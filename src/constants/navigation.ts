@@ -13,7 +13,7 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: Record<ModuleId, NavItem> = {
-  dashboard:        { label: "Dashboard",        icon: LayoutDashboard, path: "/dashboard" },
+  dashboard:        { label: "Branch",        icon: LayoutDashboard, path: "/dashboard" },
   crm:              { label: "CRM & Admissions", icon: Users,           path: "/crm" },
   students:         { label: "Students",         icon: GraduationCap,   path: "/students" },
   timetable:        { label: "Timetable",        icon: Calendar,        path: "/timetable" },

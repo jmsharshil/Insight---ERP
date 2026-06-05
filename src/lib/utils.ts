@@ -6,8 +6,13 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatDate(date: string | Date, pattern = "dd MMM yyyy") {
-  return format(typeof date === "string" ? new Date(date) : date, pattern);
+export function formatDate(date: string | Date | null | undefined, pattern = "dd MMM yyyy") {
+  if (!date) return "-";
+  const parsed = typeof date === "string" ? new Date(date) : date;
+  if (parsed instanceof Date && isNaN(parsed.getTime())) {
+    return "-";
+  }
+  return format(parsed, pattern);
 }
 
 export function formatCurrency(amount: number) {

@@ -11,6 +11,10 @@ export interface AuthUser {
   name: string;
   role: string;
   linked_student: null | string;
+  branch?: string | null;
+  organization?: string;
+  organization_name?: string;
+  profile_pic?: string | null;
 }
 
 export interface LoginResponse {

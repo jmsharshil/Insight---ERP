@@ -2,7 +2,12 @@ import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Search, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -23,11 +28,17 @@ interface DataTableProps<T> {
   exportable?: boolean;
   pageSize?: number;
   emptyTitle?: string;
+  onRowClick?: (row: T) => void;
 }
 
 export default function DataTable<T extends Record<string, any>>({
-  columns, data, searchable = true, exportable = false, pageSize = 10,
+  columns,
+  data,
+  searchable = true,
+  exportable = false,
+  pageSize = 10,
   emptyTitle = "No records found",
+  onRowClick,
 }: DataTableProps<T>) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -102,7 +113,10 @@ export default function DataTable<T extends Record<string, any>>({
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2, delay: i * 0.02 }}
-                  className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                  className={`border-b border-border last:border-0 hover:bg-muted/30 transition-colors ${
+                    onRowClick ? "cursor-pointer" : ""
+                  }`}
+                  onClick={() => onRowClick && onRowClick(row)}
                 >
                   {columns.map((c) => (
                     <TableCell key={String(c.key)} className={c.className}>
