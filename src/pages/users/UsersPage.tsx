@@ -35,7 +35,7 @@ import { Search, Loader2, FileSearch, ArrowUpDown, ChevronLeft, ChevronRight, Us
 import EmptyState from "@/components/common/EmptyState";
 
 import { cn, formatDate } from "@/lib/utils";
-import { Skeleton } from "boneyard-js/react";
+import { TableSkeleton } from "@/components/common/Skeletons";
 
 /* ─── Role choices ──────────────────────────────────────────── */
 
@@ -129,41 +129,6 @@ const columns: ColumnDef<UserRecord>[] = [
   },
 ];
 
-/* ─── Skeleton Fixture ──────────────────────────────────────── */
-
-const UsersTableFixture = () => (
-  <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
-    <Table>
-      <TableHeader>
-        <TableRow className="bg-muted/40">
-          <TableHead>Name</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>Phone</TableHead>
-          <TableHead>Role</TableHead>
-          <TableHead>Created At</TableHead>
-          <TableHead>Status</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {Array.from({ length: 10 }).map((_, i) => (
-          <TableRow key={i}>
-            <TableCell>
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 bg-border rounded-full flex-shrink-0" />
-                <div className="h-5 w-32 bg-border rounded" />
-              </div>
-            </TableCell>
-            <TableCell><div className="h-4 w-48 bg-border rounded" /></TableCell>
-            <TableCell><div className="h-4 w-24 bg-border rounded" /></TableCell>
-            <TableCell><div className="h-6 w-24 bg-border rounded-full" /></TableCell>
-            <TableCell><div className="h-4 w-24 bg-border rounded" /></TableCell>
-            <TableCell><div className="h-6 w-16 bg-border rounded-full" /></TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  </div>
-);
 
 /* ─── Component ─────────────────────────────────────────────── */
 
@@ -244,6 +209,19 @@ export default function UsersPage() {
     fetchUsers({ search: "", role: "", is_active: "" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /* ── Sync editForm when selectedUser details load ── */
+  useEffect(() => {
+    if (selectedUser) {
+      setEditForm({
+        name: selectedUser.name || "",
+        email: selectedUser.email || "",
+        phone: selectedUser.phone || "",
+        branch: selectedUser.branch || "",
+        is_active: selectedUser.is_active ?? true,
+      });
+    }
+  }, [selectedUser]);
 
   /* ── Debounced search ── */
   const handleSearchChange = (value: string) => {
@@ -464,12 +442,9 @@ export default function UsersPage() {
         </div>
 
         {/* ── Table Container ── */}
-        <Skeleton 
-          name="users-table" 
-          loading={loading && users.length === 0} 
-          fixture={<UsersTableFixture />}
-          snapshotConfig={{ leafTags: ["th", "td"] }}
-        >
+        {loading ? (
+          <TableSkeleton rows={10} columns={6} />
+        ) : (
           <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
             <Table>
               <TableHeader>
@@ -521,7 +496,7 @@ export default function UsersPage() {
               </TableBody>
             </Table>
           </div>
-        </Skeleton>
+        )}
 
         {/* ── Pagination ── */}
         {table.getPageCount() > 1 && (
@@ -569,107 +544,38 @@ export default function UsersPage() {
               </div>
             ) : selectedUser ? (
               <div className="space-y-6">
-                {/* ── VIEW MODE ── */}
-                {!isEditing ? (
-                  <>
-                    <div className="flex flex-col items-center text-center">
-                      <Avatar className="h-24 w-24 border-4 border-background shadow-md">
-                        <AvatarImage 
-                          src={
-                            selectedUser.profile_pic 
+                {/* Profile Picture Header Section */}
+                <div className="flex flex-col items-center text-center pb-4 border-b border-border">
+                  <div className="relative group">
+                    <Avatar className="h-24 w-24 border-4 border-background shadow-md">
+                      <AvatarImage 
+                        src={
+                          profilePicPreview 
+                            ? profilePicPreview 
+                            : selectedUser.profile_pic 
                               ? (selectedUser.profile_pic.startsWith("http") ? selectedUser.profile_pic : import.meta.env.VITE_APP_BASE_URL + selectedUser.profile_pic)
                               : undefined
-                          } 
-                          alt={selectedUser.name} 
-                          className="object-cover" 
-                        />
-                        <AvatarFallback className="text-3xl bg-primary/10 text-primary-dark font-medium">
-                          {selectedUser.name?.substring(0, 2).toUpperCase() || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <h3 className="mt-4 text-xl font-semibold text-text-primary">{selectedUser.name}</h3>
-                      <p className="text-sm text-muted-foreground">@{selectedUser.username}</p>
-                      
-                      <span className="mt-2 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary-dark">
-                        {selectedUser.role_display}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 pt-4 border-t border-border">
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Email</span>
-                        <span className="text-sm font-medium text-text-primary mt-1">{selectedUser.email}</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Phone</span>
-                        <span className="text-sm font-medium text-text-primary mt-1">{selectedUser.phone}</span>
-                      </div>
-                      {selectedUser.organization_name && (
-                        <div className="flex flex-col">
-                          <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Organization</span>
-                          <span className="text-sm font-medium text-text-primary mt-1">{selectedUser.organization_name}</span>
-                        </div>
-                      )}
-                      {selectedUser.branch && (
-                        <div className="flex flex-col">
-                          <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Branch</span>
-                          <span className="text-sm font-medium text-text-primary mt-1">{selectedUser.branch}</span>
-                        </div>
-                      )}
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Status</span>
-                        <span className="mt-1">
-                          <span className={cn(
-                            "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
-                            selectedUser.is_active ? "bg-green-500/10 text-green-600" : "bg-destructive/10 text-destructive"
-                          )}>
-                            {selectedUser.is_active ? "Active" : "Inactive"}
-                          </span>
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Update Details Button */}
-                    <div className="pt-4 border-t border-border">
-                      <Button
-                        className="w-full bg-primary hover:bg-primary-dark text-primary-foreground font-semibold"
-                        onClick={startEditing}
+                        } 
+                        alt={selectedUser.name} 
+                        className="object-cover" 
+                      />
+                      <AvatarFallback className="text-3xl bg-primary/10 text-primary-dark font-medium">
+                        {editForm.name?.substring(0, 2).toUpperCase() || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    {isEditing && (
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                       >
-                        <Pencil className="w-4 h-4 mr-2" />
-                        Update Details
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  /* ── EDIT MODE ── */
-                  <div className="space-y-5">
-                    {/* Profile Picture Upload */}
-                    <div className="flex flex-col items-center">
-                      <div className="relative group">
-                        <Avatar className="h-24 w-24 border-4 border-background shadow-md">
-                          <AvatarImage 
-                            src={
-                              profilePicPreview 
-                                ? profilePicPreview 
-                                : selectedUser.profile_pic 
-                                  ? (selectedUser.profile_pic.startsWith("http") ? selectedUser.profile_pic : import.meta.env.VITE_APP_BASE_URL + selectedUser.profile_pic)
-                                  : undefined
-                            }
-                            alt={selectedUser.name} 
-                            className="object-cover" 
-                          />
-                          <AvatarFallback className="text-3xl bg-primary/10 text-primary-dark font-medium">
-                            {editForm.name?.substring(0, 2).toUpperCase() || "U"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                        >
-                          <Camera className="w-6 h-6 text-white" />
-                        </button>
-                      </div>
+                        <Camera className="w-6 h-6 text-white" />
+                      </button>
+                    )}
+                  </div>
+                  
+                  {isEditing ? (
+                    <>
                       <input
                         ref={fileInputRef}
                         type="file"
@@ -685,11 +591,21 @@ export default function UsersPage() {
                         <Upload className="w-3 h-3" />
                         {profilePicFile ? profilePicFile.name : "Change photo"}
                       </button>
-                    </div>
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="mt-4 text-xl font-semibold text-text-primary">{selectedUser.name}</h3>
+                      <p className="text-sm text-muted-foreground">@{selectedUser.username}</p>
+                    </>
+                  )}
+                </div>
 
-                    {/* Name */}
-                    <div className="space-y-1.5">
-                      <Label htmlFor="edit-name" className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Name</Label>
+                {/* Form Fields (Unified for both View & Edit) */}
+                <div className="space-y-4">
+                  {/* Name */}
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-name" className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Name</Label>
+                    {isEditing ? (
                       <Input
                         id="edit-name"
                         value={editForm.name}
@@ -697,11 +613,15 @@ export default function UsersPage() {
                         placeholder="Full name"
                         className="bg-background"
                       />
-                    </div>
+                    ) : (
+                      <div className="text-sm font-medium text-text-primary pt-0.5">{selectedUser.name}</div>
+                    )}
+                  </div>
 
-                    {/* Email */}
-                    <div className="space-y-1.5">
-                      <Label htmlFor="edit-email" className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Email</Label>
+                  {/* Email */}
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-email" className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Email</Label>
+                    {isEditing ? (
                       <Input
                         id="edit-email"
                         type="email"
@@ -710,11 +630,15 @@ export default function UsersPage() {
                         placeholder="user@example.com"
                         className="bg-background"
                       />
-                    </div>
+                    ) : (
+                      <div className="text-sm font-medium text-text-primary pt-0.5">{selectedUser.email}</div>
+                    )}
+                  </div>
 
-                    {/* Phone */}
-                    <div className="space-y-1.5">
-                      <Label htmlFor="edit-phone" className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Phone</Label>
+                  {/* Phone */}
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-phone" className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Phone</Label>
+                    {isEditing ? (
                       <Input
                         id="edit-phone"
                         value={editForm.phone}
@@ -722,11 +646,15 @@ export default function UsersPage() {
                         placeholder="Phone number"
                         className="bg-background"
                       />
-                    </div>
+                    ) : (
+                      <div className="text-sm font-medium text-text-primary pt-0.5">{selectedUser.phone || "N/A"}</div>
+                    )}
+                  </div>
 
-                    {/* Branch */}
-                    <div className="space-y-1.5">
-                      <Label htmlFor="edit-branch" className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Branch</Label>
+                  {/* Branch */}
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-branch" className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Branch</Label>
+                    {isEditing ? (
                       <Input
                         id="edit-branch"
                         value={editForm.branch}
@@ -734,25 +662,73 @@ export default function UsersPage() {
                         placeholder="Branch name or ID"
                         className="bg-background"
                       />
-                    </div>
+                    ) : (
+                      <div className="text-sm font-medium text-text-primary pt-0.5">{selectedUser.branch || "N/A"}</div>
+                    )}
+                  </div>
 
-                    {/* Is Active Toggle */}
-                    <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3 bg-muted/30">
-                      <div>
-                        <Label htmlFor="edit-active" className="text-sm font-medium text-text-primary">Active Status</Label>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {editForm.is_active ? "User can access the system" : "User is blocked from access"}
-                        </p>
+                  {/* Organization (Always read-only) */}
+                  {selectedUser.organization_name && (
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Organization</Label>
+                      <div className="text-sm font-medium text-text-primary pt-0.5">{selectedUser.organization_name}</div>
+                    </div>
+                  )}
+
+                  {/* Role (Always read-only) */}
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Role</Label>
+                    <div className="pt-1">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary-dark">
+                        {selectedUser.role_display || selectedUser.role}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Status (Switch if editing, Badge if viewing) */}
+                  <div className="space-y-1">
+                    {isEditing ? (
+                      <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3 bg-muted/30">
+                        <div>
+                          <Label htmlFor="edit-active" className="text-sm font-medium text-text-primary">Active Status</Label>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {editForm.is_active ? "User can access the system" : "User is blocked from access"}
+                          </p>
+                        </div>
+                        <Switch
+                          id="edit-active"
+                          checked={editForm.is_active}
+                          onCheckedChange={(checked) => setEditForm((f) => ({ ...f, is_active: checked }))}
+                        />
                       </div>
-                      <Switch
-                        id="edit-active"
-                        checked={editForm.is_active}
-                        onCheckedChange={(checked) => setEditForm((f) => ({ ...f, is_active: checked }))}
-                      />
-                    </div>
+                    ) : (
+                      <>
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Status</Label>
+                        <div className="pt-1">
+                          <span className={cn(
+                            "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
+                            selectedUser.is_active ? "bg-green-500/10 text-green-600" : "bg-destructive/10 text-destructive"
+                          )}>
+                            {selectedUser.is_active ? "Active" : "Inactive"}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-3 pt-4 border-t border-border">
+                {/* Actions Footer */}
+                <div className="pt-4 border-t border-border">
+                  {!isEditing ? (
+                    <Button
+                      className="w-full bg-primary hover:bg-primary-dark text-primary-foreground font-semibold"
+                      onClick={startEditing}
+                    >
+                      <Pencil className="w-4 h-4 mr-2" />
+                      Update Details
+                    </Button>
+                  ) : (
+                    <div className="flex gap-3">
                       <Button
                         variant="outline"
                         className="flex-1"
@@ -774,8 +750,8 @@ export default function UsersPage() {
                         )}
                       </Button>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             ) : (
               <div className="text-center text-muted-foreground py-10">

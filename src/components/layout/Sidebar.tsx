@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import RoleBadge from "@/components/common/RoleBadge";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { AvatarImage } from "@radix-ui/react-avatar";
 
 /* ─── constants ──────────────────────────────────── */
 const EXPANDED_W = 260;
@@ -224,6 +225,14 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
                   <div className="relative flex-shrink-0 group cursor-default">
                     <div className="absolute -inset-[3px] rounded-full bg-gradient-to-tr from-primary via-primary/50 to-primary/20 opacity-60 group-hover:opacity-100 transition-opacity duration-300 blur-[1px]" />
                     <Avatar className="relative h-9 w-9 border-2 border-[#001a3a]">
+                      {/* <AvatarFallback className="bg-gradient-to-br from-primary to-[#d4900a] text-navy text-xs font-bold">
+                        {user.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .slice(0, 2)
+                          .join("")}
+                      </AvatarFallback> */}
+                      <AvatarImage src={user.profile_pic || ""} />
                       <AvatarFallback className="bg-gradient-to-br from-primary to-[#d4900a] text-navy text-xs font-bold">
                         {user.name
                           .split(" ")
