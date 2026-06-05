@@ -6,6 +6,8 @@ import authReducer from "./slices/authSlice";
 import uiReducer from "./slices/uiSlice";
 import apiAuthReducer from "@/redux/slices/authSlice";
 import usersReducer from "@/redux/slices/usersSlice";
+import dropdownReducer from "@/redux/slices/dropdownSlice";
+import crmReducer from "@/redux/slices/crmSlice";
 import rootSaga from "@/saga";
 
 const sagaMiddleware = createSagaMiddleware();
@@ -21,6 +23,8 @@ const rootReducer = combineReducers({
   ui: uiReducer,
   apiAuth: apiAuthReducer,
   users: usersReducer,
+  dropdowns: dropdownReducer,
+  crm: crmReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

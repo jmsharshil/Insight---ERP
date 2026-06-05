@@ -11,6 +11,7 @@ import ModulePlaceholder from "@/pages/ModulePlaceholder";
 import PageLoader from "@/components/common/PageLoader";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import { useAuth } from "@/hooks/useAuth";
+import LeadsInquiryForm from "@/components/forms/LeadsInquiryForm";
 
 /* ─── Lazy-loaded pages ─────────────────────────────────────── */
 
@@ -70,6 +71,10 @@ const router = createBrowserRouter([
     path: "/unauthorized",
     element: <UnauthorizedPage />,
   },
+  {
+    path: "/insight/public/lead-inquiry-form",
+    element:<LeadsInquiryForm/>
+  },
 
   /* ── Protected routes (auth required, no specific module) ── */
   {
@@ -90,22 +95,30 @@ const router = createBrowserRouter([
    *  To add a new module: just add an entry to this array.
    * ────────────────────────────────────────────────────────── */
   ...[
-    { module: "crm",              path: "/crm",              element: withSuspense(<CRMPage />) },
-    { module: "students",         path: "/students",         element: withSuspense(<StudentsPage />) },
-    { module: "students",         path: "/students/:id",     element: withSuspense(<StudentDetailPage />) },
-    { module: "timetable",        path: "/timetable",        element: withSuspense(<TimetablePage />) },
-    { module: "attendance",       path: "/attendance",       element: withSuspense(<AttendancePage />) },
-    { module: "fees",             path: "/fees",             element: withSuspense(<FeesPage />) },
-    { module: "exams",            path: "/exams",            element: withSuspense(<ExamsPage />) },
-    { module: "exam_supervision", path: "/exam-supervision", element: withSuspense(<ExamSupervisionPage />) },
-    { module: "faculty",          path: "/faculty",          element: withSuspense(<FacultyPage />) },
-    { module: "leave",            path: "/leave",            element: withSuspense(<LeavePage />) },
-    { module: "chat",             path: "/chat",             element: withSuspense(<ChatPage />) },
-    { module: "notifications",    path: "/notifications",    element: withSuspense(<NotificationsPage />) },
-    { module: "audit_logs",       path: "/audit-logs",       element: withSuspense(<AuditLogsPage />) },
-    { module: "reports",          path: "/reports",          element: withSuspense(<ReportsPage />) },
-    { module: "payroll",          path: "/payroll",          element: <ModulePlaceholder title="My Payroll" /> },
-    { module: "users",            path: "/users",            element: withSuspense(<UsersPage />) },
+    { module: "crm", path: "/crm", element: withSuspense(<CRMPage />) },
+    { module: "students", path: "/students", element: withSuspense(<StudentsPage />) },
+    { module: "students", path: "/students/:id", element: withSuspense(<StudentDetailPage />) },
+    { module: "timetable", path: "/timetable", element: withSuspense(<TimetablePage />) },
+    { module: "attendance", path: "/attendance", element: withSuspense(<AttendancePage />) },
+    { module: "fees", path: "/fees", element: withSuspense(<FeesPage />) },
+    { module: "exams", path: "/exams", element: withSuspense(<ExamsPage />) },
+    {
+      module: "exam_supervision",
+      path: "/exam-supervision",
+      element: withSuspense(<ExamSupervisionPage />),
+    },
+    { module: "faculty", path: "/faculty", element: withSuspense(<FacultyPage />) },
+    { module: "leave", path: "/leave", element: withSuspense(<LeavePage />) },
+    { module: "chat", path: "/chat", element: withSuspense(<ChatPage />) },
+    {
+      module: "notifications",
+      path: "/notifications",
+      element: withSuspense(<NotificationsPage />),
+    },
+    { module: "audit_logs", path: "/audit-logs", element: withSuspense(<AuditLogsPage />) },
+    { module: "reports", path: "/reports", element: withSuspense(<ReportsPage />) },
+    { module: "payroll", path: "/payroll", element: <ModulePlaceholder title="My Payroll" /> },
+    { module: "users", path: "/users", element: withSuspense(<UsersPage />) },
   ].map(({ module, path, element }) => ({
     element: <ProtectedRoute module={module as any} />,
     children: [

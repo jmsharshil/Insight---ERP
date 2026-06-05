@@ -1,0 +1,68 @@
+/**
+ * Centralized API endpoint definitions.
+ * Usage:
+ *   import { API } from "@/service/api";
+ *   endPoint: API.DROPDOWNS.PUBLIC("roles")
+ *   endPoint: API.DROPDOWNS.AUTH("branches")
+ */
+
+/* ─── Base paths ─────────────────────────────────────────────── */
+
+const DROPDOWN_PUBLIC_BASE = "/api/v1/dropdowns/public";
+const DROPDOWN_AUTH_BASE = "/api/v1/dropdowns/auth";
+
+/* ─── Helpers ────────────────────────────────────────────────── */
+
+/** Build a dropdown URL, e.g. `/api/v1/dropdowns/public/` */
+const buildDropdownUrl = (base: string, params?: Record<string, string>) => {
+  const url = `${base}/`;
+  if (!params || Object.keys(params).length === 0) return url;
+  const qs = new URLSearchParams(params).toString();
+  return `${url}?${qs}`;
+};
+
+/* ─── Exported API map ───────────────────────────────────────── */
+
+export const API = {
+  /** Dropdown endpoints — the most commonly reused APIs */
+  DROPDOWNS: {
+    /**
+     * Public dropdown (no auth required). Returns all public dropdowns.
+     * @param params - Optional query params
+     */
+    PUBLIC: (params?: Record<string, string>) =>
+      buildDropdownUrl(DROPDOWN_PUBLIC_BASE, params),
+
+    /**
+     * Authenticated dropdown (requires Bearer token). Returns all auth dropdowns.
+     * @param params - Optional query params
+     */
+    AUTH: (params?: Record<string, string>) =>
+      buildDropdownUrl(DROPDOWN_AUTH_BASE, params),
+  },
+
+  /** Auth endpoints */
+  AUTH: {
+    LOGIN: "/api/auth/login/",
+    SET_PASSWORD: "/api/auth/set-password/",
+  },
+
+  /** User management endpoints */
+  USERS: {
+    LIST: "/api/auth/users/",
+    DETAIL: (id: string) => `/api/auth/users/${id}/`,
+  },
+
+  /** Leads endpoints */
+  LEADS: {
+    CREATE: "/api/v1/leads/",
+    LIST: "/api/v1/leads/",
+    GET: (id: string | number) => `/api/v1/leads/${id}/`,
+    STATUS: (id: string | number) => `/api/v1/leads/${id}/status/`,
+  },
+
+  /** Reports endpoints */
+  REPORTS: {
+    LEADS: "/api/v1/reports/leads/",
+  },
+} as const;

@@ -1,4 +1,4 @@
-export type LeadStatus = "new" | "contacted" | "interested" | "converted" | "lost";
+export type LeadStatus = "new" | "contacted" | "interested" | "follow_up" | "converted" | "lost";
 export type LeadSource = "walk-in" | "referral" | "online" | "telecall";
 export type AssignedRole = "counsellor" | "sales_exec" | "telecaller";
 
@@ -30,7 +30,7 @@ export interface Lead {
 
 const COURSES = ["CA Foundation", "CS Executive", "CMA Inter", "B.Com", "MBA"];
 const SOURCES: LeadSource[] = ["walk-in", "referral", "online", "telecall"];
-const STATUSES: LeadStatus[] = ["new", "contacted", "interested", "converted", "lost"];
+const STATUSES: LeadStatus[] = ["new", "contacted", "interested", "follow_up", "converted", "lost"];
 
 const NAMES = [
   "Aarav Sharma", "Diya Patel", "Vihaan Iyer", "Ananya Reddy", "Aditya Singh",
@@ -107,6 +107,7 @@ export const LEAD_STATUS_META: Record<
   new: { label: "New", color: "text-blue-700", bg: "bg-blue-100" },
   contacted: { label: "Contacted", color: "text-indigo-700", bg: "bg-indigo-100" },
   interested: { label: "Interested", color: "text-amber-800", bg: "bg-amber-100" },
+  follow_up: { label: "Follow Up", color: "text-purple-700", bg: "bg-purple-100" },
   converted: { label: "Converted", color: "text-green-700", bg: "bg-green-100" },
   lost: { label: "Lost", color: "text-red-700", bg: "bg-red-100" },
 };
