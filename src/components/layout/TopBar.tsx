@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, MessageSquare, Menu, Building2, LogOut, User, Settings, Search } from "lucide-react";
 import { motion } from "framer-motion";
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/useToast";
 import RoleBadge from "@/components/common/RoleBadge";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import GlobalSearch from "@/components/common/GlobalSearch";
 import { NOTIFICATIONS } from "@/constants/dummy/notifications";
 
@@ -21,6 +23,7 @@ export default function TopBar() {
   const navigate = useNavigate();
   const toast = useToast();
   const unread = NOTIFICATIONS.filter((n) => !n.isRead).length;
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -121,7 +124,7 @@ export default function TopBar() {
                 <DropdownMenuItem onClick={() => navigate("/settings")}><User className="w-4 h-4 mr-2" /> My Profile</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/settings")}><Settings className="w-4 h-4 mr-2" /> Settings</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+                <DropdownMenuItem onClick={() => setShowLogoutDialog(true)} className="text-destructive focus:text-destructive">
                   <LogOut className="w-4 h-4 mr-2" /> Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -129,6 +132,17 @@ export default function TopBar() {
           )}
         </div>
       </header>
+
+      <ConfirmDialog
+        open={showLogoutDialog}
+        onOpenChange={setShowLogoutDialog}
+        onConfirm={handleLogout}
+        title="Sign out"
+        description="Are you sure you want to sign out? You'll need to log in again to access your account."
+        variant="danger"
+        confirmLabel="Sign out"
+        cancelLabel="Stay signed in"
+      />
     </>
   );
 }

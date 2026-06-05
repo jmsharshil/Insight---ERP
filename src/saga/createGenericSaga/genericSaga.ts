@@ -7,7 +7,7 @@ interface GenericSagaAction {
   type: string;
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   endPoint: string;
-  body?: object;
+  body?: object | FormData;
   auth?: boolean;
   getResponse?: (data: unknown) => void;
   getError?: (error: unknown) => void;

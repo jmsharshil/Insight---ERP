@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import PageHeader from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -5,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
+import { useUI } from "@/hooks/useUI";
 import { useToast } from "@/hooks/useToast";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { toggleNotificationPref } from "@/store/slices/uiSlice";
@@ -22,6 +24,11 @@ export default function SettingsPage() {
   const toast = useToast();
   const dispatch = useAppDispatch();
   const prefs = useAppSelector((s: any) => s.ui.notificationPrefs || {});
+  const { setPageTitle } = useUI();
+
+  useEffect(() => {
+    setPageTitle("Settings");
+  }, [setPageTitle]);
 
   return (
     <div>

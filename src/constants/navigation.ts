@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, GraduationCap, Calendar, ScanLine, CreditCard,
   BookOpen, Eye, Briefcase, CalendarOff, MessageSquare, Bell, FileText,
-  BarChart3, Wallet,
+  BarChart3, Wallet, Settings,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ModuleId } from "@/types/role.types";
@@ -28,4 +28,6 @@ export const NAV_ITEMS: Record<ModuleId, NavItem> = {
   audit_logs:       { label: "Audit Logs",       icon: FileText,        path: "/audit-logs" },
   reports:          { label: "Reports",          icon: BarChart3,       path: "/reports" },
   payroll:          { label: "My Payroll",       icon: Wallet,          path: "/payroll" },
+  settings:         { label: "Settings",         icon: Settings,        path: "/settings" },
+  users:            { label: "Users",            icon: Users,           path: "/users" },
 };

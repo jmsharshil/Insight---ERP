@@ -5,6 +5,7 @@ import createSagaMiddleware from "redux-saga";
 import authReducer from "./slices/authSlice";
 import uiReducer from "./slices/uiSlice";
 import apiAuthReducer from "@/redux/slices/authSlice";
+import usersReducer from "@/redux/slices/usersSlice";
 import rootSaga from "@/saga";
 
 const sagaMiddleware = createSagaMiddleware();
@@ -19,7 +20,7 @@ const rootReducer = combineReducers({
   auth: authReducer,
   ui: uiReducer,
   apiAuth: apiAuthReducer,
-  // new feature reducers added here
+  users: usersReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

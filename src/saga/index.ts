@@ -1,10 +1,11 @@
 import { all, fork } from "redux-saga/effects";
 import { watchAuthSaga } from "./auth";
+import { watchUsersSaga } from "./users";
 
 function* rootSaga() {
   yield all([
     fork(watchAuthSaga),
-    // fork(watchStudentSaga),   ← new features added here
+    fork(watchUsersSaga),
   ]);
 }
 

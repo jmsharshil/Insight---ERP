@@ -1,4 +1,6 @@
 import { useState, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { NavLink, useLocation } from "react-router-dom";
 import { LogOut, Pin, PinOff } from "lucide-react";
 import logo from "@/assets/logo.png";
@@ -24,7 +26,10 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
   const { user, logout } = useAuth();
   const { sidebarCollapsed, toggleSidebarCollapse, closeMobileSidebar } = useUI();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
+  
   // pinned = user clicked the pin button (uses Redux state)
   const pinned = !mobile && !sidebarCollapsed;
 
@@ -116,7 +121,7 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
           </div>
 
           {/* pin / unpin button (desktop only) */}
-          {/* {!mobile && expanded && (
+          {!mobile && expanded && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
@@ -136,14 +141,14 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
                 {pinned ? "Unpin sidebar" : "Pin sidebar open"}
               </TooltipContent>
             </Tooltip>
-          )} */}
+          )}
         </div>
 
         {/* ── gradient divider ── */}
         <div className="mx-3 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
 
         {/* ═══════ NAVIGATION ═══════ */}
-        <nav className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden py-3 px-2 space-y-0.5">
+        <nav className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden py-3 px-2 space-y-0.5 scrollbar-hidden">
           {items.map((item) => {
             const isActive = location.pathname.startsWith(item.path);
 
@@ -252,7 +257,7 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
-                      onClick={logout}
+                      onClick={() => setShowLogoutDialog(true)}
                       className="flex-shrink-0 rounded-lg p-1.5 text-white/40 hover:text-red-400 hover:bg-red-400/10 transition-all duration-200"
                       aria-label="Logout"
                     >
@@ -268,6 +273,20 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
           </div>
         )}
       </TooltipProvider>
+
+      <ConfirmDialog
+        open={showLogoutDialog}
+        onOpenChange={setShowLogoutDialog}
+        onConfirm={() => {
+          logout();
+          navigate("/login");
+        }}
+        title="Sign out"
+        description="Are you sure you want to sign out? You'll need to log in again to access your account."
+        variant="danger"
+        confirmLabel="Sign out"
+        cancelLabel="Stay signed in"
+      />
     </aside>
   );
 }

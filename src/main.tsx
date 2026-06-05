@@ -6,6 +6,7 @@ import { store, persistor } from "@/store";
 import PageLoader from "@/components/common/PageLoader";
 import App from "./App";
 import "./index.css";
+import "@/bones/registry";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
