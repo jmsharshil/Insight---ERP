@@ -61,6 +61,31 @@ export const API = {
     STATUS: (id: string | number) => `/api/v1/leads/${id}/status/`,
   },
 
+  /** Courses endpoints */
+  COURSES: {
+    LIST: "/api/v1/courses/",
+    CREATE: "/api/v1/courses/",
+    DETAIL: (id: string | number) => `/api/v1/courses/${id}/`,
+    UPDATE: (id: string | number) => `/api/v1/courses/${id}/`,
+    DELETE: (id: string | number) => `/api/v1/courses/${id}/`,
+  },
+
+  /** Batches endpoints */
+  BATCHES: {
+    LIST: "/api/v1/batches/",
+    CREATE: "/api/v1/batches/",
+    DETAIL: (id: string | number) => `/api/v1/batches/${id}/`,
+    UPDATE: (id: string | number) => `/api/v1/batches/${id}/`,
+    DELETE: (id: string | number) => `/api/v1/batches/${id}/`,
+  },
+
+  /** Subjects endpoints */
+  SUBJECTS: {
+    CREATE: "/api/v1/subjects/",
+    UPDATE: (id: string | number) => `/api/v1/subjects/${id}/`,
+    DELETE: (id: string | number) => `/api/v1/subjects/${id}/`,
+  },
+
   /** Reports endpoints */
   REPORTS: {
     LEADS: "/api/v1/reports/leads/",

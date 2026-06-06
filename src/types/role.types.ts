@@ -5,7 +5,7 @@ export type RoleId =
   | "exam_supervisor" | "paper_checker" | "accountant" | "settings" | "users";
 
 export type ModuleId =
-  | "crm" | "students" | "timetable" | "attendance" | "fees"
+  | "crm" | "students" | "courses_batches" | "classroom_timetable" | "attendance" | "fees"
   | "exams" | "exam_supervision" | "faculty" | "leave" | "chat"
   | "notifications" | "audit_logs" | "reports" | "payroll" | "dashboard" | "settings" | "users";
 

@@ -63,8 +63,9 @@ import {
   type ColumnDef,
 } from "@tanstack/react-table";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { TableSkeleton } from "@/components/common/Skeletons";
+import { TableSkeleton, SheetSkeleton } from "@/components/common/Skeletons";
 import EmptyState from "@/components/common/EmptyState";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export interface BranchRecord {
@@ -162,8 +163,10 @@ export default function SuperAdminDashboard() {
   const [isEditing, setIsEditing] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<any>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const [selectedBranchLoading, setSelectedBranchLoading] = useState(false);
   const [updateLoading, setUpdateLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -231,6 +234,7 @@ export default function SuperAdminDashboard() {
       method: "GET",
       endPoint: `/api/v1/branches/${branch.id}/`,
       auth: true,
+      setLoading: (val: boolean) => setSelectedBranchLoading(val),
       getResponse: (res: any) => {
         if (res && typeof res === "object" && !Array.isArray(res)) {
           setSelectedBranch(res);
@@ -476,7 +480,7 @@ export default function SuperAdminDashboard() {
           </div>
 
           {/* Status Filter */}
-          <Select value={statusFilter || "all"} onValueChange={handleStatusChange}>
+          {/* <Select value={statusFilter || "all"} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-[140px] bg-card">
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
@@ -485,7 +489,7 @@ export default function SuperAdminDashboard() {
               <SelectItem value="true">Active</SelectItem>
               <SelectItem value="false">Inactive</SelectItem>
             </SelectContent>
-          </Select>
+          </Select> */}
 
           {/* Clear Filters */}
           {(searchQuery || statusFilter) && (
@@ -629,7 +633,9 @@ export default function SuperAdminDashboard() {
             </SheetDescription>
           </SheetHeader>
 
-          {(selectedBranch && isEditing) || isAdding ? (
+          {selectedBranchLoading ? (
+            <SheetSkeleton />
+          ) : (selectedBranch && isEditing) || isAdding ? (
             <div className="space-y-4">
               {/* Picture Upload Area */}
               <div className="flex flex-col sm:flex-row items-center gap-4 pb-4 border-b border-border mb-4">
@@ -991,7 +997,7 @@ export default function SuperAdminDashboard() {
                 </button>
                 <button
                   type="button"
-                  onClick={handleDeleteBranch}
+                  onClick={() => setIsDeleteDialogOpen(true)}
                   disabled={deleteLoading}
                   className="w-full bg-red-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition-colors cursor-pointer"
                 >
@@ -1002,6 +1008,16 @@ export default function SuperAdminDashboard() {
           )}
         </SheetContent>
       </Sheet>
+
+      <ConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDeleteBranch}
+        title="Delete Branch"
+        description={`Are you sure you want to delete ${selectedBranch?.name}? This action cannot be undone.`}
+        variant="danger"
+        confirmLabel="Delete"
+      />
     </div>
   );
 }

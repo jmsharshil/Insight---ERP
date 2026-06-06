@@ -11,6 +11,8 @@ import crmReducer from "@/redux/slices/crmSlice";
 import settingsReducer from "@/redux/slices/settingsSlice";
 import rootSaga from "@/saga";
 import branchReducer from "@/redux/slices/branchSlice";
+import coursesReducer from "@/redux/slices/coursesSlice";
+import chatReducer from "@/redux/slices/chatSlice";
 
 const sagaMiddleware = createSagaMiddleware();
 
@@ -28,7 +30,9 @@ const rootReducer = combineReducers({
   dropdowns: dropdownReducer,
   crm: crmReducer,
   settings: settingsReducer,
-  branch: branchReducer
+  branch: branchReducer,
+  courses: coursesReducer,
+  chat: chatReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
