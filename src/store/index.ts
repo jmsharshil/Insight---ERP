@@ -11,6 +11,8 @@ import crmReducer from "@/redux/slices/crmSlice";
 import settingsReducer from "@/redux/slices/settingsSlice";
 import rootSaga from "@/saga";
 import branchReducer from "@/redux/slices/branchSlice";
+import admissionReducer from "@/redux/slices/admissionSlice";
+import studentReducer from "@/redux/slices/studentSlice";
 
 const sagaMiddleware = createSagaMiddleware();
 
@@ -28,7 +30,9 @@ const rootReducer = combineReducers({
   dropdowns: dropdownReducer,
   crm: crmReducer,
   settings: settingsReducer,
-  branch: branchReducer
+  branch: branchReducer,
+  admissions: admissionReducer,
+  students: studentReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

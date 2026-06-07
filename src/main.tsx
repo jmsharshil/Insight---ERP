@@ -9,11 +9,11 @@ import "./index.css";
 import "@/bones/registry";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
+ // <React.StrictMode>
     <Provider store={store}>
       <PersistGate loading={<PageLoader />} persistor={persistor}>
         <App />
       </PersistGate>
     </Provider>
-  </React.StrictMode>,
+ // </React.StrictMode>,
 );

@@ -61,6 +61,22 @@ export const API = {
     STATUS: (id: string | number) => `/api/v1/leads/${id}/status/`,
   },
 
+  /** Admissions endpoints */
+  ADMISSIONS: {
+    LIST: "/api/v1/admissions/",
+    GET: (id: string | number) => `/api/v1/admissions/${id}/`,
+    SUBMIT: (id: string | number) => `/api/v1/admissions/${id}/`,
+    APPROVE: (id: string | number) => `/api/v1/admissions/${id}/approve/`,
+    REJECT: (id: string | number) => `/api/v1/admissions/${id}/reject/`,
+    PAYMENT_UPLOAD: (id: string | number) => `/api/v1/admissions/${id}/payment/`,
+  },
+
+  /** Students endpoints */
+  STUDENTS: {
+    LIST: "/api/v1/students/",
+    GET: (id: string | number) => `/api/v1/students/${id}/`,
+  },
+
   /** Reports endpoints */
   REPORTS: {
     LEADS: "/api/v1/reports/leads/",

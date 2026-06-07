@@ -12,12 +12,15 @@ import PageLoader from "@/components/common/PageLoader";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import { useAuth } from "@/hooks/useAuth";
 import LeadsInquiryForm from "@/components/forms/LeadsInquiryForm";
+import StudentAdmissionForm from "@/components/forms/StudentAdmissionForm";
+import StudentPaymentUploadForm from "@/components/forms/StudentPaymentUploadForm";
 
 /* ─── Lazy-loaded pages ─────────────────────────────────────── */
 
 const CRMPage = lazy(() => import("@/pages/crm/CRMPage"));
 const StudentsPage = lazy(() => import("@/pages/students/StudentsPage"));
 const StudentDetailPage = lazy(() => import("@/pages/students/StudentDetailPage"));
+const StudentAdmissionDetailedPage = lazy(() => import("@/pages/students/StudentAdmissionDetailedPage"));
 const TimetablePage = lazy(() => import("@/pages/timetable/TimetablePage"));
 const AttendancePage = lazy(() => import("@/pages/attendance/AttendancePage"));
 const FeesPage = lazy(() => import("@/pages/fees/FeesPage"));
@@ -75,6 +78,14 @@ const router = createBrowserRouter([
     path: "/insight/public/lead-inquiry-form",
     element:<LeadsInquiryForm/>
   },
+  {
+    path: "/insight/student/admission-form",
+    element:<StudentAdmissionForm/>
+  },
+  {
+    path: "/insight/student/payment-upload",
+    element:<StudentPaymentUploadForm/>
+  },
 
   /* ── Protected routes (auth required, no specific module) ── */
   {
@@ -98,6 +109,7 @@ const router = createBrowserRouter([
     { module: "crm", path: "/crm", element: withSuspense(<CRMPage />) },
     { module: "students", path: "/students", element: withSuspense(<StudentsPage />) },
     { module: "students", path: "/students/:id", element: withSuspense(<StudentDetailPage />) },
+    { module: "students", path: "/admissions/:id", element: withSuspense(<StudentAdmissionDetailedPage />) },
     { module: "timetable", path: "/timetable", element: withSuspense(<TimetablePage />) },
     { module: "attendance", path: "/attendance", element: withSuspense(<AttendancePage />) },
     { module: "fees", path: "/fees", element: withSuspense(<FeesPage />) },
