@@ -52,7 +52,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   sales_executive: {
     id: "sales_executive", label: "Sales Executive", description: "Lead assignment only",
     color: "bg-fuchsia-100", textColor: "text-fuchsia-800",
-    modules: ["dashboard","crm"],
+    modules: ["dashboard","crm","chat"],
     canDelete: false, canExport: false,
   },
   student: {

@@ -8,7 +8,7 @@ interface ChatState {
 }
 
 const initialState: ChatState = {
-  rooms: CHAT_CHANNELS,
+  rooms: [],
   loading: false,
   error: null,
 };

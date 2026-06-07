@@ -316,7 +316,7 @@ export default function CourseDetailPage() {
         subtitle={isEditing ? "Modify course properties below." : `Course details and syllabus schedule.`}
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate("/timetable")}>
+            <Button variant="outline" onClick={() => navigate("/courses-batches")}>
               <ChevronLeft className="w-4 h-4 mr-2" /> Back
             </Button>
             {canEdit && !isEditing && (

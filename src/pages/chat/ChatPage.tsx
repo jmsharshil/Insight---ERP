@@ -14,6 +14,8 @@ import { CHAT_MESSAGES, type ChatMessage } from "@/constants/dummy/chat";
 import { ChatAction } from "@/redux/actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setRooms, setRoomsLoading, setRoomsError } from "@/redux/slices/chatSlice";
+import { useUI } from "@/hooks/useUI";
+import CreateChatModal from "./CreateChatModal";
 
 export default function ChatPage() {
   const { user } = useAuth();
@@ -22,10 +24,12 @@ export default function ChatPage() {
 
   const { rooms, loading } = useAppSelector((state) => state.chat);
   const [activeId, setActiveId] = useState<string>("");
-  const [messages, setMessages] = useState<Record<string, ChatMessage[]>>(CHAT_MESSAGES);
+  const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({});
   const [draft, setDraft] = useState("");
   const [search, setSearch] = useState("");
+  const { setPageTitle } = useUI();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Initialize active room once rooms are loaded
   useEffect(() => {
@@ -45,6 +49,10 @@ export default function ChatPage() {
   }, [activeId, msgs.length]);
 
   useEffect(() => {
+    setPageTitle("Messages");
+  }, [setPageTitle]);
+
+  const fetchRooms = () => {
     dispatch({
       type: ChatAction.GET_CHAT_ROOMS,
       method: "GET",
@@ -86,23 +94,90 @@ export default function ChatPage() {
         dispatch(setRoomsError(errorMsg));
       }
     });
+  };
+
+  useEffect(() => {
+    fetchRooms();
   }, [dispatch, user?.id]);
+
+  useEffect(() => {
+    if (activeId) {
+      dispatch({
+        type: "GET_CHAT_MESSAGES",
+        method: "GET",
+        endPoint: `/api/v1/chat/rooms/${activeId}/messages/`,
+        auth: true,
+        getResponse: (res: any) => {
+          const fetchedMessages = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.results) ? res.data.results : [];
+          const mappedMsgs = fetchedMessages.map((m: any) => ({
+            id: m.id,
+            channelId: activeId,
+            senderId: m.sender || m.sender_id,
+            senderName: m.sender_name || (m.sender === user?.id ? "You" : "Unknown"),
+            content: m.content,
+            type: "text",
+            timestamp: m.created_at || m.timestamp || new Date().toISOString(),
+            readBy: [],
+            status: "read",
+          })).sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+          
+          setMessages(prev => ({ ...prev, [activeId]: mappedMsgs }));
+        },
+        getError: (err: any) => {
+          console.error("Failed to fetch messages", err);
+        }
+      });
+    }
+  }, [activeId, dispatch, user?.id]);
 
   const send = () => {
     if (!draft.trim() || !activeId) return;
+    const content = draft.trim();
+    setDraft("");
+    
+    const tempId = `${activeId}-NEW-${Date.now()}`;
     const m: ChatMessage = {
-      id: `${activeId}-NEW-${Date.now()}`,
+      id: tempId,
       channelId: activeId,
       senderId: user?.id || "u010",
       senderName: user?.name || "You",
-      content: draft,
+      content: content,
       type: "text",
       timestamp: new Date().toISOString(),
       readBy: [user?.id || "u010"],
       status: "sent",
     };
     setMessages(prev => ({ ...prev, [activeId]: [...(prev[activeId] || []), m] }));
-    setDraft("");
+
+    dispatch({
+      type: "SEND_CHAT_MESSAGE",
+      method: "POST",
+      endPoint: `/api/v1/chat/rooms/${activeId}/messages/`,
+      auth: true,
+      body: { content },
+      getResponse: (res: any) => {
+        const realMsg = res?.data || res;
+        setMessages(prev => {
+           const channelMsgs = prev[activeId] || [];
+           return {
+             ...prev,
+             [activeId]: channelMsgs.map(msg => msg.id === tempId ? {
+                ...msg, 
+                id: realMsg.id || tempId, 
+                status: "read",
+                timestamp: realMsg.created_at || realMsg.timestamp || msg.timestamp 
+             } : msg)
+           };
+        });
+      },
+      getError: (err: any) => {
+        toast.error("Failed to send message");
+        setMessages(prev => ({
+           ...prev,
+           [activeId]: (prev[activeId] || []).filter(msg => msg.id !== tempId)
+        }));
+      }
+    });
   };
 
   const isFaculty = user?.role === "faculty";
@@ -110,8 +185,7 @@ export default function ChatPage() {
 
   return (
     <div>
-      <PageHeader title="Messages" />
-      <div className="grid md:grid-cols-[280px_1fr_240px] gap-4 h-[calc(100vh-220px)]">
+      <div className="grid md:grid-cols-[280px_1fr] gap-4 h-[85vh]">
         {/* List */}
         <div className="rounded-xl border border-border bg-card flex flex-col overflow-hidden">
           <div className="p-3 border-b border-border space-y-2">
@@ -119,7 +193,7 @@ export default function ChatPage() {
             <Button size="sm" className="w-full"
               disabled={isFaculty}
               title={isFaculty ? "Faculty can only participate in group channels" : isStudentOrParent ? "Only admins available" : ""}
-              onClick={() => toast.info("New chat dialog")}>
+              onClick={() => setIsModalOpen(true)}>
               + New Chat
             </Button>
           </div>
@@ -196,36 +270,18 @@ export default function ChatPage() {
             </div>
           )}
         </div>
-
-        {/* Info */}
-        <div className="rounded-xl border border-border bg-card p-4 hidden md:block overflow-y-auto">
-          {active ? (
-            <>
-              <h3 className="font-heading font-semibold mb-2">Channel Info</h3>
-              <div className="text-sm text-muted-foreground mb-3">
-                {active.type === "group" ? `Group · ${active.participants?.length || 0} members` : "Direct conversation"}
-              </div>
-              {active.batch && <Badge className="mb-3" variant="outline">Batch: {active.batch}</Badge>}
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Members</h4>
-              {console.log(active)}
-              <div className="space-y-1.5">
-                {active.participants?.map((p) => (
-                  <div key={p} className="flex items-center gap-2 text-sm">
-                    <Avatar className="h-7 w-7"><AvatarFallback className="text-[10px]">{p.slice(-2)}</AvatarFallback></Avatar>
-                    <span>{p}</span>
-                  </div>
-                ))}
-              </div>
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase mt-4 mb-2">Shared Files</h4>
-              <p className="text-xs text-muted-foreground">No files shared yet.</p>
-            </>
-          ) : (
-            <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-              Select a room to view info
-            </div>
-          )}
-        </div>
       </div>
+      <CreateChatModal 
+        open={isModalOpen} 
+        onOpenChange={setIsModalOpen}
+        onSuccess={(room) => {
+          // Re-fetch rooms to update the list
+          fetchRooms();
+          if (room && room.id) {
+            setActiveId(room.id);
+          }
+        }}
+      />
     </div>
   );
 }

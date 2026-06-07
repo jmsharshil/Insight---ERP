@@ -73,9 +73,11 @@ export const API = {
   STUDENTS: {
     LIST: "/api/v1/students/",
     GET: (id: string | number) => `/api/v1/students/${id}/`,
-    /** Courses endpoints */
-    COURSES: {
-      LIST: "/api/v1/courses/",
+  },
+
+  /** Courses endpoints */
+  COURSES: {
+    LIST: "/api/v1/courses/",
       CREATE: "/api/v1/courses/",
       DETAIL: (id: string | number) => `/api/v1/courses/${id}/`,
       UPDATE: (id: string | number) => `/api/v1/courses/${id}/`,
@@ -102,5 +104,5 @@ export const API = {
     REPORTS: {
       LEADS: "/api/v1/reports/leads/",
     },
-  } as const,
-};
+} as const;
+
