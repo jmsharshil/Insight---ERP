@@ -21,7 +21,9 @@ const CRMPage = lazy(() => import("@/pages/crm/CRMPage"));
 const StudentsPage = lazy(() => import("@/pages/students/StudentsPage"));
 const StudentDetailPage = lazy(() => import("@/pages/students/StudentDetailPage"));
 const StudentAdmissionDetailedPage = lazy(() => import("@/pages/students/StudentAdmissionDetailedPage"));
-const TimetablePage = lazy(() => import("@/pages/timetable/TimetablePage"));
+const CoursesBatchesPage = lazy(() => import("@/pages/courses-batches/CoursesBatchesPage"));
+const ClassroomTimetablePage = lazy(() => import("@/pages/classroom-timetable/ClassroomTimetablePage"));
+const CourseDetailPage = lazy(() => import("@/pages/courses/CourseDetailPage"));
 const AttendancePage = lazy(() => import("@/pages/attendance/AttendancePage"));
 const FeesPage = lazy(() => import("@/pages/fees/FeesPage"));
 const ExamsPage = lazy(() => import("@/pages/exams/ExamsPage"));
@@ -110,7 +112,9 @@ const router = createBrowserRouter([
     { module: "students", path: "/students", element: withSuspense(<StudentsPage />) },
     { module: "students", path: "/students/:id", element: withSuspense(<StudentDetailPage />) },
     { module: "students", path: "/admissions/:id", element: withSuspense(<StudentAdmissionDetailedPage />) },
-    { module: "timetable", path: "/timetable", element: withSuspense(<TimetablePage />) },
+    { module: "courses_batches", path: "/courses-batches", element: withSuspense(<CoursesBatchesPage />) },
+    { module: "courses_batches", path: "/courses-batches/:id", element: withSuspense(<CourseDetailPage />) },
+    { module: "classroom_timetable", path: "/classroom-timetable", element: withSuspense(<ClassroomTimetablePage />) },
     { module: "attendance", path: "/attendance", element: withSuspense(<AttendancePage />) },
     { module: "fees", path: "/fees", element: withSuspense(<FeesPage />) },
     { module: "exams", path: "/exams", element: withSuspense(<ExamsPage />) },

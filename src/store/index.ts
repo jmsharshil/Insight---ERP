@@ -13,6 +13,8 @@ import rootSaga from "@/saga";
 import branchReducer from "@/redux/slices/branchSlice";
 import admissionReducer from "@/redux/slices/admissionSlice";
 import studentReducer from "@/redux/slices/studentSlice";
+import coursesReducer from "@/redux/slices/coursesSlice";
+import chatReducer from "@/redux/slices/chatSlice";
 
 const sagaMiddleware = createSagaMiddleware();
 
@@ -33,6 +35,8 @@ const rootReducer = combineReducers({
   branch: branchReducer,
   admissions: admissionReducer,
   students: studentReducer,
+  courses: coursesReducer,
+  chat: chatReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

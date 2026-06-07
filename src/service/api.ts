@@ -30,15 +30,13 @@ export const API = {
      * Public dropdown (no auth required). Returns all public dropdowns.
      * @param params - Optional query params
      */
-    PUBLIC: (params?: Record<string, string>) =>
-      buildDropdownUrl(DROPDOWN_PUBLIC_BASE, params),
+    PUBLIC: (params?: Record<string, string>) => buildDropdownUrl(DROPDOWN_PUBLIC_BASE, params),
 
     /**
      * Authenticated dropdown (requires Bearer token). Returns all auth dropdowns.
      * @param params - Optional query params
      */
-    AUTH: (params?: Record<string, string>) =>
-      buildDropdownUrl(DROPDOWN_AUTH_BASE, params),
+    AUTH: (params?: Record<string, string>) => buildDropdownUrl(DROPDOWN_AUTH_BASE, params),
   },
 
   /** Auth endpoints */
@@ -75,10 +73,34 @@ export const API = {
   STUDENTS: {
     LIST: "/api/v1/students/",
     GET: (id: string | number) => `/api/v1/students/${id}/`,
-  },
+    /** Courses endpoints */
+    COURSES: {
+      LIST: "/api/v1/courses/",
+      CREATE: "/api/v1/courses/",
+      DETAIL: (id: string | number) => `/api/v1/courses/${id}/`,
+      UPDATE: (id: string | number) => `/api/v1/courses/${id}/`,
+      DELETE: (id: string | number) => `/api/v1/courses/${id}/`,
+    },
 
-  /** Reports endpoints */
-  REPORTS: {
-    LEADS: "/api/v1/reports/leads/",
-  },
-} as const;
+    /** Batches endpoints */
+    BATCHES: {
+      LIST: "/api/v1/batches/",
+      CREATE: "/api/v1/batches/",
+      DETAIL: (id: string | number) => `/api/v1/batches/${id}/`,
+      UPDATE: (id: string | number) => `/api/v1/batches/${id}/`,
+      DELETE: (id: string | number) => `/api/v1/batches/${id}/`,
+    },
+
+    /** Subjects endpoints */
+    SUBJECTS: {
+      CREATE: "/api/v1/subjects/",
+      UPDATE: (id: string | number) => `/api/v1/subjects/${id}/`,
+      DELETE: (id: string | number) => `/api/v1/subjects/${id}/`,
+    },
+
+    /** Reports endpoints */
+    REPORTS: {
+      LEADS: "/api/v1/reports/leads/",
+    },
+  } as const,
+};

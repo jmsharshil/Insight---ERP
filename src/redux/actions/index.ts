@@ -8,6 +8,7 @@ export const userActions = {
   GET_USERS: "GET_USERS",
   GET_USER_DETAILS: "GET_USER_DETAILS",
   UPDATE_USER: "UPDATE_USER",
+  ADD_USER: "ADD_USER",
 } as const;
 
 export const dropdownActions = {
@@ -50,4 +51,30 @@ export const branchAction = {
   UPDATE_BRANCH: "UPDATE_BRANCH",
   DELETE_BRANCH: "DELETE_BRANCH",
   CREATE_BRANCH: "CREATE_BRANCH",
+} as const;
+
+export const courseAction = {
+  GET_COURSES: "GET_COURSES",
+  GET_COURSE_DETAILS: "GET_COURSE_DETAILS",
+  CREATE_COURSE: "CREATE_COURSE",
+  UPDATE_COURSE: "UPDATE_COURSE",
+  DELETE_COURSE: "DELETE_COURSE",
+} as const;
+
+export const batchAction = {
+  GET_BATCHES: "GET_BATCHES",
+  GET_BATCH_DETAILS: "GET_BATCH_DETAILS",
+  CREATE_BATCH: "CREATE_BATCH",
+  UPDATE_BATCH: "UPDATE_BATCH",
+  DELETE_BATCH: "DELETE_BATCH",
+} as const;
+
+export const subjectAction = {
+  CREATE_SUBJECT: "CREATE_SUBJECT",
+  UPDATE_SUBJECT: "UPDATE_SUBJECT",
+  DELETE_SUBJECT: "DELETE_SUBJECT",
+} as const;
+
+export const ChatAction = {
+  GET_CHAT_ROOMS: "GET_CHAT_ROOMS",
 } as const;

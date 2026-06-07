@@ -92,3 +92,24 @@ export function TableSkeleton({ rows = 5, columns = 5, className }: TableSkeleto
     </div>
   );
 }
+
+export function SheetSkeleton() {
+  return (
+    <div className="mt-5 space-y-5 pb-10">
+      <div className="space-y-3">
+        <Skeleton height={40} className="rounded-lg" />
+        <Skeleton height={40} className="rounded-lg" />
+        <Skeleton height={40} className="rounded-lg" />
+      </div>
+      <div>
+        <Skeleton width={100} height={16} className="mb-2" />
+        <Skeleton height={80} className="rounded-lg" />
+      </div>
+      <div>
+        <Skeleton width={120} height={16} className="mb-2" />
+        <Skeleton height={120} className="rounded-lg" />
+      </div>
+    </div>
+  );
+}
+

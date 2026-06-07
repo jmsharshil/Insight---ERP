@@ -14,9 +14,10 @@ export interface NavItem {
 
 export const NAV_ITEMS: Record<ModuleId, NavItem> = {
   dashboard:        { label: "Branch",        icon: LayoutDashboard, path: "/dashboard" },
-  crm:              { label: "CRM & Leads", icon: Users,           path: "/crm" },
-  students:         { label: "Students & Admissions",         icon: GraduationCap,   path: "/students" },
-  timetable:        { label: "Timetable",        icon: Calendar,        path: "/timetable" },
+  crm:              { label: "CRM & Admissions", icon: Users,           path: "/crm" },
+  students:         { label: "Students",         icon: GraduationCap,   path: "/students" },
+  courses_batches:  { label: "Courses & Batches",  icon: BookOpen,        path: "/courses-batches" },
+  classroom_timetable: { label: "Classroom & Timetable", icon: Calendar,  path: "/classroom-timetable" },
   attendance:       { label: "Attendance",       icon: ScanLine,        path: "/attendance" },
   fees:             { label: "Fees",             icon: CreditCard,      path: "/fees" },
   exams:            { label: "Exams",            icon: BookOpen,        path: "/exams" },
