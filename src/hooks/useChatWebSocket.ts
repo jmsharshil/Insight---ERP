@@ -114,7 +114,7 @@ interface ReconnectState {
 const RECONNECT_BASE_DELAY = 1000;     // 1 second
 const RECONNECT_MAX_DELAY = 30000;     // 30 seconds
 const MAX_RECONNECT_ATTEMPTS = 20;
-const HEARTBEAT_INTERVAL = 30000;      // 30 seconds
+const HEARTBEAT_INTERVAL = 4000;      // 4 seconds (prevent DevTunnels idle timeout)
 
 // ─── Helper: get auth token ──────────────────────────────────────────────────
 

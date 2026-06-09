@@ -17,7 +17,7 @@ import {
   COUNSELLOR_PERF, LOST_REASONS, LEAVE_BY_TYPE,
 } from "@/constants/dummy/reports";
 
-const COLORS = ["#F7A900", "#002147", "#22c55e", "#3b82f6", "#a855f7"];
+const COLORS = ["#F7A900", "#2e3032", "#22c55e", "#3b82f6", "#a855f7"];
 
 function useCountUp(target: number, duration = 1200) {
   const [v, setV] = useState(0);
@@ -51,7 +51,7 @@ function KPI({ title, value, suffix = "", prefix = "", icon: Icon }: any) {
   );
 }
 
-const tooltipStyle = { backgroundColor: "#002147", border: "none", borderRadius: 8, color: "white" } as const;
+const tooltipStyle = { backgroundColor: "#2e3032", border: "none", borderRadius: 8, color: "white" } as const;
 
 export default function ReportsPage() {
   const toast = useToast();
@@ -119,7 +119,7 @@ export default function ReportsPage() {
               <LineChart data={ATTENDANCE_TREND}>
                 <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="day" /><YAxis />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Line type="monotone" dataKey="percent" stroke="#002147" strokeWidth={2} dot={{ fill: "#F7A900" }} />
+                <Line type="monotone" dataKey="percent" stroke="#2e3032" strokeWidth={2} dot={{ fill: "#F7A900" }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -133,7 +133,7 @@ export default function ReportsPage() {
                 <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="room" /><YAxis />
                 <Tooltip contentStyle={tooltipStyle} /><Legend />
                 <Bar dataKey="morning" stackId="a" fill="#F7A900" />
-                <Bar dataKey="afternoon" stackId="a" fill="#002147" />
+                <Bar dataKey="afternoon" stackId="a" fill="#2e3032" />
                 <Bar dataKey="evening" stackId="a" fill="#22c55e" />
               </BarChart>
             </ResponsiveContainer>
@@ -151,7 +151,7 @@ export default function ReportsPage() {
                 <BarChart data={SUBJECT_AVG}>
                   <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="subject" /><YAxis />
                   <Tooltip contentStyle={tooltipStyle} />
-                  <Bar dataKey="avg" fill="#002147" radius={[6,6,0,0]} />
+                  <Bar dataKey="avg" fill="#2e3032" radius={[6,6,0,0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -221,7 +221,7 @@ export default function ReportsPage() {
               <BarChart data={LEAVE_BY_TYPE}>
                 <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="type" /><YAxis />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="count" fill="#002147" radius={[6,6,0,0]} />
+                <Bar dataKey="count" fill="#2e3032" radius={[6,6,0,0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

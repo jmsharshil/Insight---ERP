@@ -194,7 +194,7 @@ function getStatusColor(status: string) {
     case "inactive": return "bg-red-50 text-red-700 border-red-200";
     case "alumni": return "bg-purple-50 text-purple-700 border-purple-200";
     case "suspended": return "bg-amber-50 text-amber-700 border-amber-200";
-    default: return "bg-gray-50 text-gray-700 border-gray-200";
+    default: return "bg-gray-50 text-black border-gray-200";
   }
 }
 
@@ -647,7 +647,7 @@ export default function StudentDetailPage() {
                           <div className="flex items-center gap-2">
                             {h.old_status !== h.new_status ? (
                               <>
-                                <Badge className="bg-gray-100 text-gray-600 border border-gray-200 text-xs">{h.old_status_display}</Badge>
+                                <Badge className="bg-gray-100 text-black border border-gray-200 text-xs">{h.old_status_display}</Badge>
                                 <span className="text-muted-foreground text-xs">→</span>
                                 <Badge className={`border text-xs ${getStatusColor(h.new_status)}`}>{h.new_status_display}</Badge>
                               </>

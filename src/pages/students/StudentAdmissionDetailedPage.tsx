@@ -116,7 +116,7 @@ export default function StudentAdmissionDetailedPage() {
         <div className="flex-1 space-y-1">
           <div className="flex items-center gap-3">
             <h2 className="text-3xl font-heading font-bold text-text-primary">{admission.first_name} {admission.surname}</h2>
-            <Badge className={admission.status === "payment_pending" ? "bg-amber-100 text-amber-700" : admission.status === "payment_submitted" ? "bg-blue-100 text-blue-700" : admission.status === "active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}>
+            <Badge className={admission.status === "payment_pending" ? "bg-amber-100 text-amber-700" : admission.status === "payment_submitted" ? "bg-blue-100 text-blue-700" : admission.status === "active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-black"}>
               {admission.status_display || admission.status.replace(/_/g, " ")}
             </Badge>
           </div>

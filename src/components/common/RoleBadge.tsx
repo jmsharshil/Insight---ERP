@@ -8,7 +8,7 @@ export default function RoleBadge({ role, className }: { role: RoleId | string; 
     <span
       className={cn(
         "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
-        def?.color || "bg-gray-100", def?.textColor || "text-gray-800", className,
+        def?.color || "bg-gray-100", def?.textColor || "text-black", className,
       )}
     >
       {def?.label || role}

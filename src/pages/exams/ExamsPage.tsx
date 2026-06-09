@@ -499,7 +499,7 @@ function TakeExamModal({ exam, onClose, onSubmit }: { exam: Exam; onClose: () =>
               onClick={() => setIdx(i)}
               className={cn(
                 "h-8 rounded text-xs font-medium",
-                i === idx ? "bg-navy text-white" :
+                i === idx ? "bg-primary text-black" :
                 answers[qq.id] != null ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground",
               )}
             >{i + 1}</button>

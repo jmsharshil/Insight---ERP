@@ -115,7 +115,7 @@ export default function TopBar() {
                       alt={user.name}
                       className="object-cover"
                     />
-                    <AvatarFallback className="bg-navy text-white text-xs font-bold">
+                    <AvatarFallback className="bg-sidebar text-white text-xs font-bold">
                       {user.name.split(" ").map((n) => n[0]).slice(0, 2).join("")}
                     </AvatarFallback>
                   </Avatar>

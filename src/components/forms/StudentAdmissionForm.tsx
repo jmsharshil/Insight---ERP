@@ -18,22 +18,13 @@ import {
   FileImage, Upload, X, Camera, CreditCard, Baby, PenTool,
 } from "lucide-react";
 
+import { THEME } from "@/config/theme";
+
 /* ─── Theme constants (matches LeadsInquiryForm) ──────────── */
 const T = {
-  primary: "#F7A900",
-  primaryDark: "#D4900A",
-  primaryLight: "#FFF3CC",
-  navy: "#002147",
-  navyLight: "#003366",
-  surface: "#F7F7F7",
-  card: "#FFFFFF",
-  text: "#1a1a2e",
-  textMuted: "#6B7280",
-  border: "#E5E7EB",
-  success: "#16A34A",
-  error: "#DC2626",
-  headingFont: '"Sora", sans-serif',
-  bodyFont: '"DM Sans", sans-serif',
+  ...THEME.colors,
+  headingFont: THEME.fontFamily.heading,
+  bodyFont: THEME.fontFamily.body,
 };
 
 /* ─── Reusable section card ────────────────────────────────── */
@@ -45,7 +36,7 @@ function SectionCard({ icon: Icon, title, children }: { icon: React.ElementType;
     >
       <div
         className="px-4 sm:px-6 py-3.5 sm:py-4 flex items-center gap-2.5"
-        style={{ background: `linear-gradient(135deg, ${T.navy} 0%, ${T.navyLight} 100%)` }}
+        style={{ background: T.grayDark }}
       >
         <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(247,169,0,0.15)" }}>
           <Icon className="w-4 h-4" style={{ color: T.primary }} />
@@ -64,7 +55,7 @@ function SubSection({ icon: Icon, title }: { icon: React.ElementType; title: str
       <div className="w-7 h-7 rounded-md flex items-center justify-center" style={{ background: `${T.primary}18` }}>
         <Icon className="w-3.5 h-3.5" style={{ color: T.primaryDark }} />
       </div>
-      <h3 className="font-semibold text-sm sm:text-base" style={{ color: T.navy, fontFamily: T.headingFont }}>{title}</h3>
+      <h3 className="font-semibold text-sm sm:text-base" style={{ color: T.text, fontFamily: T.headingFont }}>{title}</h3>
     </div>
   );
 }
@@ -281,7 +272,7 @@ export default function StudentAdmissionForm() {
             <CheckCircle2 className="w-12 h-12" style={{ color: T.success }} />
           </div>
 
-          <h2 className="text-2xl sm:text-3xl font-bold mb-3" style={{ color: T.navy, fontFamily: T.headingFont }}>
+          <h2 className="text-2xl sm:text-3xl font-bold mb-3" style={{ color: T.black, fontFamily: T.headingFont }}>
             Admission Submitted!
           </h2>
           <p className="text-base sm:text-lg mb-2" style={{ color: T.text }}>
@@ -309,7 +300,7 @@ export default function StudentAdmissionForm() {
         {/* ── Header ── */}
         <div className="text-center mb-8 sm:mb-10">
           <img src={logo} alt="Insight ERP" className="h-16 sm:h-20 object-contain mx-auto mb-5 sm:mb-6" />
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: T.navy, fontFamily: T.headingFont }}>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: T.black, fontFamily: T.headingFont }}>
             Student Admission Form
           </h1>
           <p className="mt-2 text-sm sm:text-base max-w-md mx-auto" style={{ color: T.textMuted }}>
@@ -673,10 +664,10 @@ export default function StudentAdmissionForm() {
 
             <Button
               type="submit"
-              className="w-full h-12 sm:h-14 text-sm sm:text-base font-semibold text-white transition-all duration-200"
+              className="w-full h-12 sm:h-14 text-sm sm:text-base font-semibold text-black transition-all duration-200"
               style={{
-                background: formData.consent && !loading ? `linear-gradient(135deg, ${T.navy} 0%, ${T.navyLight} 100%)` : T.textMuted,
-                boxShadow: formData.consent && !loading ? "0 4px 14px rgba(0,33,71,0.25)" : "none",
+                background: formData.consent && !loading ? T.primary : T.textMuted,
+                boxShadow: formData.consent && !loading ? "0 4px 14px rgba(247,169,0,0.25)" : "none",
               }}
               disabled={loading || !formData.consent}
             >

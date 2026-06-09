@@ -275,7 +275,7 @@ function StudentFeesView({ txns, setTxns, uploadOpen, setUploadOpen }: {
       />
 
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-        className="rounded-xl bg-gradient-to-br from-navy to-navy-light text-white p-5 mb-4">
+        className="rounded-xl bg-sidebar text-white p-5 mb-4">
         <p className="text-xs uppercase tracking-wider opacity-80">My Fee Summary</p>
         <div className="grid grid-cols-3 gap-4 mt-3">
           <div><p className="text-xs opacity-80">Total</p><p className="text-xl font-heading font-bold">{formatCurrency(student.feeTotal)}</p></div>

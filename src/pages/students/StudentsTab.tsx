@@ -77,7 +77,7 @@ export default function StudentsTab() {
     {
       key: "status", header: "Status",
       render: (r) => {
-        let bg = "bg-gray-100", text = "text-gray-700";
+        let bg = "bg-gray-100", text = "text-black";
         if (r.status === "active") { bg = "bg-green-100"; text = "text-green-700"; }
         if (r.status === "inactive") { bg = "bg-red-100"; text = "text-red-700"; }
         if (r.status === "alumni") { bg = "bg-purple-100"; text = "text-purple-700"; }

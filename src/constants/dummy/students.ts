@@ -69,7 +69,7 @@ export const DUMMY_STUDENTS: Student[] = Array.from({ length: 25 }, (_, i) => {
 
 export const STUDENT_STATUS_META: Record<StudentStatus, { label: string; bg: string; color: string }> = {
   active: { label: "Active", bg: "bg-green-100", color: "text-green-700" },
-  inactive: { label: "Inactive", bg: "bg-gray-200", color: "text-gray-700" },
+  inactive: { label: "Inactive", bg: "bg-gray-200", color: "text-black" },
   transferred: { label: "Transferred", bg: "bg-blue-100", color: "text-blue-700" },
   alumni: { label: "Alumni", bg: "bg-amber-100", color: "text-amber-700" },
 };

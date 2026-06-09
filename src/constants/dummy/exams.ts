@@ -105,6 +105,6 @@ DUMMY_EXAMS.filter(e => e.status === "completed" || e.status === "result_publish
 export const EXAM_STATUS_META: Record<ExamStatus, { label: string; bg: string; color: string }> = {
   scheduled: { label: "Scheduled", bg: "bg-blue-100", color: "text-blue-700" },
   ongoing: { label: "Ongoing", bg: "bg-amber-100", color: "text-amber-700" },
-  completed: { label: "Completed", bg: "bg-gray-200", color: "text-gray-700" },
+  completed: { label: "Completed", bg: "bg-gray-200", color: "text-black" },
   result_published: { label: "Results Published", bg: "bg-green-100", color: "text-green-700" },
 };

@@ -11,22 +11,13 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Upload, X, CreditCard, Banknote, Loader2, FileImage } from "lucide-react";
 
+import { THEME } from "@/config/theme";
+
 /* ─── Theme constants ──────────── */
 const T = {
-  primary: "#F7A900",
-  primaryDark: "#D4900A",
-  primaryLight: "#FFF3CC",
-  navy: "#002147",
-  navyLight: "#003366",
-  surface: "#F7F7F7",
-  card: "#FFFFFF",
-  text: "#1a1a2e",
-  textMuted: "#6B7280",
-  border: "#E5E7EB",
-  success: "#16A34A",
-  error: "#DC2626",
-  headingFont: '"Sora", sans-serif',
-  bodyFont: '"DM Sans", sans-serif',
+  ...THEME.colors,
+  headingFont: THEME.fontFamily.heading,
+  bodyFont: THEME.fontFamily.body,
 };
 
 function FileUploadField({
@@ -153,7 +144,7 @@ export default function StudentPaymentUploadForm() {
           <div className="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
             <CheckCircle2 className="w-10 h-10 text-green-600" />
           </div>
-          <h1 className="text-2xl font-bold mb-4" style={{ fontFamily: T.headingFont, color: T.navy }}>Payment Uploaded Successfully!</h1>
+          <h1 className="text-2xl font-bold mb-4" style={{ fontFamily: T.headingFont, color: T.black }}>Payment Uploaded Successfully!</h1>
           <p className="text-muted-foreground leading-relaxed">
             Thank you! Your payment details have been submitted. Our team will verify the transaction and process your admission shortly. We will be in touch with you.
           </p>
@@ -168,7 +159,7 @@ export default function StudentPaymentUploadForm() {
         {/* Header */}
         <div className="text-center mb-8">
           <img src={logo} alt="Insight Institute" className="h-16 mx-auto mb-6 drop-shadow-sm" />
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2" style={{ fontFamily: T.headingFont, color: T.navy }}>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2" style={{ fontFamily: T.headingFont, color: T.black }}>
             Payment Verification
           </h1>
           <p className="text-muted-foreground">Please upload your payment screenshot to proceed with the admission.</p>
@@ -183,7 +174,7 @@ export default function StudentPaymentUploadForm() {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="bg-white rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: T.border }}>
-              <div className="px-6 py-4 flex items-center gap-2" style={{ background: `linear-gradient(135deg, ${T.navy} 0%, ${T.navyLight} 100%)` }}>
+              <div className="px-6 py-4 flex items-center gap-2" style={{ background: T.grayDark }}>
                 <CreditCard className="w-5 h-5 text-amber-400" />
                 <h2 className="text-lg font-semibold text-white" style={{ fontFamily: T.headingFont }}>Payment Details</h2>
               </div>
@@ -231,7 +222,7 @@ export default function StudentPaymentUploadForm() {
               className="w-full h-14 text-base font-semibold shadow-lg rounded-xl transition-all hover:-translate-y-0.5"
               style={{
                 background: `linear-gradient(135deg, ${T.primary} 0%, ${T.primaryDark} 100%)`,
-                color: T.navy,
+                color: T.textInverse,
                 opacity: (loading || !isFormValid()) ? 0.7 : 1
               }}
             >
