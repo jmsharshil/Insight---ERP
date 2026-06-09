@@ -52,7 +52,7 @@ export default function GridView({
                 >
                   {slot ? (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                      <p className="font-medium">{slot.subject}</p>
+                      <p className="font-medium">{slot.subject_name || slot.subject}</p>
                       <p className="text-muted-foreground truncate">{slot.facultyName}</p>
                       <p className="text-muted-foreground">{slot.classroom}</p>
                       {slot.isConflict && (

@@ -19,6 +19,7 @@ export function* watchUsersSaga() {
   yield takeLatest(courseAction.CREATE_COURSE, genericSaga);
   yield takeLatest(courseAction.UPDATE_COURSE, genericSaga);
   yield takeLatest(courseAction.DELETE_COURSE, genericSaga);
+  yield takeLatest(subjectAction.GET_SUBJECTS, genericSaga);
   yield takeLatest(subjectAction.CREATE_SUBJECT, genericSaga);
   yield takeLatest(subjectAction.UPDATE_SUBJECT, genericSaga);
   yield takeLatest(subjectAction.DELETE_SUBJECT, genericSaga);

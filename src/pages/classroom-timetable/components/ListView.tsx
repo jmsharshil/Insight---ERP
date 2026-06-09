@@ -19,7 +19,7 @@ export default function ListView({ slots, onEdit }: ListViewProps) {
             <p className="text-muted-foreground">{s.startTime}</p>
           </div>
           <div className="flex-1">
-            <p className="font-medium text-sm">{s.subject}</p>
+            <p className="font-medium text-sm">{s.subject_name}</p>
             <p className="text-xs text-muted-foreground">
               {s.facultyName} @ {s.classroom}
             </p>
