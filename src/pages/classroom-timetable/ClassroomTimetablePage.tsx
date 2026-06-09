@@ -108,18 +108,11 @@ export default function ClassroomTimetablePage() {
     dispatch({
       type: dropdownActions.GET_DROPDOWN,
       method: "GET",
-      endPoint: "/api/auth/users/",
+      endPoint: "/api/v1/faculty/",
       auth: true,
       getResponse: (res: any) => {
-        const data = res?.data?.results || res?.results || res?.data?.data || res?.data || res;
-        if (Array.isArray(data)) {
-          setFacultyList(
-            data.filter(
-              (u: any) =>
-                u.role === "faculty" || String(u.role).toLowerCase() === "faculty" || u.is_faculty,
-            ),
-          );
-        }
+        const data = res?.data || res;
+        setFacultyList(data.results || data);
       },
     });
   }, [dispatch]);

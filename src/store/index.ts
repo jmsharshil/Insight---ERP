@@ -17,6 +17,7 @@ import coursesReducer from "@/redux/slices/coursesSlice";
 import chatReducer from "@/redux/slices/chatSlice";
 import classRoomReducer from "@/redux/slices/classroomSlice";
 import timetableReducer from "@/redux/slices/timetableSlice";
+import { feesReducer } from "@/redux/slices/feesSlice";
 
 const sagaMiddleware = createSagaMiddleware();
 
@@ -41,6 +42,7 @@ const rootReducer = combineReducers({
   chat: chatReducer,
   classRoom: classRoomReducer,
   timetable: timetableReducer,
+  fees: feesReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

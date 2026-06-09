@@ -125,7 +125,9 @@ export default function SlotDialog({
             {s.course_name && (
               <div className="col-span-2">
                 <span className="text-muted-foreground block text-xs mb-1">Course</span>
-                <span className="font-medium">{s.course_name} {s.course_code ? `(${s.course_code})` : ''}</span>
+                <span className="font-medium">
+                  {s.course_name} {s.course_code ? `(${s.course_code})` : ""}
+                </span>
               </div>
             )}
             <div>
@@ -147,108 +149,128 @@ export default function SlotDialog({
             {(s.effective_from || s.effective_to) && (
               <div className="col-span-2">
                 <span className="text-muted-foreground block text-xs mb-1">Effective Dates</span>
-                <span className="font-medium">{s.effective_from || "N/A"} to {s.effective_to || "N/A"}</span>
+                <span className="font-medium">
+                  {s.effective_from || "N/A"} to {s.effective_to || "N/A"}
+                </span>
               </div>
             )}
           </div>
         ) : (
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label className="text-xs">Day</Label>
-            <Select value={s.day} onValueChange={(v) => setS({ ...s, day: v as Day })}>
-              <SelectTrigger className="mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {DAYS.map((d) => (
-                  <SelectItem key={d} value={d}>
-                    {d}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Day</Label>
+              <Select value={s.day} onValueChange={(v) => setS({ ...s, day: v as Day })}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DAYS.map((d) => (
+                    <SelectItem key={d} value={d}>
+                      {d}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Period</Label>
+              <Select
+                value={String(s.period)}
+                onValueChange={(v) => {
+                  const p = Number(v) as 1 | 2 | 3 | 4 | 5 | 6;
+                  setS({
+                    ...s,
+                    period: p,
+                    startTime: PERIOD_TIMES[p].start,
+                    endTime: PERIOD_TIMES[p].end,
+                  });
+                }}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PERIODS.map((p) => (
+                    <SelectItem key={p} value={String(p)}>
+                      P{p} ({PERIOD_TIMES[p].start})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="col-span-2">
+              <Label className="text-xs">Subject</Label>
+              <Select
+                value={s.subject}
+                onValueChange={(v) => {
+                  const sub =
+                    subjects.length > 0 ? subjects.find((x: any) => x.id === v) : { name: v };
+                  setS({ ...s, subject: v, subject_name: sub?.name || v });
+                }}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(subjects.length > 0 ? subjects : SUBJECTS.map((x) => ({ id: x, name: x }))).map(
+                    (sub: any) => (
+                      <SelectItem key={sub.id} value={sub.id}>
+                        {sub.name}
+                      </SelectItem>
+                    ),
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Faculty</Label>
+              <Select
+                value={s.facultyId}
+                onValueChange={(v) => {
+                  const f =
+                    facultyList.length > 0
+                      ? facultyList.find((x: any) => x.id === v)
+                      : FACULTY.find((x) => x.id === v);
+                  if (f)
+                    setS({
+                      ...s,
+                      facultyId: f.id,
+                      facultyName:
+                        f.name || `${f.first_name || ""} ${f.last_name || ""}`.trim() || "Faculty",
+                    });
+                }}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(facultyList.length > 0 ? facultyList : FACULTY).map((f: any) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.full_name || `${f.first_name || ""} ${f.last_name || ""}`.trim() || f.id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Classroom</Label>
+              <Select value={s.classroom} onValueChange={(v) => setS({ ...s, classroom: v })}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(classrooms.length > 0
+                    ? classrooms
+                    : CLASSROOMS.map((x) => ({ id: x, name: x }))
+                  ).map((c: any) => (
+                    <SelectItem key={c.name} value={c.name}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div>
-            <Label className="text-xs">Period</Label>
-            <Select
-              value={String(s.period)}
-              onValueChange={(v) => {
-                const p = Number(v) as 1 | 2 | 3 | 4 | 5 | 6;
-                setS({
-                  ...s,
-                  period: p,
-                  startTime: PERIOD_TIMES[p].start,
-                  endTime: PERIOD_TIMES[p].end,
-                });
-              }}
-            >
-              <SelectTrigger className="mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PERIODS.map((p) => (
-                  <SelectItem key={p} value={String(p)}>
-                    P{p} ({PERIOD_TIMES[p].start})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="col-span-2">
-            <Label className="text-xs">Subject</Label>
-            <Select value={s.subject} onValueChange={(v) => {
-              const sub = subjects.length > 0 ? subjects.find((x: any) => x.id === v) : { name: v };
-              setS({ ...s, subject: v, subject_name: sub?.name || v });
-            }}>
-              <SelectTrigger className="mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(subjects.length > 0 ? subjects : SUBJECTS.map(x => ({ id: x, name: x }))).map((sub: any) => (
-                  <SelectItem key={sub.id} value={sub.id}>
-                    {sub.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label className="text-xs">Faculty</Label>
-            <Select
-              value={s.facultyId}
-              onValueChange={(v) => {
-                const f = facultyList.length > 0 ? facultyList.find((x: any) => x.id === v) : FACULTY.find((x) => x.id === v);
-                if (f) setS({ ...s, facultyId: f.id, facultyName: f.name || `${f.first_name || ''} ${f.last_name || ''}`.trim() || "Faculty" });
-              }}
-            >
-              <SelectTrigger className="mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(facultyList.length > 0 ? facultyList : FACULTY).map((f: any) => (
-                  <SelectItem key={f.id} value={f.id}>
-                    {f.name || `${f.first_name || ''} ${f.last_name || ''}`.trim() || f.id}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label className="text-xs">Classroom</Label>
-            <Select value={s.classroom} onValueChange={(v) => setS({ ...s, classroom: v })}>
-              <SelectTrigger className="mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(classrooms.length > 0 ? classrooms : CLASSROOMS.map(x => ({ id: x, name: x }))).map((c: any) => (
-                  <SelectItem key={c.name} value={c.name}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
         )}
         <DialogFooter>
           {isViewMode ? (
@@ -261,7 +283,10 @@ export default function SlotDialog({
               <Button variant="outline" onClick={onClose}>
                 Close
               </Button>
-              <Button onClick={() => setIsViewMode(false)} className="bg-primary hover:bg-primary-dark text-primary-foreground">
+              <Button
+                onClick={() => setIsViewMode(false)}
+                className="bg-primary hover:bg-primary-dark text-primary-foreground"
+              >
                 Edit Slot
               </Button>
             </>
@@ -272,7 +297,10 @@ export default function SlotDialog({
                   Delete
                 </Button>
               )}
-              <Button variant="outline" onClick={() => existing ? setIsViewMode(true) : onClose()}>
+              <Button
+                variant="outline"
+                onClick={() => (existing ? setIsViewMode(true) : onClose())}
+              >
                 Cancel
               </Button>
               <Button
