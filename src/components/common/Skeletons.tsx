@@ -113,3 +113,52 @@ export function SheetSkeleton() {
   );
 }
 
+export function ChatSkeleton() {
+  return (
+    <div className="flex-1 p-4 space-y-4">
+      {Array.from({ length: 6 }).map((_, idx) => {
+        const isOwn = idx % 2 !== 0;
+        return (
+          <div key={idx} className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
+            <div className={`max-w-[70%] w-[250px] space-y-2 p-3 ${isOwn ? "bg-[#d9fdd3] dark:bg-[#005c4b] rounded-2xl rounded-tr-sm" : "bg-white dark:bg-[#202c33] rounded-2xl rounded-tl-sm"}`}>
+              <Skeleton width={isOwn ? "100%" : "80%"} height={14} className={isOwn ? "opacity-50" : "opacity-30"} />
+              <Skeleton width={isOwn ? "60%" : "40%"} height={14} className={isOwn ? "opacity-50" : "opacity-30"} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export function RoomDetailsSkeleton() {
+  return (
+    <div className="h-full flex flex-col bg-surface overflow-hidden w-80 border-l border-border flex-shrink-0 animate-in slide-in-from-right-8 duration-300">
+      <div className="p-4 border-b border-border flex items-center justify-between bg-card shrink-0">
+        <Skeleton width={100} height={20} />
+        <Skeleton circle width={32} height={32} />
+      </div>
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex flex-col items-center justify-center space-y-3">
+          <Skeleton circle width={96} height={96} />
+          <div className="text-center w-full flex flex-col items-center">
+            <Skeleton width={150} height={24} className="mb-2" />
+            <Skeleton width={100} height={16} />
+          </div>
+        </div>
+        <div className="space-y-4 pt-4 border-t border-border">
+          <Skeleton width={120} height={20} className="mb-4" />
+          {Array.from({ length: 4 }).map((_, idx) => (
+            <div key={idx} className="flex items-center gap-3">
+              <Skeleton circle width={40} height={40} />
+              <div className="flex-1">
+                <Skeleton width="60%" height={16} className="mb-1" />
+                <Skeleton width="40%" height={12} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
