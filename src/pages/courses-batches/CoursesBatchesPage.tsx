@@ -119,22 +119,7 @@ export default function CoursesBatchesPage() {
   };
 
   const openEditBatchModal = (b: any) => {
-    setBatchForm({
-      course: b.course || "",
-      name: b.name || "",
-      group_module: b.group_module || "module_1",
-      batch_attempt: b.batch_attempt || "june",
-      location: b.location || "",
-      start_date: b.start_date || "",
-      end_date: b.end_date || "",
-      max_students: b.max_students || 50,
-      timing: b.timing || "",
-      is_active: b.is_active !== false,
-      enrolled_students: b.enrolled_students ? [...b.enrolled_students] : [],
-      assigned_faculty: b.assigned_faculty ? [...b.assigned_faculty] : [],
-    });
-    setEditingBatch(b);
-    setSheetMode("edit");
+    navigate(`/courses-batches/batch/${b.id}?mode=edit`);
   };
 
   const handleAssignStudent = (studentId: string, studentName?: string) => {
@@ -180,7 +165,7 @@ export default function CoursesBatchesPage() {
       type: "ASSIGN_FACULTY",
       method: "POST",
       endPoint: API.BATCHES.ASSIGN_FACULTY(editingBatch.id),
-      body: { faculty_id: [facultyId] },
+      body: { faculty_id: facultyId },
       auth: true,
       getResponse: () => {
         toast.success("Faculty assigned successfully.");
@@ -287,20 +272,7 @@ export default function CoursesBatchesPage() {
   };
 
   const handleViewBatchDetails = (batchId: string) => {
-    dispatch({
-      type: batchAction.GET_BATCH_DETAILS,
-      method: "GET",
-      endPoint: API.BATCHES.DETAIL(batchId),
-      auth: true,
-      getResponse: (res: any) => {
-        setSelectedBatchDetails(res?.data ?? res);
-        setSheetMode("view");
-      },
-      getError: (err: any) => {
-        const msg = err?.response?.data?.message || err?.message || "Failed to fetch batch details";
-        toast.error(msg);
-      },
-    });
+    navigate(`/courses-batches/batch/${batchId}`);
   };
 
   const canEdit =
@@ -399,7 +371,7 @@ export default function CoursesBatchesPage() {
       <PageHeader
         title={activeSubTab === "courses" ? "Courses" : "Student Batches"}
         subtitle={
-          activeSubTab === "courses" 
+          activeSubTab === "courses"
             ? "Manage courses, syllabus, and academic structure."
             : "Manage student batches, classrooms, and mentors."
         }

@@ -94,6 +94,7 @@ export default function BatchDetailsSheet({
       endPoint: "/api/v1/students/",
       auth: true,
       getResponse: (res: any) => {
+        console.log(res)
         const data = res?.data?.results || res?.results || res?.data?.data || res?.data || res;
         if (Array.isArray(data)) setStudents(data);
       },
@@ -106,8 +107,9 @@ export default function BatchDetailsSheet({
       endPoint: "/api/v1/faculty/",
       auth: true,
       getResponse: (res: any) => {
-        const data = res?.data || res;
-        setFacultyList(data.results || data);
+        console.log('abcd')
+        const data = res?.data || [];
+        setFacultyList(data);
       },
     });
   }, [dispatch]);
@@ -331,7 +333,9 @@ export default function BatchDetailsSheet({
                   <Select
                     value=""
                     onValueChange={(val) => {
-                      const existing = batchForm.enrolled_students?.find((s: any) => s.student_id === val);
+                      const existing = batchForm.enrolled_students?.find(
+                        (s: any) => s.student_id === val,
+                      );
                       if (!existing) {
                         const studentName = students.find((s: any) => s.id === val)?.full_name;
                         if (onAssignStudent) {
@@ -339,7 +343,10 @@ export default function BatchDetailsSheet({
                         } else {
                           setBatchForm({
                             ...batchForm,
-                            enrolled_students: [...(batchForm.enrolled_students || []), { student_id: val, student_name: studentName }],
+                            enrolled_students: [
+                              ...(batchForm.enrolled_students || []),
+                              { student_id: val, student_name: studentName },
+                            ],
                           });
                         }
                       }
@@ -361,13 +368,12 @@ export default function BatchDetailsSheet({
                     <div className="flex flex-wrap gap-2 mt-2 max-h-32 overflow-y-auto">
                       {batchForm.enrolled_students.map((studentObj: any) => {
                         const sid = studentObj.student_id;
-                        const studentLabel = studentObj.student_name || students.find((o: any) => o.id === sid)?.full_name || sid;
+                        const studentLabel =
+                          studentObj.student_name ||
+                          students.find((o: any) => o.id === sid)?.full_name ||
+                          sid;
                         return (
-                          <Badge
-                            key={sid}
-                            variant="secondary"
-                            className="flex items-center gap-1"
-                          >
+                          <Badge key={sid} variant="secondary" className="flex items-center gap-1">
                             {studentLabel}
                             <X
                               className="w-3 h-3 cursor-pointer hover:text-destructive"
@@ -398,7 +404,9 @@ export default function BatchDetailsSheet({
                   <Select
                     value=""
                     onValueChange={(val) => {
-                      const existing = batchForm.assigned_faculty?.find((f: any) => f.faculty_id === val);
+                      const existing = batchForm.assigned_faculty?.find(
+                        (f: any) => f.faculty_id === val,
+                      );
                       if (!existing) {
                         const facultyName = facultyList.find((o: any) => o.id === val)?.full_name;
                         if (onAssignFaculty) {
@@ -406,7 +414,10 @@ export default function BatchDetailsSheet({
                         } else {
                           setBatchForm({
                             ...batchForm,
-                            assigned_faculty: [...(batchForm.assigned_faculty || []), { faculty_id: val, faculty_name: facultyName }],
+                            assigned_faculty: [
+                              ...(batchForm.assigned_faculty || []),
+                              { faculty_id: val, faculty_name: facultyName },
+                            ],
                           });
                         }
                       }
@@ -429,7 +440,9 @@ export default function BatchDetailsSheet({
                       {batchForm.assigned_faculty.map((facultyObj: any) => {
                         const fid = facultyObj.faculty_id;
                         const facultyLabel =
-                          facultyObj.faculty_name || facultyList.find((o: any) => o.id === fid)?.full_name || fid;
+                          facultyObj.faculty_name ||
+                          facultyList.find((o: any) => o.id === fid)?.full_name ||
+                          fid;
                         return (
                           <Badge key={fid} variant="secondary" className="flex items-center gap-1">
                             {facultyLabel}
