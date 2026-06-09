@@ -16,6 +16,8 @@ export const THEME = {
     warning: "#F59E0B",
     error: "#DC2626",
     info: "#2563EB",
+  
+
   },
   sidebar: { width: "260px", collapsedWidth: "72px" },
   topbar: { height: "64px" },

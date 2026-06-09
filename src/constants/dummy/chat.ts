@@ -3,6 +3,7 @@ export interface ChatMessage {
   channelId: string;
   senderId: string;
   senderName: string;
+  senderAvatar?: string;
   content: string;
   type: "text" | "file" | "image";
   fileUrl?: string;
@@ -11,16 +12,20 @@ export interface ChatMessage {
   timestamp: string;
   readBy: string[];
   status: "sent" | "delivered" | "read";
+  isEdited?: boolean;
+  isDeleted?: boolean;
 }
 
 export interface ChatChannel {
   id: string;
   type: "direct" | "group";
   name?: string;
+  avatarUrl?: string;
   participants: string[];
   batch?: string;
   lastMessage?: ChatMessage;
   unreadCount: number;
+  roomTypeDisplay?: string;
 }
 
 const SAMPLE_TEXTS = [
