@@ -69,6 +69,8 @@ export default function CoursesBatchesPage() {
     max_students: 50,
     timing: "09:00-12:00",
     is_active: true,
+    enrolled_students: [],
+    assigned_faculty: [],
   });
   const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
   const [batchToDelete, setBatchToDelete] = useState<any>(null);
@@ -109,6 +111,8 @@ export default function CoursesBatchesPage() {
       max_students: 50,
       timing: "09:00-12:00",
       is_active: true,
+      enrolled_students: [],
+      assigned_faculty: [],
     });
     setEditingBatch(null);
     setSheetMode("create");
@@ -126,9 +130,85 @@ export default function CoursesBatchesPage() {
       max_students: b.max_students || 50,
       timing: b.timing || "",
       is_active: b.is_active !== false,
+      enrolled_students: b.enrolled_students ? [...b.enrolled_students] : [],
+      assigned_faculty: b.assigned_faculty ? [...b.assigned_faculty] : [],
     });
     setEditingBatch(b);
     setSheetMode("edit");
+  };
+
+  const handleAssignStudent = (studentId: string, studentName?: string) => {
+    if (!editingBatch) return;
+    dispatch({
+      type: batchAction.ASSIGN_STUDENT,
+      method: "POST",
+      endPoint: API.BATCHES.ASSIGN_STUDENT(editingBatch.id),
+      body: { student_ids: [studentId] },
+      auth: true,
+      getResponse: () => {
+        toast.success("Student assigned successfully.");
+        setBatchForm({
+          ...batchForm,
+          enrolled_students: [...(batchForm.enrolled_students || []), { student_id: studentId, student_name: studentName }],
+        });
+      },
+      getError: (err: any) => toast.error(err?.response?.data?.message || "Failed to assign student"),
+    });
+  };
+
+  const handleRemoveStudent = (studentId: string) => {
+    if (!editingBatch) return;
+    dispatch({
+      type: batchAction.REMOVE_STUDENT,
+      method: "POST",
+      endPoint: API.BATCHES.REMOVE_STUDENT(editingBatch.id, studentId),
+      auth: true,
+      getResponse: () => {
+        toast.success("Student removed successfully.");
+        setBatchForm({
+          ...batchForm,
+          enrolled_students: batchForm.enrolled_students?.filter((s: any) => s.student_id !== studentId),
+        });
+      },
+      getError: (err: any) => toast.error(err?.response?.data?.message || "Failed to remove student"),
+    });
+  };
+
+  const handleAssignFaculty = (facultyId: string, facultyName?: string) => {
+    if (!editingBatch) return;
+    dispatch({
+      type: "ASSIGN_FACULTY",
+      method: "POST",
+      endPoint: API.BATCHES.ASSIGN_FACULTY(editingBatch.id),
+      body: { faculty_id: [facultyId] },
+      auth: true,
+      getResponse: () => {
+        toast.success("Faculty assigned successfully.");
+        setBatchForm({
+          ...batchForm,
+          assigned_faculty: [...(batchForm.assigned_faculty || []), { faculty_id: facultyId, faculty_name: facultyName }],
+        });
+      },
+      getError: (err: any) => toast.error(err?.response?.data?.message || "Failed to assign faculty"),
+    });
+  };
+
+  const handleRemoveFaculty = (facultyId: string) => {
+    if (!editingBatch) return;
+    dispatch({
+      type: "REMOVE_FACULTY",
+      method: "POST",
+      endPoint: API.BATCHES.REMOVE_FACULTY(editingBatch.id, facultyId),
+      auth: true,
+      getResponse: () => {
+        toast.success("Faculty removed successfully.");
+        setBatchForm({
+          ...batchForm,
+          assigned_faculty: batchForm.assigned_faculty?.filter((f: any) => f.faculty_id !== facultyId),
+        });
+      },
+      getError: (err: any) => toast.error(err?.response?.data?.message || "Failed to remove faculty"),
+    });
   };
 
   const handleSaveBatch = () => {
@@ -424,6 +504,10 @@ export default function CoursesBatchesPage() {
         onEditClick={() => {
           openEditBatchModal(selectedBatchDetails);
         }}
+        onAssignStudent={handleAssignStudent}
+        onRemoveStudent={handleRemoveStudent}
+        onAssignFaculty={handleAssignFaculty}
+        onRemoveFaculty={handleRemoveFaculty}
       />
 
       <ConfirmDialog

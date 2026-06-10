@@ -93,6 +93,7 @@ export default function StudentsTab() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => navigate(`/students/${r.id}`)}>View Profile</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate(`/students/${r.id}`)}>Assign Batch</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),

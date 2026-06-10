@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 interface Course {
@@ -88,9 +89,44 @@ export default function BatchesTab({
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-border bg-card shadow-sm p-8 min-h-[400px] flex flex-col items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <p className="mt-3 text-sm text-muted-foreground">Loading batches...</p>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row gap-4 items-center bg-card p-4 rounded-xl border border-border">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full sm:w-[180px]" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-border bg-card shadow-sm flex flex-col justify-between overflow-hidden">
+              <div className="p-5 space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                </div>
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full col-span-2" />
+                  <div className="col-span-2 pt-1 border-t border-border/50 flex justify-between">
+                    <Skeleton className="h-3 w-1/3" />
+                    <Skeleton className="h-3 w-1/3" />
+                  </div>
+                </div>
+              </div>
+              <div className="bg-muted/30 px-5 py-3 border-t border-border flex items-center justify-between gap-2">
+                <Skeleton className="h-8 w-24 rounded-md" />
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

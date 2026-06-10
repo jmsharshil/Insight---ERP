@@ -1,10 +1,6 @@
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { Users, Calendar, Clock, MapPin, BookOpen, Edit2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Users, Calendar, Clock, MapPin, BookOpen, Edit2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -17,6 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "@/store";
+import { dropdownActions, studentActions } from "@/redux/actions";
 
 interface Course {
   id: string;
@@ -35,7 +34,8 @@ interface BatchForm {
   end_date: string;
   max_students: number;
   timing: string;
-  is_active: boolean;
+  enrolled_students?: string[];
+  assigned_faculty?: string[];
 }
 
 export type SheetMode = "view" | "edit" | "create" | null;
@@ -51,6 +51,12 @@ interface BatchDetailsSheetProps {
   courses: Course[];
   canEdit?: boolean;
   onEditClick?: () => void;
+  allStudents?: any[]; // optional if we pass them
+  allFaculty?: any[]; // optional if we pass them
+  onAssignStudent?: (studentId: string) => void;
+  onRemoveStudent?: (studentId: string) => void;
+  onAssignFaculty?: (facultyId: string) => void;
+  onRemoveFaculty?: (facultyId: string) => void;
 }
 
 export default function BatchDetailsSheet({
@@ -64,11 +70,47 @@ export default function BatchDetailsSheet({
   courses,
   canEdit,
   onEditClick,
+  allStudents = [],
+  onAssignStudent,
+  onRemoveStudent,
+  onAssignFaculty,
+  onRemoveFaculty,
 }: BatchDetailsSheetProps) {
   // If mode is null, render nothing or just close sheet
   if (!mode) return null;
 
   const isFormMode = mode === "edit" || mode === "create";
+
+  const dispatch = useDispatch<AppDispatch>();
+
+  const [students, setStudents] = useState<any[]>([]);
+  const [facultyList, setFacultyList] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Fetch Subjects
+    dispatch({
+      type: studentActions.GET_STUDENTS,
+      method: "GET",
+      endPoint: "/api/v1/students/",
+      auth: true,
+      getResponse: (res: any) => {
+        const data = res?.data?.results || res?.results || res?.data?.data || res?.data || res;
+        if (Array.isArray(data)) setStudents(data);
+      },
+    });
+
+    // Fetch Faculty
+    dispatch({
+      type: dropdownActions.GET_DROPDOWN,
+      method: "GET",
+      endPoint: "/api/v1/faculty/",
+      auth: true,
+      getResponse: (res: any) => {
+        const data = res?.data || res;
+        setFacultyList(data.results || data);
+      },
+    });
+  }, [dispatch]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -280,6 +322,141 @@ export default function BatchDetailsSheet({
               />
             </div>
 
+            {mode === "edit" && (
+              <div className="space-y-4 pt-4 border-t border-border mt-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Manage Enrolled Students
+                  </Label>
+                  <Select
+                    value=""
+                    onValueChange={(val) => {
+                      const existing = batchForm.enrolled_students?.find((s: any) => s.student_id === val);
+                      if (!existing) {
+                        const studentName = students.find((s: any) => s.id === val)?.full_name;
+                        if (onAssignStudent) {
+                          onAssignStudent(val, studentName);
+                        } else {
+                          setBatchForm({
+                            ...batchForm,
+                            enrolled_students: [...(batchForm.enrolled_students || []), { student_id: val, student_name: studentName }],
+                          });
+                        }
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="bg-muted/10">
+                      <SelectValue placeholder="Add student..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {students.map((opt: any) => (
+                        <SelectItem key={opt.id} value={opt.id}>
+                          {opt.full_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {batchForm.enrolled_students && batchForm.enrolled_students.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2 max-h-32 overflow-y-auto">
+                      {batchForm.enrolled_students.map((studentObj: any) => {
+                        const sid = studentObj.student_id;
+                        const studentLabel = studentObj.student_name || students.find((o: any) => o.id === sid)?.full_name || sid;
+                        return (
+                          <Badge
+                            key={sid}
+                            variant="secondary"
+                            className="flex items-center gap-1"
+                          >
+                            {studentLabel}
+                            <X
+                              className="w-3 h-3 cursor-pointer hover:text-destructive"
+                              onClick={() => {
+                                if (onRemoveStudent) {
+                                  onRemoveStudent(sid);
+                                } else {
+                                  setBatchForm({
+                                    ...batchForm,
+                                    enrolled_students: batchForm.enrolled_students?.filter(
+                                      (s: any) => s.student_id !== sid,
+                                    ),
+                                  });
+                                }
+                              }}
+                            />
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Manage Assigned Faculty
+                  </Label>
+                  <Select
+                    value=""
+                    onValueChange={(val) => {
+                      const existing = batchForm.assigned_faculty?.find((f: any) => f.faculty_id === val);
+                      if (!existing) {
+                        const facultyName = facultyList.find((o: any) => o.id === val)?.full_name;
+                        if (onAssignFaculty) {
+                          onAssignFaculty(val, facultyName);
+                        } else {
+                          setBatchForm({
+                            ...batchForm,
+                            assigned_faculty: [...(batchForm.assigned_faculty || []), { faculty_id: val, faculty_name: facultyName }],
+                          });
+                        }
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="bg-muted/10">
+                      <SelectValue placeholder="Add faculty..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {facultyList.map((opt: any) => (
+                        <SelectItem key={opt.id} value={opt.id}>
+                          {opt.full_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {batchForm.assigned_faculty && batchForm.assigned_faculty.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2 max-h-32 overflow-y-auto">
+                      {batchForm.assigned_faculty.map((facultyObj: any) => {
+                        const fid = facultyObj.faculty_id;
+                        const facultyLabel =
+                          facultyObj.faculty_name || facultyList.find((o: any) => o.id === fid)?.full_name || fid;
+                        return (
+                          <Badge key={fid} variant="secondary" className="flex items-center gap-1">
+                            {facultyLabel}
+                            <X
+                              className="w-3 h-3 cursor-pointer hover:text-destructive"
+                              onClick={() => {
+                                if (onRemoveFaculty) {
+                                  onRemoveFaculty(fid);
+                                } else {
+                                  setBatchForm({
+                                    ...batchForm,
+                                    assigned_faculty: batchForm.assigned_faculty?.filter(
+                                      (f: any) => f.faculty_id !== fid,
+                                    ),
+                                  });
+                                }
+                              }}
+                            />
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-3 pt-4 border-t border-border mt-6">
               <Button
                 type="button"
@@ -353,7 +530,9 @@ export default function BatchDetailsSheet({
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase">Timing</span>
+                  <span className="text-xs font-semibold text-muted-foreground uppercase">
+                    Timing
+                  </span>
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <Clock className="w-4 h-4 text-primary" />
                     {batch.timing}
@@ -375,31 +554,65 @@ export default function BatchDetailsSheet({
                   <span className="text-xs font-semibold text-muted-foreground uppercase">
                     Course Name
                   </span>
-                  <div
-                    className="text-sm font-medium truncate"
-                    title={batch.course}
-                  >
+                  <div className="text-sm font-medium truncate" title={batch.course}>
                     {batch.course_name}
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase">
-                    Enrolled Students
+              <div className="space-y-6 pt-2">
+                <div className="space-y-2">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-2">
+                    Enrolled Students ({batch.enrolled_students?.length || 0})
                   </span>
-                  <div className="text-sm font-medium">
-                    {batch.enrolled_students?.length || 0}
-                  </div>
+                  {batch.enrolled_students?.length > 0 ? (
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                      {batch.enrolled_students.map((student: any, idx: number) => (
+                        <div
+                          key={student.id || idx}
+                          className="flex flex-col p-2.5 border border-border rounded-lg bg-card"
+                        >
+                          <span className="font-medium text-sm text-text-primary">
+                            {student.student_name}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {student.student_email}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm font-medium text-muted-foreground">
+                      No students enrolled.
+                    </div>
+                  )}
                 </div>
-                <div className="space-y-1">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase">
-                    Assigned Faculty
+
+                <div className="space-y-2">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-2">
+                    Assigned Faculty ({batch.assigned_faculty?.length || 0})
                   </span>
-                  <div className="text-sm font-medium">
-                    {batch.assigned_faculty?.length || 0}
-                  </div>
+                  {batch.assigned_faculty?.length > 0 ? (
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                      {batch.assigned_faculty.map((faculty: any, idx: number) => (
+                        <div
+                          key={faculty.id || idx}
+                          className="flex flex-col p-2.5 border border-border rounded-lg bg-card"
+                        >
+                          <span className="font-medium text-sm text-text-primary">
+                            {faculty.faculty_name}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {faculty.subject_name || faculty.phone || "No additional details"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm font-medium text-muted-foreground">
+                      No faculty assigned.
+                    </div>
+                  )}
                 </div>
               </div>
 

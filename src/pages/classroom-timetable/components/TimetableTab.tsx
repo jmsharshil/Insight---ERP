@@ -1,7 +1,11 @@
 import { useMemo, useState } from "react";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "@/store";
+import { TimetableAction } from "@/redux/actions";
 import { motion } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { useToast } from "@/hooks/useToast";
@@ -14,6 +18,7 @@ interface TimetableTabProps {
   batch: string;
   setBatch: (b: string) => void;
   slots: TimetableSlot[];
+  loading?: boolean;
   batches: any[];
   isFaculty: boolean;
   facultyId?: string;
@@ -26,12 +31,16 @@ interface TimetableTabProps {
   setConflictsPanel: (open: boolean) => void;
   adding: { day?: Day; period?: number } | null;
   setAdding: (adding: { day?: Day; period?: number } | null) => void;
+  subjects?: any[];
+  facultyList?: any[];
+  classrooms?: any[];
 }
 
 export default function TimetableTab({
   batch,
   setBatch,
   slots,
+  loading,
   batches,
   isFaculty,
   facultyId,
@@ -44,13 +53,53 @@ export default function TimetableTab({
   setConflictsPanel,
   adding,
   setAdding,
+  subjects,
+  facultyList,
+  classrooms,
 }: TimetableTabProps) {
   const toast = useToast();
+  const dispatch = useDispatch<AppDispatch>();
   const [view, setView] = useState<"grid" | "list">("grid");
   const [editing, setEditing] = useState<TimetableSlot | null>(null);
 
   const batchSlots = useMemo(() => slots.filter((s) => s.batch === batch), [slots, batch]);
   const conflicts = useMemo(() => slots.filter((s) => s.isConflict), [slots]);
+
+  const handleEdit = (existing: TimetableSlot) => {
+    // Open dialog instantly for a responsive UI
+    setEditing(existing);
+
+    if (existing.id.startsWith("TT-")) {
+      return;
+    }
+
+    dispatch({
+      type: TimetableAction.GET_TIMETABLE_DETAIL,
+      method: "GET",
+      endPoint: `/api/v1/timetable/${existing.id}/`,
+      auth: true,
+      getResponse: (res: any) => {
+        const data = res?.data || res;
+        const updatedSlot: TimetableSlot = {
+          ...existing,
+          subject: data.subject || existing.subject,
+          subject_name: data.subject_name || existing.subject_name,
+          facultyId: data.faculty || existing.facultyId,
+          facultyName: data.faculty_name || existing.facultyName,
+          classroom: data.classroom_name || data.classroom || existing.classroom,
+          startTime: data.start_time?.substring(0, 5) || existing.startTime,
+          endTime: data.end_time?.substring(0, 5) || existing.endTime,
+          course_name: data.course_name || existing.course_name,
+          course_code: data.course_code || existing.course_code,
+          session: data.session || existing.session,
+          is_recurring: data.is_recurring ?? existing.is_recurring,
+          effective_from: data.effective_from || existing.effective_from,
+          effective_to: data.effective_to || existing.effective_to,
+        };
+        setEditing(updatedSlot);
+      }
+    });
+  };
 
   const batchNames = useMemo(() => {
     if (batches.length === 0) return [];
@@ -63,6 +112,27 @@ export default function TimetableTab({
       setBatch(batchNames[0]);
     }
   }, [batchNames, batch, setBatch]);
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        {/* Academic Calendar mini skeleton */}
+        <Skeleton className="h-14 w-full rounded-xl" />
+
+        {/* Tabs skeleton */}
+        <div className="flex gap-3 mb-3 items-center">
+          <Skeleton className="h-10 w-64 rounded-md" />
+          <div className="ml-auto flex gap-2">
+            <Skeleton className="h-9 w-16 rounded-md" />
+            <Skeleton className="h-9 w-16 rounded-md" />
+          </div>
+        </div>
+
+        {/* Grid skeleton */}
+        <Skeleton className="h-[400px] w-full rounded-xl" />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -119,12 +189,12 @@ export default function TimetableTab({
           canEdit={canEdit}
           onCellClick={(day, period) => {
             const existing = batchSlots.find((s) => s.day === day && s.period === period);
-            if (existing) setEditing(existing);
+            if (existing) handleEdit(existing);
             else if (canEdit) setAdding({ day, period });
           }}
         />
       ) : (
-        <ListView slots={batchSlots} onEdit={setEditing} />
+        <ListView slots={batchSlots} onEdit={handleEdit} />
       )}
 
       {/* Slot dialog */}
@@ -132,6 +202,9 @@ export default function TimetableTab({
         open={!!editing || !!adding}
         existing={editing ?? undefined}
         defaults={adding ? { day: adding.day, period: adding.period, batch } : undefined}
+        subjects={subjects}
+        facultyList={facultyList}
+        classrooms={classrooms}
         onClose={() => {
           setEditing(null);
           setAdding(null);

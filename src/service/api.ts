@@ -91,6 +91,10 @@ export const API = {
       DETAIL: (id: string | number) => `/api/v1/batches/${id}/`,
       UPDATE: (id: string | number) => `/api/v1/batches/${id}/`,
       DELETE: (id: string | number) => `/api/v1/batches/${id}/`,
+      ASSIGN_STUDENT: (id: string | number,) => `/api/v1/batches/${id}/assign-students/`,
+      REMOVE_STUDENT: (id: string | number, student_id: string | number) => `/api/v1/batches/${id}/remove-student/${student_id}/`,
+      ASSIGN_FACULTY: (id: string | number,) => `/api/v1/batches/${id}/assign-faculty/`,
+      REMOVE_FACULTY: (id: string | number, faculty_id: string | number) => `/api/v1/batches/${id}/remove-faculty/${faculty_id}/`,
     },
 
     /** Subjects endpoints */
