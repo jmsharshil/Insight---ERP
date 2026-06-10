@@ -69,9 +69,9 @@ export default function StudentsPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-4">
-          <TabsTrigger value="branches">Branch</TabsTrigger>
           <TabsTrigger value="admissions">Admissions</TabsTrigger>
           <TabsTrigger value="students">Students</TabsTrigger>
+          <TabsTrigger value="branches">Branch</TabsTrigger>
         </TabsList>
 
         <TabsContent value="branches" className="mt-0">

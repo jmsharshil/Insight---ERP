@@ -17,7 +17,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import PageLoader from "@/components/common/PageLoader";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
 import EditAdmissionDialog from "@/components/forms/EditAdmissionDialog";
 
 function Row({ icon, label, value }: { icon?: React.ReactNode; label: string; value: React.ReactNode }) {
@@ -75,6 +76,75 @@ const DOCUMENT_TYPES: readonly DocType[] = [
   { key: "doc_twelfth_marksheet", label: "12th Marksheet", icon: GraduationCap },
   { key: "doc_category_cert", label: "Category Certificate", icon: BadgeCheck },
 ] as const;
+
+function AdmissionDetailSkeleton() {
+  return (
+    <div className="max-w-6xl mx-auto space-y-6 pb-12 p-4 md:p-0">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-4">
+          <Skeleton width={40} height={40} className="rounded-md" />
+          <Skeleton width={200} height={32} />
+        </div>
+        <div className="hidden sm:flex items-center gap-2">
+          <Skeleton width={120} height={36} className="rounded-md" />
+          <Skeleton width={150} height={36} className="rounded-md" />
+        </div>
+      </div>
+
+      {/* Profile Card */}
+      <div className="bg-card border border-border rounded-xl shadow-sm p-6 flex flex-col md:flex-row items-start md:items-center gap-6">
+        <Skeleton circle width={96} height={96} containerClassName="shrink-0" />
+        <div className="flex-1 space-y-3 w-full">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <Skeleton width={250} height={36} />
+            <Skeleton width={120} height={24} borderRadius={12} />
+          </div>
+          <Skeleton width="40%" height={20} />
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 pt-2">
+            <Skeleton width={120} height={16} />
+            <Skeleton width={120} height={16} />
+            <Skeleton width={180} height={16} />
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+        <Skeleton width={120} height={40} className="rounded-md shrink-0" />
+        <Skeleton width={140} height={40} className="rounded-md shrink-0" />
+        <Skeleton width={100} height={40} className="rounded-md shrink-0" />
+        <Skeleton width={120} height={40} className="rounded-md shrink-0" />
+      </div>
+
+      {/* Cards Grid */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <div className="bg-card border border-border rounded-lg shadow-sm p-5">
+          <Skeleton width={150} height={24} className="mb-4" />
+          <div className="space-y-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 border-b border-border/40 pb-2 last:border-0">
+                <div className="sm:w-1/3"><Skeleton height={16} width="80%" /></div>
+                <div className="sm:w-2/3"><Skeleton height={16} width="60%" /></div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="bg-card border border-border rounded-lg shadow-sm p-5">
+          <Skeleton width={150} height={24} className="mb-4" />
+          <div className="space-y-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 border-b border-border/40 pb-2 last:border-0">
+                <div className="sm:w-1/3"><Skeleton height={16} width="80%" /></div>
+                <div className="sm:w-2/3"><Skeleton height={16} width="60%" /></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function StudentAdmissionDetailedPage() {
   const { id } = useParams();
@@ -162,7 +232,7 @@ export default function StudentAdmissionDetailedPage() {
     e.target.value = "";
   };
 
-  if (loading) return <PageLoader />;
+  if (loading) return <AdmissionDetailSkeleton />;
   if (error) return <div className="p-6 text-center text-red-500">{error}</div>;
   if (!admission) return <div className="p-6 text-center text-muted-foreground">No data found.</div>;
 

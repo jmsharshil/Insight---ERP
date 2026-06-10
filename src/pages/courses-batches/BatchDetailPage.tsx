@@ -30,6 +30,8 @@ import {
 } from "@/components/ui/select";
 import PageHeader from "@/components/layout/PageHeader";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
 
 interface BatchForm {
   course: string;
@@ -45,6 +47,84 @@ interface BatchForm {
   is_active: boolean;
   enrolled_students?: string[];
   assigned_faculty?: string[];
+}
+
+function BatchDetailSkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+        <div className="flex items-center gap-4">
+          <Skeleton width={40} height={40} className="rounded-full" />
+          <div>
+            <Skeleton width={200} height={28} />
+            <Skeleton width={150} height={16} />
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Skeleton width={100} height={36} className="rounded-md" />
+          <Skeleton width={100} height={36} className="rounded-md" />
+        </div>
+      </div>
+
+      {/* Main Card */}
+      <div className="bg-card rounded-xl border border-border p-6 shadow-sm space-y-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="space-y-1">
+              <Skeleton width={80} height={14} />
+              <Skeleton width={120} height={20} />
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-2 gap-6 bg-muted/20 p-4 rounded-xl border border-border">
+          <div className="flex items-center gap-3">
+            <Skeleton width={40} height={40} className="rounded-full shrink-0" />
+            <div className="flex-1">
+              <Skeleton width={80} height={14} />
+              <Skeleton width="80%" height={20} />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-6">
+          <div className="flex items-center gap-3 p-4 border border-border rounded-xl">
+            <Skeleton width={40} height={40} className="rounded-full shrink-0" />
+            <div className="flex-1">
+              <Skeleton width={80} height={14} />
+              <Skeleton width="60%" height={20} />
+            </div>
+          </div>
+          <div className="flex items-center gap-3 p-4 border border-border rounded-xl">
+            <Skeleton width={40} height={40} className="rounded-full shrink-0" />
+            <div className="flex-1">
+              <Skeleton width={80} height={14} />
+              <Skeleton width="60%" height={20} />
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-border grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <Skeleton width={150} height={16} />
+            <div className="flex flex-wrap gap-2">
+              <Skeleton width={80} height={24} className="rounded-full" />
+              <Skeleton width={100} height={24} className="rounded-full" />
+              <Skeleton width={90} height={24} className="rounded-full" />
+            </div>
+          </div>
+          <div className="space-y-3">
+            <Skeleton width={150} height={16} />
+            <div className="flex flex-wrap gap-2">
+              <Skeleton width={120} height={24} className="rounded-full" />
+              <Skeleton width={140} height={24} className="rounded-full" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function BatchDetailPage() {
@@ -304,7 +384,7 @@ export default function BatchDetailPage() {
   };
 
   if (loading) {
-    return <div className="p-8 text-center text-muted-foreground">Loading batch details...</div>;
+    return <BatchDetailSkeleton />;
   }
 
   if (!batch) {
@@ -782,7 +862,7 @@ export default function BatchDetailPage() {
         description={`Are you sure you want to delete ${batch.name}? This action cannot be undone.`}
         confirmText="Delete Batch"
         cancelText="Cancel"
-        variant="destructive"
+        variant="danger"
       />
     </div>
   );
