@@ -16,6 +16,8 @@ import {
   CheckCircle2, GraduationCap, MapPin, Loader2, Mail, User, Phone,
   ClipboardList, Calendar, School, Award, Megaphone, ShieldCheck,
   FileImage, Upload, X, Camera, CreditCard, Baby, PenTool,
+  FileCheck,
+  BadgeCheck,
 } from "lucide-react";
 
 /* ─── Theme constants (matches LeadsInquiryForm) ──────────── */
@@ -166,6 +168,9 @@ export default function StudentAdmissionForm() {
   const [docPhoto, setDocPhoto] = useState<File | null>(null);
   const [docIdCard, setDocIdCard] = useState<File | null>(null);
   const [docDobCertificate, setDocDobCertificate] = useState<File | null>(null);
+  const [doc12thReceipt, setDoc12thReceipt] = useState<File | null>(null);
+  const [doc12thMarkSheet, setDoc12thMarkSheet] = useState<File | null>(null);
+  const [docCategoryCertificate, setDocCategoryCertificate] = useState<File | null>(null);
 
   /* ─── Form state ──────────────────────────────────────────── */
   const [formData, setFormData] = useState({
@@ -206,7 +211,25 @@ export default function StudentAdmissionForm() {
   });
 
   const handleChange = (field: string, value: string | boolean) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      const updated = { ...prev, [field]: value };
+      if (field === "course") {
+        if (value === "cseet") {
+          updated.group_module = "full";
+          if (!["june", "oct", "feb"].includes(prev.batch_attempt)) {
+            updated.batch_attempt = "june";
+          }
+        } else if (value === "cs_executive" || value === "cs_professional") {
+          if (prev.group_module === "full" || prev.group_module === "both") {
+            updated.group_module = "module_1";
+          }
+          if (!["june", "dec"].includes(prev.batch_attempt)) {
+            updated.batch_attempt = "june";
+          }
+        }
+      }
+      return updated;
+    });
   };
 
   /* ── Submit ── */
@@ -225,6 +248,9 @@ export default function StudentAdmissionForm() {
     if (docPhoto) payload.append("doc_photo", docPhoto);
     if (docIdCard) payload.append("doc_id_card", docIdCard);
     if (docDobCertificate) payload.append("doc_dob_certificate", docDobCertificate);
+    if (doc12thReceipt) payload.append("doc_twelfth_receipt", doc12thReceipt);
+    if (doc12thMarkSheet) payload.append("doc_twelfth_marksheet", doc12thMarkSheet);
+    if (docCategoryCertificate) payload.append("doc_category_cert", docCategoryCertificate);
 
     // Append text fields
     Object.entries(formData).forEach(([key, value]) => {
@@ -302,14 +328,23 @@ export default function StudentAdmissionForm() {
   return (
     <div
       className="min-h-screen py-8 sm:py-12 px-3 sm:px-6 lg:px-8"
-      style={{ background: `linear-gradient(180deg, ${T.surface} 0%, ${T.primaryLight}30 100%)`, fontFamily: T.bodyFont }}
+      style={{
+        background: `linear-gradient(180deg, ${T.surface} 0%, ${T.primaryLight}30 100%)`,
+        fontFamily: T.bodyFont,
+      }}
     >
       <div className="max-w-4xl mx-auto">
-
         {/* ── Header ── */}
         <div className="text-center mb-8 sm:mb-10">
-          <img src={logo} alt="Insight ERP" className="h-16 sm:h-20 object-contain mx-auto mb-5 sm:mb-6" />
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: T.navy, fontFamily: T.headingFont }}>
+          <img
+            src={logo}
+            alt="Insight ERP"
+            className="h-16 sm:h-20 object-contain mx-auto mb-5 sm:mb-6"
+          />
+          <h1
+            className="text-2xl sm:text-3xl font-bold tracking-tight"
+            style={{ color: T.navy, fontFamily: T.headingFont }}
+          >
             Student Admission Form
           </h1>
           <p className="mt-2 text-sm sm:text-base max-w-md mx-auto" style={{ color: T.textMuted }}>
@@ -327,39 +362,59 @@ export default function StudentAdmissionForm() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
-
           {/* ════════════════════════════════════════════════════════ */}
           {/*  DOCUMENT UPLOADS                                      */}
           {/* ════════════════════════════════════════════════════════ */}
           <SectionCard icon={FileImage} title="Document Uploads">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <FileUploadField
-                label="Signature"
+                label="Signature Upload"
                 icon={PenTool}
                 file={docSignature}
                 onFileChange={setDocSignature}
-                required
+                // required
               />
               <FileUploadField
-                label="Passport Photo"
+                label="Your Passport Size Photo Upload"
                 icon={Camera}
                 file={docPhoto}
                 onFileChange={setDocPhoto}
-                required
+                // required
               />
               <FileUploadField
-                label="ID Card (Aadhar/PAN)"
+                label="ID Card (Aadhar Card, License, Pan Card)"
                 icon={CreditCard}
                 file={docIdCard}
                 onFileChange={setDocIdCard}
-                required
+                // required
               />
               <FileUploadField
-                label="Date of Birth Certificate"
+                label="10th Marksheet"
                 icon={Baby}
                 file={docDobCertificate}
                 onFileChange={setDocDobCertificate}
-                required
+                // required
+              />
+              <FileUploadField
+                label="12th Receipt / Hall Ticket (if Appearing in 10+2)"
+                icon={FileCheck}
+                file={doc12thReceipt}
+                onFileChange={setDoc12thReceipt}
+                // required
+              />
+              <FileUploadField
+                label="12th Passing Certificate / Marksheet"
+                icon={GraduationCap}
+                file={doc12thMarkSheet}
+                onFileChange={setDoc12thMarkSheet}
+                // required
+              />
+              <FileUploadField
+                label="Category Certificate (if belonging to SC/ST or Physically Handicapped Category)"
+                icon={BadgeCheck}
+                file={docCategoryCertificate}
+                onFileChange={setDocCategoryCertificate}
+                // required
               />
             </div>
           </SectionCard>
@@ -370,9 +425,16 @@ export default function StudentAdmissionForm() {
           <SectionCard icon={GraduationCap} title="Academic Preferences">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>Form Type</Label>
-                <Select value={formData.form_type} onValueChange={(val) => handleChange("form_type", val)}>
-                  <SelectTrigger className="h-10 sm:h-11 text-sm"><SelectValue /></SelectTrigger>
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  Form Type
+                </Label>
+                <Select
+                  value={formData.form_type}
+                  onValueChange={(val) => handleChange("form_type", val)}
+                >
+                  <SelectTrigger className="h-10 sm:h-11 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="registration">Registration</SelectItem>
                     <SelectItem value="admission">Admission</SelectItem>
@@ -383,8 +445,13 @@ export default function StudentAdmissionForm() {
                 <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
                   Course <span style={{ color: T.error }}>*</span>
                 </Label>
-                <Select value={formData.course} onValueChange={(val) => handleChange("course", val)}>
-                  <SelectTrigger className="h-10 sm:h-11 text-sm"><SelectValue /></SelectTrigger>
+                <Select
+                  value={formData.course}
+                  onValueChange={(val) => handleChange("course", val)}
+                >
+                  <SelectTrigger className="h-10 sm:h-11 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="cs_executive">CS Executive</SelectItem>
                     <SelectItem value="cs_professional">CS Professional</SelectItem>
@@ -393,26 +460,52 @@ export default function StudentAdmissionForm() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>Group Module</Label>
-                <Select value={formData.group_module} onValueChange={(val) => handleChange("group_module", val)}>
-                  <SelectTrigger className="h-10 sm:h-11 text-sm"><SelectValue /></SelectTrigger>
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  Group Module
+                </Label>
+                <Select
+                  value={formData.group_module}
+                  onValueChange={(val) => handleChange("group_module", val)}
+                >
+                  <SelectTrigger className="h-10 sm:h-11 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="full">Full</SelectItem>
-                    <SelectItem value="both">Both</SelectItem>
-                    <SelectItem value="module_1">Module 1</SelectItem>
-                    <SelectItem value="module_2">Module 2</SelectItem>
+                    {formData.course === "cseet" ? (
+                      <SelectItem value="full">Full Syllabus</SelectItem>
+                    ) : (
+                      <>
+                        <SelectItem value="module_1">Module 1</SelectItem>
+                        <SelectItem value="module_2">Module 2</SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>Batch Attempt</Label>
-                <Select value={formData.batch_attempt} onValueChange={(val) => handleChange("batch_attempt", val)}>
-                  <SelectTrigger className="h-10 sm:h-11 text-sm"><SelectValue /></SelectTrigger>
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  Batch Attempt
+                </Label>
+                <Select
+                  value={formData.batch_attempt}
+                  onValueChange={(val) => handleChange("batch_attempt", val)}
+                >
+                  <SelectTrigger className="h-10 sm:h-11 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="june">June</SelectItem>
-                    <SelectItem value="oct">October</SelectItem>
-                    <SelectItem value="feb">February</SelectItem>
-                    <SelectItem value="dec">December</SelectItem>
+                    {formData.course === "cseet" ? (
+                      <>
+                        <SelectItem value="june">June</SelectItem>
+                        <SelectItem value="oct">October</SelectItem>
+                        <SelectItem value="feb">February</SelectItem>
+                      </>
+                    ) : (
+                      <>
+                        <SelectItem value="june">June</SelectItem>
+                        <SelectItem value="dec">December</SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -428,32 +521,71 @@ export default function StudentAdmissionForm() {
                 <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
                   First Name <span style={{ color: T.error }}>*</span>
                 </Label>
-                <Input required value={formData.first_name} onChange={(e) => handleChange("first_name", e.target.value)} className="h-10 sm:h-11 text-sm" placeholder="e.g. Tulsi" />
+                <Input
+                  required
+                  value={formData.first_name}
+                  onChange={(e) => handleChange("first_name", e.target.value)}
+                  className="h-10 sm:h-11 text-sm"
+                  placeholder="e.g. Tulsi"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
                   Surname <span style={{ color: T.error }}>*</span>
                 </Label>
-                <Input required value={formData.surname} onChange={(e) => handleChange("surname", e.target.value)} className="h-10 sm:h-11 text-sm" placeholder="e.g. Kerai" />
+                <Input
+                  required
+                  value={formData.surname}
+                  onChange={(e) => handleChange("surname", e.target.value)}
+                  className="h-10 sm:h-11 text-sm"
+                  placeholder="e.g. Kerai"
+                />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>Father's Name</Label>
-                <Input value={formData.father_name} onChange={(e) => handleChange("father_name", e.target.value)} className="h-10 sm:h-11 text-sm" placeholder="e.g. Harji" />
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  Father's Name
+                </Label>
+                <Input
+                  value={formData.father_name}
+                  onChange={(e) => handleChange("father_name", e.target.value)}
+                  className="h-10 sm:h-11 text-sm"
+                  placeholder="e.g. Harji"
+                />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>Mother's Name</Label>
-                <Input value={formData.mother_name} onChange={(e) => handleChange("mother_name", e.target.value)} className="h-10 sm:h-11 text-sm" placeholder="e.g. Jashuben" />
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  Mother's Name
+                </Label>
+                <Input
+                  value={formData.mother_name}
+                  onChange={(e) => handleChange("mother_name", e.target.value)}
+                  className="h-10 sm:h-11 text-sm"
+                  placeholder="e.g. Jashuben"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
                   Date of Birth <span style={{ color: T.error }}>*</span>
                 </Label>
-                <Input required type="date" value={formData.dob} onChange={(e) => handleChange("dob", e.target.value)} className="h-10 sm:h-11 text-sm" />
+                <Input
+                  required
+                  type="date"
+                  value={formData.dob}
+                  onChange={(e) => handleChange("dob", e.target.value)}
+                  className="h-10 sm:h-11 text-sm"
+                />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>Category</Label>
-                <Select value={formData.category} onValueChange={(val) => handleChange("category", val)}>
-                  <SelectTrigger className="h-10 sm:h-11 text-sm"><SelectValue /></SelectTrigger>
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  Category
+                </Label>
+                <Select
+                  value={formData.category}
+                  onValueChange={(val) => handleChange("category", val)}
+                >
+                  <SelectTrigger className="h-10 sm:h-11 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="gen">General</SelectItem>
                     <SelectItem value="obc">OBC</SelectItem>
@@ -473,21 +605,51 @@ export default function StudentAdmissionForm() {
                   <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
                     Student Phone <span style={{ color: T.error }}>*</span>
                   </Label>
-                  <Input required type="tel" value={formData.phone_student} onChange={(e) => handleChange("phone_student", e.target.value)} className="h-10 sm:h-11 text-sm" placeholder="e.g. 9954563258" />
+                  <Input
+                    required
+                    type="tel"
+                    value={formData.phone_student}
+                    onChange={(e) => handleChange("phone_student", e.target.value)}
+                    className="h-10 sm:h-11 text-sm"
+                    placeholder="e.g. 9954563258"
+                  />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>Father's Phone</Label>
-                  <Input type="tel" value={formData.phone_father} onChange={(e) => handleChange("phone_father", e.target.value)} className="h-10 sm:h-11 text-sm" placeholder="e.g. 9978221566" />
+                  <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                    Father's Phone
+                  </Label>
+                  <Input
+                    type="tel"
+                    value={formData.phone_father}
+                    onChange={(e) => handleChange("phone_father", e.target.value)}
+                    className="h-10 sm:h-11 text-sm"
+                    placeholder="e.g. 9978221566"
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
                     Student Email <span style={{ color: T.error }}>*</span>
                   </Label>
-                  <Input required type="email" value={formData.email} onChange={(e) => handleChange("email", e.target.value)} className="h-10 sm:h-11 text-sm" placeholder="e.g. tulikerai06@gmail.com" />
+                  <Input
+                    required
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleChange("email", e.target.value)}
+                    className="h-10 sm:h-11 text-sm"
+                    placeholder="e.g. tulikerai06@gmail.com"
+                  />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>Parent Email</Label>
-                  <Input type="email" value={formData.email_parent} onChange={(e) => handleChange("email_parent", e.target.value)} className="h-10 sm:h-11 text-sm" placeholder="e.g. parent@gmail.com" />
+                  <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                    Parent Email
+                  </Label>
+                  <Input
+                    type="email"
+                    value={formData.email_parent}
+                    onChange={(e) => handleChange("email_parent", e.target.value)}
+                    className="h-10 sm:h-11 text-sm"
+                    placeholder="e.g. parent@gmail.com"
+                  />
                 </div>
               </div>
             </div>
@@ -499,24 +661,59 @@ export default function StudentAdmissionForm() {
           <SectionCard icon={MapPin} title="Address Details">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div className="space-y-1.5 sm:col-span-2">
-                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>Street Address</Label>
-                <Input value={formData.street} onChange={(e) => handleChange("street", e.target.value)} className="h-10 sm:h-11 text-sm" placeholder="e.g. 45, main road" />
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  Street Address
+                </Label>
+                <Input
+                  value={formData.street}
+                  onChange={(e) => handleChange("street", e.target.value)}
+                  className="h-10 sm:h-11 text-sm"
+                  placeholder="e.g. 45, main road"
+                />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>City</Label>
-                <Input value={formData.city} onChange={(e) => handleChange("city", e.target.value)} className="h-10 sm:h-11 text-sm" placeholder="e.g. Bhuj" />
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  City
+                </Label>
+                <Input
+                  value={formData.city}
+                  onChange={(e) => handleChange("city", e.target.value)}
+                  className="h-10 sm:h-11 text-sm"
+                  placeholder="e.g. Bhuj"
+                />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>State</Label>
-                <Input value={formData.state} onChange={(e) => handleChange("state", e.target.value)} className="h-10 sm:h-11 text-sm" placeholder="e.g. Kutch" />
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  State
+                </Label>
+                <Input
+                  value={formData.state}
+                  onChange={(e) => handleChange("state", e.target.value)}
+                  className="h-10 sm:h-11 text-sm"
+                  placeholder="e.g. Kutch"
+                />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>Pincode</Label>
-                <Input value={formData.pincode} onChange={(e) => handleChange("pincode", e.target.value)} className="h-10 sm:h-11 text-sm" placeholder="e.g. 370001" />
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  Pincode
+                </Label>
+                <Input
+                  value={formData.pincode}
+                  onChange={(e) => handleChange("pincode", e.target.value)}
+                  className="h-10 sm:h-11 text-sm"
+                  placeholder="e.g. 370001"
+                />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>Country</Label>
-                <Input value={formData.country} onChange={(e) => handleChange("country", e.target.value)} className="h-10 sm:h-11 text-sm" placeholder="e.g. India" />
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  Country
+                </Label>
+                <Input
+                  value={formData.country}
+                  onChange={(e) => handleChange("country", e.target.value)}
+                  className="h-10 sm:h-11 text-sm"
+                  placeholder="e.g. India"
+                />
               </div>
             </div>
           </SectionCard>
@@ -529,9 +726,16 @@ export default function StudentAdmissionForm() {
               {/* Qualification */}
               <div className="pb-5 sm:pb-6" style={{ borderBottom: `1px solid ${T.border}` }}>
                 <div className="max-w-xs">
-                  <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>Current Qualification</Label>
-                  <Select value={formData.qualification} onValueChange={(val) => handleChange("qualification", val)}>
-                    <SelectTrigger className="h-10 sm:h-11 text-sm mt-1.5"><SelectValue /></SelectTrigger>
+                  <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                    Current Qualification
+                  </Label>
+                  <Select
+                    value={formData.qualification}
+                    onValueChange={(val) => handleChange("qualification", val)}
+                  >
+                    <SelectTrigger className="h-10 sm:h-11 text-sm mt-1.5">
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="appearing_12">Appearing 12th</SelectItem>
                       <SelectItem value="pass_12">Passed 12th</SelectItem>
@@ -551,9 +755,16 @@ export default function StudentAdmissionForm() {
                   style={{ background: `${T.primaryLight}50`, border: `1px solid ${T.border}` }}
                 >
                   <div className="space-y-1.5">
-                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>Board/Medium</Label>
-                    <Select value={formData.tenth_medium} onValueChange={(val) => handleChange("tenth_medium", val)}>
-                      <SelectTrigger className="h-10 sm:h-11 text-sm bg-white"><SelectValue /></SelectTrigger>
+                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                      Board/Medium
+                    </Label>
+                    <Select
+                      value={formData.tenth_medium}
+                      onValueChange={(val) => handleChange("tenth_medium", val)}
+                    >
+                      <SelectTrigger className="h-10 sm:h-11 text-sm bg-white">
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="gseb">GSEB</SelectItem>
                         <SelectItem value="cbse">CBSE</SelectItem>
@@ -562,20 +773,52 @@ export default function StudentAdmissionForm() {
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>School Name</Label>
-                    <Input value={formData.tenth_school} onChange={(e) => handleChange("tenth_school", e.target.value)} className="h-10 sm:h-11 text-sm bg-white" placeholder="School name" />
+                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                      School Name
+                    </Label>
+                    <Input
+                      value={formData.tenth_school}
+                      onChange={(e) => handleChange("tenth_school", e.target.value)}
+                      className="h-10 sm:h-11 text-sm bg-white"
+                      placeholder="School name"
+                    />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>Coaching Institute</Label>
-                    <Input value={formData.tenth_coaching} onChange={(e) => handleChange("tenth_coaching", e.target.value)} className="h-10 sm:h-11 text-sm bg-white" placeholder="Coaching name" />
+                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                      Coaching Institute
+                    </Label>
+                    <Input
+                      value={formData.tenth_coaching}
+                      onChange={(e) => handleChange("tenth_coaching", e.target.value)}
+                      className="h-10 sm:h-11 text-sm bg-white"
+                      placeholder="Coaching name"
+                    />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>Percentage (%)</Label>
-                    <Input type="number" step="0.01" value={formData.tenth_percentage} onChange={(e) => handleChange("tenth_percentage", e.target.value)} className="h-10 sm:h-11 text-sm bg-white" placeholder="e.g. 86.16" />
+                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                      Percentage (%)
+                    </Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={formData.tenth_percentage}
+                      onChange={(e) => handleChange("tenth_percentage", e.target.value)}
+                      className="h-10 sm:h-11 text-sm bg-white"
+                      placeholder="e.g. 86.16"
+                    />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>Percentile</Label>
-                    <Input type="number" step="0.01" value={formData.tenth_percentile} onChange={(e) => handleChange("tenth_percentile", e.target.value)} className="h-10 sm:h-11 text-sm bg-white" placeholder="e.g. 95.42" />
+                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                      Percentile
+                    </Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={formData.tenth_percentile}
+                      onChange={(e) => handleChange("tenth_percentile", e.target.value)}
+                      className="h-10 sm:h-11 text-sm bg-white"
+                      placeholder="e.g. 95.42"
+                    />
                   </div>
                 </div>
               </div>
@@ -588,9 +831,16 @@ export default function StudentAdmissionForm() {
                   style={{ background: `${T.primaryLight}50`, border: `1px solid ${T.border}` }}
                 >
                   <div className="space-y-1.5">
-                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>Board/Medium</Label>
-                    <Select value={formData.twelfth_medium} onValueChange={(val) => handleChange("twelfth_medium", val)}>
-                      <SelectTrigger className="h-10 sm:h-11 text-sm bg-white"><SelectValue /></SelectTrigger>
+                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                      Board/Medium
+                    </Label>
+                    <Select
+                      value={formData.twelfth_medium}
+                      onValueChange={(val) => handleChange("twelfth_medium", val)}
+                    >
+                      <SelectTrigger className="h-10 sm:h-11 text-sm bg-white">
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="gseb">GSEB</SelectItem>
                         <SelectItem value="cbse">CBSE</SelectItem>
@@ -599,20 +849,52 @@ export default function StudentAdmissionForm() {
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>School Name</Label>
-                    <Input value={formData.twelfth_school} onChange={(e) => handleChange("twelfth_school", e.target.value)} className="h-10 sm:h-11 text-sm bg-white" placeholder="School name" />
+                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                      School Name
+                    </Label>
+                    <Input
+                      value={formData.twelfth_school}
+                      onChange={(e) => handleChange("twelfth_school", e.target.value)}
+                      className="h-10 sm:h-11 text-sm bg-white"
+                      placeholder="School name"
+                    />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>Coaching Institute</Label>
-                    <Input value={formData.twelfth_coaching} onChange={(e) => handleChange("twelfth_coaching", e.target.value)} className="h-10 sm:h-11 text-sm bg-white" placeholder="Coaching name" />
+                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                      Coaching Institute
+                    </Label>
+                    <Input
+                      value={formData.twelfth_coaching}
+                      onChange={(e) => handleChange("twelfth_coaching", e.target.value)}
+                      className="h-10 sm:h-11 text-sm bg-white"
+                      placeholder="Coaching name"
+                    />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>Percentage (%)</Label>
-                    <Input type="number" step="0.01" value={formData.twelfth_percentage} onChange={(e) => handleChange("twelfth_percentage", e.target.value)} className="h-10 sm:h-11 text-sm bg-white" placeholder="e.g. 80.16" />
+                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                      Percentage (%)
+                    </Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={formData.twelfth_percentage}
+                      onChange={(e) => handleChange("twelfth_percentage", e.target.value)}
+                      className="h-10 sm:h-11 text-sm bg-white"
+                      placeholder="e.g. 80.16"
+                    />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>Percentile</Label>
-                    <Input type="number" step="0.01" value={formData.twelfth_percentile} onChange={(e) => handleChange("twelfth_percentile", e.target.value)} className="h-10 sm:h-11 text-sm bg-white" placeholder="e.g. 95.42" />
+                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                      Percentile
+                    </Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={formData.twelfth_percentile}
+                      onChange={(e) => handleChange("twelfth_percentile", e.target.value)}
+                      className="h-10 sm:h-11 text-sm bg-white"
+                      placeholder="e.g. 95.42"
+                    />
                   </div>
                 </div>
               </div>
@@ -625,9 +907,16 @@ export default function StudentAdmissionForm() {
           <SectionCard icon={Megaphone} title="Other Details">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>How did you hear about us?</Label>
-                <Select value={formData.reference} onValueChange={(val) => handleChange("reference", val)}>
-                  <SelectTrigger className="h-10 sm:h-11 text-sm"><SelectValue /></SelectTrigger>
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  How did you hear about us?
+                </Label>
+                <Select
+                  value={formData.reference}
+                  onValueChange={(val) => handleChange("reference", val)}
+                >
+                  <SelectTrigger className="h-10 sm:h-11 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="google">Google</SelectItem>
                     <SelectItem value="existing">Existing Student</SelectItem>
@@ -640,13 +929,27 @@ export default function StudentAdmissionForm() {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>Inquiry Date</Label>
-                <Input type="date" value={formData.inquiry_date} onChange={(e) => handleChange("inquiry_date", e.target.value)} className="h-10 sm:h-11 text-sm" />
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  Inquiry Date
+                </Label>
+                <Input
+                  type="date"
+                  value={formData.inquiry_date}
+                  onChange={(e) => handleChange("inquiry_date", e.target.value)}
+                  className="h-10 sm:h-11 text-sm"
+                />
               </div>
 
               <div className="space-y-1.5 sm:col-span-2">
-                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>Location</Label>
-                <Input value={formData.location} onChange={(e) => handleChange("location", e.target.value)} className="h-10 sm:h-11 text-sm" placeholder="e.g. Naranpura (Ahmedabad)" />
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  Location
+                </Label>
+                <Input
+                  value={formData.location}
+                  onChange={(e) => handleChange("location", e.target.value)}
+                  className="h-10 sm:h-11 text-sm"
+                  placeholder="e.g. Naranpura (Ahmedabad)"
+                />
               </div>
             </div>
           </SectionCard>
@@ -654,7 +957,11 @@ export default function StudentAdmissionForm() {
           {/* ── Consent & Submit ── */}
           <div
             className="rounded-2xl p-4 sm:p-6"
-            style={{ background: T.card, border: `1px solid ${T.border}`, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+            style={{
+              background: T.card,
+              border: `1px solid ${T.border}`,
+              boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+            }}
           >
             <div
               className="flex items-start sm:items-center gap-3 mb-6 sm:mb-8 p-3 sm:p-4 rounded-xl"
@@ -666,8 +973,14 @@ export default function StudentAdmissionForm() {
                 onCheckedChange={(checked) => handleChange("consent", checked as boolean)}
                 className="w-5 h-5 mt-0.5 sm:mt-0 flex-shrink-0"
               />
-              <label htmlFor="consent" className="text-xs sm:text-sm font-medium leading-snug cursor-pointer" style={{ color: T.text }}>
-                I hereby declare that all the information provided above is true and correct to the best of my knowledge. I agree to be contacted by the institute for admission-related communication.
+              <label
+                htmlFor="consent"
+                className="text-xs sm:text-sm font-medium leading-snug cursor-pointer"
+                style={{ color: T.text }}
+              >
+                I hereby declare that all the information provided above is true and correct to the
+                best of my knowledge. I agree to be contacted by the institute for admission-related
+                communication.
               </label>
             </div>
 
@@ -675,13 +988,18 @@ export default function StudentAdmissionForm() {
               type="submit"
               className="w-full h-12 sm:h-14 text-sm sm:text-base font-semibold text-white transition-all duration-200"
               style={{
-                background: formData.consent && !loading ? `linear-gradient(135deg, ${T.navy} 0%, ${T.navyLight} 100%)` : T.textMuted,
+                background:
+                  formData.consent && !loading
+                    ? `linear-gradient(135deg, ${T.navy} 0%, ${T.navyLight} 100%)`
+                    : T.textMuted,
                 boxShadow: formData.consent && !loading ? "0 4px 14px rgba(0,33,71,0.25)" : "none",
               }}
               disabled={loading || !formData.consent}
             >
               {loading ? (
-                <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Submitting...</>
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Submitting...
+                </>
               ) : (
                 <>
                   <ShieldCheck className="w-5 h-5 mr-2" />
@@ -690,7 +1008,6 @@ export default function StudentAdmissionForm() {
               )}
             </Button>
           </div>
-
         </form>
 
         {/* ── Footer ── */}

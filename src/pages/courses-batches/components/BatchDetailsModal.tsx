@@ -295,7 +295,7 @@ export default function BatchDetailsSheet({
               </div>
             </div>
 
-            <div className="space-y-1">
+            {/* <div className="space-y-1">
               <Label
                 htmlFor="batch-timing"
                 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
@@ -308,7 +308,7 @@ export default function BatchDetailsSheet({
                 onChange={(e) => setBatchForm({ ...batchForm, timing: e.target.value })}
                 placeholder="e.g. 09:00-12:00"
               />
-            </div>
+            </div> */}
 
             <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 bg-muted/30">
               <Label
@@ -542,7 +542,7 @@ export default function BatchDetailsSheet({
                     {batch.start_date} to {batch.end_date}
                   </div>
                 </div>
-                <div className="space-y-1">
+                {/* <div className="space-y-1">
                   <span className="text-xs font-semibold text-muted-foreground uppercase">
                     Timing
                   </span>
@@ -550,7 +550,7 @@ export default function BatchDetailsSheet({
                     <Clock className="w-4 h-4 text-primary" />
                     {batch.timing}
                   </div>
-                </div>
+                </div> */}
               </div>
 
               <div className="grid grid-cols-2 gap-4">

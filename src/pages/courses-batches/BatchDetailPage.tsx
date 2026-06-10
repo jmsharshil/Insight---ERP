@@ -459,14 +459,14 @@ export default function BatchDetailPage() {
                 />
               </div>
 
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label>Timing</Label>
                 <Input
                   value={batchForm.timing}
                   onChange={(e) => setBatchForm({ ...batchForm, timing: e.target.value })}
                   placeholder="e.g., 09:00 AM - 11:00 AM"
                 />
-              </div>
+              </div> */}
 
               <div className="space-y-2 flex flex-col justify-center pt-6">
                 <div className="flex items-center gap-3">
@@ -479,7 +479,7 @@ export default function BatchDetailPage() {
               </div>
             </div>
 
-            <div className="border-t border-border pt-4 mt-6">
+            {/* <div className="border-t border-border pt-4 mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -632,7 +632,7 @@ export default function BatchDetailPage() {
                   )}
                 </div>
               </div>
-            </div>
+            </div> */}
 
             <div className="flex gap-3 pt-4 border-t border-border mt-6 justify-end">
               <Button type="button" variant="outline" onClick={() => setMode("view")}>
@@ -688,7 +688,7 @@ export default function BatchDetailPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              {/* <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                   <Clock className="w-5 h-5 text-primary" />
                 </div>
@@ -696,7 +696,7 @@ export default function BatchDetailPage() {
                   <p className="text-sm text-muted-foreground">Timing</p>
                   <p className="font-medium">{batch.timing || "Not set"}</p>
                 </div>
-              </div>
+              </div> */}
             </div>
 
             <div className="grid grid-cols-2 gap-6">

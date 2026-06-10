@@ -225,9 +225,9 @@ export default function BatchDialog({
             </div>
           </div>
 
-          <div className="space-y-1">
+          {/* <div className="space-y-1"> */}
             {/* Timings */}
-            <Label
+            {/* <Label
               htmlFor="batch-timing"
               className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
             >
@@ -238,8 +238,8 @@ export default function BatchDialog({
               value={batchForm.timing}
               onChange={(e) => setBatchForm({ ...batchForm, timing: e.target.value })}
               placeholder="e.g. 09:00-12:00"
-            />
-          </div>
+            /> */}
+          {/* </div> */}
 
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 bg-muted/30">
             <Label

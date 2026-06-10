@@ -274,7 +274,7 @@ export default function StudentsTab() {
             >
               View Profile
             </DropdownMenuItem>
-            <DropdownMenuItem
+            {/* <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
                 handleOpenAssignModal(r);
@@ -289,7 +289,7 @@ export default function StudentsTab() {
               }}
             >
               Remove from Batch
-            </DropdownMenuItem>
+            </DropdownMenuItem> */}
           </DropdownMenuContent>
         </DropdownMenu>
       ),

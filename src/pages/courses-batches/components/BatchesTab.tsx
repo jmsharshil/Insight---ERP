@@ -219,10 +219,10 @@ export default function BatchesTab({
                       <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
                       <span className="truncate">{b.location || "N/A"}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 col-span-2 min-w-0">
+                    {/* <div className="flex items-center gap-1.5 col-span-2 min-w-0">
                       <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
                       <span className="truncate">Timing: {b.timing}</span>
-                    </div>
+                    </div> */}
                     <div className="col-span-2 pt-1 border-t border-border/50 text-[10px] text-muted-foreground flex justify-between">
                       <span>Start: {b.start_date}</span>
                       <span>End: {b.end_date}</span>
