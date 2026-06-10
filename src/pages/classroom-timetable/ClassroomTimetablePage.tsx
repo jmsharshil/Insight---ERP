@@ -68,7 +68,9 @@ export default function ClassroomTimetablePage() {
   const { user } = useAuth();
   const toast = useToast();
   const dispatch = useDispatch<AppDispatch>();
-  const { classrooms, isLoading: classroomsLoading } = useSelector((state: RootState) => state.classRoom);
+  const { classrooms, isLoading: classroomsLoading } = useSelector(
+    (state: RootState) => state.classRoom,
+  );
 
   useEffect(() => {
     setPageTitle("Classroom & Timetable");
