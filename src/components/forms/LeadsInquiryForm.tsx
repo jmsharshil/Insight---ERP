@@ -83,6 +83,7 @@ export default function LeadsInquiryForm() {
     first_name: "",
     surname: "",
     father_name: "",
+    email: "",
     street: "",
     city: "",
     state: "",
@@ -149,6 +150,7 @@ export default function LeadsInquiryForm() {
         first_name: inquiryData.first_name,
         surname: inquiryData.surname,
         father_name: inquiryData.father_name,
+        email: inquiryData.email,
         street: inquiryData.street,
         city: inquiryData.city,
         state: inquiryData.state,
@@ -447,6 +449,12 @@ export default function LeadsInquiryForm() {
                   <div className="space-y-1.5">
                     <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>Father's Name</Label>
                     <Input value={inquiryData.father_name} onChange={(e) => handleInquiryChange("father_name", e.target.value)} className="h-10 sm:h-11 text-sm" placeholder="e.g. Harji" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                      Email <span style={{ color: T.error }}>*</span>
+                    </Label>
+                    <Input required type="email" value={inquiryData.email} onChange={(e) => handleInquiryChange("email", e.target.value)} className="h-10 sm:h-11 text-sm" placeholder="e.g. abc@gmail.com" />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>

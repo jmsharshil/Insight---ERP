@@ -433,7 +433,6 @@ export default function ChatPage() {
     if (selectedFile) {
       setIsUploading(true);
       const formData = new FormData();
-      if (content) formData.append("content", content);
       formData.append("file", selectedFile);
 
       try {
@@ -441,7 +440,7 @@ export default function ChatPage() {
         const token = raw ? JSON.parse(raw)?.access : "";
         const baseUrl = import.meta.env.VITE_APP_BASE_URL || "";
         
-        const res = await axios.post(`${baseUrl}/api/v1/chat/rooms/${activeId}/messages/`, formData, {
+        const res = await axios.post(`${baseUrl}/api/v1/chat/upload/`, formData, {
           headers: {
             "Authorization": `Bearer ${token}`,
             "Content-Type": "multipart/form-data"
