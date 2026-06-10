@@ -9,13 +9,36 @@ import { AppDispatch } from "@/store";
 import logo from "@/assets/logo.png";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  CheckCircle2, GraduationCap, MapPin, Loader2, Mail, User, Phone,
-  ClipboardList, Calendar, School, Award, Megaphone, ShieldCheck,
-  FileImage, Upload, X, Camera, CreditCard, Baby, PenTool,
+  CheckCircle2,
+  GraduationCap,
+  MapPin,
+  Loader2,
+  Mail,
+  User,
+  Phone,
+  ClipboardList,
+  Calendar,
+  School,
+  Award,
+  Megaphone,
+  ShieldCheck,
+  FileImage,
+  Upload,
+  X,
+  Camera,
+  CreditCard,
+  Baby,
+  PenTool,
   FileCheck,
   BadgeCheck,
 } from "lucide-react";
@@ -30,20 +53,40 @@ const T = {
 };
 
 /* ─── Reusable section card ────────────────────────────────── */
-function SectionCard({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {
+function SectionCard({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: React.ElementType;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <div
       className="rounded-2xl overflow-hidden transition-shadow duration-300 hover:shadow-md"
-      style={{ border: `1px solid ${T.border}`, background: T.card, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+      style={{
+        border: `1px solid ${T.border}`,
+        background: T.card,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+      }}
     >
       <div
         className="px-4 sm:px-6 py-3.5 sm:py-4 flex items-center gap-2.5"
         style={{ background: T.grayDark }}
       >
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(247,169,0,0.15)" }}>
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+          style={{ background: "rgba(247,169,0,0.15)" }}
+        >
           <Icon className="w-4 h-4" style={{ color: T.primary }} />
         </div>
-        <h2 className="text-base sm:text-lg font-semibold text-white" style={{ fontFamily: T.headingFont }}>{title}</h2>
+        <h2
+          className="text-base sm:text-lg font-semibold text-white"
+          style={{ fontFamily: T.headingFont }}
+        >
+          {title}
+        </h2>
       </div>
       <div className="p-4 sm:p-6">{children}</div>
     </div>
@@ -54,10 +97,18 @@ function SectionCard({ icon: Icon, title, children }: { icon: React.ElementType;
 function SubSection({ icon: Icon, title }: { icon: React.ElementType; title: string }) {
   return (
     <div className="flex items-center gap-2 mb-4">
-      <div className="w-7 h-7 rounded-md flex items-center justify-center" style={{ background: `${T.primary}18` }}>
+      <div
+        className="w-7 h-7 rounded-md flex items-center justify-center"
+        style={{ background: `${T.primary}18` }}
+      >
         <Icon className="w-3.5 h-3.5" style={{ color: T.primaryDark }} />
       </div>
-      <h3 className="font-semibold text-sm sm:text-base" style={{ color: T.text, fontFamily: T.headingFont }}>{title}</h3>
+      <h3
+        className="font-semibold text-sm sm:text-base"
+        style={{ color: T.text, fontFamily: T.headingFont }}
+      >
+        {title}
+      </h3>
     </div>
   );
 }
@@ -101,12 +152,19 @@ function FileUploadField({
         />
         {file ? (
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: `${T.success}15` }}>
+            <div
+              className="w-10 h-10 rounded-lg flex items-center justify-center"
+              style={{ background: `${T.success}15` }}
+            >
               <CheckCircle2 className="w-5 h-5" style={{ color: T.success }} />
             </div>
             <div className="flex-1 text-left min-w-0">
-              <p className="text-sm font-medium truncate" style={{ color: T.text }}>{file.name}</p>
-              <p className="text-xs" style={{ color: T.textMuted }}>{(file.size / 1024).toFixed(1)} KB</p>
+              <p className="text-sm font-medium truncate" style={{ color: T.text }}>
+                {file.name}
+              </p>
+              <p className="text-xs" style={{ color: T.textMuted }}>
+                {(file.size / 1024).toFixed(1)} KB
+              </p>
             </div>
             <button
               type="button"
@@ -122,7 +180,10 @@ function FileUploadField({
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 py-2">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: `${T.primary}15` }}>
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ background: `${T.primary}15` }}
+            >
               <Icon className="w-5 h-5" style={{ color: T.primaryDark }} />
             </div>
             <p className="text-xs font-medium" style={{ color: T.textMuted }}>
@@ -148,7 +209,11 @@ export default function StudentAdmissionForm() {
   const [loading, setLoading] = useState(false);
 
   // Fetch locations dropdown
-  const { options: locations, loading: locationsLoading, fetchOptions: fetchLocations } = useDropdown("locations", false);
+  const {
+    options: locations,
+    loading: locationsLoading,
+    fetchOptions: fetchLocations,
+  } = useDropdown("locations", false);
 
   useEffect(() => {
     fetchLocations();
@@ -211,9 +276,7 @@ export default function StudentAdmissionForm() {
             updated.batch_attempt = "june";
           }
         } else if (value === "cs_executive" || value === "cs_professional") {
-          if (prev.group_module === "full" || prev.group_module === "both") {
-            updated.group_module = "module_1";
-          }
+          updated.group_module = "module_1";
           if (!["june", "dec"].includes(prev.batch_attempt)) {
             updated.batch_attempt = "june";
           }
@@ -222,6 +285,13 @@ export default function StudentAdmissionForm() {
       return updated;
     });
   };
+
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      group_module: prev.course === "cseet" ? "full" : "module_1",
+    }));
+  }, [formData.course]);
 
   /* ── Submit ── */
   const handleSubmit = (e: React.FormEvent) => {
@@ -245,7 +315,12 @@ export default function StudentAdmissionForm() {
 
     // Append text fields
     Object.entries(formData).forEach(([key, value]) => {
-      if (key === "tenth_percentage" || key === "tenth_percentile" || key === "twelfth_percentage" || key === "twelfth_percentile") {
+      if (
+        key === "tenth_percentage" ||
+        key === "tenth_percentile" ||
+        key === "twelfth_percentage" ||
+        key === "twelfth_percentile"
+      ) {
         if (value) payload.append(key, String(parseFloat(value as string)));
       } else {
         payload.append(key, String(value));
@@ -283,7 +358,10 @@ export default function StudentAdmissionForm() {
     return (
       <div
         className="min-h-screen flex items-center justify-center p-4"
-        style={{ background: `linear-gradient(180deg, ${T.surface} 0%, ${T.primaryLight}50 100%)`, fontFamily: T.bodyFont }}
+        style={{
+          background: `linear-gradient(180deg, ${T.surface} 0%, ${T.primaryLight}50 100%)`,
+          fontFamily: T.bodyFont,
+        }}
       >
         <div
           className="max-w-lg w-full rounded-3xl p-8 sm:p-12 text-center animate-in fade-in zoom-in duration-500"
@@ -293,21 +371,26 @@ export default function StudentAdmissionForm() {
 
           <div
             className="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-8"
-            style={{ background: `linear-gradient(135deg, ${T.success}15 0%, ${T.success}25 100%)` }}
+            style={{
+              background: `linear-gradient(135deg, ${T.success}15 0%, ${T.success}25 100%)`,
+            }}
           >
             <CheckCircle2 className="w-12 h-12" style={{ color: T.success }} />
           </div>
 
-          <h2 className="text-2xl sm:text-3xl font-bold mb-3" style={{ color: T.black, fontFamily: T.headingFont }}>
+          <h2
+            className="text-2xl sm:text-3xl font-bold mb-3"
+            style={{ color: T.black, fontFamily: T.headingFont }}
+          >
             Admission Submitted!
           </h2>
           <p className="text-base sm:text-lg mb-2" style={{ color: T.text }}>
             Your registration form has been received successfully.
           </p>
           <p className="text-sm mb-10 max-w-sm mx-auto" style={{ color: T.textMuted }}>
-            Our admissions team will verify your documents and get in touch with you within 48 hours. Thank you for choosing Insight!
+            Our admissions team will verify your documents and get in touch with you within 48
+            hours. Thank you for choosing Insight!
           </p>
-
         </div>
       </div>
     );
@@ -466,6 +549,7 @@ export default function StudentAdmissionForm() {
                       <SelectItem value="full">Full Syllabus</SelectItem>
                     ) : (
                       <>
+                        <SelectItem value="both">Both</SelectItem>
                         <SelectItem value="module_1">Module 1</SelectItem>
                         <SelectItem value="module_2">Module 2</SelectItem>
                       </>
@@ -980,7 +1064,8 @@ export default function StudentAdmissionForm() {
               className="w-full h-12 sm:h-14 text-sm sm:text-base font-semibold text-black transition-all duration-200"
               style={{
                 background: formData.consent && !loading ? T.primary : T.textMuted,
-                boxShadow: formData.consent && !loading ? "0 4px 14px rgba(247,169,0,0.25)" : "none",
+                boxShadow:
+                  formData.consent && !loading ? "0 4px 14px rgba(247,169,0,0.25)" : "none",
               }}
               disabled={loading || !formData.consent}
             >

@@ -741,7 +741,7 @@ export default function EditAdmissionDialog({
                                   )}
                                 </span>
                               ) : (
-                                <span className="text-muted-foreground">No file uploaded</span>
+                                null
                               )}
                             </p>
                           </div>

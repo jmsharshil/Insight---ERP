@@ -65,7 +65,9 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
   // expanded when: mobile, pinned open, or hovered
   const expanded = mobile || pinned || hovered;
   const role = user ? ROLES[user.role] : null;
-  const items = role?.modules.map((m) => ({ id: m, ...NAV_ITEMS[m] })) ?? [];
+  const items = role?.modules
+    .filter((m) => !(m === "dashboard" && user?.role === "super_admin"))
+    .map((m) => ({ id: m, ...NAV_ITEMS[m] })) ?? [];
 
   return (
     <aside

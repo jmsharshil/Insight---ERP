@@ -67,7 +67,7 @@ export default function StudentsTab() {
     dispatch({
       type: batchAction.GET_BATCHES,
       method: "GET",
-      endPoint: "/api/v1/batches/?page_size=1000",
+      endPoint: "/api/v1/batches/",
       auth: true,
       setLoading: setBatchesLoading,
       getResponse: (res: any) => {
