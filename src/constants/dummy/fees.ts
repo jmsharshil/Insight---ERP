@@ -88,5 +88,5 @@ export const FEE_STATUS_META: Record<FeeStatus, { label: string; bg: string; col
   approved: { label: "Approved", bg: "bg-green-100", color: "text-green-700" },
   rejected: { label: "Rejected", bg: "bg-red-100", color: "text-red-700" },
   refund_pending: { label: "Refund Pending", bg: "bg-purple-100", color: "text-purple-700" },
-  refunded: { label: "Refunded", bg: "bg-gray-200", color: "text-gray-700" },
+  refunded: { label: "Refunded", bg: "bg-gray-200", color: "text-black" },
 };

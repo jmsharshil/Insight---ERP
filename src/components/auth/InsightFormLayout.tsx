@@ -73,7 +73,7 @@ function BrandCarousel({ compact = false }: { compact?: boolean }) {
           {SLIDES.map((s, i) => (
             <div key={i} className="relative min-w-0 flex-[0_0_100%]">
               <div
-                className={`w-full bg-navy ${
+                className={`w-full bg-sidebar ${
                   compact ? "aspect-[16/9]" : "aspect-[1280/553]"
                 }`}
               >
@@ -85,7 +85,7 @@ function BrandCarousel({ compact = false }: { compact?: boolean }) {
                 />
               </div>
               <div
-                className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-navy/95 via-navy/60 to-transparent ${
+                className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-sidebar/95 via-sidebar/60 to-transparent ${
                   compact ? "p-3" : "p-4 sm:p-5"
                 }`}
               >
@@ -134,7 +134,7 @@ interface InsightFormLayoutProps {
 
 export default function InsightFormLayout({ children }: InsightFormLayoutProps) {
   return (
-    <div className="min-h-screen w-full bg-navy relative overflow-hidden">
+    <div className="min-h-screen w-full bg-sidebar relative overflow-hidden">
       {/* Decorative background */}
       <div className="pointer-events-none absolute inset-0">
         <div

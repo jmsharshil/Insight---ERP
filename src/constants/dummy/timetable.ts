@@ -8,10 +8,17 @@ export interface TimetableSlot {
   startTime: string;
   endTime: string;
   subject: string;
+  subject_name: string;
   facultyId: string;
   facultyName: string;
   classroom: string;
   isConflict?: boolean;
+  course_name?: string;
+  course_code?: string;
+  session?: string;
+  is_recurring?: boolean;
+  effective_from?: string;
+  effective_to?: string;
 }
 
 export const DAYS: Day[] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -47,6 +54,7 @@ const slot = (
   startTime: PERIOD_TIMES[period].start,
   endTime: PERIOD_TIMES[period].end,
   subject,
+  subject_name: subject,
   facultyId: FACULTY[fIdx].id,
   facultyName: FACULTY[fIdx].name,
   classroom: room,

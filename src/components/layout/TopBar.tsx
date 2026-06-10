@@ -4,7 +4,7 @@ import { Bell, MessageSquare, Menu, Building2, LogOut, User, Settings, Search } 
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { useUI } from "@/hooks/useUI";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -106,7 +106,16 @@ export default function TopBar() {
               <DropdownMenuTrigger asChild>
                 <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} className="rounded-full">
                   <Avatar className="h-9 w-9 border-2 border-primary/30">
-                    <AvatarFallback className="bg-navy text-white text-xs font-bold">
+                    <AvatarImage
+                      src={
+                        user.profile_pic
+                          ? (user.profile_pic.startsWith("http") ? user.profile_pic : import.meta.env.VITE_APP_BASE_URL + user.profile_pic)
+                          : undefined
+                      }
+                      alt={user.name}
+                      className="object-cover"
+                    />
+                    <AvatarFallback className="bg-sidebar text-white text-xs font-bold">
                       {user.name.split(" ").map((n) => n[0]).slice(0, 2).join("")}
                     </AvatarFallback>
                   </Avatar>

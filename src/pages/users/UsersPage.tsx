@@ -1,8 +1,17 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useUI } from "@/hooks/useUI";
+import { useDropdown } from "@/hooks/useDropdown";
 import { userActions } from "@/redux/actions";
-import { setUsers, setUsersLoading, setUsersError, setSelectedUser, setSelectedUserLoading, updateUserInList, type UserRecord } from "@/redux/slices/usersSlice";
+import {
+  setUsers,
+  setUsersLoading,
+  setUsersError,
+  setSelectedUser,
+  setSelectedUserLoading,
+  updateUserInList,
+  type UserRecord,
+} from "@/redux/slices/usersSlice";
 import { RootState, AppDispatch } from "@/store";
 import PageHeader from "@/components/layout/PageHeader";
 import { useToast } from "@/hooks/useToast";
@@ -15,12 +24,23 @@ import {
   type SortingState,
   type ColumnDef,
 } from "@tanstack/react-table";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -31,11 +51,26 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { Search, Loader2, FileSearch, ArrowUpDown, ChevronLeft, ChevronRight, UserPlus, Filter, X, Pencil, Save, XCircle, Upload, Camera } from "lucide-react";
+import {
+  Search,
+  Loader2,
+  FileSearch,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  UserPlus,
+  Filter,
+  X,
+  Pencil,
+  Save,
+  XCircle,
+  Upload,
+  Camera,
+} from "lucide-react";
 import EmptyState from "@/components/common/EmptyState";
 
 import { cn, formatDate } from "@/lib/utils";
-import { Skeleton } from "boneyard-js/react";
+import { TableSkeleton, SheetSkeleton } from "@/components/common/Skeletons";
 
 /* ─── Role choices ──────────────────────────────────────────── */
 
@@ -63,7 +98,11 @@ const columns: ColumnDef<UserRecord>[] = [
   {
     accessorKey: "name",
     header: ({ column }) => (
-      <Button variant="ghost" className="px-0 font-semibold" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+      <Button
+        variant="ghost"
+        className="px-0 font-semibold"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
         Name <ArrowUpDown className="ml-2 h-3.5 w-3.5" />
       </Button>
     ),
@@ -74,16 +113,20 @@ const columns: ColumnDef<UserRecord>[] = [
       return (
         <div className="flex items-center gap-3">
           <Avatar className="h-9 w-9 border border-border/50 shadow-sm">
-            <AvatarImage 
+            <AvatarImage
               src={
-                profilePic 
-                  ? (profilePic.startsWith("http") ? profilePic : import.meta.env.VITE_APP_BASE_URL + profilePic)
+                profilePic
+                  ? profilePic.startsWith("http")
+                    ? profilePic
+                    : import.meta.env.VITE_APP_BASE_URL + profilePic
                   : undefined
-              } 
-              alt={name} 
-              className="object-cover" 
+              }
+              alt={name}
+              className="object-cover"
             />
-            <AvatarFallback className="bg-primary/10 text-primary-dark font-medium">{initials}</AvatarFallback>
+            <AvatarFallback className="bg-primary/10 text-primary-dark font-medium">
+              {initials}
+            </AvatarFallback>
           </Avatar>
           <div className="font-medium text-text-primary">{name}</div>
         </div>
@@ -110,7 +153,9 @@ const columns: ColumnDef<UserRecord>[] = [
   {
     accessorKey: "created_at",
     header: "Created At",
-    cell: ({ row }) => <span className="text-sm">{formatDate(row.getValue("created_at") as string)}</span>,
+    cell: ({ row }) => (
+      <span className="text-sm">{formatDate(row.getValue("created_at") as string)}</span>
+    ),
   },
   {
     accessorKey: "is_active",
@@ -118,52 +163,18 @@ const columns: ColumnDef<UserRecord>[] = [
     cell: ({ row }) => {
       const isActive = row.getValue("is_active") as boolean;
       return (
-        <span className={cn(
-          "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
-          isActive ? "bg-green-500/10 text-green-600" : "bg-destructive/10 text-destructive"
-        )}>
+        <span
+          className={cn(
+            "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
+            isActive ? "bg-green-500/10 text-green-600" : "bg-destructive/10 text-destructive",
+          )}
+        >
           {isActive ? "Active" : "Inactive"}
         </span>
       );
     },
   },
 ];
-
-/* ─── Skeleton Fixture ──────────────────────────────────────── */
-
-const UsersTableFixture = () => (
-  <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
-    <Table>
-      <TableHeader>
-        <TableRow className="bg-muted/40">
-          <TableHead>Name</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>Phone</TableHead>
-          <TableHead>Role</TableHead>
-          <TableHead>Created At</TableHead>
-          <TableHead>Status</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {Array.from({ length: 10 }).map((_, i) => (
-          <TableRow key={i}>
-            <TableCell>
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 bg-border rounded-full flex-shrink-0" />
-                <div className="h-5 w-32 bg-border rounded" />
-              </div>
-            </TableCell>
-            <TableCell><div className="h-4 w-48 bg-border rounded" /></TableCell>
-            <TableCell><div className="h-4 w-24 bg-border rounded" /></TableCell>
-            <TableCell><div className="h-6 w-24 bg-border rounded-full" /></TableCell>
-            <TableCell><div className="h-4 w-24 bg-border rounded" /></TableCell>
-            <TableCell><div className="h-6 w-16 bg-border rounded-full" /></TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  </div>
-);
 
 /* ─── Component ─────────────────────────────────────────────── */
 
@@ -172,18 +183,29 @@ export default function UsersPage() {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
 
-  const { users, loading, selectedUser, selectedUserLoading } = useSelector((state: RootState) => state.users);
+  const { users, loading, selectedUser, selectedUserLoading } = useSelector(
+    (state: RootState) => state.users,
+  );
 
+  const {
+    options: branchOptions,
+    fetchOptions: fetchBranchOptions,
+    loading: branchLoading,
+  } = useDropdown("branches", false);
+  console.log("branchOptions", branchOptions);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   /* ── Edit mode state ── */
   const [isEditing, setIsEditing] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
   const [editForm, setEditForm] = useState({
+    username: "",
     name: "",
     email: "",
     phone: "",
     branch: "",
+    role: "",
     is_active: true,
   });
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
@@ -235,15 +257,29 @@ export default function UsersPage() {
       });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [searchQuery, roleFilter, statusFilter]
+    [searchQuery, roleFilter, statusFilter],
   );
 
   /* ── Initial load ── */
   useEffect(() => {
     setPageTitle("Users");
     fetchUsers({ search: "", role: "", is_active: "" });
+    fetchBranchOptions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /* ── Sync editForm when selectedUser details load ── */
+  useEffect(() => {
+    if (selectedUser) {
+      setEditForm({
+        name: selectedUser.name || "",
+        email: selectedUser.email || "",
+        phone: selectedUser.phone || "",
+        branch: selectedUser.branch || "",
+        is_active: selectedUser.is_active ?? true,
+      });
+    }
+  }, [selectedUser]);
 
   /* ── Debounced search ── */
   const handleSearchChange = (value: string) => {
@@ -283,6 +319,7 @@ export default function UsersPage() {
 
   const handleRowClick = (userId: string) => {
     setIsEditing(false);
+    setIsAdding(false);
     setProfilePicFile(null);
     setProfilePicPreview(null);
     setIsSheetOpen(true);
@@ -307,14 +344,74 @@ export default function UsersPage() {
     });
   };
 
+  const handleAddUserClick = () => {
+    setEditForm({
+      username: "",
+      name: "",
+      email: "",
+      phone: "",
+      branch: "",
+      role: "",
+      is_active: true,
+    });
+    setProfilePicFile(null);
+    setProfilePicPreview(null);
+    setIsAdding(true);
+    setIsEditing(true);
+    dispatch(setSelectedUser(null));
+    setIsSheetOpen(true);
+  };
+
+  const addUser = () => {
+    setUpdateLoading(true);
+
+    const payload = {
+      username: editForm.username,
+      email: editForm.email,
+      phone: editForm.phone,
+      name: editForm.name,
+      role: editForm.role,
+      branch: editForm.branch,
+      is_active: editForm.is_active,
+    };
+
+    dispatch({
+      type: userActions.ADD_USER,
+      method: "POST",
+      endPoint: `/api/auth/users/add/`,
+      body: payload,
+      auth: true,
+      setLoading: (val: boolean) => setUpdateLoading(val),
+      getResponse: (res: any) => {
+        if (res) {
+          toast.success("User added successfully!");
+          setIsAdding(false);
+          setIsEditing(false);
+          setIsSheetOpen(false);
+          fetchUsers();
+        }
+      },
+      getError: (err: any) => {
+        const msg =
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          err?.message ||
+          "Failed to add user";
+        toast.error(msg);
+      },
+    });
+  };
+
   /* ── Enter edit mode ── */
   const startEditing = () => {
     if (!selectedUser) return;
     setEditForm({
+      username: selectedUser.username || "",
       name: selectedUser.name || "",
       email: selectedUser.email || "",
       phone: selectedUser.phone || "",
       branch: selectedUser.branch || "",
+      role: selectedUser.role || "",
       is_active: selectedUser.is_active,
     });
     setProfilePicFile(null);
@@ -323,7 +420,11 @@ export default function UsersPage() {
   };
 
   const cancelEditing = () => {
+    if (isAdding) {
+      setIsSheetOpen(false);
+    }
     setIsEditing(false);
+    setIsAdding(false);
     setProfilePicFile(null);
     setProfilePicPreview(null);
   };
@@ -348,6 +449,7 @@ export default function UsersPage() {
     formData.append("email", editForm.email);
     formData.append("phone", editForm.phone);
     formData.append("is_active", String(editForm.is_active));
+    console.log("form data", editForm);
     if (editForm.branch) formData.append("branch", editForm.branch);
     if (profilePicFile) formData.append("profile_pic", profilePicFile);
 
@@ -373,7 +475,11 @@ export default function UsersPage() {
         }
       },
       getError: (err: any) => {
-        const msg = err?.response?.data?.message || err?.response?.data?.error || err?.message || "Failed to update user";
+        const msg =
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          err?.message ||
+          "Failed to update user";
         toast.error(msg);
       },
     });
@@ -399,7 +505,10 @@ export default function UsersPage() {
         title="Users Management"
         subtitle="View and manage all users across the organization."
         actions={
-          <Button className="bg-primary hover:bg-primary-dark text-primary-foreground">
+          <Button
+            onClick={handleAddUserClick}
+            className="bg-primary hover:bg-primary-dark text-primary-foreground"
+          >
             <UserPlus className="w-4 h-4 mr-2" /> Add User
           </Button>
         }
@@ -449,7 +558,12 @@ export default function UsersPage() {
 
           {/* Clear Filters */}
           {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground hover:text-destructive">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+              className="text-muted-foreground hover:text-destructive"
+            >
               <X className="w-4 h-4 mr-1" /> Clear
             </Button>
           )}
@@ -464,12 +578,9 @@ export default function UsersPage() {
         </div>
 
         {/* ── Table Container ── */}
-        <Skeleton 
-          name="users-table" 
-          loading={loading && users.length === 0} 
-          fixture={<UsersTableFixture />}
-          snapshotConfig={{ leafTags: ["th", "td"] }}
-        >
+        {loading ? (
+          <TableSkeleton rows={10} columns={6} />
+        ) : (
           <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
             <Table>
               <TableHeader>
@@ -479,10 +590,7 @@ export default function UsersPage() {
                       <TableHead key={header.id}>
                         {header.isPlaceholder
                           ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
+                          : flexRender(header.column.columnDef.header, header.getContext())}
                       </TableHead>
                     ))}
                   </TableRow>
@@ -499,10 +607,7 @@ export default function UsersPage() {
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id} className="py-3">
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
                       ))}
                     </TableRow>
@@ -513,7 +618,11 @@ export default function UsersPage() {
                       <EmptyState
                         icon={FileSearch}
                         title="No users found"
-                        description={hasActiveFilters ? "No users match your filter criteria. Try adjusting your filters." : "There are no users in the system yet."}
+                        description={
+                          hasActiveFilters
+                            ? "No users match your filter criteria. Try adjusting your filters."
+                            : "There are no users in the system yet."
+                        }
                       />
                     </TableCell>
                   </TableRow>
@@ -521,14 +630,14 @@ export default function UsersPage() {
               </TableBody>
             </Table>
           </div>
-        </Skeleton>
+        )}
 
         {/* ── Pagination ── */}
         {table.getPageCount() > 1 && (
           <div className="flex items-center justify-between text-sm text-muted-foreground pt-2">
             <span>
-              Page {table.getState().pagination.pageIndex + 1} of{" "}
-              {table.getPageCount()} · {table.getRowModel().rows.length} records
+              Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()} ·{" "}
+              {table.getRowModel().rows.length} records
             </span>
             <div className="flex gap-1">
               <Button
@@ -553,115 +662,54 @@ export default function UsersPage() {
       </div>
 
       {/* ── User Details Sheet ── */}
-      <Sheet open={isSheetOpen} onOpenChange={(open) => { setIsSheetOpen(open); if (!open) cancelEditing(); }}>
+      <Sheet
+        open={isSheetOpen}
+        onOpenChange={(open) => {
+          setIsSheetOpen(open);
+          if (!open) cancelEditing();
+        }}
+      >
         <SheetContent className="sm:max-w-md overflow-y-auto scrollbar-hidden">
           <SheetHeader>
-            <SheetTitle>{isEditing ? "Edit User" : "User Details"}</SheetTitle>
+            <SheetTitle>
+              {isAdding ? "Add New User" : isEditing ? "Edit User" : "User Details"}
+            </SheetTitle>
             <SheetDescription>
-              {isEditing ? "Update the user's information below." : "View complete information for this user."}
+              {isAdding
+                ? "Enter the details below to create a new user."
+                : isEditing
+                  ? "Update the user's information below."
+                  : "View complete information for this user."}
             </SheetDescription>
           </SheetHeader>
           <div className="mt-6">
-            {selectedUserLoading ? (
-              <div className="flex flex-col items-center justify-center h-40">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                <p className="mt-2 text-sm text-muted-foreground">Loading details...</p>
-              </div>
-            ) : selectedUser ? (
+            {selectedUserLoading && !isAdding ? (
+              <SheetSkeleton />
+            ) : isAdding || selectedUser ? (
               <div className="space-y-6">
-                {/* ── VIEW MODE ── */}
-                {!isEditing ? (
-                  <>
-                    <div className="flex flex-col items-center text-center">
+                {/* Profile Picture Header Section */}
+                {!isAdding && (
+                  <div className="flex flex-col items-center text-center pb-4 border-b border-border">
+                    <div className="relative group">
                       <Avatar className="h-24 w-24 border-4 border-background shadow-md">
-                        <AvatarImage 
+                        <AvatarImage
                           src={
-                            selectedUser.profile_pic 
-                              ? (selectedUser.profile_pic.startsWith("http") ? selectedUser.profile_pic : import.meta.env.VITE_APP_BASE_URL + selectedUser.profile_pic)
-                              : undefined
-                          } 
-                          alt={selectedUser.name} 
-                          className="object-cover" 
+                            profilePicPreview
+                              ? profilePicPreview
+                              : selectedUser.profile_pic
+                                ? selectedUser.profile_pic.startsWith("http")
+                                  ? selectedUser.profile_pic
+                                  : import.meta.env.VITE_APP_BASE_URL + selectedUser.profile_pic
+                                : undefined
+                          }
+                          alt={selectedUser.name}
+                          className="object-cover"
                         />
                         <AvatarFallback className="text-3xl bg-primary/10 text-primary-dark font-medium">
-                          {selectedUser.name?.substring(0, 2).toUpperCase() || "U"}
+                          {editForm.name?.substring(0, 2).toUpperCase() || "U"}
                         </AvatarFallback>
                       </Avatar>
-                      <h3 className="mt-4 text-xl font-semibold text-text-primary">{selectedUser.name}</h3>
-                      <p className="text-sm text-muted-foreground">@{selectedUser.username}</p>
-                      
-                      <span className="mt-2 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary-dark">
-                        {selectedUser.role_display}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 pt-4 border-t border-border">
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Email</span>
-                        <span className="text-sm font-medium text-text-primary mt-1">{selectedUser.email}</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Phone</span>
-                        <span className="text-sm font-medium text-text-primary mt-1">{selectedUser.phone}</span>
-                      </div>
-                      {selectedUser.organization_name && (
-                        <div className="flex flex-col">
-                          <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Organization</span>
-                          <span className="text-sm font-medium text-text-primary mt-1">{selectedUser.organization_name}</span>
-                        </div>
-                      )}
-                      {selectedUser.branch && (
-                        <div className="flex flex-col">
-                          <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Branch</span>
-                          <span className="text-sm font-medium text-text-primary mt-1">{selectedUser.branch}</span>
-                        </div>
-                      )}
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Status</span>
-                        <span className="mt-1">
-                          <span className={cn(
-                            "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
-                            selectedUser.is_active ? "bg-green-500/10 text-green-600" : "bg-destructive/10 text-destructive"
-                          )}>
-                            {selectedUser.is_active ? "Active" : "Inactive"}
-                          </span>
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Update Details Button */}
-                    <div className="pt-4 border-t border-border">
-                      <Button
-                        className="w-full bg-primary hover:bg-primary-dark text-primary-foreground font-semibold"
-                        onClick={startEditing}
-                      >
-                        <Pencil className="w-4 h-4 mr-2" />
-                        Update Details
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  /* ── EDIT MODE ── */
-                  <div className="space-y-5">
-                    {/* Profile Picture Upload */}
-                    <div className="flex flex-col items-center">
-                      <div className="relative group">
-                        <Avatar className="h-24 w-24 border-4 border-background shadow-md">
-                          <AvatarImage 
-                            src={
-                              profilePicPreview 
-                                ? profilePicPreview 
-                                : selectedUser.profile_pic 
-                                  ? (selectedUser.profile_pic.startsWith("http") ? selectedUser.profile_pic : import.meta.env.VITE_APP_BASE_URL + selectedUser.profile_pic)
-                                  : undefined
-                            }
-                            alt={selectedUser.name} 
-                            className="object-cover" 
-                          />
-                          <AvatarFallback className="text-3xl bg-primary/10 text-primary-dark font-medium">
-                            {editForm.name?.substring(0, 2).toUpperCase() || "U"}
-                          </AvatarFallback>
-                        </Avatar>
+                      {isEditing && (
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
@@ -669,27 +717,68 @@ export default function UsersPage() {
                         >
                           <Camera className="w-6 h-6 text-white" />
                         </button>
-                      </div>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleProfilePicChange}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="mt-2 text-xs text-primary-dark hover:underline flex items-center gap-1"
-                      >
-                        <Upload className="w-3 h-3" />
-                        {profilePicFile ? profilePicFile.name : "Change photo"}
-                      </button>
+                      )}
                     </div>
 
-                    {/* Name */}
-                    <div className="space-y-1.5">
-                      <Label htmlFor="edit-name" className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Name</Label>
+                    {isEditing ? (
+                      <>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleProfilePicChange}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="mt-2 text-xs text-primary-dark hover:underline flex items-center gap-1"
+                        >
+                          <Upload className="w-3 h-3" />
+                          {profilePicFile ? profilePicFile.name : "Change photo"}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <h3 className="mt-4 text-xl font-semibold text-text-primary">
+                          {selectedUser.name}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">@{selectedUser.username}</p>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Form Fields (Unified for both View & Edit) */}
+                <div className="space-y-4">
+                  {/* Username (Only when adding) */}
+                  {isAdding && (
+                    <div className="space-y-1">
+                      <Label
+                        htmlFor="edit-username"
+                        className="text-xs text-muted-foreground uppercase tracking-wider font-semibold"
+                      >
+                        Username
+                      </Label>
+                      <Input
+                        id="edit-username"
+                        value={editForm.username}
+                        onChange={(e) => setEditForm((f) => ({ ...f, username: e.target.value }))}
+                        placeholder="Username"
+                        className="bg-background"
+                      />
+                    </div>
+                  )}
+
+                  {/* Name */}
+                  <div className="space-y-1">
+                    <Label
+                      htmlFor="edit-name"
+                      className="text-xs text-muted-foreground uppercase tracking-wider font-semibold"
+                    >
+                      Name
+                    </Label>
+                    {isEditing ? (
                       <Input
                         id="edit-name"
                         value={editForm.name}
@@ -697,11 +786,22 @@ export default function UsersPage() {
                         placeholder="Full name"
                         className="bg-background"
                       />
-                    </div>
+                    ) : (
+                      <div className="text-sm font-medium text-text-primary pt-0.5">
+                        {selectedUser.name}
+                      </div>
+                    )}
+                  </div>
 
-                    {/* Email */}
-                    <div className="space-y-1.5">
-                      <Label htmlFor="edit-email" className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Email</Label>
+                  {/* Email */}
+                  <div className="space-y-1">
+                    <Label
+                      htmlFor="edit-email"
+                      className="text-xs text-muted-foreground uppercase tracking-wider font-semibold"
+                    >
+                      Email
+                    </Label>
+                    {isEditing ? (
                       <Input
                         id="edit-email"
                         type="email"
@@ -710,11 +810,22 @@ export default function UsersPage() {
                         placeholder="user@example.com"
                         className="bg-background"
                       />
-                    </div>
+                    ) : (
+                      <div className="text-sm font-medium text-text-primary pt-0.5">
+                        {selectedUser.email}
+                      </div>
+                    )}
+                  </div>
 
-                    {/* Phone */}
-                    <div className="space-y-1.5">
-                      <Label htmlFor="edit-phone" className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Phone</Label>
+                  {/* Phone */}
+                  <div className="space-y-1">
+                    <Label
+                      htmlFor="edit-phone"
+                      className="text-xs text-muted-foreground uppercase tracking-wider font-semibold"
+                    >
+                      Phone
+                    </Label>
+                    {isEditing ? (
                       <Input
                         id="edit-phone"
                         value={editForm.phone}
@@ -722,37 +833,156 @@ export default function UsersPage() {
                         placeholder="Phone number"
                         className="bg-background"
                       />
-                    </div>
-
-                    {/* Branch */}
-                    <div className="space-y-1.5">
-                      <Label htmlFor="edit-branch" className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Branch</Label>
-                      <Input
-                        id="edit-branch"
-                        value={editForm.branch}
-                        onChange={(e) => setEditForm((f) => ({ ...f, branch: e.target.value }))}
-                        placeholder="Branch name or ID"
-                        className="bg-background"
-                      />
-                    </div>
-
-                    {/* Is Active Toggle */}
-                    <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3 bg-muted/30">
-                      <div>
-                        <Label htmlFor="edit-active" className="text-sm font-medium text-text-primary">Active Status</Label>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {editForm.is_active ? "User can access the system" : "User is blocked from access"}
-                        </p>
+                    ) : (
+                      <div className="text-sm font-medium text-text-primary pt-0.5">
+                        {selectedUser.phone || "N/A"}
                       </div>
-                      <Switch
-                        id="edit-active"
-                        checked={editForm.is_active}
-                        onCheckedChange={(checked) => setEditForm((f) => ({ ...f, is_active: checked }))}
-                      />
-                    </div>
+                    )}
+                  </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-3 pt-4 border-t border-border">
+                  {/* Branch */}
+                  <div className="space-y-1">
+                    <Label
+                      htmlFor="edit-branch"
+                      className="text-xs text-muted-foreground uppercase tracking-wider font-semibold"
+                    >
+                      Branch
+                    </Label>
+                    {isEditing || isAdding ? (
+                      <Select
+                        value={editForm.branch}
+                        onValueChange={(val) => setEditForm((f) => ({ ...f, branch: val }))}
+                        disabled={branchLoading}
+                      >
+                        <SelectTrigger className="bg-background" id="edit-branch">
+                          <SelectValue
+                            placeholder={branchLoading ? "Loading branches..." : "Select a branch"}
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {branchOptions.map((b) => (
+                            <SelectItem key={b.value} value={String(b.value)}>
+                              {b.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="text-sm font-medium text-text-primary pt-0.5">
+                        {branchOptions.find((b) => String(b.value) === String(selectedUser.branch))
+                          ?.label ||
+                          selectedUser.branch ||
+                          "N/A"}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Organization (Always read-only) */}
+                  {!isAdding && selectedUser?.organization_name && (
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                        Organization
+                      </Label>
+                      <div className="text-sm font-medium text-text-primary pt-0.5">
+                        {selectedUser.organization_name}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Role */}
+                  {isAdding ? (
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                        Role
+                      </Label>
+                      <Select
+                        value={editForm.role}
+                        onValueChange={(val) => setEditForm((f) => ({ ...f, role: val }))}
+                      >
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ROLE_CHOICES.map((r) => (
+                            <SelectItem key={r.value} value={r.value}>
+                              {r.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                        Role
+                      </Label>
+                      <div className="pt-1">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary-dark">
+                          {selectedUser?.role_display || selectedUser?.role}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Status (Switch if editing, Badge if viewing) */}
+                  <div className="space-y-1">
+                    {isEditing && !isAdding ? (
+                      <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3 bg-muted/30">
+                        <div>
+                          <Label
+                            htmlFor="edit-active"
+                            className="text-sm font-medium text-text-primary"
+                          >
+                            Active Status
+                          </Label>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {editForm.is_active
+                              ? "User can access the system"
+                              : "User is blocked from access"}
+                          </p>
+                        </div>
+                        <Switch
+                          id="edit-active"
+                          checked={editForm.is_active}
+                          onCheckedChange={(checked) =>
+                            setEditForm((f) => ({ ...f, is_active: checked }))
+                          }
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                          Status
+                        </Label>
+                        <div className="pt-1">
+                          <span
+                            className={cn(
+                              "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
+                              selectedUser?.is_active
+                                ? "bg-green-500/10 text-green-600"
+                                : "bg-destructive/10 text-destructive",
+                            )}
+                          >
+                            {selectedUser?.is_active ? "Active" : "Inactive"}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions Footer */}
+                <div className="pt-4 border-t border-border">
+                  {!isEditing ? (
+                    <Button
+                      className="w-full bg-primary hover:bg-primary-dark text-primary-foreground font-semibold"
+                      onClick={startEditing}
+                    >
+                      <Pencil className="w-4 h-4 mr-2" />
+                      Update Details
+                    </Button>
+                  ) : (
+                    <div className="flex gap-3">
                       <Button
                         variant="outline"
                         className="flex-1"
@@ -764,18 +994,23 @@ export default function UsersPage() {
                       </Button>
                       <Button
                         className="flex-1 bg-primary hover:bg-primary-dark text-primary-foreground font-semibold"
-                        onClick={handleUpdateUser}
+                        onClick={isAdding ? addUser : handleUpdateUser}
                         disabled={updateLoading}
                       >
                         {updateLoading ? (
-                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...
+                          </>
                         ) : (
-                          <><Save className="w-4 h-4 mr-2" /> Save Changes</>
+                          <>
+                            <Save className="w-4 h-4 mr-2" />{" "}
+                            {isAdding ? "Add User" : "Save Changes"}
+                          </>
                         )}
                       </Button>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             ) : (
               <div className="text-center text-muted-foreground py-10">

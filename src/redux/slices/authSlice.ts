@@ -37,9 +37,14 @@ const apiAuthSlice = createSlice({
       state.error = null;
       localStorage.removeItem("Insight_Login_Data");
     },
+    updateUser(state, action: PayloadAction<Partial<AuthUser>>) {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload };
+      }
+    },
   },
 });
 
-export const { setCredentials, setAuthLoading, clearAuth } =
+export const { setCredentials, setAuthLoading, clearAuth, updateUser } =
   apiAuthSlice.actions;
 export default apiAuthSlice.reducer;

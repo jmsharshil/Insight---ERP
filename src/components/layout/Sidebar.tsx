@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import RoleBadge from "@/components/common/RoleBadge";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { AvatarImage } from "@radix-ui/react-avatar";
 
 /* ─── constants ──────────────────────────────────── */
 const EXPANDED_W = 260;
@@ -19,7 +20,7 @@ const COLLAPSED_W = 70;
 
 /* ─── tooltip style (reused) ─────────────────────── */
 const tooltipClass =
-  "bg-[#0a1e3d] text-white border border-white/10 shadow-xl shadow-black/30 text-xs font-medium px-3 py-1.5 rounded-lg";
+  "bg-grayDark text-white border border-white/10 shadow-xl shadow-black/30 text-xs font-medium px-3 py-1.5 rounded-lg";
 
 /* ─── component ──────────────────────────────────── */
 export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
@@ -73,7 +74,7 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
       style={{ width: expanded ? EXPANDED_W : COLLAPSED_W }}
       className={cn(
         "relative flex flex-col h-full overflow-hidden select-none",
-        "bg-navy",
+        "bg-sidebar",
         "text-white",
         "transition-[width] duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)]",
       )}
@@ -164,8 +165,8 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
                       className={cn(
                         "group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150",
                         isActive
-                          ? "bg-white/10 text-white"
-                          : "text-white/55 hover:bg-white/[0.06] hover:text-white/90",
+                          ? "bg-primary text-black"
+                          : "text-white/55 hover:bg-[rgba(247,169,0,0.12)] hover:text-white/90",
                       )}
                     >
                       {/* active glow bar */}
@@ -178,7 +179,7 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
                         <item.icon
                           className={cn(
                             "w-5 h-5 transition-colors duration-150",
-                            isActive ? "text-primary" : "text-white/50 group-hover:text-white/80",
+                            isActive ? "text-black" : "text-gray-light group-hover:text-white/80",
                           )}
                         />
                         {isActive && (
@@ -223,8 +224,16 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
                 <TooltipTrigger asChild>
                   <div className="relative flex-shrink-0 group cursor-default">
                     <div className="absolute -inset-[3px] rounded-full bg-gradient-to-tr from-primary via-primary/50 to-primary/20 opacity-60 group-hover:opacity-100 transition-opacity duration-300 blur-[1px]" />
-                    <Avatar className="relative h-9 w-9 border-2 border-[#001a3a]">
-                      <AvatarFallback className="bg-gradient-to-br from-primary to-[#d4900a] text-navy text-xs font-bold">
+                    <Avatar className="relative h-9 w-9 border-2 border-black/20">
+                      {/* <AvatarFallback className="bg-gradient-to-br from-primary to-[#d4900a] text-navy text-xs font-bold">
+                        {user.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .slice(0, 2)
+                          .join("")}
+                      </AvatarFallback> */}
+                      <AvatarImage src={user.profile_pic || ""} />
+                      <AvatarFallback className="bg-gradient-to-br from-primary to-[#d4900a] text-sidebar text-xs font-bold">
                         {user.name
                           .split(" ")
                           .map((n) => n[0])
@@ -233,7 +242,7 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
                       </AvatarFallback>
                     </Avatar>
                     {/* online dot */}
-                    <div className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#002147] shadow-[0_0_6px_1px_rgba(52,211,153,0.5)]" />
+                    <div className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#2e3032] shadow-[0_0_6px_1px_rgba(52,211,153,0.5)]" />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={8} className={tooltipClass}>

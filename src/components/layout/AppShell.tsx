@@ -25,7 +25,7 @@ export default function AppShell() {
 
       {/* Mobile drawer */}
       <Sheet open={sidebarOpen} onOpenChange={(o) => !o && closeMobileSidebar()}>
-        <SheetContent side="left" className="p-0 w-[260px] bg-navy border-0">
+        <SheetContent side="left" className="p-0 w-[260px] bg-sidebar border-0">
           <Sidebar mobile />
         </SheetContent>
       </Sheet>

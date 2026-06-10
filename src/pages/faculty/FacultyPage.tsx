@@ -194,7 +194,7 @@ export default function FacultyPage() {
                 className="rounded-xl border border-border bg-card p-5 cursor-pointer hover:shadow-md transition-shadow"
                 onClick={() => setSelectedFaculty(f)}>
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-navy text-white flex items-center justify-center font-bold">
+                  <div className="w-12 h-12 rounded-full bg-sidebar text-white flex items-center justify-center font-bold">
                     {f.name.split(" ").map(n => n[0]).slice(0,2).join("")}
                   </div>
                   <div className="flex-1 min-w-0">

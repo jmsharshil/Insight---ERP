@@ -12,41 +12,47 @@ export default {
     },
     extend: {
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        border: THEME.colors.border,
+        input: THEME.colors.grayXLight,
+        ring: THEME.colors.primary,
+        background: THEME.colors.surface,
+        foreground: THEME.colors.text,
         primary: {
           DEFAULT: THEME.colors.primary,
           dark: THEME.colors.primaryDark,
           light: THEME.colors.primaryLight,
-          foreground: THEME.colors.text,
+          foreground: THEME.colors.black,
+        },
+        gray: {
+          DEFAULT: THEME.colors.gray,
+          light: THEME.colors.grayLight,
+          dark: THEME.colors.grayDark,
         },
         navy: {
           DEFAULT: THEME.colors.navy,
-          light: THEME.colors.navyLight,
         },
         surface: THEME.colors.surface,
+        sidebar: THEME.colors.sidebar,
+        "sidebar-active": THEME.colors.sidebarActive,
         card: {
           DEFAULT: THEME.colors.card,
           foreground: THEME.colors.text,
         },
         popover: {
-          DEFAULT: "#ffffff",
+          DEFAULT: THEME.colors.card,
           foreground: THEME.colors.text,
         },
         secondary: {
-          DEFAULT: "#F1F5F9",
-          foreground: THEME.colors.text,
+          DEFAULT: THEME.colors.grayXLight,
+          foreground: THEME.colors.gray,
         },
         muted: {
-          DEFAULT: "#F1F5F9",
+          DEFAULT: THEME.colors.grayXLight,
           foreground: THEME.colors.textMuted,
         },
         accent: {
           DEFAULT: THEME.colors.primaryLight,
-          foreground: THEME.colors.text,
+          foreground: THEME.colors.black,
         },
         destructive: {
           DEFAULT: THEME.colors.error,

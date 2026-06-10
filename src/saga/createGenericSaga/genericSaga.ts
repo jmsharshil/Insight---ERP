@@ -1,4 +1,4 @@
-import { call, put } from "redux-saga/effects";
+import { call, put, cancelled } from "redux-saga/effects";
 import type { AxiosRequestConfig, AxiosResponse, AxiosError } from "axios";
 import { axiosRequest } from "@/service/axiosRequest";
 import { clearAuth } from "@/redux/slices/authSlice";
@@ -26,6 +26,7 @@ export function* genericSaga(action: GenericSagaAction): Generator {
       method,
       url: endPoint,
       data: body,
+      timeout: 20000, // Prevent indefinite hanging
     };
 
     if (auth) {
@@ -59,5 +60,9 @@ export function* genericSaga(action: GenericSagaAction): Generator {
     }
 
     console.error(error);
+  } finally {
+    if (yield cancelled()) {
+      if (setLoading) setLoading(false);
+    }
   }
 }

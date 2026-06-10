@@ -6,7 +6,18 @@ import authReducer from "./slices/authSlice";
 import uiReducer from "./slices/uiSlice";
 import apiAuthReducer from "@/redux/slices/authSlice";
 import usersReducer from "@/redux/slices/usersSlice";
+import dropdownReducer from "@/redux/slices/dropdownSlice";
+import crmReducer from "@/redux/slices/crmSlice";
+import settingsReducer from "@/redux/slices/settingsSlice";
 import rootSaga from "@/saga";
+import branchReducer from "@/redux/slices/branchSlice";
+import admissionReducer from "@/redux/slices/admissionSlice";
+import studentReducer from "@/redux/slices/studentSlice";
+import coursesReducer from "@/redux/slices/coursesSlice";
+import chatReducer from "@/redux/slices/chatSlice";
+import classRoomReducer from "@/redux/slices/classroomSlice";
+import timetableReducer from "@/redux/slices/timetableSlice";
+import { feesReducer } from "@/redux/slices/feesSlice";
 
 const sagaMiddleware = createSagaMiddleware();
 
@@ -21,6 +32,17 @@ const rootReducer = combineReducers({
   ui: uiReducer,
   apiAuth: apiAuthReducer,
   users: usersReducer,
+  dropdowns: dropdownReducer,
+  crm: crmReducer,
+  settings: settingsReducer,
+  branch: branchReducer,
+  admissions: admissionReducer,
+  students: studentReducer,
+  courses: coursesReducer,
+  chat: chatReducer,
+  classRoom: classRoomReducer,
+  timetable: timetableReducer,
+  fees: feesReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

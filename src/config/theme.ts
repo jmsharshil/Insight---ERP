@@ -1,22 +1,43 @@
-// SINGLE SOURCE OF TRUTH for all design tokens.
+// SINGLE SOURCE OF TRUTH for all design tokens — Saprae Color System.
 export const THEME = {
   colors: {
+    // ── Primary accent (orange) ──────────────────────────────────────────
     primary: "#F7A900",
     primaryDark: "#D4900A",
     primaryLight: "#FFF3CC",
-    navy: "#002147",
-    navyLight: "#003366",
-    surface: "#F7F7F7",
+
+    // ── Core gray scale (dominant neutral) ──────────────────────────────
+    gray: "#585a5c",          // dominant neutral — muted text, labels, captions
+    grayLight: "#8a8c8e",     // placeholders, nav icons on dark bg
+    grayXLight: "#e8e9ea",    // borders, input strokes, dividers
+    grayDark: "#2e3032",      // sidebar bg, dark surfaces, hover states
+
+    // ── High-emphasis accents (use sparingly) ───────────────────────────
+    navy: "#002147",          // reserved for hero banners ONLY (max 2-3 uses)
+    black: "#000000",         // body text & headings on white/light surfaces
+
+    // ── Surface & layout ────────────────────────────────────────────────
+    surface: "#F4F5F5",       // page background (off-white)
     card: "#FFFFFF",
-    text: "#000000DB",
-    textMuted: "#6B7280",
-    textInverse: "#FFFFFF",
-    border: "#E5E7EB",
+    sidebar: "#2e3032",       // dark gray sidebar
+    sidebarActive: "#F7A900", // active item uses primary orange
+
+    // ── Semantic text ───────────────────────────────────────────────────
+    text: "#000000",          // primary body text on light surfaces
+    textMuted: "#585a5c",     // captions, secondary text (= gray)
+    textInverse: "#FFFFFF",   // text on dark/colored backgrounds
+
+    // ── UI chrome ───────────────────────────────────────────────────────
+    border: "#e8e9ea",        // = grayXLight
+    divider: "#e8e9ea",
+
+    // ── Status colours (unchanged) ──────────────────────────────────────
     success: "#16A34A",
     warning: "#F59E0B",
     error: "#DC2626",
     info: "#2563EB",
   },
+
   sidebar: { width: "260px", collapsedWidth: "72px" },
   topbar: { height: "64px" },
   borderRadius: { sm: "6px", md: "10px", lg: "14px", xl: "20px" },

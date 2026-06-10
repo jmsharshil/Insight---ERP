@@ -1,152 +1,270 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import {
-  Plus, Users, UserPlus, TrendingUp, CheckCircle2, XCircle,
-  ChevronRight, Phone, Mail, Calendar as CalIcon, MessageSquare,
-  StickyNote, Move,
+  Users,
+  UserPlus,
+  TrendingUp,
+  CheckCircle2,
+  XCircle,
+  Phone,
+  Mail,
+  Calendar as CalIcon,
+  Clock,
+  MapPin,
+  FileText,
+  ChevronRight,
+  Loader2,
+  RefreshCw,
+  GripVertical,
 } from "lucide-react";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 
 import PageHeader from "@/components/layout/PageHeader";
 import StatCard from "@/components/common/StatCard";
+import { AppDispatch, RootState } from "@/store";
+import { crmActions, leadActions } from "@/redux/actions";
+import {
+  setCRMAnalytics,
+  setCRMLoading,
+  setCRMError,
+  setLeads,
+  setLeadsLoading,
+  type CRMAnalytics,
+  type APILead,
+} from "@/redux/slices/crmSlice";
+import { API } from "@/service/api";
 import DataTable, { type DataTableColumn } from "@/components/common/DataTable";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
-} from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 
 import { useUI } from "@/hooks/useUI";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
-import {
-  DUMMY_LEADS, LEAD_STATUS_META, COURSE_OPTIONS, SOURCE_OPTIONS, ASSIGNEE_POOL,
-  type Lead, type LeadStatus, type InteractionNote,
-} from "@/constants/dummy/crm";
+import { LEAD_STATUS_META, type LeadStatus } from "@/constants/dummy/crm";
 import { formatDate, cn } from "@/lib/utils";
 
-const STATUSES: LeadStatus[] = ["new", "contacted", "interested", "converted", "lost"];
+/* ─── Stage config ───────────────────────────────────────────── */
 
-const leadSchema = z.object({
-  studentName: z.string().trim().min(2, "Required").max(80),
-  guardianName: z.string().trim().min(2, "Required").max(80),
-  contact: z.string().trim().min(7, "Enter contact"),
-  email: z.string().trim().email("Invalid email").or(z.literal("")),
-  courseInterested: z.string().min(1, "Required"),
-  source: z.string().min(1, "Required"),
-  assignedTo: z.string().min(1, "Required"),
-  remarks: z.string().max(500).optional(),
-});
-type LeadForm = z.infer<typeof leadSchema>;
+const STAGES: LeadStatus[] = ["new", "contacted", "interested", "follow_up", "converted", "lost"];
 
-function StatusBadge({ status }: { status: LeadStatus }) {
-  const m = LEAD_STATUS_META[status];
-  return (
-    <motion.span
-      key={status}
-      initial={{ scale: 0.9 }}
-      animate={{ scale: 1 }}
-      transition={{ type: "spring", stiffness: 400 }}
-      className={cn("inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium", m.bg, m.color)}
-    >
-      {m.label}
-    </motion.span>
-  );
-}
+const STAGE_COLORS: Record<string, { header: string; accent: string; ring: string }> = {
+  new: { header: "bg-blue-50", accent: "#3B82F6", ring: "ring-blue-200" },
+  contacted: { header: "bg-indigo-50", accent: "#6366F1", ring: "ring-indigo-200" },
+  interested: { header: "bg-amber-50", accent: "#F59E0B", ring: "ring-amber-200" },
+  follow_up: { header: "bg-purple-50", accent: "#8B5CF6", ring: "ring-purple-200" },
+  converted: { header: "bg-green-50", accent: "#16A34A", ring: "ring-green-200" },
+  lost: { header: "bg-red-50", accent: "#EF4444", ring: "ring-red-200" },
+};
+
+const COURSE_LABELS: Record<string, string> = {
+  cs_executive: "CS Executive",
+  cs_professional: "CS Professional",
+  cseet: "CSEET",
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   MAIN COMPONENT
+   ═══════════════════════════════════════════════════════════════ */
 
 export default function CRMPage() {
   const { setPageTitle } = useUI();
   const { user } = useAuth();
   const toast = useToast();
-  const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
+  const { analytics, leads, leadsLoading } = useSelector((state: RootState) => state.crm);
 
-  useEffect(() => { setPageTitle("CRM & Pre-Admission"); }, [setPageTitle]);
-
-  const [leads, setLeads] = useState<Lead[]>(DUMMY_LEADS);
-  const [newOpen, setNewOpen] = useState(false);
-  const [selected, setSelected] = useState<Lead | null>(null);
-  const [confirm, setConfirm] = useState<{ kind: "convert" | "lost"; lead: Lead } | null>(null);
   const [tab, setTab] = useState("pipeline");
+  const [selectedLead, setSelectedLead] = useState<APILead | null>(null);
+  const [isLeadDetailLoading, setIsLeadDetailLoading] = useState(false);
 
-  const role = user?.role;
-  const isLeadOwnerOnly = role === "counsellor" || role === "telecaller" || role === "sales_exec";
-  const canReassign = role === "super_admin" || role === "branch_manager" || role === "sales_senior_exec";
-  const canCreate = role !== "student" && role !== "parent" && role !== "faculty";
+  const [pendingMove, setPendingMove] = useState<{ leadId: string; stage: string } | null>(null);
+  const [moveNote, setMoveNote] = useState("");
 
-  // Role-scoped leads
-  const visibleLeads = useMemo(() => {
-    if (isLeadOwnerOnly && user) return leads.filter(l => l.assignedTo === user.id);
-    return leads;
-  }, [leads, isLeadOwnerOnly, user]);
+  useEffect(() => {
+    setPageTitle("CRM & Pre-Admission");
+  }, [setPageTitle]);
 
+  /* ─── Fetch analytics ──────────────────────────────────────── */
+  // useEffect(() => {
+  //   dispatch({
+  //     type: crmActions.GET_CRM_ANALYTICS,
+  //     method: "GET",
+  //     endPoint: API.REPORTS.LEADS,
+  //     auth: true,
+  //     setLoading: (val: boolean) => dispatch(setCRMLoading(val)),
+  //     getResponse: (res: any) => {
+  //       if (res.data) dispatch(setCRMAnalytics(res.data));
+  //     },
+  //     getError: (err: any) => {
+  //       dispatch(setCRMError(err.message));
+  //       toast.error("Failed to load CRM analytics");
+  //     },
+  //   });
+  // }, [dispatch, toast]);
+
+  /* ─── Fetch leads list ─────────────────────────────────────── */
+  const fetchLeads = useCallback(() => {
+    dispatch({
+      type: leadActions.GET_LEADS,
+      method: "GET",
+      endPoint: API.LEADS.LIST,
+      auth: true,
+      setLoading: (val: boolean) => dispatch(setLeadsLoading(val)),
+      getResponse: (res: any) => {
+        if (res.data) dispatch(setLeads(res.data));
+      },
+      getError: (err: any) => {
+        toast.error("Failed to load leads");
+      },
+    });
+  }, [dispatch, toast]);
+
+  useEffect(() => {
+    fetchLeads();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ─── Fetch single lead details ────────────────────────────── */
+  const fetchLeadDetails = useCallback(
+    (lead: APILead) => {
+      // Show the sheet immediately with partial list data
+      setSelectedLead(lead);
+      setIsLeadDetailLoading(true);
+
+      // Fetch full data in the background and update it silently
+      dispatch({
+        type: leadActions.GET_LEAD_DETAILS,
+        method: "GET",
+        endPoint: API.LEADS.GET(lead.id),
+        auth: true,
+        getResponse: (res: any) => {
+          setIsLeadDetailLoading(false);
+          if (res.data) setSelectedLead(res.data);
+        },
+        getError: (err: any) => {
+          setIsLeadDetailLoading(false);
+          toast.error("Failed to load full lead details");
+        },
+      });
+    },
+    [dispatch, toast],
+  );
+
+  /* ─── Stats from analytics ─────────────────────────────────── */
   const stats = useMemo(() => {
-    const by = (s: LeadStatus) => visibleLeads.filter(l => l.status === s).length;
-    return {
-      total: visibleLeads.length,
-      new: by("new"),
-      progress: by("contacted") + by("interested"),
-      converted: by("converted"),
-      lost: by("lost"),
-    };
-  }, [visibleLeads]);
-
-  function moveLead(lead: Lead, to: LeadStatus) {
-    if (to === lead.status) return;
-    if (to === "converted") { setConfirm({ kind: "convert", lead }); return; }
-    if (to === "lost") { setConfirm({ kind: "lost", lead }); return; }
-    setLeads(prev => prev.map(l => l.id === lead.id
-      ? { ...l, status: to, updatedAt: new Date().toISOString(),
-          notes: [...l.notes, {
-            id: `n-${Date.now()}`, author: user?.name ?? "—",
-            content: `Status changed to ${LEAD_STATUS_META[to].label}`,
-            type: "status_change", createdAt: new Date().toISOString(),
-          }] }
-      : l));
-    if (selected?.id === lead.id) {
-      setSelected(s => s ? { ...s, status: to } : s);
+    if (analytics) {
+      return {
+        total: analytics.total_leads,
+        new: analytics.new,
+        contacted: analytics.contacted,
+        interested: analytics.interested,
+        follow_up: analytics.follow_up,
+        converted: analytics.converted,
+        lost: analytics.lost,
+      };
     }
-    toast.success(`Lead moved to ${LEAD_STATUS_META[to].label}`);
-  }
-
-  function performConvert(lead: Lead) {
-    setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, status: "converted" } : l));
-    toast.success("Lead converted! Student admission form auto-populated.");
-    setConfirm(null); setSelected(null);
-    navigate(`/students?prefill=${lead.id}`);
-  }
-  function performLost(lead: Lead) {
-    setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, status: "lost", lostReason: "Marked lost manually" } : l));
-    toast.info("Lead marked as lost.");
-    setConfirm(null);
-  }
-
-  function addNote(lead: Lead, content: string, type: InteractionNote["type"]) {
-    if (!content.trim()) { toast.error("Please fix the errors before submitting."); return; }
-    const note: InteractionNote = {
-      id: `n-${Date.now()}`,
-      author: user?.name ?? "—",
-      content: content.trim(),
-      type,
-      createdAt: new Date().toISOString(),
+    const count = (stage: string) => leads.filter((l) => l.current_stage === stage).length;
+    return {
+      total: leads.length,
+      new: count("new"),
+      contacted: count("contacted"),
+      interested: count("interested"),
+      follow_up: count("follow_up"),
+      converted: count("converted"),
+      lost: count("lost"),
     };
-    setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, notes: [...l.notes, note] } : l));
-    setSelected(s => s && s.id === lead.id ? { ...s, notes: [...s.notes, note] } : s);
-    toast.success("Note added");
-  }
+  }, [analytics, leads]);
+
+  /* ─── Drag & Drop handler ──────────────────────────────────── */
+  const onDragEnd = useCallback((result: DropResult) => {
+    const { draggableId, source, destination } = result;
+    if (!destination || source.droppableId === destination.droppableId) return;
+
+    const targetStage = destination.droppableId;
+    setPendingMove({ leadId: draggableId, stage: targetStage });
+  }, []);
+
+  const handleConfirmMove = useCallback(() => {
+    if (!pendingMove) return;
+    const { leadId, stage } = pendingMove;
+
+    const leadToMove = leads.find((l) => String(l.id) === leadId);
+    if (!leadToMove) return;
+
+    const leadsWithoutMoved = leads.filter((l) => String(l.id) !== leadId);
+    const updatedLeads = [{ ...leadToMove, current_stage: stage }, ...leadsWithoutMoved];
+
+    dispatch(setLeads(updatedLeads));
+    toast.success(`Lead moved to ${LEAD_STATUS_META[stage as LeadStatus]?.label || stage}`);
+
+    dispatch({
+      type: "UPDATE_LEAD_STATUS",
+      method: "PATCH",
+      endPoint: API.LEADS.STATUS(leadId),
+      auth: true,
+      body: { stage, note: moveNote },
+      getError: () => {
+        toast.error("Failed to update lead status");
+        dispatch(setLeads(leads));
+      },
+    } as any);
+
+    setPendingMove(null);
+    setMoveNote("");
+  }, [pendingMove, moveNote, leads, dispatch, toast]);
+
+  const pendingLead = pendingMove ? leads.find((l) => String(l.id) === pendingMove.leadId) : null;
+  const pendingTitle =
+    pendingLead && pendingMove ? (
+      <span className="flex items-center gap-1.5 flex-wrap font-medium">
+        Converting{" "}
+        <span className="font-bold text-primary">
+          {pendingLead.first_name} {pendingLead.surname}
+        </span>{" "}
+        from
+        <span
+          className={cn(
+            "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold",
+            LEAD_STATUS_META[pendingLead.current_stage as LeadStatus]?.bg,
+            LEAD_STATUS_META[pendingLead.current_stage as LeadStatus]?.color,
+          )}
+        >
+          {LEAD_STATUS_META[pendingLead.current_stage as LeadStatus]?.label ||
+            pendingLead.current_stage}
+        </span>
+        to
+        <span
+          className={cn(
+            "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold",
+            LEAD_STATUS_META[pendingMove.stage as LeadStatus]?.bg,
+            LEAD_STATUS_META[pendingMove.stage as LeadStatus]?.color,
+          )}
+        >
+          {LEAD_STATUS_META[pendingMove.stage as LeadStatus]?.label || pendingMove.stage}
+        </span>
+      </span>
+    ) : (
+      "Change Lead Stage"
+    );
 
   return (
     <div>
@@ -154,431 +272,746 @@ export default function CRMPage() {
         title="CRM & Pre-Admission"
         subtitle="Manage inquiries through the admission pipeline."
         actions={
-          canCreate ? (
-            <Button onClick={() => setNewOpen(true)} className="bg-primary hover:bg-primary-dark text-primary-foreground">
-              <Plus className="w-4 h-4" /> New Inquiry
-            </Button>
-          ) : undefined
+          <Button onClick={fetchLeads} variant="outline" disabled={leadsLoading} className="gap-2">
+            {leadsLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4" />
+            )}
+            Refresh
+          </Button>
         }
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-        <StatCard title="Total Leads" value={stats.total} icon={Users} index={0} />
-        <StatCard title="New" value={stats.new} icon={UserPlus} index={1} />
-        <StatCard title="In Progress" value={stats.progress} icon={TrendingUp} index={2} />
-        <StatCard title="Converted" value={stats.converted} icon={CheckCircle2} trendType="up" index={3} />
-        <StatCard title="Lost" value={stats.lost} icon={XCircle} trendType="down" index={4} />
+      {/* ─── Stat cards ─────────────────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-7 gap-3 mb-6">
+        <StatCard title="Total Leads" value={stats.total} icon={Users} />
+        <StatCard title="New" value={stats.new} icon={UserPlus} />
+        <StatCard title="Contacted" value={stats.contacted} icon={Phone} />
+        <StatCard title="Interested" value={stats.interested} icon={TrendingUp} />
+        <StatCard title="Follow Up" value={stats.follow_up} icon={Clock} />
+        <StatCard title="Converted" value={stats.converted} icon={CheckCircle2} trendType="up" />
+        <StatCard title="Lost" value={stats.lost} icon={XCircle} trendType="down" />
       </div>
 
+      {/* ─── Tabs ────────────────────────────────────────────── */}
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
-          <TabsTrigger value="list">List View</TabsTrigger>
-          {isLeadOwnerOnly && <TabsTrigger value="mine">My Leads</TabsTrigger>}
+          {/* <TabsTrigger value="list">List View</TabsTrigger> */}
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
+        {/* Pipeline (Kanban) */}
         <TabsContent value="pipeline">
-          <PipelineBoard leads={visibleLeads} onCardClick={setSelected} onMove={moveLead} />
+          {leadsLoading && leads.length === 0 ? (
+            <div className="flex gap-3 overflow-x-auto pb-4 mt-3 -mx-1 px-1">
+              {STAGES.map((stage) => {
+                const meta = LEAD_STATUS_META[stage];
+                const colors = STAGE_COLORS[stage];
+                return <KanbanColumnSkeleton key={stage} meta={meta} colors={colors} />;
+              })}
+            </div>
+          ) : (
+            <DragDropContext onDragEnd={onDragEnd}>
+              <div className="flex gap-3 overflow-x-auto pb-4 mt-3 -mx-1 px-1">
+                {STAGES.map((stage, stageIdx) => {
+                  const stageLeads = leads.filter((l) => l.current_stage === stage);
+                  const meta = LEAD_STATUS_META[stage];
+                  const colors = STAGE_COLORS[stage];
+
+                  return (
+                    <motion.div
+                      key={stage}
+                      initial={{ opacity: 0, y: 14 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: stageIdx * 0.05 }}
+                      className="flex-shrink-0 w-[280px]"
+                    >
+                      {/* Lane header */}
+                      <div
+                        className={cn(
+                          "flex items-center justify-between px-3 py-2.5 rounded-t-xl border border-b-0 border-border",
+                          colors.header,
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full"
+                            style={{ backgroundColor: colors.accent }}
+                          />
+                          <span className="font-heading font-semibold text-sm">{meta.label}</span>
+                        </div>
+                        <span
+                          className="text-xs font-bold px-2 py-0.5 rounded-full"
+                          style={{
+                            backgroundColor: colors.accent + "18",
+                            color: colors.accent,
+                          }}
+                        >
+                          {stageLeads.length}
+                        </span>
+                      </div>
+
+                      {/* Droppable lane body */}
+                      <Droppable droppableId={stage}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.droppableProps}
+                            className={cn(
+                              "rounded-b-xl border border-border p-2 min-h-[240px] max-h-[calc(100vh-380px)] overflow-y-auto transition-colors duration-200 scrollbar-hidden",
+                              snapshot.isDraggingOver
+                                ? "bg-primary/5 ring-2 ring-primary/20"
+                                : "bg-muted/30",
+                            )}
+                          >
+                            <AnimatePresence>
+                              {stageLeads.map((lead, index) => (
+                                <Draggable
+                                  key={String(lead.id)}
+                                  draggableId={String(lead.id)}
+                                  index={index}
+                                >
+                                  {(dragProvided, dragSnapshot) => (
+                                    <div
+                                      ref={dragProvided.innerRef}
+                                      {...dragProvided.draggableProps}
+                                      {...dragProvided.dragHandleProps}
+                                      className={cn(
+                                        "rounded-lg border bg-card p-3 mb-2 shadow-sm transition-all duration-150 group cursor-grab active:cursor-grabbing",
+                                        dragSnapshot.isDragging
+                                          ? "shadow-lg ring-2 ring-primary/30 rotate-[1deg] scale-[1.02]"
+                                          : "hover:shadow-md hover:-translate-y-0.5",
+                                      )}
+                                      style={{
+                                        ...dragProvided.draggableProps.style,
+                                      }}
+                                      onClick={() => fetchLeadDetails(lead)}
+                                    >
+                                      {/* Name */}
+                                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                                        <div className="flex-1 min-w-0">
+                                          <p className="font-medium text-sm truncate">
+                                            {lead.first_name} {lead.surname}
+                                          </p>
+                                        </div>
+                                        <span className="text-[10px] font-mono text-muted-foreground shrink-0 mt-0.5">
+                                          #{lead.id}
+                                        </span>
+                                      </div>
+
+                                      {/* Tags */}
+                                      <div className="flex items-center gap-1.5 mb-2">
+                                        <span
+                                          className="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded"
+                                          style={{
+                                            backgroundColor: colors.accent + "12",
+                                            color: colors.accent,
+                                          }}
+                                        >
+                                          {COURSE_LABELS[lead.course] || lead.course}
+                                        </span>
+                                        <span className="text-[10px] uppercase tracking-wider bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-medium">
+                                          {lead.form_type_display}
+                                        </span>
+                                      </div>
+
+                                      {/* Contact info */}
+                                      <div className="space-y-1">
+                                        {lead.phone_student && (
+                                          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                                            <Phone className="w-3 h-3" />
+                                            <span>{lead.phone_student}</span>
+                                          </div>
+                                        )}
+                                        {lead.email && (
+                                          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                                            <Mail className="w-3 h-3" />
+                                            <span className="truncate">{lead.email}</span>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Footer */}
+                                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
+                                        <span className="text-[10px] text-muted-foreground">
+                                          {formatDate(lead.created_at)}
+                                        </span>
+                                        {lead.location && (
+                                          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                                            <MapPin className="w-2.5 h-2.5" />
+                                            <span className="truncate max-w-[80px]">
+                                              {lead.location}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                </Draggable>
+                              ))}
+                            </AnimatePresence>
+
+                            {provided.placeholder}
+
+                            {stageLeads.length === 0 && !snapshot.isDraggingOver && (
+                              <div className="text-center py-10 text-xs text-muted-foreground">
+                                No leads
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </Droppable>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </DragDropContext>
+          )}
         </TabsContent>
 
+        {/* List View */}
         <TabsContent value="list">
-          <LeadsTable leads={visibleLeads} onView={setSelected} canExport={!!user && !isLeadOwnerOnly} />
+          <LeadsTable leads={leads} onView={fetchLeadDetails} />
         </TabsContent>
 
-        {isLeadOwnerOnly && (
-          <TabsContent value="mine">
-            <LeadsTable leads={visibleLeads} onView={setSelected} canExport={false} />
-          </TabsContent>
-        )}
+        {/* Analytics */}
+        <TabsContent value="analytics">
+          <AnalyticsTab analytics={analytics} />
+        </TabsContent>
       </Tabs>
 
-      <NewInquiryDialog
-        open={newOpen}
-        onClose={() => setNewOpen(false)}
-        onCreate={(data) => {
-          const nextNum = leads.length + 1;
-          const id = `INQ-${String(nextNum).padStart(3, "0")}`;
-          const assignee = ASSIGNEE_POOL.find(a => a.id === data.assignedTo)!;
-          const lead: Lead = {
-            id, studentName: data.studentName, guardianName: data.guardianName,
-            contact: data.contact, email: data.email || `${data.studentName.toLowerCase().replace(/\s/g, ".")}@gmail.com`,
-            courseInterested: data.courseInterested, source: data.source as Lead["source"],
-            status: "new", assignedTo: data.assignedTo, assignedToName: assignee.name,
-            assignedRole: assignee.role,
-            notes: data.remarks ? [{
-              id: `n-${Date.now()}`, author: user?.name ?? "—",
-              content: data.remarks, type: "note", createdAt: new Date().toISOString(),
-            }] : [],
-            createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-          };
-          setLeads(prev => [lead, ...prev]);
-          setNewOpen(false);
-          toast.success(`New inquiry ${id} created successfully`);
-        }}
-      />
-
+      {/* ─── Lead Detail Sheet ───────────────────────────────── */}
       <LeadDetailSheet
-        lead={selected}
-        onClose={() => setSelected(null)}
-        onMove={moveLead}
-        onAddNote={addNote}
-        canReassign={canReassign}
-        onReassign={(lead, newId) => {
-          const a = ASSIGNEE_POOL.find(x => x.id === newId)!;
-          setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, assignedTo: newId, assignedToName: a.name, assignedRole: a.role } : l));
-          setSelected(s => s ? { ...s, assignedTo: newId, assignedToName: a.name, assignedRole: a.role } : s);
-          toast.success(`Lead reassigned to ${a.name}`);
+        lead={selectedLead}
+        isLoading={isLeadDetailLoading}
+        onClose={() => setSelectedLead(null)}
+      />
+
+      {/* ─── Confirm Move Dialog ─────────────────────────────── */}
+      <ConfirmDialog
+        open={!!pendingMove}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingMove(null);
+            setMoveNote("");
+          }
         }}
-      />
-
-      <ConfirmDialog
-        open={confirm?.kind === "convert"}
-        onOpenChange={(o) => !o && setConfirm(null)}
-        title="Convert to Student?"
-        description="This will create a pre-filled admission entry for the student."
-        confirmLabel="Convert"
-        variant="info"
-        onConfirm={() => confirm && performConvert(confirm.lead)}
-      />
-      <ConfirmDialog
-        open={confirm?.kind === "lost"}
-        onOpenChange={(o) => !o && setConfirm(null)}
-        title="Mark as Lost?"
-        description="This lead will be archived as a lost opportunity."
-        confirmLabel="Mark Lost"
-        variant="danger"
-        onConfirm={() => confirm && performLost(confirm.lead)}
-      />
+        onConfirm={handleConfirmMove}
+        title={pendingTitle}
+        description="Please provide an optional note for this stage change."
+      >
+        <div className="pt-2 pb-1">
+          <Label htmlFor="note" className="text-xs text-muted-foreground mb-1 block">
+            Note
+          </Label>
+          <Input
+            id="note"
+            placeholder="Enter note..."
+            value={moveNote}
+            onChange={(e) => setMoveNote(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleConfirmMove();
+              }
+            }}
+            className="text-sm h-10"
+          />
+        </div>
+      </ConfirmDialog>
     </div>
   );
 }
 
-/* ---------------- Pipeline Board ---------------- */
-function PipelineBoard({
-  leads, onCardClick, onMove,
-}: {
-  leads: Lead[]; onCardClick: (l: Lead) => void; onMove: (l: Lead, to: LeadStatus) => void;
-}) {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3 mt-2">
-      {STATUSES.map((s, i) => {
-        const items = leads.filter(l => l.status === s);
-        const m = LEAD_STATUS_META[s];
+/* ═══════════════════════════════════════════════════════════════
+   LIST VIEW TABLE
+   ═══════════════════════════════════════════════════════════════ */
+
+function LeadsTable({ leads, onView }: { leads: APILead[]; onView: (l: APILead) => void }) {
+  const cols: DataTableColumn<APILead>[] = [
+    {
+      key: "id",
+      header: "ID",
+      className: "font-mono text-xs",
+      render: (r) => `#${r.id}`,
+    },
+    {
+      key: "first_name",
+      header: "Name",
+      render: (r) => (
+        <span className="font-medium">
+          {r.first_name} {r.surname}
+        </span>
+      ),
+    },
+    {
+      key: "course",
+      header: "Course",
+      render: (r) => COURSE_LABELS[r.course] || r.course,
+    },
+    {
+      key: "form_type_display",
+      header: "Type",
+      render: (r) => (
+        <span className="text-xs bg-muted px-2 py-0.5 rounded">{r.form_type_display}</span>
+      ),
+    },
+    {
+      key: "current_stage",
+      header: "Stage",
+      render: (r) => {
+        const meta = LEAD_STATUS_META[r.current_stage as LeadStatus];
+        if (!meta) return r.current_stage;
         return (
-          <motion.div
-            key={s}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className="rounded-xl bg-muted/40 border border-border p-3 min-h-[300px]"
+          <span
+            className={cn(
+              "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
+              meta.bg,
+              meta.color,
+            )}
           >
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span className={cn("w-2 h-2 rounded-full", m.bg.replace("100", "500"))} />
-                <h3 className="font-heading font-semibold text-sm">{m.label}</h3>
-              </div>
-              <span className="text-xs text-muted-foreground font-medium">{items.length}</span>
-            </div>
-            <div className="space-y-2">
-              <AnimatePresence>
-                {items.map((lead) => (
-                  <motion.div
-                    layout
-                    key={lead.id}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{ duration: 0.18 }}
-                    whileHover={{ y: -2, boxShadow: "0 8px 24px -8px rgba(0,33,71,0.18)" }}
-                    onClick={() => onCardClick(lead)}
-                    className="rounded-lg bg-card border border-border p-3 cursor-pointer shadow-sm group"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{lead.studentName}</p>
-                        <p className="text-xs text-muted-foreground truncate">{lead.courseInterested}</p>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <button className="opacity-0 group-hover:opacity-100 transition p-1 rounded hover:bg-muted">
-                            <Move className="w-3.5 h-3.5 text-muted-foreground" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {STATUSES.filter(x => x !== lead.status).map(x => (
-                            <DropdownMenuItem key={x} onClick={(e) => { e.stopPropagation(); onMove(lead, x); }}>
-                              Move to {LEAD_STATUS_META[x].label}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-[10px] uppercase tracking-wide bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
-                        {lead.source}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground">{formatDate(lead.createdAt)}</span>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground mt-2 truncate">→ {lead.assignedToName}</p>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-              {items.length === 0 && (
-                <div className="text-center text-xs text-muted-foreground py-6">No leads</div>
-              )}
-            </div>
-          </motion.div>
+            {meta.label}
+          </span>
         );
-      })}
+      },
+    },
+    {
+      key: "phone_student",
+      header: "Phone",
+    },
+    {
+      key: "created_at",
+      header: "Date",
+      render: (r) => formatDate(r.created_at),
+    },
+    {
+      key: "actions",
+      header: "",
+      render: (r) => (
+        <Button variant="ghost" size="sm" onClick={() => onView(r)} className="gap-1">
+          View <ChevronRight className="w-3.5 h-3.5" />
+        </Button>
+      ),
+    },
+  ];
+
+  return (
+    <div className="mt-3">
+      <DataTable columns={cols} data={leads} exportable />
     </div>
   );
 }
 
-/* ---------------- List Table ---------------- */
-function LeadsTable({ leads, onView, canExport }: { leads: Lead[]; onView: (l: Lead) => void; canExport: boolean }) {
-  const cols: DataTableColumn<Lead>[] = [
-    { key: "id", header: "ID", className: "font-mono text-xs" },
-    { key: "studentName", header: "Student" },
-    { key: "courseInterested", header: "Course" },
-    { key: "source", header: "Source", render: (r) => (
-      <span className="text-xs uppercase tracking-wide bg-muted px-1.5 py-0.5 rounded">{r.source}</span>
-    ) },
-    { key: "status", header: "Status", render: (r) => <StatusBadge status={r.status} /> },
-    { key: "assignedToName", header: "Assigned To" },
-    { key: "createdAt", header: "Date", render: (r) => formatDate(r.createdAt) },
-    { key: "actions", header: "", render: (r) => (
-      <Button variant="ghost" size="sm" onClick={() => onView(r)}>
-        View <ChevronRight className="w-3.5 h-3.5" />
-      </Button>
-    ) },
-  ];
-  return <div className="mt-3"><DataTable columns={cols} data={leads} exportable={canExport} /></div>;
-}
+/* ═══════════════════════════════════════════════════════════════
+   LEAD DETAIL SHEET
+   ═══════════════════════════════════════════════════════════════ */
 
-/* ---------------- New Inquiry Dialog ---------------- */
-function NewInquiryDialog({
-  open, onClose, onCreate,
-}: { open: boolean; onClose: () => void; onCreate: (d: LeadForm) => void }) {
-  const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm<LeadForm>({
-    resolver: zodResolver(leadSchema),
-    defaultValues: { courseInterested: "", source: "", assignedTo: "", remarks: "" },
-  });
-  useEffect(() => { if (!open) reset(); }, [open, reset]);
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="font-heading">New Inquiry</DialogTitle>
-          <DialogDescription>Add a new pre-admission lead.</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit(onCreate)} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Student Name *</Label>
-              <Input {...register("studentName")} className="mt-1" />
-              {errors.studentName && <p className="text-xs text-destructive mt-1">{errors.studentName.message}</p>}
-            </div>
-            <div>
-              <Label>Guardian Name *</Label>
-              <Input {...register("guardianName")} className="mt-1" />
-              {errors.guardianName && <p className="text-xs text-destructive mt-1">{errors.guardianName.message}</p>}
-            </div>
-            <div>
-              <Label>Contact *</Label>
-              <Input {...register("contact")} className="mt-1" />
-              {errors.contact && <p className="text-xs text-destructive mt-1">{errors.contact.message}</p>}
-            </div>
-            <div>
-              <Label>Email</Label>
-              <Input {...register("email")} className="mt-1" />
-              {errors.email && <p className="text-xs text-destructive mt-1">{errors.email.message}</p>}
-            </div>
-            <div>
-              <Label>Course Interested *</Label>
-              <Select value={watch("courseInterested")} onValueChange={(v) => setValue("courseInterested", v, { shouldValidate: true })}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{COURSE_OPTIONS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-              </Select>
-              {errors.courseInterested && <p className="text-xs text-destructive mt-1">{errors.courseInterested.message}</p>}
-            </div>
-            <div>
-              <Label>Source *</Label>
-              <Select value={watch("source")} onValueChange={(v) => setValue("source", v, { shouldValidate: true })}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{SOURCE_OPTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-              </Select>
-              {errors.source && <p className="text-xs text-destructive mt-1">{errors.source.message}</p>}
-            </div>
-          </div>
-          <div>
-            <Label>Assign To *</Label>
-            <Select value={watch("assignedTo")} onValueChange={(v) => setValue("assignedTo", v, { shouldValidate: true })}>
-              <SelectTrigger className="mt-1"><SelectValue placeholder="Select staff" /></SelectTrigger>
-              <SelectContent>
-                {ASSIGNEE_POOL.map(a => <SelectItem key={a.id} value={a.id}>{a.name} ({a.role})</SelectItem>)}
-              </SelectContent>
-            </Select>
-            {errors.assignedTo && <p className="text-xs text-destructive mt-1">{errors.assignedTo.message}</p>}
-          </div>
-          <div>
-            <Label>Remarks</Label>
-            <Textarea {...register("remarks")} rows={3} className="mt-1" />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" type="button" onClick={onClose}>Cancel</Button>
-            <Button type="submit" className="bg-primary hover:bg-primary-dark text-primary-foreground">Create Inquiry</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/* ---------------- Lead Detail Sheet ---------------- */
 function LeadDetailSheet({
-  lead, onClose, onMove, onAddNote, canReassign, onReassign,
+  lead,
+  isLoading,
+  onClose,
 }: {
-  lead: Lead | null;
+  lead: APILead | null;
+  isLoading: boolean;
   onClose: () => void;
-  onMove: (l: Lead, s: LeadStatus) => void;
-  onAddNote: (l: Lead, content: string, type: InteractionNote["type"]) => void;
-  canReassign: boolean;
-  onReassign: (l: Lead, newId: string) => void;
 }) {
-  const [note, setNote] = useState("");
-  const [type, setType] = useState<InteractionNote["type"]>("note");
-  useEffect(() => { setNote(""); setType("note"); }, [lead?.id]);
   if (!lead) return null;
-  const idx = STATUSES.indexOf(lead.status);
+
+  const meta = LEAD_STATUS_META[lead.current_stage as LeadStatus];
+  const colors = STAGE_COLORS[lead.current_stage] || STAGE_COLORS.new;
 
   return (
     <Sheet open={!!lead} onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="right" className="sm:max-w-[480px] w-full overflow-y-auto">
         <SheetHeader>
           <div className="flex items-center justify-between">
-            <SheetTitle className="font-heading text-xl">{lead.studentName}</SheetTitle>
-            <StatusBadge status={lead.status} />
-          </div>
-          <p className="text-xs text-muted-foreground font-mono">{lead.id} · Created {formatDate(lead.createdAt)}</p>
-        </SheetHeader>
-
-        <div className="mt-5 space-y-5">
-          {/* Contact */}
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center gap-2"><Phone className="w-4 h-4 text-muted-foreground" /> {lead.contact}</div>
-            <div className="flex items-center gap-2"><Mail className="w-4 h-4 text-muted-foreground" /> {lead.email}</div>
-            <div className="flex items-center gap-2"><CalIcon className="w-4 h-4 text-muted-foreground" /> Guardian: {lead.guardianName}</div>
-          </div>
-
-          {/* Course */}
-          <div className="rounded-lg bg-muted/40 p-3 text-sm">
-            <p className="text-xs text-muted-foreground">Course Interested</p>
-            <p className="font-medium">{lead.courseInterested}</p>
-            <p className="text-xs text-muted-foreground mt-2">Source</p>
-            <p className="font-medium uppercase">{lead.source}</p>
-          </div>
-
-          {/* Assigned */}
-          <div>
-            <Label className="text-xs">Assigned To</Label>
-            {canReassign ? (
-              <Select value={lead.assignedTo} onValueChange={(v) => onReassign(lead, v)}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {ASSIGNEE_POOL.map(a => <SelectItem key={a.id} value={a.id}>{a.name} ({a.role})</SelectItem>)}
-                </SelectContent>
-              </Select>
-            ) : (
-              <p className="font-medium mt-1">{lead.assignedToName}</p>
+            <SheetTitle className="font-heading text-xl">
+              {lead.first_name} {lead.surname}
+            </SheetTitle>
+            {meta && (
+              <span
+                className={cn(
+                  "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
+                  meta.bg,
+                  meta.color,
+                )}
+              >
+                {meta.label}
+              </span>
             )}
           </div>
+          <p className="text-xs text-muted-foreground font-mono">
+            #{lead.id} · {lead.form_type_display} · Created {formatDate(lead.created_at)}
+          </p>
+        </SheetHeader>
 
-          {/* Pipeline Stepper */}
-          <div>
-            <Label className="text-xs">Pipeline Status</Label>
-            <div className="flex items-center gap-1 mt-2">
-              {STATUSES.map((s, i) => {
-                const active = i <= idx;
+        {isLoading ? (
+          <SheetSkeleton />
+        ) : (
+          <div className="mt-5 space-y-5 pb-10">
+            {/* Contact Info */}
+            <div className="space-y-2.5 text-sm">
+              <div className="flex items-center gap-2.5">
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style={{ backgroundColor: colors.accent + "15" }}
+                >
+                  <Phone className="w-4 h-4" style={{ color: colors.accent }} />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Phone</p>
+                  <p className="font-medium">{lead.phone_student}</p>
+                </div>
+              </div>
+
+              {lead.email && (
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center"
+                    style={{ backgroundColor: colors.accent + "15" }}
+                  >
+                    <Mail className="w-4 h-4" style={{ color: colors.accent }} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Email</p>
+                    <p className="font-medium">{lead.email}</p>
+                  </div>
+                </div>
+              )}
+
+              {lead.location && (
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center"
+                    style={{ backgroundColor: colors.accent + "15" }}
+                  >
+                    <MapPin className="w-4 h-4" style={{ color: colors.accent }} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Location</p>
+                    <p className="font-medium">{lead.location}</p>
+                  </div>
+                </div>
+              )}
+
+              {lead.father_name && (
+                <div className="flex items-center gap-2.5 mt-2">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-muted/50">
+                    <Users className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Father's Name</p>
+                    <p className="font-medium">
+                      {lead.father_name} {lead.phone_father ? `(${lead.phone_father})` : ""}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Address if exists */}
+            {(lead.street || lead.city || lead.state) && (
+              <div>
+                <Label className="text-xs mb-2 block">Address</Label>
+                <div className="rounded-lg border border-border p-3 text-sm bg-muted/20">
+                  {lead.apartment && <p>{lead.apartment}</p>}
+                  {lead.street && <p>{lead.street}</p>}
+                  <p>{[lead.city, lead.state, lead.country].filter(Boolean).join(", ")}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Course & Form type */}
+            <div>
+              <Label className="text-xs mb-2 block">Inquiry Details</Label>
+              <div className="rounded-lg bg-muted/40 p-4 text-sm grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">Course</p>
+                  <p className="font-semibold">{COURSE_LABELS[lead.course] || lead.course}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Form Type</p>
+                  <p className="font-medium">{lead.form_type_display}</p>
+                </div>
+                {lead.group_module && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Module</p>
+                    <p className="font-medium capitalize">{lead.group_module.replace("_", " ")}</p>
+                  </div>
+                )}
+                {lead.batch_attempt && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Attempt</p>
+                    <p className="font-medium capitalize">{lead.batch_attempt}</p>
+                  </div>
+                )}
+                <div className="col-span-2">
+                  <p className="text-xs text-muted-foreground">Branch Name</p>
+                  <p className="font-mono text-[11px] truncate">{lead.branch_name}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Academic Info */}
+            {(lead.qualification ||
+              lead.tenth_school ||
+              lead.twelfth_school ||
+              lead.grad_college) && (
+              <div>
+                <Label className="text-xs mb-2 block">Academic History</Label>
+                <div className="rounded-lg border border-border divide-y divide-border/50 text-sm">
+                  {lead.qualification && (
+                    <div className="p-3">
+                      <p className="text-xs text-muted-foreground">Current Qualification</p>
+                      <p className="font-medium capitalize">
+                        {lead.qualification.replace("_", " ")}
+                      </p>
+                    </div>
+                  )}
+                  {lead.tenth_school && (
+                    <div className="p-3">
+                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                        10th Grade
+                      </p>
+                      <p className="font-medium">{lead.tenth_school}</p>
+                      <div className="flex gap-3 text-xs text-muted-foreground mt-1">
+                        {lead.tenth_medium && <span>Board: {lead.tenth_medium.toUpperCase()}</span>}
+                        {lead.tenth_percentage && <span>{lead.tenth_percentage}%</span>}
+                      </div>
+                    </div>
+                  )}
+                  {lead.twelfth_school && (
+                    <div className="p-3">
+                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                        12th Grade
+                      </p>
+                      <p className="font-medium">{lead.twelfth_school}</p>
+                      <div className="flex gap-3 text-xs text-muted-foreground mt-1">
+                        {lead.twelfth_medium && (
+                          <span>Board: {lead.twelfth_medium.toUpperCase()}</span>
+                        )}
+                        {lead.twelfth_percentage && <span>{lead.twelfth_percentage}%</span>}
+                      </div>
+                    </div>
+                  )}
+                  {lead.grad_college && (
+                    <div className="p-3">
+                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                        Graduation
+                      </p>
+                      <p className="font-medium">{lead.grad_college}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{lead.grad_university}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Pipeline Stepper */}
+            {/* <div>
+            <Label className="text-xs mb-2 block">Pipeline Status</Label>
+            <div className="flex items-center gap-1">
+              {STAGES.map((s) => {
+                const idx = STAGES.indexOf(s);
+                const currentIdx = STAGES.indexOf(lead.current_stage as LeadStatus);
+                const active = idx <= currentIdx;
+                const sMeta = LEAD_STATUS_META[s];
                 return (
-                  <button
+                  <div
                     key={s}
-                    onClick={() => onMove(lead, s)}
                     className={cn(
-                      "flex-1 h-8 rounded text-[11px] font-medium transition-all",
-                      active ? `${LEAD_STATUS_META[s].bg} ${LEAD_STATUS_META[s].color}` : "bg-muted text-muted-foreground hover:bg-muted/70",
+                      "flex-1 h-9 rounded flex items-center justify-center text-[10px] font-semibold transition-all",
+                      active
+                        ? `${sMeta.bg} ${sMeta.color}`
+                        : "bg-muted text-muted-foreground"
                     )}
                   >
-                    {LEAD_STATUS_META[s].label}
-                  </button>
+                    {sMeta.label}
+                  </div>
                 );
               })}
             </div>
-          </div>
+          </div> */}
 
-          {/* Convert button */}
-          {lead.status === "interested" && (
-            <Button
-              onClick={() => onMove(lead, "converted")}
-              className="w-full bg-primary hover:bg-primary-dark text-primary-foreground"
-            >
-              Convert to Student
-            </Button>
-          )}
-
-          {/* Interaction history */}
-          <div>
-            <h4 className="font-heading font-semibold text-sm mb-2">Interaction History</h4>
-            <div className="space-y-2">
-              {lead.notes.length === 0 && (
-                <p className="text-xs text-muted-foreground">No interactions yet.</p>
-              )}
-              <AnimatePresence>
-                {lead.notes.slice().reverse().map((n) => (
-                  <motion.div
-                    key={n.id}
-                    initial={{ opacity: 0, x: 8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="rounded-lg border border-border bg-card p-2.5 text-xs"
-                  >
-                    <div className="flex items-center gap-1.5 mb-1 text-muted-foreground">
-                      {n.type === "call" && <Phone className="w-3 h-3" />}
-                      {n.type === "visit" && <CalIcon className="w-3 h-3" />}
-                      {n.type === "note" && <StickyNote className="w-3 h-3" />}
-                      {n.type === "status_change" && <MessageSquare className="w-3 h-3" />}
-                      <span className="font-medium text-foreground">{n.author}</span>
-                      <span>· {formatDate(n.createdAt, "dd MMM, HH:mm")}</span>
-                    </div>
-                    <p>{n.content}</p>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
+            {/* Note */}
+            {lead.note && (
+              <div className="rounded-lg border border-border p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground">Note</span>
+                </div>
+                <p className="text-sm">{lead.note}</p>
+              </div>
+            )}
           </div>
-
-          {/* Add note */}
-          <div className="space-y-2 pt-2 border-t border-border">
-            <Label className="text-xs">Add Note</Label>
-            <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Add a quick note..." />
-            <div className="flex gap-2">
-              <Select value={type} onValueChange={(v) => setType(v as InteractionNote["type"])}>
-                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="note">Note</SelectItem>
-                  <SelectItem value="call">Call</SelectItem>
-                  <SelectItem value="visit">Visit</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                onClick={() => { onAddNote(lead, note, type); setNote(""); }}
-                className="ml-auto bg-primary hover:bg-primary-dark text-primary-foreground"
-              >
-                Add
-              </Button>
-            </div>
-          </div>
-        </div>
+        )}
       </SheetContent>
     </Sheet>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ANALYTICS TAB
+   ═══════════════════════════════════════════════════════════════ */
+
+function AnalyticsTab({ analytics }: { analytics: CRMAnalytics | null }) {
+  if (!analytics)
+    return (
+      <div className="flex items-center justify-center p-16">
+        <Loader2 className="w-6 h-6 animate-spin text-primary mr-3" />
+        <span className="text-muted-foreground">Loading analytics...</span>
+      </div>
+    );
+
+  const COLORS = ["#3B82F6", "#16A34A", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"];
+
+  return (
+    <div className="space-y-6 mt-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <StatCard
+          title="Conversion Rate"
+          value={`${analytics.conversion_rate.toFixed(1)}%`}
+          icon={TrendingUp}
+          trendType="up"
+          index={0}
+        />
+        <StatCard
+          title="Avg Conversion Time"
+          value={`${analytics.avg_conversion_days} days`}
+          icon={CalIcon}
+          index={1}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-card border border-border rounded-xl p-5 shadow-sm"
+        >
+          <h3 className="font-heading font-semibold text-lg mb-4">Leads by Source</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={analytics.by_source}
+                  dataKey="count"
+                  nameKey="source"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  label={({ source, count }: any) => `${source} (${count})`}
+                >
+                  {analytics.by_source.map((_entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <RechartsTooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-card border border-border rounded-xl p-5 shadow-sm"
+        >
+          <h3 className="font-heading font-semibold text-lg mb-4">Daily Trend</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={analytics.daily_trend}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="date" tickFormatter={(v) => formatDate(v)} />
+                <YAxis allowDecimals={false} />
+                <RechartsTooltip labelFormatter={(v) => formatDate(v)} />
+                <Area
+                  type="monotone"
+                  dataKey="count"
+                  stroke="#3B82F6"
+                  fill="#3B82F6"
+                  fillOpacity={0.15}
+                  strokeWidth={2}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SKELETONS
+   ═══════════════════════════════════════════════════════════════ */
+
+function KanbanCardSkeleton() {
+  return (
+    <div className="rounded-lg border bg-card p-3 mb-2 shadow-sm">
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <Skeleton width="60%" height={16} />
+        <Skeleton width={40} height={12} />
+      </div>
+      <div className="flex items-center gap-1.5 mb-3">
+        <Skeleton width={60} height={16} className="rounded" />
+        <Skeleton width={50} height={16} className="rounded" />
+      </div>
+      <div className="space-y-1.5 mb-3">
+        <Skeleton width="40%" height={12} />
+        <Skeleton width="70%" height={12} />
+      </div>
+      <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
+        <Skeleton width={70} height={10} />
+        <Skeleton width={60} height={10} />
+      </div>
+    </div>
+  );
+}
+
+function KanbanColumnSkeleton({ meta, colors }: any) {
+  return (
+    <div className="flex-shrink-0 w-[280px]">
+      <div
+        className={cn(
+          "flex items-center justify-between px-3 py-2.5 rounded-t-xl border border-b-0 border-border",
+          colors.header,
+        )}
+      >
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: colors.accent }} />
+          <span className="font-heading font-semibold text-sm">{meta.label}</span>
+        </div>
+        <Skeleton width={20} height={16} className="rounded-full" />
+      </div>
+      <div className="rounded-b-xl border border-border p-2 min-h-[240px] bg-muted/30">
+        <KanbanCardSkeleton />
+        <KanbanCardSkeleton />
+        <KanbanCardSkeleton />
+      </div>
+    </div>
+  );
+}
+
+function SheetSkeleton() {
+  return (
+    <div className="mt-5 space-y-5 pb-10">
+      <div className="space-y-3">
+        <Skeleton height={40} className="rounded-lg" />
+        <Skeleton height={40} className="rounded-lg" />
+        <Skeleton height={40} className="rounded-lg" />
+      </div>
+      <div>
+        <Skeleton width={100} height={16} className="mb-2" />
+        <Skeleton height={80} className="rounded-lg" />
+      </div>
+      <div>
+        <Skeleton width={120} height={16} className="mb-2" />
+        <Skeleton height={120} className="rounded-lg" />
+      </div>
+    </div>
   );
 }

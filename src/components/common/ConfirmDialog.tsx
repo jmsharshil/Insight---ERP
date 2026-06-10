@@ -8,16 +8,17 @@ interface ConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
-  title: string;
+  title: React.ReactNode;
   description?: string;
   variant?: "danger" | "warning" | "info";
   confirmLabel?: string;
   cancelLabel?: string;
+  children?: React.ReactNode;
 }
 
 export default function ConfirmDialog({
   open, onOpenChange, onConfirm, title, description,
-  variant = "info", confirmLabel = "Confirm", cancelLabel = "Cancel",
+  variant = "info", confirmLabel = "Confirm", cancelLabel = "Cancel", children,
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -26,6 +27,7 @@ export default function ConfirmDialog({
           <DialogTitle className="font-heading">{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
+        {children && <div className="py-2">{children}</div>}
         <DialogFooter className="gap-2 sm:gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>{cancelLabel}</Button>
           <Button

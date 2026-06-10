@@ -4,11 +4,6 @@
 
 @layer base {
   :root {
-    --background: 0 0% 96.9%;
-    --foreground: 0 0% 5%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 39 100% 50%;
     --radius: 0.625rem;
   }
 

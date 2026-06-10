@@ -11,13 +11,19 @@ import ModulePlaceholder from "@/pages/ModulePlaceholder";
 import PageLoader from "@/components/common/PageLoader";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import { useAuth } from "@/hooks/useAuth";
+import LeadsInquiryForm from "@/components/forms/LeadsInquiryForm";
+import StudentAdmissionForm from "@/components/forms/StudentAdmissionForm";
+import StudentPaymentUploadForm from "@/components/forms/StudentPaymentUploadForm";
 
 /* ─── Lazy-loaded pages ─────────────────────────────────────── */
 
 const CRMPage = lazy(() => import("@/pages/crm/CRMPage"));
 const StudentsPage = lazy(() => import("@/pages/students/StudentsPage"));
 const StudentDetailPage = lazy(() => import("@/pages/students/StudentDetailPage"));
-const TimetablePage = lazy(() => import("@/pages/timetable/TimetablePage"));
+const StudentAdmissionDetailedPage = lazy(() => import("@/pages/students/StudentAdmissionDetailedPage"));
+const CoursesBatchesPage = lazy(() => import("@/pages/courses-batches/CoursesBatchesPage"));
+const ClassroomTimetablePage = lazy(() => import("@/pages/classroom-timetable/ClassroomTimetablePage"));
+const CourseDetailPage = lazy(() => import("@/pages/courses/CourseDetailPage"));
 const AttendancePage = lazy(() => import("@/pages/attendance/AttendancePage"));
 const FeesPage = lazy(() => import("@/pages/fees/FeesPage"));
 const ExamsPage = lazy(() => import("@/pages/exams/ExamsPage"));
@@ -70,6 +76,18 @@ const router = createBrowserRouter([
     path: "/unauthorized",
     element: <UnauthorizedPage />,
   },
+  {
+    path: "/insight/public/lead-inquiry-form",
+    element:<LeadsInquiryForm/>
+  },
+  {
+    path: "/insight/student/admission-form",
+    element:<StudentAdmissionForm/>
+  },
+  {
+    path: "/insight/student/payment-upload",
+    element:<StudentPaymentUploadForm/>
+  },
 
   /* ── Protected routes (auth required, no specific module) ── */
   {
@@ -90,22 +108,33 @@ const router = createBrowserRouter([
    *  To add a new module: just add an entry to this array.
    * ────────────────────────────────────────────────────────── */
   ...[
-    { module: "crm",              path: "/crm",              element: withSuspense(<CRMPage />) },
-    { module: "students",         path: "/students",         element: withSuspense(<StudentsPage />) },
-    { module: "students",         path: "/students/:id",     element: withSuspense(<StudentDetailPage />) },
-    { module: "timetable",        path: "/timetable",        element: withSuspense(<TimetablePage />) },
-    { module: "attendance",       path: "/attendance",       element: withSuspense(<AttendancePage />) },
-    { module: "fees",             path: "/fees",             element: withSuspense(<FeesPage />) },
-    { module: "exams",            path: "/exams",            element: withSuspense(<ExamsPage />) },
-    { module: "exam_supervision", path: "/exam-supervision", element: withSuspense(<ExamSupervisionPage />) },
-    { module: "faculty",          path: "/faculty",          element: withSuspense(<FacultyPage />) },
-    { module: "leave",            path: "/leave",            element: withSuspense(<LeavePage />) },
-    { module: "chat",             path: "/chat",             element: withSuspense(<ChatPage />) },
-    { module: "notifications",    path: "/notifications",    element: withSuspense(<NotificationsPage />) },
-    { module: "audit_logs",       path: "/audit-logs",       element: withSuspense(<AuditLogsPage />) },
-    { module: "reports",          path: "/reports",          element: withSuspense(<ReportsPage />) },
-    { module: "payroll",          path: "/payroll",          element: <ModulePlaceholder title="My Payroll" /> },
-    { module: "users",            path: "/users",            element: withSuspense(<UsersPage />) },
+    { module: "crm", path: "/crm", element: withSuspense(<CRMPage />) },
+    { module: "students", path: "/students", element: withSuspense(<StudentsPage />) },
+    { module: "students", path: "/students/:id", element: withSuspense(<StudentDetailPage />) },
+    { module: "students", path: "/admissions/:id", element: withSuspense(<StudentAdmissionDetailedPage />) },
+    { module: "courses_batches", path: "/courses-batches", element: withSuspense(<CoursesBatchesPage />) },
+    { module: "courses_batches", path: "/courses-batches/:id", element: withSuspense(<CourseDetailPage />) },
+    { module: "classroom_timetable", path: "/classroom-timetable", element: withSuspense(<ClassroomTimetablePage />) },
+    { module: "attendance", path: "/attendance", element: withSuspense(<AttendancePage />) },
+    { module: "fees", path: "/fees", element: withSuspense(<FeesPage />) },
+    { module: "exams", path: "/exams", element: withSuspense(<ExamsPage />) },
+    {
+      module: "exam_supervision",
+      path: "/exam-supervision",
+      element: withSuspense(<ExamSupervisionPage />),
+    },
+    { module: "faculty", path: "/faculty", element: withSuspense(<FacultyPage />) },
+    { module: "leave", path: "/leave", element: withSuspense(<LeavePage />) },
+    { module: "chat", path: "/chat", element: withSuspense(<ChatPage />) },
+    {
+      module: "notifications",
+      path: "/notifications",
+      element: withSuspense(<NotificationsPage />),
+    },
+    { module: "audit_logs", path: "/audit-logs", element: withSuspense(<AuditLogsPage />) },
+    { module: "reports", path: "/reports", element: withSuspense(<ReportsPage />) },
+    { module: "payroll", path: "/payroll", element: <ModulePlaceholder title="My Payroll" /> },
+    { module: "users", path: "/users", element: withSuspense(<UsersPage />) },
   ].map(({ module, path, element }) => ({
     element: <ProtectedRoute module={module as any} />,
     children: [
