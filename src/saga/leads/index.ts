@@ -7,4 +7,5 @@ export function* watchLeadsSaga() {
   yield takeLatest(leadActions.GET_LEADS, genericSaga);
   yield takeLatest(leadActions.GET_LEAD_DETAILS, genericSaga);
   yield takeLatest(leadActions.UPDATE_LEAD_STATUS, genericSaga);
+  yield takeLatest(leadActions.UPDATE_LEAD, genericSaga);
 }

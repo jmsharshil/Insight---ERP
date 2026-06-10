@@ -74,6 +74,10 @@ export interface APILead {
   grad_last_sem?: string;
   created_at: string;
   updated_at?: string;
+  followup_date?:string;
+  visit_date?:string;
+  reference_display?:string;
+  
 }
 
 interface CRMState {

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { admissionActions } from "@/redux/actions";
@@ -9,11 +9,16 @@ import { useUI } from "@/hooks/useUI";
 import { useToast } from "@/hooks/useToast";
 
 import { motion } from "framer-motion";
-import { ChevronLeft, Calendar, MapPin, Phone, Mail, FileText, User, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  ChevronLeft, Calendar, MapPin, Phone, Mail, FileText, User, CheckCircle2, AlertCircle,
+  Camera, PenTool, Baby, CreditCard, FileCheck, GraduationCap, BadgeCheck, Upload, Loader2, Eye,
+  Pencil, Save, XCircle
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import PageLoader from "@/components/common/PageLoader";
+import EditAdmissionDialog from "@/components/forms/EditAdmissionDialog";
 
 function Row({ icon, label, value }: { icon?: React.ReactNode; label: string; value: React.ReactNode }) {
   return (
@@ -35,6 +40,42 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   );
 }
 
+const getFileType = (url?: string) => {
+  if (!url) return "unknown";
+  const cleanUrl = url.split("?")[0].toLowerCase();
+  if (
+    cleanUrl.endsWith(".jpg") ||
+    cleanUrl.endsWith(".jpeg") ||
+    cleanUrl.endsWith(".png") ||
+    cleanUrl.endsWith(".gif") ||
+    cleanUrl.endsWith(".webp")
+  ) {
+    return "image";
+  }
+  if (cleanUrl.endsWith(".pdf")) {
+    return "pdf";
+  }
+  return "other";
+};
+
+type DocumentKey = "doc_photo" | "doc_signature" | "doc_dob_certificate" | "doc_id_card" | "doc_twelfth_receipt" | "doc_twelfth_marksheet" | "doc_category_cert";
+
+interface DocType {
+  key: DocumentKey;
+  label: string;
+  icon: React.ElementType;
+}
+
+const DOCUMENT_TYPES: readonly DocType[] = [
+  { key: "doc_photo", label: "Photograph", icon: Camera },
+  { key: "doc_signature", label: "Signature", icon: PenTool },
+  { key: "doc_dob_certificate", label: "DOB Certificate / 10th Marksheet", icon: Baby },
+  { key: "doc_id_card", label: "ID Proof (Aadhar/PAN/License)", icon: CreditCard },
+  { key: "doc_twelfth_receipt", label: "12th Receipt / Hall Ticket", icon: FileCheck },
+  { key: "doc_twelfth_marksheet", label: "12th Marksheet", icon: GraduationCap },
+  { key: "doc_category_cert", label: "Category Certificate", icon: BadgeCheck },
+] as const;
+
 export default function StudentAdmissionDetailedPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -44,11 +85,18 @@ export default function StudentAdmissionDetailedPage() {
 
   const { selectedAdmission: admission, selectedAdmissionLoading: loading, error } = useSelector((state: RootState) => state.admissions);
 
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
+  const [selectedDocKey, setSelectedDocKey] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // General Edit details modal state
+  const [editModalOpen, setEditModalOpen] = useState(false);
+
   useEffect(() => {
     setPageTitle("Admission Details");
   }, [setPageTitle]);
 
-  useEffect(() => {
+  const loadAdmissionDetails = useCallback(() => {
     if (!id) return;
     dispatch({
       type: admissionActions.GET_ADMISSION_DETAIL,
@@ -69,6 +117,50 @@ export default function StudentAdmissionDetailedPage() {
       }
     });
   }, [id, dispatch, toast]);
+
+  useEffect(() => {
+    loadAdmissionDetails();
+  }, [loadAdmissionDetails]);
+
+  const handleDocumentUpload = (key: string, file: File) => {
+    if (!admission?.id) return;
+
+    const payload = new FormData();
+    payload.append(key, file);
+
+    setUploadingDoc(key);
+    dispatch({
+      type: admissionActions.SUBMIT_ADMISSION,
+      method: "PATCH",
+      endPoint: API.ADMISSIONS.SUBMIT(admission.id),
+      body: payload,
+      auth: true,
+      setLoading: (val: boolean) => {
+        if (!val) setUploadingDoc(null);
+      },
+      getResponse: () => {
+        toast.success("Document updated successfully!");
+        loadAdmissionDetails();
+      },
+      getError: (err: any) => {
+        const errMsg = err?.response?.data?.message || err?.message || "Failed to update document";
+        toast.error(errMsg);
+      }
+    });
+  };
+
+  const triggerFileInput = (key: string) => {
+    setSelectedDocKey(key);
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && selectedDocKey) {
+      handleDocumentUpload(selectedDocKey, file);
+    }
+    e.target.value = "";
+  };
 
   if (loading) return <PageLoader />;
   if (error) return <div className="p-6 text-center text-red-500">{error}</div>;
@@ -99,6 +191,9 @@ export default function StudentAdmissionDetailedPage() {
           <h1 className="text-2xl font-heading font-bold text-text-primary">Admission #{admission.id}</h1>
         </div>
         <div className="flex items-center gap-2">
+          <Button onClick={() => setEditModalOpen(true)} variant="outline" className="flex items-center gap-2 border-border/80 hover:bg-muted/50">
+            <Pencil className="w-4 h-4" /> Edit Details
+          </Button>
           {(admission.status === "approval_pending" || admission.status === "payment_submitted") && (
             <Button onClick={handleApprove} className="bg-green-600 hover:bg-green-700 text-white">Approve Admission</Button>
           )}
@@ -213,18 +308,165 @@ export default function StudentAdmissionDetailedPage() {
 
         <TabsContent value="documents" className="space-y-6">
           <Card title="Uploaded Documents">
-            <div className="grid sm:grid-cols-2 gap-4">
-              {admission.doc_photo && <a href={admission.doc_photo} target="_blank" className="text-primary hover:underline flex items-center gap-2 p-3 bg-muted/20 rounded border border-border/50"><FileText className="w-5 h-5 text-blue-500" /> Photograph</a>}
-              {admission.doc_signature && <a href={admission.doc_signature} target="_blank" className="text-primary hover:underline flex items-center gap-2 p-3 bg-muted/20 rounded border border-border/50"><FileText className="w-5 h-5 text-blue-500" /> Signature</a>}
-              {admission.doc_dob_certificate && <a href={admission.doc_dob_certificate} target="_blank" className="text-primary hover:underline flex items-center gap-2 p-3 bg-muted/20 rounded border border-border/50"><FileText className="w-5 h-5 text-blue-500" /> DOB Certificate</a>}
-              {admission.doc_id_card && <a href={admission.doc_id_card} target="_blank" className="text-primary hover:underline flex items-center gap-2 p-3 bg-muted/20 rounded border border-border/50"><FileText className="w-5 h-5 text-blue-500" /> ID Proof</a>}
-              {admission.doc_twelfth_receipt && <a href={admission.doc_twelfth_receipt} target="_blank" className="text-primary hover:underline flex items-center gap-2 p-3 bg-muted/20 rounded border border-border/50"><FileText className="w-5 h-5 text-blue-500" /> 12th Receipt</a>}
-              {admission.doc_twelfth_marksheet && <a href={admission.doc_twelfth_marksheet} target="_blank" className="text-primary hover:underline flex items-center gap-2 p-3 bg-muted/20 rounded border border-border/50"><FileText className="w-5 h-5 text-blue-500" /> 12th Marksheet</a>}
-              {admission.doc_category_cert && <a href={admission.doc_category_cert} target="_blank" className="text-primary hover:underline flex items-center gap-2 p-3 bg-muted/20 rounded border border-border/50"><FileText className="w-5 h-5 text-blue-500" /> Category Certificate</a>}
-              
-              {(!admission.doc_photo && !admission.doc_signature && !admission.doc_dob_certificate && !admission.doc_id_card && !admission.doc_twelfth_receipt && !admission.doc_twelfth_marksheet && !admission.doc_category_cert) && (
-                <p className="text-sm text-muted-foreground col-span-2 p-4">No documents uploaded.</p>
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+              {DOCUMENT_TYPES.map(({ key, label, icon: Icon }) => {
+                const docUrl = admission[key as keyof typeof admission] as string | null;
+                const fileType = getFileType(docUrl || undefined);
+                const isDocUploading = uploadingDoc === key;
+
+                return (
+                  <div
+                    key={key}
+                    className="relative bg-card border border-border/85 rounded-xl overflow-hidden shadow-xs flex flex-col group transition-all duration-200 hover:shadow-md hover:border-border-hover"
+                  >
+                    {/* Header */}
+                    <div className="p-4 border-b border-border/50 flex items-center justify-between bg-muted/10">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Icon className="w-4 h-4 text-primary shrink-0" />
+                        <span className="text-xs sm:text-sm font-semibold text-text-primary truncate" title={label}>
+                          {label}
+                        </span>
+                      </div>
+                      <Badge
+                        variant={docUrl ? "default" : "secondary"}
+                        className={docUrl ? "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400" : "bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400"}
+                      >
+                        {docUrl ? "Uploaded" : "Pending"}
+                      </Badge>
+                    </div>
+
+                    {/* Preview Area */}
+                    <div className="relative h-48 flex items-center justify-center p-4 bg-muted/5 min-h-[12rem]">
+                      {isDocUploading && (
+                        <div className="absolute inset-0 bg-background/80 backdrop-blur-xs flex flex-col items-center justify-center z-10 transition-all duration-200">
+                          <Loader2 className="w-8 h-8 text-primary animate-spin mb-2" />
+                          <span className="text-xs font-medium text-muted-foreground animate-pulse">Uploading...</span>
+                        </div>
+                      )}
+
+                      {docUrl ? (
+                        fileType === "image" ? (
+                          <div className="relative w-full h-full group/image rounded overflow-hidden flex items-center justify-center">
+                            <img
+                              src={docUrl}
+                              alt={label}
+                              className="max-w-full max-h-full object-contain rounded border transition-transform duration-300 group-hover/image:scale-102"
+                            />
+                            {/* Hover Overlay */}
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/image:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="h-8 text-xs gap-1 shadow-xs"
+                                onClick={() => window.open(docUrl, "_blank")}
+                              >
+                                <Eye className="w-3.5 h-3.5" /> View
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="default"
+                                className="h-8 text-xs gap-1 shadow-xs bg-primary hover:bg-primary/90 text-white border-0"
+                                onClick={() => triggerFileInput(key)}
+                              >
+                                <Upload className="w-3.5 h-3.5" /> Replace
+                              </Button>
+                            </div>
+                          </div>
+                        ) : fileType === "pdf" ? (
+                          <div className="relative w-full h-full flex flex-col items-center justify-center bg-red-500/5 border border-red-100/50 rounded-lg p-4 text-center group/pdf">
+                            <FileText className="w-12 h-12 text-red-500 mb-2 transition-transform duration-200 group-hover/pdf:scale-105" />
+                            <span className="text-xs font-semibold text-red-700 dark:text-red-400 truncate max-w-full">
+                              {docUrl.split('/').pop()?.split('?')[0] || "document.pdf"}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground mt-1">PDF Document</span>
+                            {/* Hover Overlay */}
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/pdf:opacity-100 transition-opacity flex items-center justify-center gap-3 rounded-lg">
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="h-8 text-xs gap-1 shadow-xs"
+                                onClick={() => window.open(docUrl, "_blank")}
+                              >
+                                <Eye className="w-3.5 h-3.5" /> View
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="default"
+                                className="h-8 text-xs gap-1 shadow-xs bg-primary hover:bg-primary/90 text-white border-0"
+                                onClick={() => triggerFileInput(key)}
+                              >
+                                <Upload className="w-3.5 h-3.5" /> Replace
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="relative w-full h-full flex flex-col items-center justify-center bg-blue-500/5 border border-blue-100/50 rounded-lg p-4 text-center group/other">
+                            <FileText className="w-12 h-12 text-blue-500 mb-2 transition-transform duration-200 group-hover/other:scale-105" />
+                            <span className="text-xs font-semibold text-blue-700 dark:text-blue-400 truncate max-w-full">
+                              {docUrl.split('/').pop()?.split('?')[0] || "document"}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground mt-1">Attachment File</span>
+                            {/* Hover Overlay */}
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/other:opacity-100 transition-opacity flex items-center justify-center gap-3 rounded-lg">
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="h-8 text-xs gap-1 shadow-xs"
+                                onClick={() => window.open(docUrl, "_blank")}
+                              >
+                                <Eye className="w-3.5 h-3.5" /> View
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="default"
+                                className="h-8 text-xs gap-1 shadow-xs bg-primary hover:bg-primary/90 text-white border-0"
+                                onClick={() => triggerFileInput(key)}
+                              >
+                                <Upload className="w-3.5 h-3.5" /> Replace
+                              </Button>
+                            </div>
+                          </div>
+                        )
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center border-2 border-dashed border-border/60 rounded-lg bg-muted/5 text-center p-4">
+                          <Upload className="w-8 h-8 text-muted-foreground/40 mb-2" />
+                          <span className="text-xs text-muted-foreground mb-3">No document uploaded</span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 text-xs gap-1 border-primary/30 text-primary hover:bg-primary/5 hover:text-primary-dark"
+                            onClick={() => triggerFileInput(key)}
+                          >
+                            <Upload className="w-3.5 h-3.5" /> Upload File
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Footer buttons for mobile/touch screens */}
+                    {docUrl && (
+                      <div className="p-3 border-t border-border/50 flex gap-2 md:hidden bg-muted/5 mt-auto">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 text-xs h-8 gap-1"
+                          onClick={() => window.open(docUrl, "_blank")}
+                        >
+                          <Eye className="w-3.5 h-3.5" /> View
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 text-xs h-8 gap-1"
+                          onClick={() => triggerFileInput(key)}
+                        >
+                          <Upload className="w-3.5 h-3.5" /> Replace
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </Card>
         </TabsContent>
@@ -282,6 +524,23 @@ export default function StudentAdmissionDetailedPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Hidden File Input for document upload */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        accept="image/*,application/pdf"
+        onChange={handleFileChange}
+      />
+
+      {/* Edit Admission Details Dialog component */}
+      <EditAdmissionDialog
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+        admission={admission}
+        onSaveSuccess={loadAdmissionDetails}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-export type LeadStatus = "new" | "contacted" | "interested" | "follow_up" | "converted" | "lost";
+export type LeadStatus = "new" | "contacted" | "interested" | "visit" | "follow_up" | "converted" | "lost";
 export type LeadSource = "walk-in" | "referral" | "online" | "telecall";
 export type AssignedRole = "counsellor" | "sales_exec" | "telecaller";
 
@@ -30,7 +30,7 @@ export interface Lead {
 
 const COURSES = ["CA Foundation", "CS Executive", "CMA Inter", "B.Com", "MBA"];
 const SOURCES: LeadSource[] = ["walk-in", "referral", "online", "telecall"];
-const STATUSES: LeadStatus[] = ["new", "contacted", "interested", "follow_up", "converted", "lost"];
+const STATUSES: LeadStatus[] = ["new", "contacted", "interested", "visit", "follow_up", "converted", "lost"];
 
 const NAMES = [
   "Aarav Sharma", "Diya Patel", "Vihaan Iyer", "Ananya Reddy", "Aditya Singh",
@@ -107,9 +107,26 @@ export const LEAD_STATUS_META: Record<
   new: { label: "New", color: "text-blue-700", bg: "bg-blue-100" },
   contacted: { label: "Contacted", color: "text-indigo-700", bg: "bg-indigo-100" },
   interested: { label: "Interested", color: "text-amber-800", bg: "bg-amber-100" },
+  visit: { label: "Visit", color: "text-teal-700", bg: "bg-teal-100" },
   follow_up: { label: "Follow Up", color: "text-purple-700", bg: "bg-purple-100" },
   converted: { label: "Converted", color: "text-green-700", bg: "bg-green-100" },
   lost: { label: "Lost", color: "text-red-700", bg: "bg-red-100" },
+};
+
+export const STAGE_COLORS: Record<string, { header: string; accent: string; ring: string }> = {
+  new: { header: "bg-blue-50", accent: "#3B82F6", ring: "ring-blue-200" },
+  contacted: { header: "bg-indigo-50", accent: "#6366F1", ring: "ring-indigo-200" },
+  interested: { header: "bg-amber-50", accent: "#F59E0B", ring: "ring-amber-200" },
+  visit: { header: "bg-teal-50", accent: "#14B8A6", ring: "ring-teal-200" },
+  follow_up: { header: "bg-purple-50", accent: "#8B5CF6", ring: "ring-purple-200" },
+  converted: { header: "bg-green-50", accent: "#16A34A", ring: "ring-green-200" },
+  lost: { header: "bg-red-50", accent: "#EF4444", ring: "ring-red-200" },
+};
+
+export const COURSE_LABELS: Record<string, string> = {
+  cs_executive: "CS Executive",
+  cs_professional: "CS Professional",
+  cseet: "CSEET",
 };
 
 export const COURSE_OPTIONS = COURSES;
