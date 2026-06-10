@@ -248,6 +248,8 @@ export function useChatWebSocket(
     wsRef.current = ws;
 
     ws.onopen = () => {
+      // Guard: only update state if this WS is still the active one
+      if (wsRef.current !== ws) return;
       console.log(`[WS] Connected to room ${targetRoomId}`);
       setIsConnected(true);
       setIsReconnecting(false);
@@ -256,7 +258,11 @@ export function useChatWebSocket(
       startHeartbeat();
     };
 
-    ws.onmessage = handleMessage;
+    ws.onmessage = (event) => {
+      // Guard: ignore messages from stale sockets
+      if (wsRef.current !== ws) return;
+      handleMessage(event);
+    };
 
     ws.onerror = (err) => {
       console.error("[WS] Error:", err);
@@ -264,6 +270,14 @@ export function useChatWebSocket(
 
     ws.onclose = (event) => {
       console.log(`[WS] Disconnected (code: ${event.code}, reason: ${event.reason})`);
+
+      // Guard: only update state if this WS is still the active one.
+      // Without this, a stale socket's onclose can override the new connection's state.
+      if (wsRef.current !== ws) {
+        console.log("[WS] Ignoring onclose from stale socket");
+        return;
+      }
+
       setIsConnected(false);
       handlersRef.current.onConnectionChange?.(false);
       stopHeartbeat();

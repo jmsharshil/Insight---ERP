@@ -9,4 +9,5 @@ export function* watchChatSaga() {
   yield takeLatest(ChatAction.CREATE_DIRECT_CHAT, genericSaga);
   yield takeLatest(ChatAction.SEND_CHAT_MESSAGE, genericSaga);
   yield takeLatest(ChatAction.GET_CHAT_MESSAGES, genericSaga);
+  yield takeLatest(ChatAction.UPDATE_GROUP, genericSaga);
 }

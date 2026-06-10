@@ -20,6 +20,7 @@ export const leadActions = {
   GET_LEADS: "GET_LEADS",
   GET_LEAD_DETAILS: "GET_LEAD_DETAILS",
   UPDATE_LEAD_STATUS: "UPDATE_LEAD_STATUS",
+  UPDATE_LEAD: "UPDATE_LEAD",
 } as const;
 
 export const crmActions = {
@@ -87,6 +88,7 @@ export const ChatAction = {
   CREATE_DIRECT_CHAT: "CREATE_DIRECT_CHAT",
   SEND_CHAT_MESSAGE: "SEND_CHAT_MESSAGE",
   GET_CHAT_MESSAGES: "GET_CHAT_MESSAGES",
+  UPDATE_GROUP: "UPDATE_GROUP",
 } as const;
 
 export const ClassroomAction = {

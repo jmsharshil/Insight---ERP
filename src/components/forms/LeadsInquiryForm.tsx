@@ -78,7 +78,7 @@ export default function LeadsInquiryForm() {
   // ── Inquiry state
   const [inquiryData, setInquiryData] = useState({
     course: "cs_executive",
-    group_module: "module_1",
+    group_module: "full",
     batch_attempt: "june",
     first_name: "",
     surname: "",

@@ -431,6 +431,11 @@ export default function ChatPage() {
     }
 
     if (selectedFile) {
+      if (!isConnected) {
+        toast.error("Cannot send message, chat is disconnected.");
+        return;
+      }
+
       setIsUploading(true);
       const formData = new FormData();
       formData.append("file", selectedFile);
@@ -448,11 +453,38 @@ export default function ChatPage() {
         });
         
         const data = res.data;
+
+        // Create optimistic temp message for the file so sender sees it immediately
+        const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const fileMsg: ChatMessage = {
+          id: tempId,
+          channelId: activeId,
+          senderId: user?.id || "",
+          senderName: user?.name || "You",
+          content: content,
+          type: "file",
+          fileUrl: data.file_url,
+          fileName: data.file_name,
+          fileSize: data.file_size,
+          timestamp: new Date().toISOString(),
+          readBy: [user?.id || ""],
+          status: "sent",
+        };
+
+        pendingTempIdsRef.current.add(tempId);
+        setMessages(prev => ({ ...prev, [activeId]: [...(prev[activeId] || []), fileMsg] }));
+
+        // Send via WebSocket
         wsSendMessage(content, {
           file_url: data.file_url,
           file_name: data.file_name,
           file_size: data.file_size
         });
+
+        // Clean up temp tracking after timeout
+        setTimeout(() => {
+          pendingTempIdsRef.current.delete(tempId);
+        }, 8000);
         
         setDraft("");
         setSelectedFile(null);
@@ -462,6 +494,11 @@ export default function ChatPage() {
       } finally {
         setIsUploading(false);
       }
+      return;
+    }
+
+    if (!isConnected) {
+      toast.error("Cannot send message, chat is disconnected.");
       return;
     }
 
@@ -485,47 +522,12 @@ export default function ChatPage() {
     setMessages(prev => ({ ...prev, [activeId]: [...(prev[activeId] || []), m] }));
 
     // Send via WebSocket for real-time delivery
-    if (isConnected) {
-      wsSendMessage(content);
+    wsSendMessage(content);
 
-      // Fallback: if WS doesn't echo back in 8 seconds, remove from pending
-      setTimeout(() => {
-        pendingTempIdsRef.current.delete(tempId);
-      }, 8000);
-    } else {
-      // Fallback to REST if WebSocket is disconnected
-      dispatch({
-        type: "SEND_CHAT_MESSAGE",
-        method: "POST",
-        endPoint: `/api/v1/chat/rooms/${activeId}/messages/`,
-        auth: true,
-        body: { content },
-        getResponse: (res: any) => {
-          const realMsg = res?.data || res;
-          pendingTempIdsRef.current.delete(tempId);
-          setMessages(prev => {
-            const channelMsgs = prev[activeId] || [];
-            return {
-              ...prev,
-              [activeId]: channelMsgs.map(msg => msg.id === tempId ? {
-                ...msg,
-                id: realMsg.id || tempId,
-                status: "delivered" as const,
-                timestamp: realMsg.created_at || realMsg.timestamp || msg.timestamp
-              } : msg)
-            };
-          });
-        },
-        getError: (err: any) => {
-          toast.error("Failed to send message");
-          pendingTempIdsRef.current.delete(tempId);
-          setMessages(prev => ({
-            ...prev,
-            [activeId]: (prev[activeId] || []).filter(msg => msg.id !== tempId)
-          }));
-        }
-      });
-    }
+    // Fallback: if WS doesn't echo back in 8 seconds, remove from pending
+    setTimeout(() => {
+      pendingTempIdsRef.current.delete(tempId);
+    }, 8000);
   };
 
   // ── Typing indicator logic ────────────────────────────────────────────────
@@ -756,7 +758,7 @@ export default function ChatPage() {
                             )}
                           </div>
                         )}
-                        <div className={`max-w-[75%] px-3 py-1.5 text-sm relative group shadow-sm ${
+                        <div className={`max-w-[75%] px-3 py-1.5 text-sm relative group shadow-sm break-words ${
                           m.isDeleted
                             ? "bg-muted/50 border border-border italic text-muted-foreground rounded-2xl"
                             : own
