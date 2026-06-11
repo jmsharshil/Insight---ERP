@@ -580,7 +580,7 @@ export default function BatchDetailPage() {
               </div>
             </div>
 
-            {/* <div className="border-t border-border pt-4 mt-6">
+            <div className="border-t border-border pt-4 mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -733,7 +733,7 @@ export default function BatchDetailPage() {
                   )}
                 </div>
               </div>
-            </div> */}
+            </div>
 
             <div className="flex gap-3 pt-4 border-t border-border mt-6 justify-end">
               <Button type="button" variant="outline" onClick={() => setMode("view")}>

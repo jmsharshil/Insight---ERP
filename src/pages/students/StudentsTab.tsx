@@ -274,15 +274,15 @@ export default function StudentsTab() {
             >
               View Profile
             </DropdownMenuItem>
-            {/* <DropdownMenuItem
+            <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
                 handleOpenAssignModal(r);
               }}
             >
-              Assign Batch
+              Assign and Remove Batch
             </DropdownMenuItem>
-            <DropdownMenuItem
+            {/* <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
                 handleRemoveStudentFromBatch(r);

@@ -111,6 +111,13 @@ export const API = {
       DELETE: (id: string | number) => `/api/v1/subjects/${id}/`,
     },
 
+    /** Chapters endpoints */
+    CHAPTERS: {
+      CREATE: (subjectId: string | number) => `/api/v1/subjects/${subjectId}/chapters/`,
+      UPDATE: (subjectId: string | number, chapterId: string | number) => `/api/v1/subjects/${subjectId}/chapters/${chapterId}/`,
+      DELETE: (subjectId: string | number, chapterId: string | number) => `/api/v1/subjects/${subjectId}/chapters/${chapterId}/`,
+    },
+
     /** Reports endpoints */
     REPORTS: {
       LEADS: "/api/v1/reports/leads/",

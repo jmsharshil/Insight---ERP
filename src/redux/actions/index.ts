@@ -81,6 +81,13 @@ export const subjectAction = {
   DELETE_SUBJECT: "DELETE_SUBJECT",
 } as const;
 
+export const chapterAction = {
+  GET_CHAPTERS: "GET_CHAPTERS",
+  CREATE_CHAPTER: "CREATE_CHAPTER",
+  UPDATE_CHAPTER: "UPDATE_CHAPTER",
+  DELETE_CHAPTER: "DELETE_CHAPTER",
+} as const;
+
 export const ChatAction = {
   GET_CHAT_ROOMS: "GET_CHAT_ROOMS",
   GET_CHAT_ROOM_DETAILS: "GET_CHAT_ROOM_DETAILS",
