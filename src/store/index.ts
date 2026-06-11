@@ -14,10 +14,12 @@ import branchReducer from "@/redux/slices/branchSlice";
 import admissionReducer from "@/redux/slices/admissionSlice";
 import studentReducer from "@/redux/slices/studentSlice";
 import coursesReducer from "@/redux/slices/coursesSlice";
+import levelsReducer from "@/redux/slices/levelsSlice";
 import chatReducer from "@/redux/slices/chatSlice";
 import classRoomReducer from "@/redux/slices/classroomSlice";
 import timetableReducer from "@/redux/slices/timetableSlice";
 import { feesReducer } from "@/redux/slices/feesSlice";
+import attendanceReducer from "@/redux/slices/attendanceSlice";
 
 const sagaMiddleware = createSagaMiddleware();
 
@@ -39,10 +41,12 @@ const rootReducer = combineReducers({
   admissions: admissionReducer,
   students: studentReducer,
   courses: coursesReducer,
+  levels: levelsReducer,
   chat: chatReducer,
   classRoom: classRoomReducer,
   timetable: timetableReducer,
   fees: feesReducer,
+  attendance: attendanceReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

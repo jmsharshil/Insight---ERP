@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store";
 import { batchAction, dropdownActions, studentActions, courseAction } from "@/redux/actions";
 import { API } from "@/service/api";
+import { useDropdown } from "@/hooks/useDropdown";
 import { toast } from "sonner";
 import {
   Users,
@@ -39,7 +40,7 @@ interface BatchForm {
   batch_code: string;
   group_module: "full" | "both" | "module_1" | "module_2";
   batch_attempt: "june" | "oct" | "dec" | "feb";
-  location: string;
+  branch: string;
   start_date: string;
   end_date: string;
   max_students: number;
@@ -152,13 +153,23 @@ export default function BatchDetailPage() {
   const [pendingStudents, setPendingStudents] = useState<string[]>([]);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
+  const {
+    options: branches,
+    loading: branchesLoading,
+    fetchOptions: fetchBranches,
+  } = useDropdown("branches", false);
+
+  useEffect(() => {
+    fetchBranches();
+  }, [fetchBranches]);
+
   const [batchForm, setBatchForm] = useState<BatchForm>({
     course: "",
     name: "",
     batch_code: "",
     group_module: "module_1",
     batch_attempt: "june",
-    location: "",
+    branch: "",
     start_date: "",
     end_date: "",
     max_students: 50,
@@ -185,7 +196,7 @@ export default function BatchDetailPage() {
             batch_code: data.batch_code || "",
             group_module: data.group_module || "module_1",
             batch_attempt: data.batch_attempt || "june",
-            location: data.location || "",
+            branch: data.branch || "",
             start_date: data.start_date || "",
             end_date: data.end_date || "",
             max_students: data.max_students || 50,
@@ -244,7 +255,6 @@ export default function BatchDetailPage() {
   }, [dispatch, id]);
 
   const handleSave = () => {
-    if (!batchForm.name.trim()) return toast.error("Batch name is required.");
     if (!batchForm.course) return toast.error("Course is required.");
 
     const payload = {
@@ -498,12 +508,23 @@ export default function BatchDetailPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Location</Label>
-                <Input
-                  value={batchForm.location}
-                  onChange={(e) => setBatchForm({ ...batchForm, location: e.target.value })}
-                  placeholder="e.g., Room 101, Main Campus"
-                />
+                <Label>Branch</Label>
+                <Select
+                  value={batchForm.branch || ""}
+                  onValueChange={(val) => setBatchForm({ ...batchForm, branch: val })}
+                  disabled={branchesLoading}
+                >
+                  <SelectTrigger className="w-full bg-muted/10">
+                    <SelectValue placeholder={branchesLoading ? "Loading branches..." : "Select Branch"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((b) => (
+                      <SelectItem key={b.value} value={String(b.value)}>
+                        {b.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -785,8 +806,8 @@ export default function BatchDetailPage() {
                   <MapPin className="w-5 h-5 text-blue-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Location</p>
-                  <p className="font-medium">{batch.location || "Not assigned"}</p>
+                  <p className="text-sm text-muted-foreground">Branch</p>
+                  <p className="font-medium">{batch.branch_name || batch.branch || "Not assigned"}</p>
                 </div>
               </div>
 

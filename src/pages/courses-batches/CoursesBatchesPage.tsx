@@ -24,6 +24,7 @@ import { API } from "@/service/api";
 import CoursesTab from "./components/CoursesTab";
 import CourseSheet from "./components/CourseSheet";
 import BatchesTab from "./components/BatchesTab";
+import LevelsTab from "./components/LevelsTab";
 import BatchDetailsSheet, { SheetMode } from "./components/BatchDetailsModal";
 
 export default function CoursesBatchesPage() {
@@ -63,7 +64,7 @@ export default function CoursesBatchesPage() {
     batch_code: "",
     group_module: "module_1",
     batch_attempt: "june",
-    location: "Campus 1",
+    branch: "",
     start_date: "2026-07-01",
     end_date: "2027-01-31",
     max_students: 50,
@@ -105,7 +106,7 @@ export default function CoursesBatchesPage() {
       batch_code: "",
       group_module: "module_1",
       batch_attempt: "june",
-      location: "Campus 1",
+      branch: "",
       start_date: new Date().toISOString().split("T")[0],
       end_date: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
       max_students: 50,
@@ -134,10 +135,14 @@ export default function CoursesBatchesPage() {
         toast.success("Student assigned successfully.");
         setBatchForm({
           ...batchForm,
-          enrolled_students: [...(batchForm.enrolled_students || []), { student_id: studentId, student_name: studentName }],
+          enrolled_students: [
+            ...(batchForm.enrolled_students || []),
+            { student_id: studentId, student_name: studentName },
+          ],
         });
       },
-      getError: (err: any) => toast.error(err?.response?.data?.message || "Failed to assign student"),
+      getError: (err: any) =>
+        toast.error(err?.response?.data?.message || "Failed to assign student"),
     });
   };
 
@@ -152,10 +157,13 @@ export default function CoursesBatchesPage() {
         toast.success("Student removed successfully.");
         setBatchForm({
           ...batchForm,
-          enrolled_students: batchForm.enrolled_students?.filter((s: any) => s.student_id !== studentId),
+          enrolled_students: batchForm.enrolled_students?.filter(
+            (s: any) => s.student_id !== studentId,
+          ),
         });
       },
-      getError: (err: any) => toast.error(err?.response?.data?.message || "Failed to remove student"),
+      getError: (err: any) =>
+        toast.error(err?.response?.data?.message || "Failed to remove student"),
     });
   };
 
@@ -171,10 +179,14 @@ export default function CoursesBatchesPage() {
         toast.success("Faculty assigned successfully.");
         setBatchForm({
           ...batchForm,
-          assigned_faculty: [...(batchForm.assigned_faculty || []), { faculty_id: facultyId, faculty_name: facultyName }],
+          assigned_faculty: [
+            ...(batchForm.assigned_faculty || []),
+            { faculty_id: facultyId, faculty_name: facultyName },
+          ],
         });
       },
-      getError: (err: any) => toast.error(err?.response?.data?.message || "Failed to assign faculty"),
+      getError: (err: any) =>
+        toast.error(err?.response?.data?.message || "Failed to assign faculty"),
     });
   };
 
@@ -189,10 +201,13 @@ export default function CoursesBatchesPage() {
         toast.success("Faculty removed successfully.");
         setBatchForm({
           ...batchForm,
-          assigned_faculty: batchForm.assigned_faculty?.filter((f: any) => f.faculty_id !== facultyId),
+          assigned_faculty: batchForm.assigned_faculty?.filter(
+            (f: any) => f.faculty_id !== facultyId,
+          ),
         });
       },
-      getError: (err: any) => toast.error(err?.response?.data?.message || "Failed to remove faculty"),
+      getError: (err: any) =>
+        toast.error(err?.response?.data?.message || "Failed to remove faculty"),
     });
   };
 
@@ -400,6 +415,7 @@ export default function CoursesBatchesPage() {
         <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="w-full">
           <TabsList className="mb-4 bg-muted/50">
             <TabsTrigger value="courses">Courses</TabsTrigger>
+            <TabsTrigger value="levels">Levels</TabsTrigger>
             <TabsTrigger value="batches">Batches</TabsTrigger>
           </TabsList>
 
@@ -427,13 +443,18 @@ export default function CoursesBatchesPage() {
                     }
                   },
                   getError: (err: any) => {
-                    const msg = err?.response?.data?.message || err?.message || "Failed to fetch courses";
+                    const msg =
+                      err?.response?.data?.message || err?.message || "Failed to fetch courses";
                     dispatch(setCoursesError(msg));
                     toast.error(msg);
                   },
                 });
               }}
             />
+          </TabsContent>
+
+          <TabsContent value="levels" className="mt-0">
+            <LevelsTab />
           </TabsContent>
 
           <TabsContent value="batches" className="mt-0">

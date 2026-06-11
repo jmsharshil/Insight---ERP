@@ -11,6 +11,7 @@ import { watchCourseSaga } from "./course";
 import { watchChatSaga } from "./chat";
 import { watchClassroomSaga } from "./classroom";
 import { watchFeesSaga } from "./fees";
+import { watchAttendanceSaga } from "./attendance";
 
 function* rootSaga() {
   yield all([
@@ -26,6 +27,7 @@ function* rootSaga() {
     fork(watchChatSaga),
     fork(watchClassroomSaga),
     fork(watchFeesSaga),
+    fork(watchAttendanceSaga),
   ]);
 }
 

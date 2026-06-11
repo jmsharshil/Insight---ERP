@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useDropdown } from "@/hooks/useDropdown";
 
 interface Course {
   id: string;
@@ -29,7 +31,7 @@ interface BatchForm {
   batch_code: string;
   group_module: "full" | "both" | "module_1" | "module_2";
   batch_attempt: "june" | "oct" | "dec" | "feb";
-  location: string;
+  branch: string;
   start_date: string;
   end_date: string;
   max_students: number;
@@ -56,6 +58,18 @@ export default function BatchDialog({
   onSave,
   courses,
 }: BatchDialogProps) {
+  const {
+    options: branches,
+    loading: branchesLoading,
+    fetchOptions: fetchBranches,
+  } = useDropdown("branches", false);
+
+  useEffect(() => {
+    if (open) {
+      fetchBranches();
+    }
+  }, [open, fetchBranches]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
@@ -208,20 +222,30 @@ export default function BatchDialog({
               />
             </div>
 
-            {/* Classroom Location */}
+            {/* Branch Name */}
             <div className="space-y-1">
               <Label
-                htmlFor="batch-location"
+                htmlFor="batch-branch"
                 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
               >
-                Location / Classroom
+                Branch Name
               </Label>
-              <Input
-                id="batch-location"
-                value={batchForm.location}
-                onChange={(e) => setBatchForm({ ...batchForm, location: e.target.value })}
-                placeholder="e.g. Campus 1"
-              />
+              <Select
+                value={batchForm.branch || ""}
+                onValueChange={(val) => setBatchForm({ ...batchForm, branch: val })}
+                disabled={branchesLoading}
+              >
+                <SelectTrigger id="batch-branch" className="bg-muted/10">
+                  <SelectValue placeholder={branchesLoading ? "Loading branches..." : "Select Branch"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((b) => (
+                    <SelectItem key={b.value} value={String(b.value)}>
+                      {b.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

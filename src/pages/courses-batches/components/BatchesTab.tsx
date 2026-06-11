@@ -27,7 +27,8 @@ interface Batch {
   batch_code: string;
   group_module: "full" | "both" | "module_1" | "module_2";
   batch_attempt: "june" | "oct" | "dec" | "feb";
-  location: string;
+  branch?: string;
+  branch_name?: string;
   start_date: string;
   end_date: string;
   max_students: number;
@@ -76,7 +77,7 @@ export default function BatchesTab({
         b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         b.batch_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
         courseName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        b.location.toLowerCase().includes(searchQuery.toLowerCase());
+        (b.branch_name || b.branch || "").toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesStatus =
         statusFilter === "all" ||
@@ -217,7 +218,7 @@ export default function BatchesTab({
                     </div>
                     <div className="flex items-center gap-1.5 min-w-0">
                       <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
-                      <span className="truncate">{b.location || "N/A"}</span>
+                      <span className="truncate">{b.branch_name || b.branch || "N/A"}</span>
                     </div>
                     {/* <div className="flex items-center gap-1.5 col-span-2 min-w-0">
                       <Clock className="w-3.5 h-3.5 text-primary shrink-0" />

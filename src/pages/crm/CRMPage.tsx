@@ -38,8 +38,7 @@ import {
 import { API } from "@/service/api";
 import DataTable, { type DataTableColumn } from "@/components/common/DataTable";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
-import Skeleton from "react-loading-skeleton";
-import "react-loading-skeleton/dist/skeleton.css";
+import { TableSkeleton } from "@/components/common/Skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -89,7 +88,7 @@ export default function CRMPage() {
   const dispatch = useDispatch<AppDispatch>();
   const { analytics, leads, leadsLoading } = useSelector((state: RootState) => state.crm);
 
-  const [tab, setTab] = useState("pipeline");
+  const [tab, setTab] = useState("table");
   const [selectedLead, setSelectedLead] = useState<APILead | null>(null);
   const [isLeadDetailLoading, setIsLeadDetailLoading] = useState(false);
   const [isEditLeadOpen, setIsEditLeadOpen] = useState(false);
@@ -330,16 +329,20 @@ export default function CRMPage() {
       
         {/* Table View */}
         <TabsContent value="table">
-          <LeadsTable
-            leads={leads}
-            onView={(lead) => {
-              setSelectedLead(lead);
-              fetchLeadDetails(lead);
-            }}
-            onChangeStage={(lead, stage) => {
-              setPendingMove({ leadId: String(lead.id), stage });
-            }}
-          />
+          {leadsLoading ? (
+            <TableSkeleton rows={10} columns={8} className="mt-3" />
+          ) : (
+            <LeadsTable
+              leads={leads}
+              onView={(lead) => {
+                setSelectedLead(lead);
+                fetchLeadDetails(lead);
+              }}
+              onChangeStage={(lead, stage) => {
+                setPendingMove({ leadId: String(lead.id), stage });
+              }}
+            />
+          )}
         </TabsContent>
 
         {/* Pipeline (Kanban) */}

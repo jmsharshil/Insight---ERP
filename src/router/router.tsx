@@ -23,9 +23,11 @@ import StudentDetailPage from "@/pages/students/StudentDetailPage";
 import StudentAdmissionDetailedPage from "@/pages/students/StudentAdmissionDetailedPage";
 const CoursesBatchesPage = lazy(() => import("@/pages/courses-batches/CoursesBatchesPage"));
 import CourseDetailPage from "@/pages/courses/CourseDetailPage";
+import LevelDetailPage from "@/pages/courses/LevelDetailPage";
 import BatchDetailPage from "@/pages/courses-batches/BatchDetailPage";
 const ClassroomTimetablePage = lazy(() => import("@/pages/classroom-timetable/ClassroomTimetablePage"));
 const AttendancePage = lazy(() => import("@/pages/attendance/AttendancePage"));
+import AttendanceDetailPage from "@/pages/attendance/AttendanceDetailPage";
 const FeesPage = lazy(() => import("@/pages/fees/FeesPage"));
 const ExamsPage = lazy(() => import("@/pages/exams/ExamsPage"));
 const FacultyPage = lazy(() => import("@/pages/faculty/FacultyPage"));
@@ -52,7 +54,7 @@ function RootRedirect() {
 function withSuspense(component: ReactNode) {
   return (
     <ErrorBoundary>
-      <Suspense fallback={<PageLoader />}>{component}</Suspense>
+      <Suspense>{component}</Suspense>
     </ErrorBoundary>
   );
 }
@@ -115,9 +117,11 @@ const router = createBrowserRouter([
     { module: "students", path: "/admissions/:id", element: <StudentAdmissionDetailedPage /> },
     { module: "courses_batches", path: "/courses-batches", element: withSuspense(<CoursesBatchesPage />) },
     { module: "courses_batches", path: "/courses-batches/:id", element: <CourseDetailPage /> },
+    { module: "courses_batches", path: "/courses-batches/:courseId/level/:levelId", element: <LevelDetailPage /> },
     { module: "courses_batches", path: "/courses-batches/batch/:id", element: <BatchDetailPage /> },
     { module: "classroom_timetable", path: "/classroom-timetable", element: withSuspense(<ClassroomTimetablePage />) },
     { module: "attendance", path: "/attendance", element: withSuspense(<AttendancePage />) },
+    { module: "attendance", path: "/attendance/:id", element: <AttendanceDetailPage /> },
     { module: "fees", path: "/fees", element: withSuspense(<FeesPage />) },
     { module: "exams", path: "/exams", element: withSuspense(<ExamsPage />) },
     {

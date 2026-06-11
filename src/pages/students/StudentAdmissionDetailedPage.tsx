@@ -79,7 +79,7 @@ const DOCUMENT_TYPES: readonly DocType[] = [
 
 function AdmissionDetailSkeleton() {
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-12 p-4 md:p-0">
+    <div className="mx-auto space-y-6 pb-12 p-4 md:p-0">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-4">
@@ -254,7 +254,7 @@ export default function StudentAdmissionDetailedPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-12">
+    <div className="mx-auto space-y-6 pb-12">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ChevronLeft className="w-5 h-5" /></Button>

@@ -231,7 +231,7 @@ export default function CourseDetailPage() {
         dispatch(removeCourseFromList(id));
         toast.success("Course deleted successfully.");
         setDeleteConfirmOpen(false);
-        navigate("/timetable");
+        navigate("/courses-batches");
       },
       getError: (err: any) => {
         const msg = err?.response?.data?.message || err?.message || "Failed to delete course";

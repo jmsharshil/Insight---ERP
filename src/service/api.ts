@@ -82,6 +82,13 @@ export const API = {
       DETAIL: (id: string | number) => `/api/v1/courses/${id}/`,
       UPDATE: (id: string | number) => `/api/v1/courses/${id}/`,
       DELETE: (id: string | number) => `/api/v1/courses/${id}/`,
+      LEVELS: {
+        LIST: (courseId: string | number) => `/api/v1/courses/${courseId}/levels/`,
+        CREATE: (courseId: string | number) => `/api/v1/courses/${courseId}/levels/`,
+        DETAIL: (courseId: string | number, levelId: string | number) => `/api/v1/courses/${courseId}/levels/${levelId}/`,
+        UPDATE: (courseId: string | number, levelId: string | number) => `/api/v1/courses/${courseId}/levels/${levelId}/`,
+        DELETE: (courseId: string | number, levelId: string | number) => `/api/v1/courses/${courseId}/levels/${levelId}/`,
+      },
     },
 
     /** Batches endpoints */
@@ -107,6 +114,34 @@ export const API = {
     /** Reports endpoints */
     REPORTS: {
       LEADS: "/api/v1/reports/leads/",
+    },
+
+    /** Attendance endpoints */
+    ATTENDANCE: {
+      LIST: (params?: Record<string, any>) => {
+        const base = "/api/v1/attendance/";
+        if (!params || Object.keys(params).length === 0) return base;
+        const cleanParams = Object.fromEntries(
+          Object.entries(params)
+            .filter(([_, v]) => v !== undefined && v !== null && v !== "")
+            .map(([k, v]) => [k, String(v)])
+        );
+        if (Object.keys(cleanParams).length === 0) return base;
+        const qs = new URLSearchParams(cleanParams).toString();
+        return `${base}?${qs}`;
+      },
+      REPORT: (params?: Record<string, any>) => {
+        const base = "/api/v1/attendance/report/";
+        if (!params || Object.keys(params).length === 0) return base;
+        const cleanParams = Object.fromEntries(
+          Object.entries(params)
+            .filter(([_, v]) => v !== undefined && v !== null && v !== "")
+            .map(([k, v]) => [k, String(v)])
+        );
+        if (Object.keys(cleanParams).length === 0) return base;
+        const qs = new URLSearchParams(cleanParams).toString();
+        return `${base}?${qs}`;
+      },
     },
 } as const;
 
