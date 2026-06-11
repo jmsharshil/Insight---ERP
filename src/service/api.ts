@@ -108,5 +108,21 @@ export const API = {
     REPORTS: {
       LEADS: "/api/v1/reports/leads/",
     },
+
+    /** Attendance endpoints */
+    ATTENDANCE: {
+      DASHBOARD:        "/api/v1/attendance/dashboard/",
+      STUDENTS:         "/api/v1/attendance/students/",
+      STUDENT_DETAIL:   (id: string) => `/api/v1/attendance/students/${id}/`,
+      HISTORY:          "/api/v1/attendance/history/",
+      FACULTY:          "/api/v1/attendance/faculty/",
+      FACULTY_DETAIL:   (id: string) => `/api/v1/attendance/faculty/${id}/`,
+      ANALYTICS:        "/api/v1/attendance/analytics/",
+      DEFAULTERS:       "/api/v1/attendance/defaulters/",
+      VIOLATIONS:       "/api/v1/attendance/violations/",
+      BATCH_REGISTER:   (batchId: string) => `/api/v1/attendance/batches/${batchId}/register/`,
+      EXPORT:           "/api/v1/attendance/export/",
+    },
 } as const;
+
 

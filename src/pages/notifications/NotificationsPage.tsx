@@ -1,14 +1,17 @@
-import { useMemo, useState } from "react";
+import { useMemo, useEffect, useCallback, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, BellOff, CheckCheck } from "lucide-react";
+import { Bell, BellOff, CheckCheck, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/store";
+import { notificationActions } from "@/redux/actions";
+import { setNotifications, setNotificationsLoading, markAllAsRead, markAsRead, AppNotification } from "@/redux/slices/notificationsSlice";
 import PageHeader from "@/components/layout/PageHeader";
 import EmptyState from "@/components/common/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/useToast";
-import { NOTIFICATIONS, type AppNotification } from "@/constants/dummy/notifications";
 
 function relative(ts: string) {
   const diff = Date.now() - new Date(ts).getTime();
@@ -32,76 +35,157 @@ function groupByDay(notifs: AppNotification[]) {
 }
 
 export default function NotificationsPage() {
-  const [items, setItems] = useState(NOTIFICATIONS);
+  const { notifications, loading } = useSelector((state: RootState) => state.notifications);
   const [filter, setFilter] = useState<"all" | "unread" | "high">("all");
   const navigate = useNavigate();
   const toast = useToast();
+  const dispatch = useDispatch<AppDispatch>();
 
-  const filtered = useMemo(() => items.filter(n =>
+  const fetchNotifications = useCallback(() => {
+    dispatch({
+      type: notificationActions.GET_NOTIFICATIONS,
+      method: "GET",
+      endPoint: `/api/auth/notifications/`,
+      auth: true,
+      setLoading: (val: boolean) => dispatch(setNotificationsLoading(val)),
+      getResponse: (res: any) => {
+        const apiData = res?.data || [];
+        const mapped: AppNotification[] = apiData.map((n: any) => ({
+          id: n.id,
+          title: n.title,
+          body: n.body,
+          timestamp: n.created_at,
+          isRead: n.is_read,
+          priority: n.data?.priority || "normal",
+          actionUrl: n.data?.url || undefined,
+          data: n.data
+        }));
+        dispatch(setNotifications(mapped));
+      },
+      getError: (err: any) => {
+        const msg = err?.response?.data?.message || err?.message || "Failed to load notifications";
+        toast.error(msg);
+      }
+    });
+  }, [dispatch, toast]);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  const filtered = useMemo(() => notifications.filter(n =>
     filter === "all" ? true : filter === "unread" ? !n.isRead : n.priority === "high",
-  ), [items, filter]);
+  ), [notifications, filter]);
 
   const groups = groupByDay(filtered);
 
-  const markAll = () => {
-    setItems(rows => rows.map(r => ({ ...r, isRead: true })));
-    toast.success("All notifications marked as read.");
-  };
-  const onClick = (n: AppNotification) => {
-    setItems(rows => rows.map(r => r.id === n.id ? { ...r, isRead: true } : r));
-    if (n.actionUrl) navigate(n.actionUrl);
-  };
+  const handleMarkAll = useCallback(() => {
+    dispatch({
+      type: notificationActions.MARK_NOTIFICATIONS_READ,
+      method: "PATCH",
+      endPoint: `/api/auth/notifications/`,
+      auth: true,
+      getResponse: (res: any) => {
+        if (res?.success) {
+          dispatch(markAllAsRead());
+          // Optional: You can silence the toast here since it's automatic, 
+          // but we'll keep it as requested to show the message.
+          toast.success(res.message || "All notifications marked as read.");
+        } else {
+          toast.error("Failed to mark notifications as read.");
+        }
+      },
+      getError: (err: any) => {
+        const msg = err?.response?.data?.message || err?.message || "Failed to mark as read";
+        toast.error(msg);
+      }
+    });
+  }, [dispatch, toast]);
+
+  // Automatically mark all as read after 3 seconds of viewing
+  useEffect(() => {
+    if (!loading && notifications.some(n => !n.isRead)) {
+      const timer = setTimeout(() => {
+        handleMarkAll();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, notifications, handleMarkAll]);
 
   return (
-    <div>
-      <PageHeader title="Notifications" subtitle={`${items.filter(n => !n.isRead).length} unread`}
+    <div className="max-w-4xl mx-auto pb-10">
+      <PageHeader title="Notifications" subtitle={loading ? "Loading..." : `${notifications.filter(n => !n.isRead).length} unread`}
         actions={
           <div className="flex gap-2">
             <Select value={filter} onValueChange={(v: any) => setFilter(v)}>
-              <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-32 h-9 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All</SelectItem>
                 <SelectItem value="unread">Unread</SelectItem>
                 <SelectItem value="high">High Priority</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" onClick={markAll}><CheckCheck className="w-4 h-4 mr-1.5" />Mark all read</Button>
+            <Button variant="outline" size="sm" className="h-9 text-xs" onClick={handleMarkAll} disabled={!notifications.some(n => !n.isRead)}>
+              <CheckCheck className="w-3.5 h-3.5 mr-1.5" /> Mark all read
+            </Button>
           </div>
         }
       />
-      {filtered.length === 0 ? (
-        <EmptyState icon={BellOff} title="You're all caught up! 🎉" description="No notifications to show." />
+      
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+          <Loader2 className="w-8 h-8 animate-spin mb-4 text-primary" />
+          <p className="text-sm">Loading notifications...</p>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="py-10">
+          <EmptyState icon={BellOff} title="You're all caught up! 🎉" description="No notifications to show." />
+        </div>
       ) : (
         <div className="space-y-6">
-          {["Today", "Yesterday", "Earlier"].map((day) => groups[day] && (
+          {["Today", "Yesterday", "Earlier"].map((day) => groups[day] && groups[day].length > 0 && (
             <div key={day}>
-              <h3 className="font-heading font-semibold text-sm text-muted-foreground mb-2">{day}</h3>
+              <h3 className="font-heading font-semibold text-xs text-muted-foreground uppercase tracking-wider mb-3 px-1">{day}</h3>
               <div className="space-y-2">
                 <AnimatePresence>
                   {groups[day].map((n, i) => (
-                    <motion.button key={n.id}
-                      initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
-                      transition={{ delay: i * 0.03 }}
-                      onClick={() => onClick(n)}
-                      className={`w-full text-left rounded-xl border bg-card p-4 hover:shadow-md transition-shadow flex items-start gap-3
-                        ${!n.isRead ? "border-l-4 border-l-primary bg-primary-light/30" : "border-border"}
-                        ${n.priority === "high" ? "ring-1 ring-warning/40" : ""}`}>
-                      <div className={`rounded-full p-2 ${n.priority === "high" ? "bg-warning/20" : "bg-primary-light"}`}>
-                        <Bell className={`w-4 h-4 ${n.priority === "high" ? "text-warning" : "text-primary-dark"}`} />
+                    <motion.div key={n.id}
+                      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ delay: i * 0.02, duration: 0.2 }}
+                      className={`w-full text-left rounded-lg border bg-card p-4 flex items-start gap-4 relative overflow-hidden group
+                        ${!n.isRead ? "border-l-4 border-l-primary bg-primary/5 shadow-sm" : "border-border shadow-sm"}
+                        ${n.priority === "high" ? "border-l-4 border-l-warning bg-warning/5" : ""}`}>
+                      
+                      <div className={`flex-shrink-0 rounded-full p-2.5 mt-0.5
+                        ${n.priority === "high" ? "bg-warning/15 text-warning" : !n.isRead ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
+                        <Bell className="w-4 h-4" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold text-sm">{n.title}</span>
-                          <span className="text-xs text-muted-foreground">{relative(n.timestamp)}</span>
+                      
+                      <div className="flex-1 min-w-0 pr-6">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className={`font-semibold text-sm truncate ${!n.isRead ? "text-foreground" : "text-foreground/80"}`}>{n.title}</span>
+                          <span className="text-[11px] text-muted-foreground flex-shrink-0 ml-2 whitespace-nowrap">{relative(n.timestamp)}</span>
                         </div>
-                        <p className="text-sm text-muted-foreground mt-0.5">{n.body}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          {n.actionUrl && <Badge variant="outline" className="text-xs">View →</Badge>}
-                          {n.priority === "high" && <Badge className="bg-warning/20 text-warning border-warning/30 text-xs">High</Badge>}
-                        </div>
+                        <p className={`text-sm leading-relaxed whitespace-pre-wrap ${!n.isRead ? "text-muted-foreground" : "text-muted-foreground/80"}`}>{n.body}</p>
+                        
+                        {(n.actionUrl || n.priority === "high") && (
+                          <div className="flex items-center gap-2 mt-3">
+                            {n.actionUrl && (
+                              <a href={n.actionUrl} className="inline-flex items-center">
+                                <Badge variant="secondary" className="text-[10px] px-2 py-0.5 hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">
+                                  View Details
+                                </Badge>
+                              </a>
+                            )}
+                            {n.priority === "high" && <Badge variant="outline" className="text-[10px] px-2 py-0.5 border-warning text-warning">Important</Badge>}
+                          </div>
+                        )}
                       </div>
-                      {!n.isRead && <span className="w-2 h-2 rounded-full bg-primary mt-2" />}
-                    </motion.button>
+
+                      {!n.isRead && (
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary" />
+                      )}
+                    </motion.div>
                   ))}
                 </AnimatePresence>
               </div>
