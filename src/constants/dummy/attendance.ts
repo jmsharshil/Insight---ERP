@@ -15,6 +15,23 @@ export interface AttendanceRecord {
   scanType: ScanType;
   deviceId?: string;
   violation?: "repeated_delay" | "unauthorised_absence";
+  rollNumber?: string;
+  statusDisplay?: string;
+  session?: string;
+  sessionDisplay?: string;
+  markedByName?: string;
+  markedBy?: string;
+  markedAt?: string;
+  isCorrected?: boolean;
+  correctedBy?: string;
+  correctedByName?: string;
+  correctionNote?: string;
+  checkedInAt?: string;
+  checkedOutAt?: string;
+  batchId?: string;
+  branchId?: string;
+  batchName?: string;
+  branchName?: string;
 }
 
 function dateNDaysAgo(n: number) {

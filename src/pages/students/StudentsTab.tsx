@@ -67,7 +67,7 @@ export default function StudentsTab() {
     dispatch({
       type: batchAction.GET_BATCHES,
       method: "GET",
-      endPoint: "/api/v1/batches/?page_size=1000",
+      endPoint: "/api/v1/batches/",
       auth: true,
       setLoading: setBatchesLoading,
       getResponse: (res: any) => {
@@ -274,15 +274,15 @@ export default function StudentsTab() {
             >
               View Profile
             </DropdownMenuItem>
-            {/* <DropdownMenuItem
+            <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
                 handleOpenAssignModal(r);
               }}
             >
-              Assign Batch
+              Assign and Remove Batch
             </DropdownMenuItem>
-            <DropdownMenuItem
+            {/* <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
                 handleRemoveStudentFromBatch(r);

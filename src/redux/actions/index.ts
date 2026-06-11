@@ -81,6 +81,13 @@ export const subjectAction = {
   DELETE_SUBJECT: "DELETE_SUBJECT",
 } as const;
 
+export const chapterAction = {
+  GET_CHAPTERS: "GET_CHAPTERS",
+  CREATE_CHAPTER: "CREATE_CHAPTER",
+  UPDATE_CHAPTER: "UPDATE_CHAPTER",
+  DELETE_CHAPTER: "DELETE_CHAPTER",
+} as const;
+
 export const ChatAction = {
   GET_CHAT_ROOMS: "GET_CHAT_ROOMS",
   GET_CHAT_ROOM_DETAILS: "GET_CHAT_ROOM_DETAILS",
@@ -140,3 +147,10 @@ export const attendanceActions = {
   EXPORT_CSV:           "EXPORT_ATTENDANCE_CSV",
 } as const;
 
+export const levelActions = {
+  GET_LEVELS: "GET_LEVELS",
+  GET_LEVEL_DETAILS: "GET_LEVEL_DETAILS",
+  CREATE_LEVEL: "CREATE_LEVEL",
+  UPDATE_LEVEL: "UPDATE_LEVEL",
+  DELETE_LEVEL: "DELETE_LEVEL",
+} as const;

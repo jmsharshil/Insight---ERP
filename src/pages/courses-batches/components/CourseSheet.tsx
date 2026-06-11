@@ -95,9 +95,9 @@ export default function CourseSheet({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {/* <div className="grid grid-cols-2 gap-4"> */}
             {/* Code */}
-            <div className="space-y-1">
+            {/* <div className="space-y-1">
               <Label
                 htmlFor="course-code"
                 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
@@ -110,10 +110,10 @@ export default function CourseSheet({
                 onChange={(e) => setForm({ ...form, code: e.target.value })}
                 placeholder="e.g. BM101"
               />
-            </div>
+            </div> */}
 
             {/* Type */}
-            <div className="space-y-1">
+            {/* <div className="space-y-1">
               <Label
                 htmlFor="course-type"
                 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
@@ -133,12 +133,12 @@ export default function CourseSheet({
                   <SelectItem value="cs_professional">CS Professional</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-          </div>
+            </div> */}
+          {/* </div> */}
 
-          <div className="grid grid-cols-2 gap-4">
+          {/* <div className="grid grid-cols-2 gap-4"> */}
             {/* Fee Amount */}
-            <div className="space-y-1">
+            {/* <div className="space-y-1">
               <Label
                 htmlFor="course-fees"
                 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
@@ -152,10 +152,10 @@ export default function CourseSheet({
                 onChange={(e) => setForm({ ...form, fee_amount: e.target.value })}
                 placeholder="e.g. 52000"
               />
-            </div>
+            </div> */}
 
             {/* Duration */}
-            <div className="space-y-1">
+            {/* <div className="space-y-1">
               <Label
                 htmlFor="course-duration"
                 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
@@ -174,8 +174,8 @@ export default function CourseSheet({
                 }
                 placeholder="e.g. 12"
               />
-            </div>
-          </div>
+            </div> */}
+          {/* </div> */}
 
           {/* Description */}
           <div className="space-y-1">

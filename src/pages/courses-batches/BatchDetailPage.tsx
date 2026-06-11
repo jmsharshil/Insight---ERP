@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store";
 import { batchAction, dropdownActions, studentActions, courseAction } from "@/redux/actions";
 import { API } from "@/service/api";
+import { useDropdown } from "@/hooks/useDropdown";
 import { toast } from "sonner";
 import {
   Users,
@@ -30,6 +31,8 @@ import {
 } from "@/components/ui/select";
 import PageHeader from "@/components/layout/PageHeader";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
 
 interface BatchForm {
   course: string;
@@ -37,7 +40,7 @@ interface BatchForm {
   batch_code: string;
   group_module: "full" | "both" | "module_1" | "module_2";
   batch_attempt: "june" | "oct" | "dec" | "feb";
-  location: string;
+  branch: string;
   start_date: string;
   end_date: string;
   max_students: number;
@@ -45,6 +48,84 @@ interface BatchForm {
   is_active: boolean;
   enrolled_students?: string[];
   assigned_faculty?: string[];
+}
+
+function BatchDetailSkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+        <div className="flex items-center gap-4">
+          <Skeleton width={40} height={40} className="rounded-full" />
+          <div>
+            <Skeleton width={200} height={28} />
+            <Skeleton width={150} height={16} />
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Skeleton width={100} height={36} className="rounded-md" />
+          <Skeleton width={100} height={36} className="rounded-md" />
+        </div>
+      </div>
+
+      {/* Main Card */}
+      <div className="bg-card rounded-xl border border-border p-6 shadow-sm space-y-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="space-y-1">
+              <Skeleton width={80} height={14} />
+              <Skeleton width={120} height={20} />
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-2 gap-6 bg-muted/20 p-4 rounded-xl border border-border">
+          <div className="flex items-center gap-3">
+            <Skeleton width={40} height={40} className="rounded-full shrink-0" />
+            <div className="flex-1">
+              <Skeleton width={80} height={14} />
+              <Skeleton width="80%" height={20} />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-6">
+          <div className="flex items-center gap-3 p-4 border border-border rounded-xl">
+            <Skeleton width={40} height={40} className="rounded-full shrink-0" />
+            <div className="flex-1">
+              <Skeleton width={80} height={14} />
+              <Skeleton width="60%" height={20} />
+            </div>
+          </div>
+          <div className="flex items-center gap-3 p-4 border border-border rounded-xl">
+            <Skeleton width={40} height={40} className="rounded-full shrink-0" />
+            <div className="flex-1">
+              <Skeleton width={80} height={14} />
+              <Skeleton width="60%" height={20} />
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-border grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <Skeleton width={150} height={16} />
+            <div className="flex flex-wrap gap-2">
+              <Skeleton width={80} height={24} className="rounded-full" />
+              <Skeleton width={100} height={24} className="rounded-full" />
+              <Skeleton width={90} height={24} className="rounded-full" />
+            </div>
+          </div>
+          <div className="space-y-3">
+            <Skeleton width={150} height={16} />
+            <div className="flex flex-wrap gap-2">
+              <Skeleton width={120} height={24} className="rounded-full" />
+              <Skeleton width={140} height={24} className="rounded-full" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function BatchDetailPage() {
@@ -72,13 +153,23 @@ export default function BatchDetailPage() {
   const [pendingStudents, setPendingStudents] = useState<string[]>([]);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
+  const {
+    options: branches,
+    loading: branchesLoading,
+    fetchOptions: fetchBranches,
+  } = useDropdown("branches", false);
+
+  useEffect(() => {
+    fetchBranches();
+  }, [fetchBranches]);
+
   const [batchForm, setBatchForm] = useState<BatchForm>({
     course: "",
     name: "",
     batch_code: "",
     group_module: "module_1",
     batch_attempt: "june",
-    location: "",
+    branch: "",
     start_date: "",
     end_date: "",
     max_students: 50,
@@ -105,7 +196,7 @@ export default function BatchDetailPage() {
             batch_code: data.batch_code || "",
             group_module: data.group_module || "module_1",
             batch_attempt: data.batch_attempt || "june",
-            location: data.location || "",
+            branch: data.branch || "",
             start_date: data.start_date || "",
             end_date: data.end_date || "",
             max_students: data.max_students || 50,
@@ -164,7 +255,6 @@ export default function BatchDetailPage() {
   }, [dispatch, id]);
 
   const handleSave = () => {
-    if (!batchForm.name.trim()) return toast.error("Batch name is required.");
     if (!batchForm.course) return toast.error("Course is required.");
 
     const payload = {
@@ -304,7 +394,7 @@ export default function BatchDetailPage() {
   };
 
   if (loading) {
-    return <div className="p-8 text-center text-muted-foreground">Loading batch details...</div>;
+    return <BatchDetailSkeleton />;
   }
 
   if (!batch) {
@@ -418,12 +508,23 @@ export default function BatchDetailPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Location</Label>
-                <Input
-                  value={batchForm.location}
-                  onChange={(e) => setBatchForm({ ...batchForm, location: e.target.value })}
-                  placeholder="e.g., Room 101, Main Campus"
-                />
+                <Label>Branch</Label>
+                <Select
+                  value={batchForm.branch || ""}
+                  onValueChange={(val) => setBatchForm({ ...batchForm, branch: val })}
+                  disabled={branchesLoading}
+                >
+                  <SelectTrigger className="w-full bg-muted/10">
+                    <SelectValue placeholder={branchesLoading ? "Loading branches..." : "Select Branch"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((b) => (
+                      <SelectItem key={b.value} value={String(b.value)}>
+                        {b.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -479,7 +580,7 @@ export default function BatchDetailPage() {
               </div>
             </div>
 
-            {/* <div className="border-t border-border pt-4 mt-6">
+            <div className="border-t border-border pt-4 mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -632,7 +733,7 @@ export default function BatchDetailPage() {
                   )}
                 </div>
               </div>
-            </div> */}
+            </div>
 
             <div className="flex gap-3 pt-4 border-t border-border mt-6 justify-end">
               <Button type="button" variant="outline" onClick={() => setMode("view")}>
@@ -705,8 +806,8 @@ export default function BatchDetailPage() {
                   <MapPin className="w-5 h-5 text-blue-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Location</p>
-                  <p className="font-medium">{batch.location || "Not assigned"}</p>
+                  <p className="text-sm text-muted-foreground">Branch</p>
+                  <p className="font-medium">{batch.branch_name || batch.branch || "Not assigned"}</p>
                 </div>
               </div>
 
@@ -782,7 +883,7 @@ export default function BatchDetailPage() {
         description={`Are you sure you want to delete ${batch.name}? This action cannot be undone.`}
         confirmText="Delete Batch"
         cancelText="Cancel"
-        variant="destructive"
+        variant="danger"
       />
     </div>
   );

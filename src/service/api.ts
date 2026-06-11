@@ -82,6 +82,13 @@ export const API = {
       DETAIL: (id: string | number) => `/api/v1/courses/${id}/`,
       UPDATE: (id: string | number) => `/api/v1/courses/${id}/`,
       DELETE: (id: string | number) => `/api/v1/courses/${id}/`,
+      LEVELS: {
+        LIST: (courseId: string | number) => `/api/v1/courses/${courseId}/levels/`,
+        CREATE: (courseId: string | number) => `/api/v1/courses/${courseId}/levels/`,
+        DETAIL: (courseId: string | number, levelId: string | number) => `/api/v1/courses/${courseId}/levels/${levelId}/`,
+        UPDATE: (courseId: string | number, levelId: string | number) => `/api/v1/courses/${courseId}/levels/${levelId}/`,
+        DELETE: (courseId: string | number, levelId: string | number) => `/api/v1/courses/${courseId}/levels/${levelId}/`,
+      },
     },
 
     /** Batches endpoints */
@@ -102,6 +109,13 @@ export const API = {
       CREATE: "/api/v1/subjects/",
       UPDATE: (id: string | number) => `/api/v1/subjects/${id}/`,
       DELETE: (id: string | number) => `/api/v1/subjects/${id}/`,
+    },
+
+    /** Chapters endpoints */
+    CHAPTERS: {
+      CREATE: (subjectId: string | number) => `/api/v1/subjects/${subjectId}/chapters/`,
+      UPDATE: (subjectId: string | number, chapterId: string | number) => `/api/v1/subjects/${subjectId}/chapters/${chapterId}/`,
+      DELETE: (subjectId: string | number, chapterId: string | number) => `/api/v1/subjects/${subjectId}/chapters/${chapterId}/`,
     },
 
     /** Reports endpoints */

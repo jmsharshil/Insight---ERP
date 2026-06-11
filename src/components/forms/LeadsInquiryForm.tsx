@@ -181,9 +181,7 @@ export default function LeadsInquiryForm() {
             updated.batch_attempt = "june";
           }
         } else if (value === "cs_executive" || value === "cs_professional") {
-          if (prev.group_module === "full" || prev.group_module === "both") {
-            updated.group_module = "module_1";
-          }
+          updated.group_module = "module_1";
           if (!["june", "dec"].includes(prev.batch_attempt)) {
             updated.batch_attempt = "june";
           }
@@ -192,6 +190,14 @@ export default function LeadsInquiryForm() {
       return updated;
     });
   };
+
+  useEffect(() => {
+    setInquiryData((prev) => ({
+      ...prev,
+      group_module:
+        prev.course === "cseet" ? "full" : "module_1",
+    }));
+  }, [inquiryData.course]);
 
   const handleContactChange = (field: string, value: string | boolean) => {
     setContactData((prev) => ({ ...prev, [field]: value }));
@@ -627,7 +633,14 @@ export default function LeadsInquiryForm() {
                     <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
                       Email <span style={{ color: T.error }}>*</span>
                     </Label>
-                    <Input required type="email" value={inquiryData.email} onChange={(e) => handleInquiryChange("email", e.target.value)} className="h-10 sm:h-11 text-sm" placeholder="e.g. abc@gmail.com" />
+                    <Input
+                      required
+                      type="email"
+                      value={inquiryData.email}
+                      onChange={(e) => handleInquiryChange("email", e.target.value)}
+                      className="h-10 sm:h-11 text-sm"
+                      placeholder="e.g. abc@gmail.com"
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
