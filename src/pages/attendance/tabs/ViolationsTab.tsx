@@ -20,10 +20,12 @@ const VIOLATION_BADGE: Record<string, string> = {
   unauthorized: "bg-orange-100 text-orange-700",
 };
 
-export default function ViolationsTab() {
+export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
   const { violations, violationsLoading, violationsCount } = useSelector((s: RootState) => s.attendance);
+
+  const studentsList = dropdowns?.students || [];
 
   const [f, setF] = useState({
     student_id: "", violation_type: "", is_resolved: "", date_from: "", date_to: "",
@@ -54,8 +56,16 @@ export default function ViolationsTab() {
     <div className="space-y-4">
       <div className="bg-white rounded-xl border border-border p-4 flex flex-wrap gap-3 items-end">
         <div className="flex flex-col gap-1">
-          <Label className="text-xs text-muted-foreground">Student UUID</Label>
-          <Input placeholder="Student UUID" className="h-9 text-sm w-40" value={f.student_id} onChange={e => setF(p => ({ ...p, student_id: e.target.value }))} />
+          <Label className="text-xs text-muted-foreground">Student</Label>
+          <Select value={f.student_id} onValueChange={v => setF(p => ({ ...p, student_id: v === "all" ? "" : v }))}>
+            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Select Student" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Students</SelectItem>
+              {studentsList.map((s: any) => (
+                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <Select value={f.violation_type} onValueChange={v => setF(p => ({ ...p, violation_type: v === "all" ? "" : v }))}>
           <SelectTrigger className="h-9 text-sm w-36"><SelectValue placeholder="Type" /></SelectTrigger>

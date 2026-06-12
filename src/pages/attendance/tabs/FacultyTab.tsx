@@ -16,11 +16,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export default function FacultyTab() {
+export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
   const { faculty, facultyLoading, selectedFaculty, selectedFacultyLoading } = useSelector((s: RootState) => s.attendance);
+
+  const branches = dropdowns?.branches || [];
+  const facultyList = dropdowns?.faculty || [];
 
   const [f, setF] = useState({ faculty_id: "", branch_id: "", date_from: "", date_to: "" });
   const [detailOpen, setDetailOpen] = useState(false);
@@ -65,8 +69,24 @@ export default function FacultyTab() {
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-xl border border-border p-4 flex flex-wrap gap-3">
-        <Input placeholder="Faculty UUID" className="h-9 text-sm w-40" value={f.faculty_id} onChange={e => setF(p => ({ ...p, faculty_id: e.target.value }))} />
-        <Input placeholder="Branch UUID"  className="h-9 text-sm w-40" value={f.branch_id}  onChange={e => setF(p => ({ ...p, branch_id:  e.target.value }))} />
+        <Select value={f.faculty_id} onValueChange={v => setF(p => ({ ...p, faculty_id: v === "all" ? "" : v }))}>
+          <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Select Faculty" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Faculty</SelectItem>
+            {facultyList.map((fac: any) => (
+              <SelectItem key={fac.id} value={fac.id}>{fac.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={f.branch_id} onValueChange={v => setF(p => ({ ...p, branch_id: v === "all" ? "" : v }))}>
+          <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Branch" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Branches</SelectItem>
+            {branches.map((b: any) => (
+              <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Input type="date" className="h-9 text-sm w-40" value={f.date_from} onChange={e => setF(p => ({ ...p, date_from: e.target.value }))} />
         <Input type="date" className="h-9 text-sm w-40" value={f.date_to}   onChange={e => setF(p => ({ ...p, date_to:   e.target.value }))} />
         <Button onClick={fetchFaculty} className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm">Apply</Button>

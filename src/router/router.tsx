@@ -29,6 +29,7 @@ const ClassroomTimetablePage = lazy(() => import("@/pages/classroom-timetable/Cl
 const TimetablePage = lazy(() => import("@/pages/timetable/TimetablePage"));
 const AttendancePage = lazy(() => import("@/pages/attendance/AttendancePage"));
 import AttendanceDetailPage from "@/pages/attendance/AttendanceDetailPage";
+import StudentAttendanceDetailPage from "@/pages/attendance/StudentAttendanceDetailPage";
 const FeesPage = lazy(() => import("@/pages/fees/FeesPage"));
 const ExamsPage = lazy(() => import("@/pages/exams/ExamsPage"));
 const FacultyPage = lazy(() => import("@/pages/faculty/FacultyPage"));
@@ -123,6 +124,7 @@ const router = createBrowserRouter([
     { module: "classroom_timetable", path: "/classroom-timetable", element: withSuspense(<ClassroomTimetablePage />) },
     { module: "timetable", path: "/timetable", element: withSuspense(<TimetablePage />) },
     { module: "attendance", path: "/attendance", element: withSuspense(<AttendancePage />) },
+    { module: "attendance", path: "/attendance/student/:id", element: <StudentAttendanceDetailPage /> },
     // { module: "attendance", path: "/attendance/:id", element: <AttendanceDetailPage /> },
     { module: "fees", path: "/fees", element: withSuspense(<FeesPage />) },
     { module: "exams", path: "/exams", element: withSuspense(<ExamsPage />) },

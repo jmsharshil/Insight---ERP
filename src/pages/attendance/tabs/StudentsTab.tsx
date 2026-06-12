@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
-import { Search, X, Eye } from "lucide-react";
+import { Search, X, Eye, ArrowLeft, BookOpen, Calendar, ShieldAlert, Clock, TrendingUp } from "lucide-react";
 import { attendanceActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import {
@@ -28,10 +29,14 @@ function buildQuery(f: Record<string, string>) {
   return p.toString();
 }
 
-export default function StudentsAttendanceTab() {
+export default function StudentsAttendanceTab({ dropdowns }: { dropdowns?: any }) {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
   const toast = useToast();
-  const { students, studentsLoading, selectedStudent, selectedStudentLoading } = useSelector((s: RootState) => s.attendance);
+  const { students, studentsLoading } = useSelector((s: RootState) => s.attendance);
+
+  const branches = dropdowns?.branches || [];
+  const batches = dropdowns?.batches || [];
 
   const [filters, setFilters] = useState({
     search: "", branch_id: "", batch_id: "", course_id: "",
@@ -39,7 +44,6 @@ export default function StudentsAttendanceTab() {
     date_from: "", date_to: "",
     late_entries: "", active_violations: "",
   });
-  const [detailOpen, setDetailOpen] = useState(false);
 
   const fetchStudents = () => {
     const q = buildQuery(filters);
@@ -54,22 +58,6 @@ export default function StudentsAttendanceTab() {
         else toast.error("Failed to load students.");
       },
       getError: (err: any) => toast.error(err?.response?.data?.message || "Failed to fetch students"),
-    });
-  };
-
-  const fetchStudentDetail = (id: string) => {
-    setDetailOpen(true);
-    dispatch({
-      type: attendanceActions.GET_STUDENT_DETAIL,
-      method: "GET",
-      endPoint: API.ATTENDANCE.STUDENT_DETAIL(id),
-      auth: true,
-      setLoading: (v: boolean) => dispatch(setSelectedStudentLoading(v)),
-      getResponse: (res: any) => {
-        if (res?.success && res?.data) dispatch(setSelectedStudent(res.data));
-        else toast.error("Failed to load student detail.");
-      },
-      getError: (err: any) => toast.error(err?.response?.data?.message || "Failed to fetch student detail"),
     });
   };
 
@@ -95,8 +83,24 @@ export default function StudentsAttendanceTab() {
               onChange={e => setFilters(f => ({ ...f, search: e.target.value }))}
             />
           </div>
-          <Input placeholder="Branch UUID" className="h-9 text-sm w-40" value={filters.branch_id} onChange={e => setFilters(f => ({ ...f, branch_id: e.target.value }))} />
-          <Input placeholder="Batch UUID" className="h-9 text-sm w-40" value={filters.batch_id} onChange={e => setFilters(f => ({ ...f, batch_id: e.target.value }))} />
+          <Select value={filters.branch_id} onValueChange={v => setFilters(f => ({ ...f, branch_id: v === "all" ? "" : v }))}>
+            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Branch" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Branches</SelectItem>
+              {branches?.map((b: any) => (
+                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filters.batch_id} onValueChange={v => setFilters(f => ({ ...f, batch_id: v === "all" ? "" : v }))}>
+            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Batch" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Batches</SelectItem>
+              {batches?.map((b: any) => (
+                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Input type="date" className="h-9 text-sm w-40" value={filters.date_from} onChange={e => setFilters(f => ({ ...f, date_from: e.target.value }))} />
           <Input type="date" className="h-9 text-sm w-40" value={filters.date_to} onChange={e => setFilters(f => ({ ...f, date_to: e.target.value }))} />
         </div>
@@ -157,7 +161,7 @@ export default function StudentsAttendanceTab() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.03 }}
                   className="border-b border-border/50 hover:bg-muted/20 cursor-pointer transition-colors"
-                  onClick={() => fetchStudentDetail(s.id)}
+                  onClick={() => navigate(`/attendance/student/${s.id}`)}
                 >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -183,7 +187,7 @@ export default function StudentsAttendanceTab() {
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{s.last_attendance_date ?? "—"}</td>
                   <td className="px-4 py-3">
-                    <Button variant="ghost" size="icon" onClick={e => { e.stopPropagation(); fetchStudentDetail(s.id); }}>
+                    <Button variant="ghost" size="icon" onClick={e => { e.stopPropagation(); navigate(`/attendance/student/${s.id}`); }}>
                       <Eye className="w-4 h-4 text-muted-foreground" />
                     </Button>
                   </td>
@@ -193,81 +197,6 @@ export default function StudentsAttendanceTab() {
           </table>
         </div>
       )}
-
-      {/* Student Detail Dialog */}
-      <Dialog open={detailOpen} onOpenChange={open => { setDetailOpen(open); if (!open) dispatch(setSelectedStudent(null)); }}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Student Attendance Detail</DialogTitle>
-          </DialogHeader>
-          {selectedStudentLoading ? (
-            <TableSkeleton columns={2} rows={4} />
-          ) : selectedStudent ? (
-            <div className="space-y-5">
-              {/* Profile */}
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
-                  {selectedStudent.student_profile.name.slice(0, 2).toUpperCase()}
-                </div>
-                <div>
-                  <div className="font-semibold text-foreground">{selectedStudent.student_profile.name}</div>
-                  <div className="text-xs text-muted-foreground">{selectedStudent.student_profile.admission_number} · {selectedStudent.student_profile.branch_name}</div>
-                </div>
-                <Badge className={`ml-auto text-sm font-bold ${pct(selectedStudent.attendance_percentage)}`}>
-                  {selectedStudent.attendance_percentage.toFixed(1)}%
-                </Badge>
-              </div>
-
-              {/* Summary */}
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { l: "Present", v: selectedStudent.summary.present_count, c: "text-green-600" },
-                  { l: "Absent",  v: selectedStudent.summary.absent_count,  c: "text-red-600" },
-                  { l: "Late",    v: selectedStudent.summary.late_count,    c: "text-yellow-600" },
-                ].map(item => (
-                  <div key={item.l} className="bg-muted/30 rounded-lg p-3 text-center">
-                    <div className={`text-2xl font-bold ${item.c}`}>{item.v}</div>
-                    <div className="text-xs text-muted-foreground">{item.l}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Monthly Trend Chart */}
-              {selectedStudent.monthly_trend?.length > 0 && (
-                <div>
-                  <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Monthly Trend</h4>
-                  <ResponsiveContainer width="100%" height={160}>
-                    <LineChart data={selectedStudent.monthly_trend}>
-                      <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                      <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} tick={{ fontSize: 11 }} />
-                      <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
-                      <Line type="monotone" dataKey="percentage" stroke="#F7A900" strokeWidth={2} dot={{ fill: "#F7A900", r: 4 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-
-              {/* Subject-wise */}
-              {selectedStudent.subject_wise_attendance?.length > 0 && (
-                <div>
-                  <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Subject-wise Attendance</h4>
-                  <div className="space-y-2">
-                    {selectedStudent.subject_wise_attendance.map(sub => (
-                      <div key={sub.subject_id} className="flex items-center gap-3">
-                        <span className="text-sm text-foreground flex-1">{sub.subject_name}</span>
-                        <div className="w-32 h-2 rounded-full bg-muted overflow-hidden">
-                          <div className="h-full rounded-full bg-primary" style={{ width: `${sub.percentage}%` }} />
-                        </div>
-                        <span className="text-xs font-medium text-muted-foreground w-12 text-right">{sub.percentage.toFixed(1)}%</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : null}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

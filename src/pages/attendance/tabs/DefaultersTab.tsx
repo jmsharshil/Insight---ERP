@@ -12,11 +12,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export default function DefaultersTab() {
+export default function DefaultersTab({ dropdowns }: { dropdowns?: any }) {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
   const { defaulters, defaultersLoading, defaultersCount } = useSelector((s: RootState) => s.attendance);
+
+  const branches = dropdowns?.branches || [];
+  const batches = dropdowns?.batches || [];
 
   const [filters, setFilters] = useState({
     branch_id: "", batch_id: "",
@@ -49,12 +53,28 @@ export default function DefaultersTab() {
     <div className="space-y-4">
       <div className="bg-white rounded-xl border border-border p-4 flex flex-wrap gap-3 items-end">
         <div className="flex flex-col gap-1">
-          <Label className="text-xs text-muted-foreground">Branch UUID</Label>
-          <Input placeholder="Branch UUID" className="h-9 text-sm w-40" value={filters.branch_id} onChange={e => setFilters(f => ({ ...f, branch_id: e.target.value }))} />
+          <Label className="text-xs text-muted-foreground">Branch</Label>
+          <Select value={filters.branch_id} onValueChange={v => setFilters(f => ({ ...f, branch_id: v === "all" ? "" : v }))}>
+            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Branch" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Branches</SelectItem>
+              {branches.map((b: any) => (
+                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex flex-col gap-1">
-          <Label className="text-xs text-muted-foreground">Batch UUID</Label>
-          <Input placeholder="Batch UUID" className="h-9 text-sm w-40" value={filters.batch_id} onChange={e => setFilters(f => ({ ...f, batch_id: e.target.value }))} />
+          <Label className="text-xs text-muted-foreground">Batch</Label>
+          <Select value={filters.batch_id} onValueChange={v => setFilters(f => ({ ...f, batch_id: v === "all" ? "" : v }))}>
+            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Batch" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Batches</SelectItem>
+              {batches.map((b: any) => (
+                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">Attendance Below (%)</Label>
