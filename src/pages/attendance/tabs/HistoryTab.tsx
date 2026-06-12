@@ -19,10 +19,15 @@ const STATUS_BADGE: Record<string, string> = {
   late:    "bg-yellow-100 text-yellow-700",
 };
 
-export default function HistoryTab() {
+export default function HistoryTab({ dropdowns }: { dropdowns?: any }) {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
   const { history, historyLoading, historyCount } = useSelector((s: RootState) => s.attendance);
+
+  const branches = dropdowns?.branches || [];
+  const batches = dropdowns?.batches || [];
+  const studentsList = dropdowns?.students || [];
+  const facultyList = dropdowns?.faculty || [];
 
   const [f, setF] = useState({
     student_id: "", branch_id: "", batch_id: "", faculty_id: "",
@@ -55,10 +60,42 @@ export default function HistoryTab() {
       {/* Filters */}
       <div className="bg-white rounded-xl border border-border p-4 space-y-3">
         <div className="flex flex-wrap gap-3">
-          <Input placeholder="Student UUID" className="h-9 text-sm w-40" value={f.student_id} onChange={e => setF(p => ({ ...p, student_id: e.target.value }))} />
-          <Input placeholder="Branch UUID"  className="h-9 text-sm w-40" value={f.branch_id}  onChange={e => setF(p => ({ ...p, branch_id:  e.target.value }))} />
-          <Input placeholder="Batch UUID"   className="h-9 text-sm w-40" value={f.batch_id}   onChange={e => setF(p => ({ ...p, batch_id:   e.target.value }))} />
-          <Input placeholder="Faculty UUID" className="h-9 text-sm w-40" value={f.faculty_id} onChange={e => setF(p => ({ ...p, faculty_id: e.target.value }))} />
+          <Select value={f.student_id} onValueChange={v => setF(p => ({ ...p, student_id: v === "all" ? "" : v }))}>
+            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Select Student" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Students</SelectItem>
+              {studentsList.map((s: any) => (
+                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={f.branch_id} onValueChange={v => setF(p => ({ ...p, branch_id: v === "all" ? "" : v }))}>
+            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Branch" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Branches</SelectItem>
+              {branches.map((b: any) => (
+                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={f.batch_id} onValueChange={v => setF(p => ({ ...p, batch_id: v === "all" ? "" : v }))}>
+            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Batch" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Batches</SelectItem>
+              {batches.map((b: any) => (
+                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={f.faculty_id} onValueChange={v => setF(p => ({ ...p, faculty_id: v === "all" ? "" : v }))}>
+            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Select Faculty" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Faculty</SelectItem>
+              {facultyList.map((fac: any) => (
+                <SelectItem key={fac.id} value={fac.id}>{fac.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Input type="date" className="h-9 text-sm w-40" value={f.date_from} onChange={e => setF(p => ({ ...p, date_from: e.target.value }))} />
           <Input type="date" className="h-9 text-sm w-40" value={f.date_to}   onChange={e => setF(p => ({ ...p, date_to:   e.target.value }))} />
           <Select value={f.attendance_status} onValueChange={v => setF(p => ({ ...p, attendance_status: v === "all" ? "" : v }))}>

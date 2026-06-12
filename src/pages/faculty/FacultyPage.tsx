@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { facultyAction } from "@/redux/actions";
+import { facultyAction, batchAction } from "@/redux/actions";
 import { setFaculty, setFacultyLoading, setFacultyError } from "@/redux/slices/facultySlice";
 import { RootState, AppDispatch } from "@/store";
 import { motion } from "framer-motion";
@@ -11,7 +11,15 @@ import {
   Wallet,
   Plus,
   CheckCircle2,
+  MoreHorizontal,
 } from "lucide-react";
+import { API } from "@/service/api";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import PageHeader from "@/components/layout/PageHeader";
 import StatCard from "@/components/common/StatCard";
 import DataTable from "@/components/common/DataTable";
@@ -62,6 +70,154 @@ export default function FacultyPage() {
   const [payrolls, setPayrolls] = useState<any[]>([]);
   const [confirmApprove, setConfirmApprove] = useState(false);
   const [sessionDialogOpen, setSessionDialogOpen] = useState(false);
+
+  const [selectedFacultyForAssign, setSelectedFacultyForAssign] = useState<any | null>(null);
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [batches, setBatches] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [dropdownsLoading, setDropdownsLoading] = useState(false);
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [selectedBatchId, setSelectedBatchId] = useState<string>("");
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
+
+  const batchesLoading = dropdownsLoading;
+  const subjectsLoading = dropdownsLoading;
+
+  const fetchDropdowns = () => {
+    setDropdownsLoading(true);
+    dispatch({
+      type: batchAction.GET_BATCHES,
+      method: "GET",
+      endPoint: "/api/v1/batches/dropdowns/",
+      auth: true,
+      getResponse: (res: any) => {
+        const data = res?.data || res;
+        if (data) {
+          if (Array.isArray(data.batches)) setBatches(data.batches);
+          if (Array.isArray(data.subjects)) setSubjects(data.subjects);
+        }
+        setDropdownsLoading(false);
+      },
+      getError: () => {
+        toast.error("Failed to load dropdown values");
+        setDropdownsLoading(false);
+      }
+    });
+  };
+
+  useEffect(() => {
+    if (assignModalOpen) {
+      fetchDropdowns();
+    }
+  }, [assignModalOpen]);
+
+  const fetchFacultyDetails = (id: string) => {
+    dispatch({
+      type: facultyAction.GET_FACULTY_DETAILS,
+      method: "GET",
+      endPoint: `/api/v1/faculty/${id}/`,
+      auth: true,
+      getResponse: (res: any) => {
+        const fullFaculty = res?.data || res;
+        if (fullFaculty) {
+          setSelectedFacultyForAssign(fullFaculty);
+        }
+      },
+      getError: () => {
+        console.error("Failed to load latest faculty details");
+      }
+    });
+  };
+
+  const handleOpenAssignModal = (faculty: any) => {
+    setSelectedFacultyForAssign(faculty);
+    setAssignModalOpen(true);
+    setSelectedBatchId("");
+    setSelectedSubjectId("");
+    fetchFacultyDetails(faculty.id);
+  };
+
+  const handleAssignFacultyToBatch = () => {
+    if (!selectedFacultyForAssign || !selectedBatchId) return;
+
+    setAssignLoading(true);
+    const apiSubjectId = selectedSubjectId === "none" || !selectedSubjectId ? null : selectedSubjectId;
+
+    dispatch({
+      type: batchAction.ASSIGN_FACULTY,
+      method: "POST",
+      endPoint: API.BATCHES.ASSIGN_FACULTY(selectedBatchId),
+      body: {
+        faculty_id: selectedFacultyForAssign.id,
+        subject_id: apiSubjectId,
+      },
+      auth: true,
+      getResponse: () => {
+        toast.success("Faculty assigned to batch successfully.");
+        setSelectedBatchId("");
+        setSelectedSubjectId("");
+        fetchDropdowns();
+        fetchFacultyDetails(selectedFacultyForAssign.id);
+        setAssignLoading(false);
+      },
+      getError: (err: any) => {
+        toast.error(err?.response?.data?.message || "Failed to assign faculty");
+        setAssignLoading(false);
+      }
+    });
+  };
+
+  const handleRemoveFacultyFromBatch = (batchId: string) => {
+    if (!selectedFacultyForAssign) return;
+
+    setAssignLoading(true);
+    dispatch({
+      type: batchAction.REMOVE_FACULTY,
+      method: "POST",
+      endPoint: API.BATCHES.REMOVE_FACULTY(batchId, selectedFacultyForAssign.id),
+      auth: true,
+      getResponse: () => {
+        toast.success("Faculty removed from batch successfully.");
+        fetchDropdowns();
+        fetchFacultyDetails(selectedFacultyForAssign.id);
+        setAssignLoading(false);
+      },
+      getError: (err: any) => {
+        toast.error(err?.response?.data?.message || "Failed to remove faculty");
+        setAssignLoading(false);
+      }
+    });
+  };
+
+  const assignedBatches = useMemo(() => {
+    if (!selectedFacultyForAssign) return [];
+
+    let facultyBatchNames: string[] = [];
+    const rawBatchName = selectedFacultyForAssign.batch_name;
+
+    if (typeof rawBatchName === "string") {
+      facultyBatchNames = rawBatchName
+        .split(",")
+        .map((name: string) => name.trim().toLowerCase())
+        .filter(Boolean);
+    } else if (Array.isArray(rawBatchName)) {
+      facultyBatchNames = rawBatchName
+        .map((name: any) => String(name).trim().toLowerCase())
+        .filter(Boolean);
+    }
+
+    return batches.filter((b) => {
+      const nameMatch = facultyBatchNames.includes(b.name?.trim().toLowerCase());
+      const facultyMatch = b.assigned_faculty?.some((f: any) => f.faculty_id === selectedFacultyForAssign.id);
+      return nameMatch || facultyMatch;
+    });
+  }, [batches, selectedFacultyForAssign]);
+
+  const assignableBatches = useMemo(() => {
+    return batches.filter(
+      (b) => !assignedBatches.some((ab) => ab.id === b.id)
+    );
+  }, [batches, assignedBatches]);
 
   const handleRowClick = (faculty: any) => {
     setSelectedFacultyId(faculty.id);
@@ -429,6 +585,37 @@ export default function FacultyPage() {
                   </Badge>
                 ),
               },
+              {
+                key: "actions",
+                header: "",
+                render: (f: any) => (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
+                        <MoreHorizontal className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRowClick(f);
+                        }}
+                      >
+                        View Profile
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenAssignModal(f);
+                        }}
+                      >
+                        Assign and Remove Batch
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ),
+              },
             ]}
           />
         </TabsContent>
@@ -531,6 +718,123 @@ export default function FacultyPage() {
       </Tabs>
 
       <FacultyDetailSheet open={isSheetOpen} onOpenChange={setIsSheetOpen} facultyId={selectedFacultyId} />
+
+      <Dialog open={assignModalOpen} onOpenChange={setAssignModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Assign Batch</DialogTitle>
+          </DialogHeader>
+          {selectedFacultyForAssign && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-1">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Faculty Details
+                </span>
+                <p className="font-semibold text-text-primary text-base">
+                  {selectedFacultyForAssign.full_name}
+                </p>
+                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  <span>Level: <strong className="capitalize">{selectedFacultyForAssign.level_display || selectedFacultyForAssign.level || "N/A"}</strong></span>
+                  <span>•</span>
+                  <span>Type: <strong className="capitalize">{selectedFacultyForAssign.employment_type_display || selectedFacultyForAssign.employment_type || "N/A"}</strong></span>
+                </div>
+              </div>
+
+              {/* Current Batch Info */}
+              <div className="rounded-lg bg-muted/20 border border-border/40 p-3 space-y-2">
+                <span className="text-xs font-medium text-muted-foreground block">
+                  Current Enrollment Status
+                </span>
+                {assignedBatches.length === 0 ? (
+                  <p className="text-sm font-medium text-muted-foreground">No batches assigned</p>
+                ) : (
+                  <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
+                    {assignedBatches.map((b) => (
+                      <div key={b.id} className="flex items-center justify-between py-1 border-b border-border/40 last:border-0">
+                        <p className="text-sm font-medium text-foreground">
+                          {b.name}
+                        </p>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => handleRemoveFacultyFromBatch(b.id)}
+                          disabled={assignLoading}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Assign New Batch Selector */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
+                  Assign to Batch
+                </label>
+                <Select value={selectedBatchId} onValueChange={setSelectedBatchId}>
+                  <SelectTrigger className="w-full bg-muted/10">
+                    <SelectValue placeholder={batchesLoading ? "Loading batches..." : "Select a batch"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assignableBatches.length === 0 ? (
+                      <SelectItem value="no_batches" disabled>
+                        No available batches
+                      </SelectItem>
+                    ) : (
+                      assignableBatches.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.name} ({b.course_name || "General"})
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Assign New Subject Selector (Optional) */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
+                  Subject (Optional)
+                </label>
+                <Select value={selectedSubjectId} onValueChange={setSelectedSubjectId}>
+                  <SelectTrigger className="w-full bg-muted/10">
+                    <SelectValue placeholder={subjectsLoading ? "Loading subjects..." : "Select a subject"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None (No subject)</SelectItem>
+                    {subjects.length === 0 ? (
+                      <SelectItem value="no_subjects" disabled>
+                        No subjects available
+                      </SelectItem>
+                    ) : (
+                      subjects.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name} ({s.code || "No Code"})
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAssignFacultyToBatch}
+              disabled={!selectedBatchId || assignLoading}
+              className="bg-primary hover:bg-primary-dark"
+            >
+              {assignLoading ? "Assigning..." : "Assign"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

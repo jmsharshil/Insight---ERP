@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/useToast";
 import { TableSkeleton } from "@/components/common/Skeletons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const STAT_CARDS = (d: any) => [
   { label: "Total Students",    value: d.total_students,                              icon: Users,         color: "bg-blue-50 text-blue-600" },
@@ -25,10 +26,13 @@ const STAT_CARDS = (d: any) => [
   { label: "Active Violations", value: d.active_violations,                           icon: AlertTriangle, color: "bg-orange-50 text-orange-600" },
 ];
 
-export default function DashboardTab() {
+export default function DashboardTab({ dropdowns }: { dropdowns?: any }) {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
   const { dashboard, dashboardLoading } = useSelector((s: RootState) => s.attendance);
+
+  const branches = dropdowns?.branches || [];
+  const batches = dropdowns?.batches || [];
 
   const [filters, setFilters] = useState({ date: "", branch: "", batch: "", faculty: "" });
 
@@ -70,12 +74,28 @@ export default function DashboardTab() {
           <Input type="date" value={filters.date} onChange={e => setFilters(f => ({ ...f, date: e.target.value }))} className="h-9 text-sm" />
         </div>
         <div className="flex flex-col gap-1 min-w-[160px]">
-          <Label className="text-xs text-muted-foreground">Branch UUID</Label>
-          <Input placeholder="Branch UUID" value={filters.branch} onChange={e => setFilters(f => ({ ...f, branch: e.target.value }))} className="h-9 text-sm" />
+          <Label className="text-xs text-muted-foreground">Branch</Label>
+          <Select value={filters.branch} onValueChange={v => setFilters(f => ({ ...f, branch: v === "all" ? "" : v }))}>
+            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Branch" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Branches</SelectItem>
+              {branches.map((b: any) => (
+                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex flex-col gap-1 min-w-[160px]">
-          <Label className="text-xs text-muted-foreground">Batch UUID</Label>
-          <Input placeholder="Batch UUID" value={filters.batch} onChange={e => setFilters(f => ({ ...f, batch: e.target.value }))} className="h-9 text-sm" />
+          <Label className="text-xs text-muted-foreground">Batch</Label>
+          <Select value={filters.batch} onValueChange={v => setFilters(f => ({ ...f, batch: v === "all" ? "" : v }))}>
+            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Batch" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Batches</SelectItem>
+              {batches.map((b: any) => (
+                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
