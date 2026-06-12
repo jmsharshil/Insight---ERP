@@ -437,6 +437,8 @@ export default function ClassroomTimetablePage() {
           <TabsList className="mb-4 bg-muted/50">
             <TabsTrigger value="classroom">Classrooms</TabsTrigger>
             <TabsTrigger value="timetable">Timetable</TabsTrigger>
+            <TabsTrigger value="exams">Exams</TabsTrigger>
+            
           </TabsList>
 
           <TabsContent value="classroom" className="mt-0">

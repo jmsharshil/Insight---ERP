@@ -22,6 +22,7 @@ import { feesReducer } from "@/redux/slices/feesSlice";
 import facultyReducer from "@/redux/slices/facultySlice";
 import notificationsReducer from "@/redux/slices/notificationsSlice";
 import attendanceReducer from "@/redux/slices/attendanceSlice";
+import timetableNewReducer from "@/redux/slices/timetableNewSlice";
 
 const sagaMiddleware = createSagaMiddleware();
 
@@ -51,6 +52,7 @@ const rootReducer = combineReducers({
   faculty: facultyReducer,
   notifications: notificationsReducer,
   attendance: attendanceReducer,
+  timetableNew: timetableNewReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

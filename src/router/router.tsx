@@ -26,6 +26,7 @@ import CourseDetailPage from "@/pages/courses/CourseDetailPage";
 import LevelDetailPage from "@/pages/courses/LevelDetailPage";
 import BatchDetailPage from "@/pages/courses-batches/BatchDetailPage";
 const ClassroomTimetablePage = lazy(() => import("@/pages/classroom-timetable/ClassroomTimetablePage"));
+const TimetablePage = lazy(() => import("@/pages/timetable/TimetablePage"));
 const AttendancePage = lazy(() => import("@/pages/attendance/AttendancePage"));
 import AttendanceDetailPage from "@/pages/attendance/AttendanceDetailPage";
 const FeesPage = lazy(() => import("@/pages/fees/FeesPage"));
@@ -120,8 +121,9 @@ const router = createBrowserRouter([
     { module: "courses_batches", path: "/courses-batches/:courseId/level/:levelId", element: <LevelDetailPage /> },
     { module: "courses_batches", path: "/courses-batches/batch/:id", element: <BatchDetailPage /> },
     { module: "classroom_timetable", path: "/classroom-timetable", element: withSuspense(<ClassroomTimetablePage />) },
+    { module: "timetable", path: "/timetable", element: withSuspense(<TimetablePage />) },
     { module: "attendance", path: "/attendance", element: withSuspense(<AttendancePage />) },
-    { module: "attendance", path: "/attendance/:id", element: <AttendanceDetailPage /> },
+    // { module: "attendance", path: "/attendance/:id", element: <AttendanceDetailPage /> },
     { module: "fees", path: "/fees", element: withSuspense(<FeesPage />) },
     { module: "exams", path: "/exams", element: withSuspense(<ExamsPage />) },
     {

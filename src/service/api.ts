@@ -137,6 +137,16 @@ export const API = {
       BATCH_REGISTER:   (batchId: string) => `/api/v1/attendance/batches/${batchId}/register/`,
       EXPORT:           "/api/v1/attendance/export/",
     },
+
+    /** Timetable endpoints (new slot-based API) */
+    TIMETABLE: {
+      SLOTS:              "/api/v1/timetable/",
+      SLOT_DETAIL:        (id: string) => `/api/v1/timetable/${id}/`,
+      EXAM_TYPES:         "/api/v1/timetable/exam-types/",
+      EXAM_TYPE_DETAIL:   (id: string) => `/api/v1/timetable/exam-types/${id}/`,
+      FACULTY_VIEW:       (facultyId: string) => `/api/v1/timetable/faculty/${facultyId}/`,
+      STUDENT_VIEW:       (studentId: string) => `/api/v1/timetable/student/${studentId}/`,
+    },
 } as const;
 
 

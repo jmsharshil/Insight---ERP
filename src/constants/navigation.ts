@@ -18,6 +18,7 @@ export const NAV_ITEMS: Record<ModuleId, NavItem> = {
   students:         { label: "Students",         icon: GraduationCap,   path: "/students" },
   courses_batches:  { label: "Courses & Batches",  icon: BookOpen,        path: "/courses-batches" },
   classroom_timetable: { label: "Classroom & Timetable", icon: Calendar,  path: "/classroom-timetable" },
+  timetable:           { label: "Timetable",             icon: Calendar,  path: "/timetable" },
   attendance:       { label: "Attendance",       icon: ScanLine,        path: "/attendance" },
   fees:             { label: "Fees",             icon: CreditCard,      path: "/fees" },
   exams:            { label: "Exams",            icon: BookOpen,        path: "/exams" },
