@@ -1,19 +1,20 @@
-import { useState } from "react";
-import { Plus, List, LayoutGrid, Clock } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, List, LayoutGrid, Clock, User, MapPin, BookOpen } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { TimetableSlot } from "@/redux/slices/timetableNewSlice";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const DAYS: { key: string; label: string }[] = [
-  { key: "Monday",    label: "Monday" },
-  { key: "Tuesday",   label: "Tuesday" },
-  { key: "Wednesday", label: "Wednesday" },
-  { key: "Thursday",  label: "Thursday" },
-  { key: "Friday",    label: "Friday" },
-  { key: "Saturday",  label: "Saturday" },
+const DAYS: { key: string; label: string; short: string }[] = [
+  { key: "Monday",    label: "Monday",    short: "MON" },
+  { key: "Tuesday",   label: "Tuesday",   short: "TUE" },
+  { key: "Wednesday", label: "Wednesday", short: "WED" },
+  { key: "Thursday",  label: "Thursday",  short: "THU" },
+  { key: "Friday",    label: "Friday",    short: "FRI" },
+  { key: "Saturday",  label: "Saturday",  short: "SAT" },
 ];
 
 const SLOT_CODES = [
@@ -23,12 +24,13 @@ const SLOT_CODES = [
   { code: "P4", start: "15:00", end: "17:00" },
 ];
 
-const SESSION_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  regular:    { bg: "bg-blue-50",   text: "text-blue-800",   border: "border-blue-200" },
-  class_test: { bg: "bg-yellow-50", text: "text-yellow-800", border: "border-yellow-200" },
-  prelim:     { bg: "bg-purple-50", text: "text-purple-800", border: "border-purple-200" },
-  practice:   { bg: "bg-green-50",  text: "text-green-800",  border: "border-green-200" },
-  custom:     { bg: "bg-gray-50",   text: "text-gray-700",   border: "border-gray-200" },
+// User-specified hex colors
+const SESSION_COLORS: Record<string, { bg: string; text: string; border: string; accent: string }> = {
+  regular:    { bg: "bg-[#E3F2FD]", text: "text-[#1E88E5]", border: "border-[#90CAF9]", accent: "#1E88E5" },
+  class_test: { bg: "bg-[#FFF3E0]", text: "text-[#FB8C00]", border: "border-[#FFCC80]", accent: "#FB8C00" },
+  prelim:     { bg: "bg-[#FFEBEE]", text: "text-[#E53935]", border: "border-[#EF9A9A]", accent: "#E53935" },
+  practice:   { bg: "bg-[#E8F5E9]", text: "text-[#43A047]", border: "border-[#A5D6A7]", accent: "#43A047" },
+  custom:     { bg: "bg-[#F3E5F5]", text: "text-[#8E24AA]", border: "border-[#CE93D8]", accent: "#8E24AA" },
 };
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -37,7 +39,7 @@ interface TimetableGridViewProps {
   slots:        TimetableSlot[];
   batches:      { id: string; name: string }[];
   canEdit?:     boolean;
-  onAddClick?:  (day: string, slotCode: string) => void;
+  onAddClick?:  (day: string, slotCode: string, batchId: string) => void;
   onSlotClick?: (slot: TimetableSlot) => void;
   onDeleteSlot?:(slot: TimetableSlot) => void;
 }
@@ -51,73 +53,35 @@ function getSlotsForCell(
   batchId: string,
 ): TimetableSlot[] {
   return slots.filter(s => {
-    const dayMatch = s.day_label === day || s.day_of_week_display === day;
-    const codeMatch = s.slot_code === slotCode;
     const batchMatch = !batchId || s.batch === batchId;
-    return dayMatch && codeMatch && batchMatch && s.session_type === "regular";
+    if (!batchMatch) return false;
+
+    if (s.session_type === "regular") {
+      const dayMatch = s.day_label === day || s.day_of_week_display === day;
+      const codeMatch = s.slot_code === slotCode;
+      return dayMatch && codeMatch;
+    } else {
+      // Dynamic mapping for non-regular sessions (class tests, prelims, etc.)
+      if (!s.session_date || !s.start_time) return false;
+      
+      const dateObj = new Date(s.session_date);
+      const dayName = dateObj.toLocaleDateString("en-US", { weekday: "long" });
+      const dayMatch = dayName === day;
+
+      const t = s.start_time.substring(0, 5);
+      let derivedSlot = "";
+      if (t < "10:15") derivedSlot = "P1";
+      else if (t < "12:45") derivedSlot = "P2";
+      else if (t < "15:00") derivedSlot = "P3";
+      else derivedSlot = "P4";
+
+      const codeMatch = derivedSlot === slotCode;
+      return dayMatch && codeMatch;
+    }
   });
 }
 
-// ─── Slot Card (inside a cell) ────────────────────────────────────────────────
-
-function SlotCard({ slot, onSlotClick, onDeleteSlot, canEdit }: {
-  slot: TimetableSlot;
-  onSlotClick?: (s: TimetableSlot) => void;
-  onDeleteSlot?: (s: TimetableSlot) => void;
-  canEdit?: boolean;
-}) {
-  const color = SESSION_COLORS[slot.session_type] ?? SESSION_COLORS.custom;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.96 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className={`group relative rounded-lg border px-2.5 py-2 cursor-pointer transition-all hover:shadow-sm ${color.bg} ${color.border}`}
-      onClick={() => onSlotClick?.(slot)}
-    >
-      {/* Subject */}
-      <div className={`text-xs font-semibold leading-tight truncate ${color.text}`}>
-        {slot.subject_name || "No subject"}
-      </div>
-
-      {/* Faculty */}
-      {slot.faculty_name && (
-        <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
-          {slot.faculty_name}
-        </div>
-      )}
-
-      {/* Classroom */}
-      {slot.classroom_name && (
-        <div className="text-[11px] text-muted-foreground truncate">
-          {slot.classroom_name}
-        </div>
-      )}
-
-      {/* Session type badge — shown on hover */}
-      <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-        <Badge className={`text-[10px] px-1.5 py-0 h-4 capitalize ${color.bg} ${color.text} border ${color.border}`}>
-          {slot.session_type_display || slot.session_type}
-        </Badge>
-        {canEdit && onDeleteSlot && (
-          <button
-            onClick={e => { e.stopPropagation(); onDeleteSlot(slot); }}
-            className="w-4 h-4 flex items-center justify-center rounded text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors"
-          >
-            ×
-          </button>
-        )}
-      </div>
-
-      {/* Exam linked indicator */}
-      {slot.exam && (
-        <div className="mt-1">
-          <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-medium">exam</span>
-        </div>
-      )}
-    </motion.div>
-  );
-}
+// Removed SlotCard. Rendering is now inline within the cell.
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -126,6 +90,14 @@ export default function TimetableGridView({
 }: TimetableGridViewProps) {
   const [selectedBatchId, setSelectedBatchId] = useState(batches[0]?.id ?? "");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+
+  useEffect(() => {
+    if (batches.length > 0 && !batches.some(b => b.id === selectedBatchId)) {
+      setSelectedBatchId(batches[0].id);
+    }
+  }, [batches, selectedBatchId]);
+
+  const selectedBatch = batches.find(b => b.id === selectedBatchId);
 
   // ── List view ──────────────────────────────────────────────────────────────
   if (viewMode === "list") {
@@ -142,16 +114,16 @@ export default function TimetableGridView({
           viewMode={viewMode}
           onViewModeChange={setViewMode}
         />
-        <div className="bg-white rounded-xl border border-border overflow-hidden">
+        <div className="bg-white rounded-xl border border-border overflow-hidden shadow-sm">
           <table className="w-full text-sm">
             <thead className="bg-muted/40 border-b border-border">
               <tr>{["Session Type", "Day / Date", "Time", "Subject", "Faculty", "Classroom", "Slot"].map(h => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">{h}</th>
+                <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
               ))}</tr>
             </thead>
             <tbody>
               {filteredSlots.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-12 text-muted-foreground text-sm">No slots for this batch.</td></tr>
+                <tr><td colSpan={7} className="text-center py-16 text-muted-foreground text-sm">No slots for this batch.</td></tr>
               ) : filteredSlots.map((slot, i) => {
                 const color = SESSION_COLORS[slot.session_type] ?? SESSION_COLORS.custom;
                 return (
@@ -159,7 +131,7 @@ export default function TimetableGridView({
                     className="border-b border-border/50 hover:bg-muted/20 cursor-pointer transition-colors"
                     onClick={() => onSlotClick?.(slot)}>
                     <td className="px-4 py-3">
-                      <Badge className={`text-xs capitalize ${color.bg} ${color.text} border ${color.border}`}>
+                      <Badge className={`text-xs capitalize font-semibold ${color.bg} ${color.text} border ${color.border}`}>
                         {slot.session_type_display || slot.session_type}
                       </Badge>
                     </td>
@@ -197,19 +169,21 @@ export default function TimetableGridView({
       />
 
       {/* Grid Table */}
-      <div className="bg-white rounded-xl border border-border overflow-hidden">
+      <div className="bg-white rounded-xl border border-border overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse" style={{ minWidth: "760px" }}>
+          <table className="w-full border-collapse table-fixed" style={{ minWidth: "820px" }}>
             {/* Header row — days */}
             <thead>
               <tr>
-                <th className="w-[80px] px-3 py-3 text-left text-xs font-semibold text-muted-foreground border-b border-r border-border bg-muted/30">
+                <th className="w-[90px] px-3 py-3.5 text-center text-[10px] font-bold text-muted-foreground uppercase tracking-widest border-b border-r border-border bg-muted/30">
+                  <Clock className="w-3.5 h-3.5 mx-auto mb-0.5 text-muted-foreground/60" />
                   Time
                 </th>
                 {DAYS.map(day => (
                   <th key={day.key}
-                    className="px-3 py-3 text-left text-xs font-semibold text-foreground border-b border-r border-border bg-muted/30 last:border-r-0">
-                    {day.label}
+                    className="px-3 py-3.5 text-center border-b border-r border-border bg-muted/30 last:border-r-0 w-[calc((100%-90px)/6)]">
+                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{day.short}</div>
+                    <div className="text-[10px] text-muted-foreground/60 mt-0.5">{day.label}</div>
                   </th>
                 ))}
               </tr>
@@ -217,46 +191,98 @@ export default function TimetableGridView({
 
             <tbody>
               {SLOT_CODES.map((slot, rowIdx) => (
-                <tr key={slot.code} className={rowIdx % 2 === 0 ? "bg-white" : "bg-muted/10"}>
+                <tr key={slot.code} className={rowIdx % 2 === 0 ? "bg-white" : "bg-muted/5"}>
                   {/* Time column */}
-                  <td className="w-[80px] px-3 py-3 border-b border-r border-border align-top">
-                    <div className="text-xs font-bold text-foreground">{slot.code}</div>
-                    <div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
-                      <Clock className="w-2.5 h-2.5" />{slot.start}
+                  <td className="w-[90px] px-3 py-4 border-b border-r border-border text-center">
+                    <div className="text-sm font-bold text-foreground">{slot.code}</div>
+                    <div className="text-[10px] text-muted-foreground mt-0.5 font-mono">
+                      {slot.start}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground font-mono">
+                      {slot.end}
                     </div>
                   </td>
 
-                  {/* Day cells */}
+                  {/* Day cells — entire cell is clickable */}
                   {DAYS.map(day => {
                     const cellSlots = getSlotsForCell(slots, day.key, slot.code, selectedBatchId);
+                    const isEmpty = cellSlots.length === 0;
+                    
+                    const firstSlot = cellSlots[0];
+                    const color = firstSlot ? (SESSION_COLORS[firstSlot.session_type] ?? SESSION_COLORS.custom) : null;
 
                     return (
                       <td key={day.key}
-                        className="px-2 py-2 border-b border-r border-border align-top last:border-r-0 min-h-[72px]"
-                        style={{ minHeight: "72px", verticalAlign: "top" }}>
-                        <div className="flex flex-col gap-1.5 min-h-[64px]">
-                          {/* Filled slots */}
-                          {cellSlots.map(s => (
-                            <SlotCard
-                              key={s.id}
-                              slot={s}
-                              onSlotClick={onSlotClick}
-                              onDeleteSlot={onDeleteSlot}
-                              canEdit={canEdit}
-                            />
-                          ))}
+                        className={`p-0 border-b border-r border-border align-top last:border-r-0 transition-colors relative group
+                          ${isEmpty && canEdit ? "hover:bg-[#1E88E5]/[0.04] cursor-pointer" : ""}
+                          ${!isEmpty ? `cursor-pointer ${color?.bg}` : ""}`}
+                        style={{ height: "100px" }}
+                        onClick={() => {
+                          if (isEmpty && canEdit) {
+                            onAddClick?.(day.key, slot.code, selectedBatchId);
+                          } else if (!isEmpty) {
+                            onSlotClick?.(firstSlot);
+                          }
+                        }}
+                      >
+                        {!isEmpty ? (
+                          <div className={`w-full h-full border-l-[4px] p-2 flex flex-col`} style={{ borderLeftColor: color?.accent }}>
+                            {/* Primary info */}
+                            <div className={`text-[13px] font-bold leading-tight line-clamp-2 break-all ${color?.text} mb-1.5`} title={`${firstSlot.subject_name || "No Subject"}${firstSlot.session_name ? ` — ${firstSlot.session_name}` : ""}`}>
+                              {firstSlot.subject_name || "No Subject"}
+                              {firstSlot.session_name && <span className="font-normal opacity-80 break-all"> — {firstSlot.session_name}</span>}
+                            </div>
+                            
+                            <div className="flex-1"></div>
 
-                          {/* Add button — show when cell is empty or canEdit */}
-                          {canEdit && (
-                            <button
-                              onClick={() => onAddClick?.(day.key, slot.code)}
-                              className={`flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary transition-colors px-1 py-0.5 rounded hover:bg-primary/5 w-fit
-                                ${cellSlots.length === 0 ? "opacity-60 hover:opacity-100" : "opacity-0 hover:opacity-100"}`}
-                            >
-                              <Plus className="w-3 h-3" /> Add
-                            </button>
-                          )}
-                        </div>
+                            <div className="grid grid-cols-1 gap-1">
+                              {firstSlot.faculty_name && (
+                                <div className="flex items-center gap-1.5 text-muted-foreground/80">
+                                  <User className="w-[11px] h-[11px]" />
+                                  <span className="text-[11px] leading-none truncate">{firstSlot.faculty_name}</span>
+                                </div>
+                              )}
+                              {firstSlot.classroom_name && (
+                                <div className="flex items-center gap-1.5 text-muted-foreground/80">
+                                  <MapPin className="w-[11px] h-[11px]" />
+                                  <span className="text-[11px] leading-none truncate">{firstSlot.classroom_name}</span>
+                                </div>
+                              )}
+                              {firstSlot.exam && (
+                                <div className="flex items-center gap-1.5 text-purple-600/90 mt-0.5">
+                                  <BookOpen className="w-[11px] h-[11px]" />
+                                  <span className="text-[10px] font-medium leading-none">Exam linked</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Session type badge + delete — shown on hover */}
+                            <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                              <Badge className={`text-[9px] px-1.5 py-0 h-[18px] capitalize font-semibold ${color?.bg} ${color?.text} border ${color?.border}`}>
+                                {firstSlot.session_type_display || firstSlot.session_type}
+                              </Badge>
+                              {canEdit && onDeleteSlot && (
+                                <button
+                                  onClick={e => { e.stopPropagation(); onDeleteSlot(firstSlot); }}
+                                  className="w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition-colors text-xs font-bold"
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="w-full h-full min-h-[90px] p-2 flex flex-col relative">
+                            {/* Empty cell hint */}
+                            {canEdit && (
+                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex items-center gap-1 text-[11px] text-muted-foreground/60 border border-dashed border-muted-foreground/20 rounded-lg px-3 py-1.5 bg-white/50">
+                                  <Plus className="w-3 h-3" /> Add session
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </td>
                     );
                   })}
@@ -265,6 +291,23 @@ export default function TimetableGridView({
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Color legend */}
+      <div className="flex items-center flex-wrap gap-4 px-1 pt-1">
+        <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Legend:</span>
+        {[
+          { label: "Regular",    color: "#1E88E5" },
+          { label: "Class Test", color: "#FB8C00" },
+          { label: "Prelims",    color: "#E53935" },
+          { label: "Practice",   color: "#43A047" },
+          { label: "Special Session", color: "#8E24AA" },
+        ].map(item => (
+          <div key={item.label} className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: item.color }} />
+            <span className="text-[10px] text-muted-foreground">{item.label}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -284,48 +327,45 @@ function GridHeader({
   return (
     <div className="space-y-3">
       {/* Term info banner */}
-      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 flex flex-wrap items-center gap-x-5 gap-y-1">
+      <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-2.5 flex flex-wrap items-center gap-x-5 gap-y-1">
         <span className="text-xs text-amber-800">
-          Showing <span className="font-semibold">Regular</span> sessions — weekly recurring schedule
+          Showing <span className="font-bold">All</span> sessions — including Regular, Class Tests, and Prelims
         </span>
-        <span className="text-xs text-amber-700">
-          Use <span className="font-semibold">All Slots</span> tab to manage class tests, prelims & custom sessions
+        <span className="text-[11px] text-amber-600">
+          Non-regular sessions are automatically mapped to the grid based on their scheduled date and time.
         </span>
       </div>
 
       {/* Batch selector + view toggle */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        {/* Batch pills */}
+        {/* Batch pills using Tabs */}
         <div className="flex flex-wrap gap-2">
-          {batches.map(b => (
-            <button
-              key={b.id}
-              onClick={() => onBatchChange(b.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer
-                ${selectedBatchId === b.id
-                  ? "bg-primary text-white border-primary shadow-sm"
-                  : "bg-white text-foreground border-border hover:border-primary/40 hover:bg-primary/5"}`}
-            >
-              {b.name}
-            </button>
-          ))}
-          {batches.length === 0 && (
-            <span className="text-xs text-muted-foreground px-2">No batches loaded</span>
-          )}
+          <Tabs value={selectedBatchId} onValueChange={onBatchChange}>
+            <TabsList className="bg-muted flex flex-wrap h-auto rounded-xl p-1">
+              {batches.map(b => (
+                <TabsTrigger key={b.id} value={b.id} className="text-xs px-3.5 py-1.5 rounded-lg data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">
+                  {b.name}
+                </TabsTrigger>
+              ))}
+              {batches.length === 0 && (
+                <span className="text-xs text-muted-foreground px-2 py-1.5">No batches loaded</span>
+              )}
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* Grid / List toggle */}
-        <div className="flex items-center border border-border rounded-lg overflow-hidden bg-white shrink-0">
+        <div className="flex items-center border border-border rounded-lg overflow-hidden bg-white shrink-0 shadow-sm">
           <button
             onClick={() => onViewModeChange("grid")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer
               ${viewMode === "grid" ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted/40"}`}
           >
             <LayoutGrid className="w-3.5 h-3.5" /> Grid
           </button>
           <button
             onClick={() => onViewModeChange("list")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer
               ${viewMode === "list" ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted/40"}`}
           >
             <List className="w-3.5 h-3.5" /> List

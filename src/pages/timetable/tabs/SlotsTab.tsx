@@ -43,13 +43,18 @@ interface SlotsTabProps {
   batches:     { id: string; name: string }[];
   subjects:    { id: string; name: string }[];
   facultyList: { id: string; name: string; employee_id?: string }[];
-  classrooms:  { id: string; name: string }[];
-  examTypes:   { id: string; name: string }[];
-  chapters:    { id: string; name: string; order: number; subject?: string }[];
-  defaultView?: "grid" | "list";
+  classrooms:     { id: string; name: string }[];
+  examTypes:      { id: string; name: string }[];
+  chapters:       { id: string; name: string; order: number; subject?: string }[];
+  examinersList:  { id: string; name: string; employee_id?: string }[];
+  paperCheckersList: { id: string; name: string; employee_id?: string }[];
+  defaultView?:   "grid" | "list";
 }
 
-export default function SlotsTab({ batches, subjects, facultyList, classrooms, examTypes, chapters, defaultView = "list" }: SlotsTabProps) {
+export default function SlotsTab({
+  batches, subjects, facultyList, classrooms, examTypes, chapters,
+  examinersList, paperCheckersList, defaultView = "list"
+}: SlotsTabProps) {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
   const { user } = useAuth();
@@ -61,6 +66,7 @@ export default function SlotsTab({ batches, subjects, facultyList, classrooms, e
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [formPreFill, setFormPreFill] = useState<Partial<SlotFormValues> | null>(null);
+  const [formLockedFields, setFormLockedFields] = useState<(keyof SlotFormValues)[]>([]);
 
   const canEdit = !!user && ["super_admin", "branch_manager", "admin_senior_exec", "admin"].includes(user.role ?? "");
 
@@ -145,21 +151,28 @@ export default function SlotsTab({ batches, subjects, facultyList, classrooms, e
             slots={slots}
             batches={batches}
             canEdit={canEdit}
-            onAddClick={(day, slotCode) => {
+            onAddClick={(day, slotCode, batchId) => {
               setEditingSlot(null);
-              setFormPreFill({ session_type: "regular", day_of_week: DAY_TO_NUM[day], slot_code: slotCode });
+              setFormPreFill({
+                session_type: "regular",
+                day_of_week: DAY_TO_NUM[day],
+                slot_code: slotCode,
+                batch: batchId,
+              });
+              setFormLockedFields(["batch", "day_of_week", "slot_code"]);
               setFormOpen(true);
             }}
             onSlotClick={(slot) => {
               setEditingSlot(slot);
+              setFormLockedFields([]);
               setFormOpen(true);
             }}
             onDeleteSlot={(slot) => setDeleteTarget({ id: slot.id, name: slot.session_name || slot.id })}
           />
         )}
         
-        <Dialog open={formOpen} onOpenChange={open => { setFormOpen(open); if (!open) { setEditingSlot(null); setFormPreFill(null); } }}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <Dialog open={formOpen} onOpenChange={open => { setFormOpen(open); if (!open) { setEditingSlot(null); setFormPreFill(null); setFormLockedFields([]); } }}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingSlot ? "Edit Timetable Slot" : "Create Timetable Slot"}</DialogTitle>
             </DialogHeader>
@@ -170,6 +183,8 @@ export default function SlotsTab({ batches, subjects, facultyList, classrooms, e
               classrooms={classrooms}
               examTypes={examTypes}
               chapters={chapters}
+              examinersList={examinersList}
+              paperCheckersList={paperCheckersList}
               loading={formLoading}
               isEdit={!!editingSlot}
               defaultValues={editingSlot ? {
@@ -192,8 +207,9 @@ export default function SlotsTab({ batches, subjects, facultyList, classrooms, e
                 paper_checkers: (editingSlot.paper_checkers ?? []).join(", "),
                 timetable_exam_type: editingSlot.timetable_exam_type ?? "",
               } : formPreFill ?? undefined}
+              lockedFields={editingSlot ? [] : formLockedFields}
               onSubmit={(payload) => handleCreateOrUpdate(payload)}
-              onCancel={() => { setFormOpen(false); setEditingSlot(null); setFormPreFill(null); }}
+              onCancel={() => { setFormOpen(false); setEditingSlot(null); setFormPreFill(null); setFormLockedFields([]); }}
             />
           </DialogContent>
         </Dialog>
@@ -220,7 +236,7 @@ export default function SlotsTab({ batches, subjects, facultyList, classrooms, e
           <SelectContent>
             <SelectItem value="all">All Types</SelectItem>
             {["regular","class_test","prelim","practice","custom"].map(t => (
-              <SelectItem key={t} value={t} className="capitalize">{t.replace("_", " ")}</SelectItem>
+              <SelectItem key={t} value={t} className="capitalize">{t === "custom" ? "Special" : t.replace("_", " ")}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -328,6 +344,8 @@ export default function SlotsTab({ batches, subjects, facultyList, classrooms, e
             classrooms={classrooms}
             examTypes={examTypes}
             chapters={chapters}
+            examinersList={examinersList}
+            paperCheckersList={paperCheckersList}
             loading={formLoading}
             isEdit={!!editingSlot}
             defaultValues={editingSlot ? {

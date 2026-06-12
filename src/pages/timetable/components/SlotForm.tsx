@@ -2,8 +2,9 @@ import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Info } from "lucide-react";
+import { Info, Lock, Check, ChevronsUpDown } from "lucide-react";
 
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,17 +12,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type SessionType = "regular" | "class_test" | "prelim" | "practice" | "custom";
 
 const SESSION_TYPES: { value: SessionType; label: string; color: string }[] = [
-  { value: "regular",    label: "Regular",    color: "bg-blue-100 text-blue-700" },
-  { value: "class_test", label: "Class Test", color: "bg-yellow-100 text-yellow-700" },
-  { value: "prelim",     label: "Prelim",     color: "bg-purple-100 text-purple-700" },
-  { value: "practice",   label: "Practice",   color: "bg-green-100 text-green-700" },
-  { value: "custom",     label: "Custom",     color: "bg-gray-100 text-gray-700" },
+  { value: "regular",    label: "Regular",    color: "bg-[#E3F2FD] text-[#1E88E5]" },
+  { value: "class_test", label: "Class Test", color: "bg-[#FFF3E0] text-[#FB8C00]" },
+  { value: "prelim",     label: "Prelim",     color: "bg-[#FFEBEE] text-[#E53935]" },
+  { value: "practice",   label: "Practice",   color: "bg-[#E8F5E9] text-[#43A047]" },
+  { value: "custom",     label: "Special Session", color: "bg-[#F3E5F5] text-[#8E24AA]" },
 ];
 
 const SLOT_CODES = [
@@ -147,12 +150,16 @@ export function buildSlotPayload(values: SlotFormValues): Record<string, any> {
 
 interface SlotFormProps {
   defaultValues?: Partial<SlotFormValues>;
+  /** Fields that are pre-filled from grid context and should NOT be editable */
+  lockedFields?:  (keyof SlotFormValues)[];
   batches:        { id: string; name: string }[];
   subjects:       { id: string; name: string }[];
   facultyList:    { id: string; name: string; employee_id?: string }[];
   classrooms:     { id: string; name: string }[];
   examTypes:      { id: string; name: string }[];
   chapters:       { id: string; name: string; order: number; subject?: string }[];
+  examinersList?: { id: string; name: string; employee_id?: string }[];
+  paperCheckersList?: { id: string; name: string; employee_id?: string }[];
   loading:        boolean;
   onSubmit:       (payload: Record<string, any>, values: SlotFormValues) => void;
   onCancel:       () => void;
@@ -162,8 +169,8 @@ interface SlotFormProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function SlotForm({
-  defaultValues, batches, subjects, facultyList, classrooms,
-  examTypes, chapters, loading, onSubmit, onCancel, isEdit,
+  defaultValues, lockedFields = [], batches, subjects, facultyList, classrooms,
+  examTypes, chapters, examinersList = [], paperCheckersList = [], loading, onSubmit, onCancel, isEdit,
 }: SlotFormProps) {
   const { control, register, handleSubmit, watch, setValue, formState: { errors } } = useForm<SlotFormValues>({
     resolver: zodResolver(schema),
@@ -175,6 +182,8 @@ export default function SlotForm({
       ...defaultValues,
     },
   });
+
+  const isLocked = (field: keyof SlotFormValues) => lockedFields.includes(field);
 
   const sessionType = watch("session_type");
   const selectedSubject = watch("subject");
@@ -199,6 +208,24 @@ export default function SlotForm({
     onSubmit(buildSlotPayload(values), values);
   };
 
+  // ── Resolve display labels for locked fields ───────────────────────────────
+  const getBatchName = (id?: string) => batches.find(b => b.id === id)?.name ?? id ?? "—";
+  const getDayLabel = (val?: string) => DAY_OPTIONS.find(d => d.value === val)?.label ?? val ?? "—";
+  const getSlotLabel = (val?: string) => SLOT_CODES.find(s => s.value === val)?.label ?? val ?? "—";
+
+  // ─── Locked Field Display ──────────────────────────────────────────────────
+  const LockedDisplay = ({ label, value }: { label: string; value: string }) => (
+    <div className="flex flex-col gap-1">
+      <Label className="text-xs text-muted-foreground flex items-center gap-1">
+        {label}
+        <Lock className="w-3 h-3 text-muted-foreground/50" />
+      </Label>
+      <div className="h-9 px-3 flex items-center bg-muted/50 rounded-md text-sm text-foreground font-medium border border-border">
+        {value}
+      </div>
+    </div>
+  );
+
   // ─── Session Type Selector ─────────────────────────────────────────────────
   const SessionTypeRow = () => (
     <div className="space-y-2">
@@ -208,8 +235,10 @@ export default function SlotForm({
           <button
             key={st.value}
             type="button"
-            onClick={() => setValue("session_type", st.value)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all cursor-pointer
+            disabled={isLocked("session_type")}
+            onClick={() => !isLocked("session_type") && setValue("session_type", st.value)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all
+              ${isLocked("session_type") ? "cursor-not-allowed opacity-70" : "cursor-pointer"}
               ${sessionType === st.value
                 ? `${st.color} border-current`
                 : "bg-white border-border text-muted-foreground hover:border-muted-foreground"}`}
@@ -225,7 +254,7 @@ export default function SlotForm({
         {isClassTest && "Class test. Exam record is auto-created. Chapters must have order ≤ 2."}
         {isPrelim    && "Prelim exam. Set custom start and end time. Exam record auto-created."}
         {isPractice  && "Practice session. No paper checkers or exam data allowed."}
-        {isCustom    && "Custom session. Optionally attach an exam by filling the Exam Details section."}
+        {isCustom    && "Special Session. Optionally attach an exam by filling the Exam Details section."}
       </div>
     </div>
   );
@@ -245,18 +274,32 @@ export default function SlotForm({
       {/* Session Type Picker */}
       <SessionTypeRow />
 
+      {/* ── Pre-filled context banner (when coming from grid) ───────────────── */}
+      {lockedFields.length > 0 && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50/60 px-4 py-2.5 flex items-start gap-2">
+          <Lock className="w-3.5 h-3.5 text-blue-500 mt-0.5 shrink-0" />
+          <span className="text-xs text-blue-700">
+            Some fields are pre-filled from the timetable grid and cannot be changed.
+          </span>
+        </div>
+      )}
+
       {/* ── Common Fields ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Batch" required error={errors.batch?.message}>
-          <Controller name="batch" control={control} render={({ field }) => (
-            <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select batch" /></SelectTrigger>
-              <SelectContent>
-                {batches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          )} />
-        </Field>
+        {isLocked("batch") ? (
+          <LockedDisplay label="Batch" value={getBatchName(defaultValues?.batch)} />
+        ) : (
+          <Field label="Batch" required error={errors.batch?.message}>
+            <Controller name="batch" control={control} render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select batch" /></SelectTrigger>
+                <SelectContent>
+                  {batches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )} />
+          </Field>
+        )}
 
         <Field label="Subject">
           <Controller name="subject" control={control} render={({ field }) => (
@@ -300,30 +343,38 @@ export default function SlotForm({
 
       {/* ── Regular Fields ─────────────────────────────────────────────────── */}
       {isRegular && (
-        <div className="space-y-4 p-4 bg-blue-50/40 rounded-xl border border-blue-100">
-          <div className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Regular Session Settings</div>
+        <div className="space-y-4 p-4 bg-[#E3F2FD]/40 rounded-xl border border-[#90CAF9]/60">
+          <div className="text-xs font-semibold text-[#1E88E5] uppercase tracking-wide">Regular Session Settings</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Slot Code" required error={errors.slot_code?.message}>
-              <Controller name="slot_code" control={control} render={({ field }) => (
-                <Select value={field.value || ""} onValueChange={field.onChange}>
-                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Pick slot" /></SelectTrigger>
-                  <SelectContent>
-                    {SLOT_CODES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              )} />
-            </Field>
+            {isLocked("slot_code") ? (
+              <LockedDisplay label="Slot Code" value={getSlotLabel(defaultValues?.slot_code)} />
+            ) : (
+              <Field label="Slot Code" required error={errors.slot_code?.message}>
+                <Controller name="slot_code" control={control} render={({ field }) => (
+                  <Select value={field.value || ""} onValueChange={field.onChange}>
+                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Pick slot" /></SelectTrigger>
+                    <SelectContent>
+                      {SLOT_CODES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )} />
+              </Field>
+            )}
 
-            <Field label="Day of Week" required error={errors.day_of_week?.message}>
-              <Controller name="day_of_week" control={control} render={({ field }) => (
-                <Select value={field.value || ""} onValueChange={field.onChange}>
-                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select day" /></SelectTrigger>
-                  <SelectContent>
-                    {DAY_OPTIONS.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              )} />
-            </Field>
+            {isLocked("day_of_week") ? (
+              <LockedDisplay label="Day of Week" value={getDayLabel(defaultValues?.day_of_week)} />
+            ) : (
+              <Field label="Day of Week" required error={errors.day_of_week?.message}>
+                <Controller name="day_of_week" control={control} render={({ field }) => (
+                  <Select value={field.value || ""} onValueChange={field.onChange}>
+                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select day" /></SelectTrigger>
+                    <SelectContent>
+                      {DAY_OPTIONS.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )} />
+              </Field>
+            )}
 
             <Field label="Effective From">
               <Input type="date" {...register("effective_from")} className="h-9 text-sm" />
@@ -371,46 +422,167 @@ export default function SlotForm({
 
       {/* ── Chapters (class_test + prelim) ─────────────────────────────────── */}
       {needsChapters && (
-        <div className="space-y-3 p-4 bg-yellow-50/40 rounded-xl border border-yellow-100">
-          <div className="text-xs font-semibold text-yellow-700 uppercase tracking-wide">
-            Chapters <span className="font-normal normal-case text-yellow-600">(comma-separated UUIDs or select below)</span>
+        <div className="space-y-3 p-4 bg-[#FFF3E0]/40 rounded-xl border border-[#FFCC80]/60">
+          <div className="text-xs font-semibold text-[#FB8C00] uppercase tracking-wide">
+            Chapters
           </div>
-          <Field label="Chapter UUIDs" required error={errors.chapters?.message}>
-            <Input {...register("chapters")} placeholder="uuid1, uuid2, ..." className="h-9 text-sm font-mono" />
+          <Field label="Select Chapters" required error={errors.chapters?.message}>
+            <Controller name="chapters" control={control} render={({ field }) => {
+              const selectedIds = csvToArray(field.value);
+              const selectedNames = selectedIds.map(id => filteredChapters.find(c => c.id === id)?.name || id);
+
+              return (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className="w-full justify-between font-normal text-sm min-h-[36px] h-auto p-2"
+                    >
+                      {selectedNames.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5 text-left">
+                          {selectedNames.map((name, i) => (
+                            <Badge key={i} variant="secondary" className="text-xs font-medium bg-[#FFF3E0] text-[#FB8C00] hover:bg-[#FFE0B2]">
+                              {name}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">Select chapters...</span>
+                      )}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[400px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search chapters..." />
+                      <CommandList>
+                        <CommandEmpty>No chapters found.</CommandEmpty>
+                        <CommandGroup>
+                          {filteredChapters.map((chapter) => (
+                            <CommandItem
+                              key={chapter.id}
+                              value={chapter.name}
+                              onSelect={() => {
+                                const isSelected = selectedIds.includes(chapter.id);
+                                const newIds = isSelected
+                                  ? selectedIds.filter(id => id !== chapter.id)
+                                  : [...selectedIds, chapter.id];
+                                field.onChange(newIds.join(", "));
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedIds.includes(chapter.id) ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {chapter.name} (order {chapter.order})
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              );
+            }} />
           </Field>
-          {filteredChapters.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-1">
-              {filteredChapters.map(ch => (
-                <Badge
-                  key={ch.id}
-                  className="text-xs cursor-pointer bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
-                  onClick={() => {
-                    const current = (watch("chapters") || "").split(",").map(s => s.trim()).filter(Boolean);
-                    if (!current.includes(ch.id)) setValue("chapters", [...current, ch.id].join(", "));
-                  }}
-                >
-                  {ch.name} (order {ch.order})
-                </Badge>
-              ))}
-            </div>
-          )}
           {isClassTest && (
-            <p className="text-xs text-yellow-600">⚠ Class test only allows chapters with order ≤ 2</p>
+            <p className="text-xs text-[#FB8C00]/80">⚠ Class test only allows chapters with order ≤ 2</p>
           )}
         </div>
       )}
 
       {/* ── Examiners ──────────────────────────────────────────────────────── */}
       {needsExaminers && (
-        <Field label="Examiners (comma-separated UUIDs)" required error={errors.examiners?.message}>
-          <Input {...register("examiners")} placeholder="user-uuid-1, user-uuid-2" className="h-9 text-sm font-mono" />
+        <Field label="Examiners" required error={errors.examiners?.message}>
+          <Controller name="examiners" control={control} render={({ field }) => {
+            const selectedIds = csvToArray(field.value);
+            const selectedNames = selectedIds.map(id => examinersList.find(f => f.id === id)?.name || id);
+
+            return (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" className="w-full justify-between font-normal text-sm min-h-[36px] h-auto p-2">
+                    {selectedNames.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5 text-left">
+                        {selectedNames.map((name, i) => (
+                          <Badge key={i} variant="secondary" className="text-xs font-medium">{name}</Badge>
+                        ))}
+                      </div>
+                    ) : <span className="text-muted-foreground">Select examiners...</span>}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search faculty..." />
+                    <CommandList>
+                      <CommandEmpty>No faculty found.</CommandEmpty>
+                      <CommandGroup>
+                        {examinersList.map((fac) => (
+                          <CommandItem key={fac.id} value={fac.name} onSelect={() => {
+                            const newIds = selectedIds.includes(fac.id) ? selectedIds.filter(id => id !== fac.id) : [...selectedIds, fac.id];
+                            field.onChange(newIds.join(", "));
+                          }}>
+                            <Check className={cn("mr-2 h-4 w-4", selectedIds.includes(fac.id) ? "opacity-100" : "opacity-0")} />
+                            {fac.name} {fac.employee_id ? `(${fac.employee_id})` : ""}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            );
+          }} />
         </Field>
       )}
 
       {/* ── Paper Checkers ─────────────────────────────────────────────────── */}
       {needsPaperCheck && (
-        <Field label="Paper Checkers (comma-separated UUIDs)" required error={errors.paper_checkers?.message}>
-          <Input {...register("paper_checkers")} placeholder="user-uuid-1, user-uuid-2" className="h-9 text-sm font-mono" />
+        <Field label="Paper Checkers" required error={errors.paper_checkers?.message}>
+          <Controller name="paper_checkers" control={control} render={({ field }) => {
+            const selectedIds = csvToArray(field.value);
+            const selectedNames = selectedIds.map(id => paperCheckersList.find(f => f.id === id)?.name || id);
+
+            return (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" className="w-full justify-between font-normal text-sm min-h-[36px] h-auto p-2">
+                    {selectedNames.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5 text-left">
+                        {selectedNames.map((name, i) => (
+                          <Badge key={i} variant="secondary" className="text-xs font-medium">{name}</Badge>
+                        ))}
+                      </div>
+                    ) : <span className="text-muted-foreground">Select paper checkers...</span>}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search faculty..." />
+                    <CommandList>
+                      <CommandEmpty>No faculty found.</CommandEmpty>
+                      <CommandGroup>
+                        {paperCheckersList.map((fac) => (
+                          <CommandItem key={fac.id} value={fac.name} onSelect={() => {
+                            const newIds = selectedIds.includes(fac.id) ? selectedIds.filter(id => id !== fac.id) : [...selectedIds, fac.id];
+                            field.onChange(newIds.join(", "));
+                          }}>
+                            <Check className={cn("mr-2 h-4 w-4", selectedIds.includes(fac.id) ? "opacity-100" : "opacity-0")} />
+                            {fac.name} {fac.employee_id ? `(${fac.employee_id})` : ""}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            );
+          }} />
         </Field>
       )}
 
@@ -430,9 +602,9 @@ export default function SlotForm({
 
       {/* ── Exam Data (class_test, prelim = required; custom = optional) ────── */}
       {(needsExam || customExamOpt) && (
-        <div className="space-y-4 p-4 bg-purple-50/40 rounded-xl border border-purple-100">
-          <div className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
-            Exam Details {customExamOpt && <span className="font-normal normal-case text-purple-500">(optional for custom)</span>}
+        <div className="space-y-4 p-4 bg-[#F3E5F5]/40 rounded-xl border border-[#CE93D8]/60">
+          <div className="text-xs font-semibold text-[#8E24AA] uppercase tracking-wide">
+            Exam Details {customExamOpt && <span className="font-normal normal-case text-[#8E24AA]/60">(optional for custom)</span>}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Exam Title" required={needsExam} error={errors.exam_title?.message}>

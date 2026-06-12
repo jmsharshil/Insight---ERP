@@ -36,88 +36,90 @@ export default function TimetablePage() {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
 
-  const [activeTab, setActiveTab] = useState<TabValue>("slots");
+  const [activeTab, setActiveTab] = useState<TabValue>("grid");
 
   // ── Shared dropdown data (loaded once, passed as props) ───────────────────
-  const [batches,     setBatches]     = useState<{ id: string; name: string }[]>([]);
-  const [subjects,    setSubjects]    = useState<{ id: string; name: string }[]>([]);
-  const [facultyList, setFacultyList] = useState<{ id: string; name: string; employee_id?: string }[]>([]);
+  const [dropdowns, setDropdowns] = useState<any>({
+    branches: [],
+    batches: [],
+    subjects: [],
+    courses: [],
+    faculty: [],
+  });
   const [classrooms,  setClassrooms]  = useState<{ id: string; name: string }[]>([]);
   const [chapters,    setChapters]    = useState<{ id: string; name: string; order: number; subject?: string }[]>([]);
   const [examTypes,   setExamTypes]   = useState<{ id: string; name: string }[]>([]);
+  const [examinersList, setExaminersList] = useState<{ id: string; name: string; employee_id?: string }[]>([]);
+  const [paperCheckersList, setPaperCheckersList] = useState<{ id: string; name: string; employee_id?: string }[]>([]);
 
   useEffect(() => {
     setPageTitle("Timetable");
   }, [setPageTitle]);
 
-  // ── Fetch all dropdown data on mount ──────────────────────────────────────
+  // ── Fetch all dropdown data on mount (attendance pattern) ─────────────────
   useEffect(() => {
-    // Batches
+    // 1. Fetch common dropdowns (batches, subjects, courses) in one call
     dispatch({
-      type: batchAction.GET_BATCHES,
+      type: dropdownActions.GET_DROPDOWN,
       method: "GET",
-      endPoint: API.BATCHES.LIST,
+      endPoint: "/api/v1/batches/dropdowns/",
       auth: true,
       getResponse: (res: any) => {
         const data = res?.data || res;
-        setBatches(Array.isArray(data) ? data : (data?.results ?? []));
+        if (data) {
+          setDropdowns((prev: any) => ({
+            ...prev,
+            ...data,
+          }));
+
+          if (data.classrooms) {
+            setClassrooms(data.classrooms);
+          }
+
+          if (data.subjects) {
+            const flatChapters: any[] = [];
+            data.subjects.forEach((subj: any) => {
+              if (subj.chapters && Array.isArray(subj.chapters)) {
+                subj.chapters.forEach((ch: any) => {
+                  flatChapters.push({
+                    id: ch.id,
+                    name: ch.name,
+                    order: ch.order,
+                    subject: subj.id,
+                  });
+                });
+              }
+            });
+            setChapters(flatChapters);
+          }
+        }
       },
       getError: () => {},
     });
 
-    // Subjects
-    dispatch({
-      type: subjectAction.GET_SUBJECTS,
-      method: "GET",
-      endPoint: "/api/v1/subjects/",
-      auth: true,
-      getResponse: (res: any) => {
-        const data = res?.data?.results || res?.results || res?.data?.data || res?.data || res;
-        if (Array.isArray(data)) setSubjects(data);
-      },
-      getError: () => {},
-    });
-
-    // Faculty
+    // 2. Fetch faculty
     dispatch({
       type: dropdownActions.GET_DROPDOWN,
       method: "GET",
       endPoint: "/api/v1/faculty/",
       auth: true,
       getResponse: (res: any) => {
-        const data = res?.data || res;
-        setFacultyList(data?.results ?? (Array.isArray(data) ? data : []));
+        const list = res?.data || res;
+        if (Array.isArray(list)) {
+          setDropdowns((prev: any) => ({
+            ...prev,
+            faculty: list.map((item: any) => ({
+              id: item.id,
+              name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim(),
+              employee_id: item.employee_id,
+            })),
+          }));
+        }
       },
       getError: () => {},
     });
 
-    // Classrooms
-    dispatch({
-      type: ClassroomAction.GET_CLASSROOMS,
-      method: "GET",
-      endPoint: "/api/v1/classrooms/",
-      auth: true,
-      getResponse: (res: any) => {
-        const data = res?.data || res;
-        setClassrooms(Array.isArray(data) ? data : (data?.results ?? []));
-      },
-      getError: () => {},
-    });
-
-    // Chapters
-    dispatch({
-      type: dropdownActions.GET_DROPDOWN,
-      method: "GET",
-      endPoint: "/api/v1/chapters/",
-      auth: true,
-      getResponse: (res: any) => {
-        const data = res?.data?.results || res?.results || res?.data?.data || res?.data || res;
-        if (Array.isArray(data)) setChapters(data);
-      },
-      getError: () => {},
-    });
-
-    // Exam Types (for slot form dropdown)
+    // 3. Exam Types (for slot form dropdown)
     dispatch({
       type: dropdownActions.GET_DROPDOWN,
       method: "GET",
@@ -131,14 +133,49 @@ export default function TimetablePage() {
       },
       getError: () => {},
     });
+
+    // 4. Exam Staff (Examiners & Paper Checkers)
+    dispatch({
+      type: dropdownActions.GET_DROPDOWN,
+      method: "GET",
+      endPoint: "/api/auth/users/?role=exam_supervisor&role=paper_checker",
+      auth: true,
+      getResponse: (res: any) => {
+        const data = res?.data?.results || res?.results || res?.data || res;
+        if (Array.isArray(data)) {
+          const parsed = data.map((item: any) => ({
+            id: item.id,
+            name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim(),
+            employee_id: item.employee_id,
+            role: item.role,
+            roles: item.roles,
+          }));
+
+          // Try to segregate by role if the backend returns it, otherwise populate both with the combined data
+          const supervisors = parsed.filter(u => u.role === "exam_supervisor" || (Array.isArray(u.roles) && u.roles.includes("exam_supervisor")));
+          const checkers = parsed.filter(u => u.role === "paper_checker" || (Array.isArray(u.roles) && u.roles.includes("paper_checker")));
+
+          if (supervisors.length > 0 || checkers.length > 0) {
+            setExaminersList(supervisors);
+            setPaperCheckersList(checkers);
+          } else {
+            setExaminersList(parsed);
+            setPaperCheckersList(parsed);
+          }
+        }
+      },
+      getError: () => {},
+    });
   }, [dispatch]);
+
+  // ── Derive flat arrays for child components ───────────────────────────────
+  const batches = Array.isArray(dropdowns.batches) ? dropdowns.batches : [];
+  const subjects = Array.isArray(dropdowns.subjects) ? dropdowns.subjects : [];
+  const facultyList = Array.isArray(dropdowns.faculty) ? dropdowns.faculty : [];
 
   return (
     <div>
-      <PageHeader
-        title="Timetable"
-        subtitle="Schedule sessions, manage exam types, and view personal timetables."
-      />
+    
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
         <Tabs value={activeTab} onValueChange={v => setActiveTab(v as TabValue)}>
@@ -158,6 +195,8 @@ export default function TimetablePage() {
                classrooms={classrooms}
                examTypes={examTypes}
                chapters={chapters}
+               examinersList={examinersList}
+               paperCheckersList={paperCheckersList}
                defaultView="grid"
             />
           </TabsContent>
@@ -170,6 +209,8 @@ export default function TimetablePage() {
               classrooms={classrooms}
               examTypes={examTypes}
               chapters={chapters}
+              examinersList={examinersList}
+              paperCheckersList={paperCheckersList}
               defaultView="list"
             />
           </TabsContent>
