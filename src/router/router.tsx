@@ -30,9 +30,11 @@ const TimetablePage = lazy(() => import("@/pages/timetable/TimetablePage"));
 const AttendancePage = lazy(() => import("@/pages/attendance/AttendancePage"));
 import AttendanceDetailPage from "@/pages/attendance/AttendanceDetailPage";
 import StudentAttendanceDetailPage from "@/pages/attendance/StudentAttendanceDetailPage";
+import FacultyAttendanceDetailPage from "@/pages/attendance/FacultyAttendanceDetailPage";
 const FeesPage = lazy(() => import("@/pages/fees/FeesPage"));
 const ExamsPage = lazy(() => import("@/pages/exams/ExamsPage"));
 const FacultyPage = lazy(() => import("@/pages/faculty/FacultyPage"));
+import FacultyPayrollDetailPage from "@/pages/faculty/FacultyPayrollDetailPage";
 const LeavePage = lazy(() => import("@/pages/leave/LeavePage"));
 const ExamSupervisionPage = lazy(() => import("@/pages/exam-supervision/ExamSupervisionPage"));
 const ChatPage = lazy(() => import("@/pages/chat/ChatPage"));
@@ -125,6 +127,7 @@ const router = createBrowserRouter([
     { module: "timetable", path: "/timetable", element: withSuspense(<TimetablePage />) },
     { module: "attendance", path: "/attendance", element: withSuspense(<AttendancePage />) },
     { module: "attendance", path: "/attendance/student/:id", element: <StudentAttendanceDetailPage /> },
+    { module: "attendance", path: "/attendance/faculty/:id", element: <FacultyAttendanceDetailPage /> },
     // { module: "attendance", path: "/attendance/:id", element: <AttendanceDetailPage /> },
     { module: "fees", path: "/fees", element: withSuspense(<FeesPage />) },
     { module: "exams", path: "/exams", element: withSuspense(<ExamsPage />) },
@@ -134,6 +137,7 @@ const router = createBrowserRouter([
       element: withSuspense(<ExamSupervisionPage />),
     },
     { module: "faculty", path: "/faculty", element: withSuspense(<FacultyPage />) },
+    { module: "faculty", path: "/faculty/payroll/:id", element: <FacultyPayrollDetailPage /> },
     { module: "leave", path: "/leave", element: withSuspense(<LeavePage />) },
     { module: "chat", path: "/chat", element: withSuspense(<ChatPage />) },
     {

@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { facultyAction, batchAction } from "@/redux/actions";
+import { useNavigate } from "react-router-dom";
+import { facultyAction, batchAction, dropdownActions } from "@/redux/actions";
 import { setFaculty, setFacultyLoading, setFacultyError } from "@/redux/slices/facultySlice";
 import { RootState, AppDispatch } from "@/store";
 import { motion } from "framer-motion";
@@ -37,6 +38,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -53,6 +55,7 @@ const MONTHS = ["Mar 2024", "Apr 2024", "May 2024"];
 
 export default function FacultyPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const toast = useToast();
   const isFaculty = user?.role === "faculty";
   const canPayroll =
@@ -66,10 +69,116 @@ export default function FacultyPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [selectedFacultyId, setSelectedFacultyId] = useState<string | null>(null);
 
-  const [payrollMonth, setPayrollMonth] = useState(MONTHS[2]);
+  const [payrollMonth, setPayrollMonth] = useState<string>("All Months");
   const [payrolls, setPayrolls] = useState<any[]>([]);
+  const [payrollLoading, setPayrollLoading] = useState(false);
   const [confirmApprove, setConfirmApprove] = useState(false);
   const [sessionDialogOpen, setSessionDialogOpen] = useState(false);
+
+  const [latePolicyDialogOpen, setLatePolicyDialogOpen] = useState(false);
+  const [latePolicyLoading, setLatePolicyLoading] = useState(false);
+  const [latePolicyForm, setLatePolicyForm] = useState({
+    grace_period_minutes: 0,
+    penalty_per_minute: "0.00",
+    max_late_minutes: 0,
+    deduction_per_late_instance: "0.00",
+    is_active: true,
+  });
+
+  const fetchLatePolicy = () => {
+    setLatePolicyLoading(true);
+    dispatch({
+      type: facultyAction.GET_PAYROLL_LATE_POLICY,
+      method: "GET",
+      endPoint: "/api/v1/payroll/late-policy/",
+      auth: true,
+      getResponse: (res: any) => {
+        const policy = res?.data || res;
+        if (policy && typeof policy === "object" && !Array.isArray(policy)) {
+          setLatePolicyForm({
+            grace_period_minutes: policy.grace_period_minutes ?? 0,
+            penalty_per_minute: policy.penalty_per_minute ?? "0.00",
+            max_late_minutes: policy.max_late_minutes ?? 0,
+            deduction_per_late_instance: policy.deduction_per_late_instance ?? "0.00",
+            is_active: policy.is_active !== false,
+          });
+        }
+        setLatePolicyLoading(false);
+      },
+      getError: () => {
+        setLatePolicyLoading(false);
+      }
+    });
+  };
+
+  useEffect(() => {
+    if (latePolicyDialogOpen) {
+      fetchLatePolicy();
+    }
+  }, [latePolicyDialogOpen]);
+
+  const handleSaveLatePolicy = () => {
+    setLatePolicyLoading(true);
+    dispatch({
+      type: facultyAction.CREATE_PAYROLL_LATE_POLICY,
+      method: "POST",
+      endPoint: "/api/v1/payroll/late-policy/",
+      body: latePolicyForm,
+      auth: true,
+      getResponse: () => {
+        toast.success("Late policy settings saved successfully.");
+        setLatePolicyDialogOpen(false);
+        setLatePolicyLoading(false);
+      },
+      getError: (err: any) => {
+        toast.error(err?.response?.data?.message || "Failed to save late policy settings");
+        setLatePolicyLoading(false);
+      },
+    });
+  };
+
+  const monthNames = useMemo(() => [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ], []);
+
+  const payrollMonths = useMemo(() => {
+    const months = payrolls.map((p) => `${monthNames[p.month - 1]} ${p.year}`);
+    return ["All Months", ...Array.from(new Set(months))];
+  }, [payrolls, monthNames]);
+
+  useEffect(() => {
+    if (payrollMonths.length > 0 && !payrollMonths.includes(payrollMonth)) {
+      setPayrollMonth("All Months");
+    }
+  }, [payrollMonths, payrollMonth]);
+
+  const fetchPayroll = () => {
+    setPayrollLoading(true);
+    dispatch({
+      type: facultyAction.GET_PAYROLL,
+      method: "GET",
+      endPoint: "/api/v1/payroll/",
+      auth: true,
+      getResponse: (res: any) => {
+        const list = res?.data || res?.results || res;
+        if (Array.isArray(list)) {
+          setPayrolls(list);
+        }
+        setPayrollLoading(false);
+      },
+      getError: (err: any) => {
+        toast.error(err?.response?.data?.message || "Failed to fetch payroll data");
+        setPayrollLoading(false);
+      }
+    });
+  };
+
+  useEffect(() => {
+    if (canPayroll) {
+      fetchPayroll();
+    }
+  }, [canPayroll]);
 
   const [selectedFacultyForAssign, setSelectedFacultyForAssign] = useState<any | null>(null);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
@@ -241,34 +350,113 @@ export default function FacultyPage() {
     } as any);
   }, [dispatch, toast]);
 
-  const payrollRows = useMemo(
-    () => payrolls.filter((p) => p.month === payrollMonth),
-    [payrolls, payrollMonth],
-  );
-  const totalPayrollDue = payrollRows.reduce(
-    (s, p) => s + (p.status !== "disbursed" ? p.netPayable : 0),
-    0,
-  );
+  const payrollRows = useMemo(() => {
+    if (!payrollMonth || payrollMonth === "All Months") return payrolls;
+    return payrolls.filter((p) => {
+      const pMonthStr = `${monthNames[p.month - 1]} ${p.year}`;
+      return pMonthStr === payrollMonth;
+    });
+  }, [payrolls, payrollMonth, monthNames]);
+
+  const totalPayrollDue = useMemo(() => {
+    return payrolls.reduce(
+      (s, p) => s + (p.status !== "disbursed" ? parseFloat(p.total_amount || 0) : 0),
+      0,
+    );
+  }, [payrolls]);
 
   const computePayroll = () => {
-    toast.success(`Payroll computed for ${payrollMonth}. ${facultyList.length} records generated.`);
+    toast.success(`Payroll computed for ${payrollMonth || "selected period"}.`);
   };
+
+  const handleApprovePayroll = (payrollId: string) => {
+    dispatch({
+      type: dropdownActions.GET_DROPDOWN,
+      method: "POST",
+      endPoint: `/api/v1/payroll/${payrollId}/approve/`,
+      auth: true,
+      getResponse: () => {
+        toast.success("Payroll approved successfully.");
+        fetchPayroll();
+      },
+      getError: (err: any) => {
+        toast.error(err?.response?.data?.message || "Failed to approve payroll");
+      }
+    });
+  };
+
+  const handleDisbursePayroll = (payrollId: string) => {
+    dispatch({
+      type: dropdownActions.GET_DROPDOWN,
+      method: "POST",
+      endPoint: `/api/v1/payroll/${payrollId}/disburse/`,
+      auth: true,
+      getResponse: () => {
+        toast.success("Payroll disbursed successfully.");
+        fetchPayroll();
+      },
+      getError: (err: any) => {
+        toast.error(err?.response?.data?.message || "Failed to disburse payroll");
+      }
+    });
+  };
+
   const submitApproval = () => {
-    setPayrolls((rows) =>
-      rows.map((r) => (r.month === payrollMonth ? { ...r, status: "pending_approval" } : r)),
-    );
-    toast.success("Submitted to Branch Manager for approval.");
+    const draftRows = payrollRows.filter(r => r.status === "draft");
+    if (draftRows.length === 0) {
+      toast.info("No draft payrolls to approve for this period.");
+      return;
+    }
+
+    let completed = 0;
+    draftRows.forEach(r => {
+      dispatch({
+        type: dropdownActions.GET_DROPDOWN,
+        method: "POST",
+        endPoint: `/api/v1/payroll/${r.id}/approve/`,
+        auth: true,
+        getResponse: () => {
+          completed++;
+          if (completed === draftRows.length) {
+            toast.success("All draft payrolls approved successfully.");
+            fetchPayroll();
+          }
+        },
+        getError: (err: any) => {
+          toast.error(`Failed to approve payroll for ${r.branch_name}: ${err?.response?.data?.message || ""}`);
+        }
+      });
+    });
   };
+
   const approveAll = () => {
-    setPayrolls((rows) =>
-      rows.map((r) =>
-        r.month === payrollMonth
-          ? { ...r, status: "disbursed", disbursedAt: new Date().toISOString() }
-          : r,
-      ),
-    );
+    const approvedRows = payrollRows.filter(r => r.status === "approved" || r.status === "draft");
+    if (approvedRows.length === 0) {
+      toast.info("No actionable payrolls to disburse for this period.");
+      setConfirmApprove(false);
+      return;
+    }
+
+    let completed = 0;
+    approvedRows.forEach(r => {
+      dispatch({
+        type: dropdownActions.GET_DROPDOWN,
+        method: "POST",
+        endPoint: `/api/v1/payroll/${r.id}/disburse/`,
+        auth: true,
+        getResponse: () => {
+          completed++;
+          if (completed === approvedRows.length) {
+            toast.success("All selected payrolls disbursed successfully.");
+            fetchPayroll();
+          }
+        },
+        getError: (err: any) => {
+          toast.error(`Failed to disburse payroll for ${r.branch_name}: ${err?.response?.data?.message || ""}`);
+        }
+      });
+    });
     setConfirmApprove(false);
-    toast.success(`Payroll approved! Digital slips sent to ${payrollRows.length} faculty members.`);
   };
 
   if (isFaculty) {
@@ -643,76 +831,235 @@ export default function FacultyPage() {
         {canPayroll && (
           <TabsContent value="payroll" className="mt-4">
             <div className="flex flex-wrap gap-2 items-center mb-4">
-              <Select value={payrollMonth} onValueChange={setPayrollMonth}>
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MONTHS.map((m) => (
-                    <SelectItem key={m} value={m}>
-                      {m}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {payrollMonths.length > 0 && (
+                <Select value={payrollMonth} onValueChange={setPayrollMonth}>
+                  <SelectTrigger className="w-48 bg-muted/10 border-border">
+                    <SelectValue placeholder="Select Month" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {payrollMonths.map((m) => (
+                      <SelectItem key={m} value={m}>
+                        {m}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <Button variant="outline" onClick={computePayroll}>
                 Compute Payroll
               </Button>
               <Button variant="outline" onClick={submitApproval}>
                 Submit for Approval
               </Button>
-              <Button onClick={() => setConfirmApprove(true)} className="ml-auto">
+              <Button variant="outline" onClick={() => setLatePolicyDialogOpen(true)}>
+                Late Policy Settings
+              </Button>
+              <Button onClick={() => setConfirmApprove(true)} className="ml-auto bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
                 <CheckCircle2 className="w-4 h-4 mr-1.5" /> Approve & Disburse
               </Button>
             </div>
             <DataTable
               exportable
+              loading={payrollLoading}
               data={payrollRows}
+              onRowClick={(row) => navigate(`/faculty/payroll/${row.id}`)}
               columns={[
-                { key: "facultyId", header: "Faculty" },
-                { key: "hoursTaught", header: "Hours" },
+                { key: "branch_name", header: "Branch" },
                 {
-                  key: "grossAmount",
-                  header: "Gross",
-                  render: (r: any) => `₹${r.grossAmount.toLocaleString()}`,
+                  key: "month",
+                  header: "Period",
+                  render: (r: any) => `${monthNames[r.month - 1] || r.month} ${r.year}`
                 },
+                { key: "faculty_count", header: "Faculties" },
                 {
-                  key: "lateEntryDeductions",
-                  header: "Late Ded.",
-                  render: (r: any) => `₹${r.lateEntryDeductions}`,
-                },
-                {
-                  key: "absenceDeductions",
-                  header: "Abs. Ded.",
-                  render: (r: any) => `₹${r.absenceDeductions}`,
-                },
-                {
-                  key: "netPayable",
-                  header: "Net",
-                  render: (r: any) => (
-                    <span className="font-semibold text-primary-dark">
-                      ₹{r.netPayable.toLocaleString()}
-                    </span>
-                  ),
+                  key: "total_amount",
+                  header: "Total Amount",
+                  render: (r: any) => {
+                    const amt = parseFloat(r.total_amount);
+                    return isNaN(amt) ? `₹${r.total_amount}` : `₹${amt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
+                  }
                 },
                 {
                   key: "status",
                   header: "Status",
-                  render: (r: any) => (
-                    <Badge variant="outline" className="capitalize">
-                      {r.status.replace("_", " ")}
-                    </Badge>
-                  ),
+                  render: (r: any) => {
+                    const statusColors: Record<string, string> = {
+                      draft: "bg-gray-100 text-gray-700 border-gray-200",
+                      pending_approval: "bg-yellow-100 text-yellow-700 border-yellow-200",
+                      approved: "bg-blue-100 text-blue-700 border-blue-200",
+                      disbursed: "bg-green-100 text-green-700 border-green-200",
+                    };
+                    return (
+                      <Badge className={statusColors[r.status] || "bg-gray-150 text-gray-800"}>
+                        {r.status_display || r.status}
+                      </Badge>
+                    );
+                  }
                 },
+                {
+                  key: "generated_at",
+                  header: "Generated At",
+                  render: (r: any) => r.generated_at ? new Date(r.generated_at).toLocaleString() : "—"
+                },
+                {
+                  key: "actions",
+                  header: "",
+                  render: (r: any) => (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {r.status === "draft" && (
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleApprovePayroll(r.id);
+                            }}
+                          >
+                            Approve
+                          </DropdownMenuItem>
+                        )}
+                        {r.status === "approved" && (
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDisbursePayroll(r.id);
+                            }}
+                          >
+                            Disburse
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/faculty/payroll/${r.id}`);
+                          }}
+                        >
+                          View Details
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )
+                }
               ]}
             />
             <ConfirmDialog
               open={confirmApprove}
               onOpenChange={setConfirmApprove}
               title="Approve & Disburse Payroll?"
-              description={`This will mark all ${payrollRows.length} faculty payslips as disbursed.`}
+              description={`This will mark all selected branch payrolls as disbursed.`}
               onConfirm={approveAll}
             />
+
+            <Dialog open={latePolicyDialogOpen} onOpenChange={setLatePolicyDialogOpen}>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Late Policy Settings</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Grace Period (Minutes)
+                    </Label>
+                    <Input
+                      type="number"
+                      value={latePolicyForm.grace_period_minutes}
+                      onChange={(e) =>
+                        setLatePolicyForm({
+                          ...latePolicyForm,
+                          grace_period_minutes: parseInt(e.target.value) || 0,
+                        })
+                      }
+                      placeholder="e.g. 15"
+                    />
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Penalty Per Minute (₹)
+                    </Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={latePolicyForm.penalty_per_minute}
+                      onChange={(e) =>
+                        setLatePolicyForm({
+                          ...latePolicyForm,
+                          penalty_per_minute: e.target.value,
+                        })
+                      }
+                      placeholder="e.g. 5.00"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Max Allowed Late Minutes
+                    </Label>
+                    <Input
+                      type="number"
+                      value={latePolicyForm.max_late_minutes}
+                      onChange={(e) =>
+                        setLatePolicyForm({
+                          ...latePolicyForm,
+                          max_late_minutes: parseInt(e.target.value) || 0,
+                        })
+                      }
+                      placeholder="e.g. 60"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Flat Deduction Per Late Entry (₹)
+                    </Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={latePolicyForm.deduction_per_late_instance}
+                      onChange={(e) =>
+                        setLatePolicyForm({
+                          ...latePolicyForm,
+                          deduction_per_late_instance: e.target.value,
+                        })
+                      }
+                      placeholder="e.g. 100.00"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 bg-muted/30">
+                    <Label className="text-xs font-semibold text-text-primary cursor-pointer">
+                      Policy Active Status
+                    </Label>
+                    <Switch
+                      checked={latePolicyForm.is_active}
+                      onCheckedChange={(checked) =>
+                        setLatePolicyForm({ ...latePolicyForm, is_active: checked })
+                      }
+                    />
+                  </div>
+                </div>
+                <DialogFooter className="gap-2 sm:gap-0">
+                  <Button
+                    variant="outline"
+                    onClick={() => setLatePolicyDialogOpen(false)}
+                    disabled={latePolicyLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSaveLatePolicy}
+                    disabled={latePolicyLoading}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold min-w-[80px]"
+                  >
+                    {latePolicyLoading ? "Saving..." : "Save Settings"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
         )}
       </Tabs>

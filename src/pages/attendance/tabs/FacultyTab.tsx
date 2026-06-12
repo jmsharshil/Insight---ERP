@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
 import { Eye, X } from "lucide-react";
@@ -6,7 +7,6 @@ import { attendanceActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import {
   setFaculty, setFacultyLoading,
-  setSelectedFaculty, setSelectedFacultyLoading,
 } from "@/redux/slices/attendanceSlice";
 import type { RootState, AppDispatch } from "@/store";
 import { useToast } from "@/hooks/useToast";
@@ -14,20 +14,18 @@ import { TableSkeleton } from "@/components/common/Skeletons";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
   const toast = useToast();
-  const { faculty, facultyLoading, selectedFaculty, selectedFacultyLoading } = useSelector((s: RootState) => s.attendance);
+  const { faculty, facultyLoading } = useSelector((s: RootState) => s.attendance);
 
   const branches = dropdowns?.branches || [];
   const facultyList = dropdowns?.faculty || [];
 
   const [f, setF] = useState({ faculty_id: "", branch_id: "", date_from: "", date_to: "" });
-  const [detailOpen, setDetailOpen] = useState(false);
 
   const fetchFaculty = () => {
     const p = new URLSearchParams();
@@ -41,22 +39,6 @@ export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
       getResponse: (res: any) => {
         if (res?.success) dispatch(setFaculty({ data: res.data, count: res.count ?? res.data.length }));
         else toast.error("Failed to load faculty.");
-      },
-      getError: (err: any) => toast.error(err?.response?.data?.message || "Error"),
-    });
-  };
-
-  const fetchDetail = (id: string) => {
-    setDetailOpen(true);
-    dispatch({
-      type: attendanceActions.GET_FACULTY_DETAIL,
-      method: "GET",
-      endPoint: API.ATTENDANCE.FACULTY_DETAIL(id),
-      auth: true,
-      setLoading: (v: boolean) => dispatch(setSelectedFacultyLoading(v)),
-      getResponse: (res: any) => {
-        if (res?.success && res?.data) dispatch(setSelectedFaculty(res.data));
-        else toast.error("Failed to load faculty detail.");
       },
       getError: (err: any) => toast.error(err?.response?.data?.message || "Error"),
     });
@@ -99,7 +81,7 @@ export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
             <thead className="bg-muted/40 border-b border-border">
               <tr>
                 {["Faculty", "Employee ID", "Email", "Branch", "Present", "Absent", "Leave", "Attendance %", ""].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">{h}</th>
+                   <th key={h} className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -110,7 +92,7 @@ export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
                 <motion.tr key={fac.id}
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
                   className="border-b border-border/50 hover:bg-muted/20 cursor-pointer transition-colors"
-                  onClick={() => fetchDetail(fac.id)}
+                  onClick={() => navigate(`/attendance/faculty/${fac.id}`)}
                 >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -132,7 +114,7 @@ export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
                     </Badge>
                   </td>
                   <td className="px-4 py-3">
-                    <Button variant="ghost" size="icon" onClick={e => { e.stopPropagation(); fetchDetail(fac.id); }}>
+                    <Button variant="ghost" size="icon" onClick={e => { e.stopPropagation(); navigate(`/attendance/faculty/${fac.id}`); }}>
                       <Eye className="w-4 h-4 text-muted-foreground" />
                     </Button>
                   </td>
@@ -142,79 +124,6 @@ export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
           </table>
         </div>
       )}
-
-      {/* Faculty Detail Dialog */}
-      <Dialog open={detailOpen} onOpenChange={open => { setDetailOpen(open); if (!open) dispatch(setSelectedFaculty(null)); }}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Faculty Attendance Detail</DialogTitle>
-          </DialogHeader>
-          {selectedFacultyLoading ? (
-            <TableSkeleton columns={2} rows={4} />
-          ) : selectedFaculty ? (
-            <div className="space-y-5">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
-                  {selectedFaculty.faculty.name.slice(0, 2).toUpperCase()}
-                </div>
-                <div>
-                  <div className="font-semibold text-foreground">{selectedFaculty.faculty.name}</div>
-                  <div className="text-xs text-muted-foreground">{selectedFaculty.faculty.employee_id} · {selectedFaculty.faculty.email}</div>
-                </div>
-                <Badge className={`ml-auto text-sm font-bold ${pct(selectedFaculty.summary.attendance_percentage)}`}>
-                  {selectedFaculty.summary.attendance_percentage.toFixed(1)}%
-                </Badge>
-              </div>
-
-              <div className="grid grid-cols-4 gap-3">
-                {[
-                  { l: "Present", v: selectedFaculty.summary.present_count, c: "text-green-600" },
-                  { l: "Absent",  v: selectedFaculty.summary.absent_count,  c: "text-red-600" },
-                  { l: "Leave",   v: selectedFaculty.summary.leave_count,   c: "text-blue-600" },
-                  { l: "Attendance %", v: `${selectedFaculty.summary.attendance_percentage.toFixed(1)}%`, c: "text-primary" },
-                ].map(item => (
-                  <div key={item.l} className="bg-muted/30 rounded-lg p-3 text-center">
-                    <div className={`text-2xl font-bold ${item.c}`}>{item.v}</div>
-                    <div className="text-xs text-muted-foreground">{item.l}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Working Hours */}
-              {selectedFaculty.working_hours && (
-                <div className="bg-muted/20 rounded-lg p-4">
-                  <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Working Hours</h4>
-                  <div className="flex gap-6">
-                    <div>
-                      <span className="text-lg font-bold text-foreground">{selectedFaculty.working_hours.total_hours.toFixed(1)}</span>
-                      <span className="text-xs text-muted-foreground ml-1">Total Hours</span>
-                    </div>
-                    <div>
-                      <span className="text-lg font-bold text-foreground">{selectedFaculty.working_hours.average_hours_per_day.toFixed(1)}</span>
-                      <span className="text-xs text-muted-foreground ml-1">Avg/Day</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Monthly Analytics */}
-              {selectedFaculty.monthly_analytics?.length > 0 && (
-                <div>
-                  <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Monthly Trend</h4>
-                  <ResponsiveContainer width="100%" height={160}>
-                    <LineChart data={selectedFaculty.monthly_analytics}>
-                      <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                      <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} tick={{ fontSize: 11 }} />
-                      <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
-                      <Line type="monotone" dataKey="percentage" stroke="#F7A900" strokeWidth={2} dot={{ fill: "#F7A900", r: 4 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </div>
-          ) : null}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

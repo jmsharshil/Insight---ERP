@@ -51,6 +51,7 @@ export interface StudentDetail {
   check_in_history: { date: string; time: string; status: string }[];
   check_out_history: { date: string; time: string }[];
   violations: any[];
+  day_wise_attendance: { date: string; status: string }[];
   monthly_trend: { month: string; percentage: number }[];
   subject_wise_attendance: { subject_id: string; subject_name: string; percentage: number }[];
   session_wise_attendance: { session: string; percentage: number }[];
