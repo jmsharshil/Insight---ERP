@@ -8,4 +8,8 @@ export function* watchFacultySaga() {
   yield takeLatest(facultyAction.ADD_FACULTY, genericSaga);
   yield takeLatest(facultyAction.UPDATE_FACULTY, genericSaga);
   yield takeLatest(facultyAction.DELETE_FACULTY, genericSaga);
+  yield takeLatest(facultyAction.GET_PAYROLL, genericSaga);
+  yield takeLatest(facultyAction.GET_PAYROLL_DETAILS, genericSaga);
+  yield takeLatest(facultyAction.GET_PAYROLL_LATE_POLICY, genericSaga);
+  yield takeLatest(facultyAction.CREATE_PAYROLL_LATE_POLICY, genericSaga);
 }

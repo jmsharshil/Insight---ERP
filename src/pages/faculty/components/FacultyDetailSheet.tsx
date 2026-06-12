@@ -374,41 +374,62 @@ export default function FacultyDetailSheet({
               /* ── View Mode ── */
               <div className="space-y-5">
                 {/* Header with avatar */}
-                <div className="flex items-center gap-4 pb-4 border-b border-border">
-                  {selectedFaculty.photo_url ? (
-                    <img
-                      src={selectedFaculty.photo_url}
-                      alt={selectedFaculty.full_name}
-                      className="w-16 h-16 rounded-full object-cover border-2 border-border"
-                    />
-                  ) : (
-                    <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xl">
-                      {selectedFaculty.full_name
-                        .split(" ")
-                        .map((n: string) => n[0])
-                        .slice(0, 2)
-                        .join("")}
-                    </div>
-                  )}
-                  <div>
-                    <div className="text-base font-semibold">{selectedFaculty.full_name}</div>
-                    <div className="text-xs text-muted-foreground">{selectedFaculty.employee_id}</div>
-                    <div className="flex gap-2 mt-1">
-                      <Badge
-                        className={
-                          selectedFaculty.is_active
-                            ? "bg-success/20 text-success"
-                            : "bg-destructive/20 text-destructive"
-                        }
-                      >
-                        {selectedFaculty.is_active ? "Active" : "Inactive"}
-                      </Badge>
-                      <Badge variant="secondary" className="capitalize">
-                        {selectedFaculty.employment_type_display}
-                      </Badge>
+                <div className="flex items-center justify-between gap-4 pb-4 border-b border-border">
+                  <div className="flex items-center gap-4">
+                    {selectedFaculty.photo_url ? (
+                      <img
+                        src={selectedFaculty.photo_url}
+                        alt={selectedFaculty.full_name}
+                        className="w-16 h-16 rounded-full object-cover border-2 border-border"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xl">
+                        {selectedFaculty.full_name
+                          .split(" ")
+                          .map((n: string) => n[0])
+                          .slice(0, 2)
+                          .join("")}
+                      </div>
+                    )}
+                    <div>
+                      <div className="text-base font-semibold">{selectedFaculty.full_name}</div>
+                      <div className="text-xs text-muted-foreground">{selectedFaculty.employee_id}</div>
+                      <div className="flex gap-2 mt-1">
+                        <Badge
+                          className={
+                            selectedFaculty.is_active
+                              ? "bg-success/20 text-success"
+                              : "bg-destructive/20 text-destructive"
+                          }
+                        >
+                          {selectedFaculty.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                        <Badge variant="secondary" className="capitalize">
+                          {selectedFaculty.employment_type_display}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
                 </div>
+
+                {/* QR Code Scan Card */}
+                {(selectedFaculty.qr_code_url || selectedFaculty.qr_code) && (
+                  <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border border-primary/25 p-5 flex flex-col items-center justify-center text-center space-y-3">
+                    <div className="bg-white rounded-lg p-3 border border-border shadow-md">
+                      <img
+                        src={selectedFaculty.qr_code_url || selectedFaculty.qr_code}
+                        alt="QR Code"
+                        className="w-48 h-48 object-contain"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-bold text-foreground">Digital QR Identity Card</h4>
+                      <p className="text-xs text-muted-foreground max-w-[280px]">
+                        Scan this QR code with the attendance reader terminal or mobile app to log sessions.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Personal Information */}
                 <div>
