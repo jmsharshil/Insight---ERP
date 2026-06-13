@@ -231,7 +231,7 @@ export default function CourseDetailPage() {
         dispatch(removeCourseFromList(id));
         toast.success("Course deleted successfully.");
         setDeleteConfirmOpen(false);
-        navigate("/courses-batches");
+        navigate(-1);
       },
       getError: (err: any) => {
         const msg = err?.response?.data?.message || err?.message || "Failed to delete course";
@@ -384,7 +384,7 @@ export default function CourseDetailPage() {
         subtitle={isEditing ? "Modify course properties below." : `Course details and syllabus schedule.`}
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate("/courses-batches")}>
+            <Button variant="outline" onClick={() => navigate(-1)}>
               <ChevronLeft className="w-4 h-4 mr-2" /> Back
             </Button>
             {canEdit && !isEditing && (

@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { facultyAction, batchAction, dropdownActions } from "@/redux/actions";
 import { setFaculty, setFacultyLoading, setFacultyError } from "@/redux/slices/facultySlice";
 import { RootState, AppDispatch } from "@/store";
@@ -50,16 +50,28 @@ import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
 import FacultyDetailSheet from "./components/FacultyDetailSheet";
+import { useUI } from "@/hooks/useUI";
 
 const MONTHS = ["Mar 2024", "Apr 2024", "May 2024"];
 
 export default function FacultyPage() {
   const { user } = useAuth();
+  const { setPageTitle } = useUI();
   const navigate = useNavigate();
   const toast = useToast();
   const isFaculty = user?.role === "faculty";
   const canPayroll =
     user?.role === "accountant" || user?.role === "branch_manager" || user?.role === "super_admin";
+
+  const [params, setParams] = useSearchParams();
+  const activeTab = params.get("tab") || (isFaculty ? "attendance" : "directory");
+
+  const setActiveTab = (tab: string) => {
+    setParams((prev) => {
+      prev.set("tab", tab);
+      return prev;
+    }, { replace: true });
+  };
 
   const dispatch = useDispatch<AppDispatch>();
   const { facultyList, loading: isLoading } = useSelector(
@@ -76,63 +88,127 @@ export default function FacultyPage() {
   const [sessionDialogOpen, setSessionDialogOpen] = useState(false);
 
   const [latePolicyDialogOpen, setLatePolicyDialogOpen] = useState(false);
-  const [latePolicyLoading, setLatePolicyLoading] = useState(false);
+  const [latePolicyFetching, setLatePolicyFetching] = useState(false);
+  const [latePolicySaving, setLatePolicySaving] = useState(false);
+  const [deletePolicyId, setDeletePolicyId] = useState<string | null>(null);
+  const [allLatePolicies, setAllLatePolicies] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [branchesLoading, setBranchesLoading] = useState(false);
+
   const [latePolicyForm, setLatePolicyForm] = useState({
-    grace_period_minutes: 0,
-    penalty_per_minute: "0.00",
-    max_late_minutes: 0,
-    deduction_per_late_instance: "0.00",
-    is_active: true,
+    branch_id: "",
+    grace_period_minutes: 5,
+    deduction_per_minute: "0.00",
+    max_deduction_per_session: "0.00",
+    absence_deduction_per_day: "0.00",
+    late_entry_threshold: 3,
+    auto_halfday_deduction: true,
   });
 
   const fetchLatePolicy = () => {
-    setLatePolicyLoading(true);
+    setLatePolicyFetching(true);
     dispatch({
       type: facultyAction.GET_PAYROLL_LATE_POLICY,
       method: "GET",
       endPoint: "/api/v1/payroll/late-policy/",
       auth: true,
       getResponse: (res: any) => {
-        const policy = res?.data || res;
-        if (policy && typeof policy === "object" && !Array.isArray(policy)) {
+        const policyData = res?.data || res;
+        const policies = Array.isArray(policyData) ? policyData : (policyData ? [policyData] : []);
+        setAllLatePolicies(policies);
+        if (policies.length > 0) {
+          const policy = policies[0];
           setLatePolicyForm({
-            grace_period_minutes: policy.grace_period_minutes ?? 0,
-            penalty_per_minute: policy.penalty_per_minute ?? "0.00",
-            max_late_minutes: policy.max_late_minutes ?? 0,
-            deduction_per_late_instance: policy.deduction_per_late_instance ?? "0.00",
-            is_active: policy.is_active !== false,
+            branch_id: policy.branch_id || policy.branch?.id || policy.branch || "",
+            grace_period_minutes: policy.grace_period_minutes ?? 5,
+            deduction_per_minute: policy.deduction_per_minute ?? "0.00",
+            max_deduction_per_session: policy.max_deduction_per_session ?? "0.00",
+            absence_deduction_per_day: policy.absence_deduction_per_day ?? "0.00",
+            late_entry_threshold: policy.late_entry_threshold ?? 3,
+            auto_halfday_deduction: policy.auto_halfday_deduction ?? true,
           });
         }
-        setLatePolicyLoading(false);
+        setLatePolicyFetching(false);
       },
       getError: () => {
-        setLatePolicyLoading(false);
+        setLatePolicyFetching(false);
       }
     });
   };
 
   useEffect(() => {
-    if (latePolicyDialogOpen) {
+    setPageTitle("Faculty & Payroll");
+  }, [setPageTitle]);
+
+  useEffect(() => {
+    if (canPayroll) {
       fetchLatePolicy();
     }
-  }, [latePolicyDialogOpen]);
+  }, [canPayroll]);
+
+  useEffect(() => {
+    if (user?.role === "super_admin") {
+      setBranchesLoading(true);
+      dispatch({
+        type: dropdownActions.GET_DROPDOWN,
+        method: "GET",
+        endPoint: "/api/v1/branches/",
+        auth: true,
+        getResponse: (res: any) => {
+          const data = res?.data?.results || res?.data || res?.results || res;
+          if (Array.isArray(data)) setBranches(data);
+          setBranchesLoading(false);
+        },
+        getError: () => {
+          toast.error("Failed to load branches");
+          setBranchesLoading(false);
+        }
+      });
+    }
+  }, [user?.role, dispatch, toast]);
+
+  const handleDeleteLatePolicy = (id: string) => {
+    dispatch({
+      type: dropdownActions.GET_DROPDOWN,
+      method: "DELETE",
+      endPoint: `/api/v1/payroll/late-policy/${id}/`,
+      auth: true,
+      getResponse: () => {
+        toast.success("Policy deleted successfully.");
+        fetchLatePolicy();
+      },
+      getError: (err: any) => {
+        toast.error(err?.response?.data?.message || "Failed to delete policy");
+      }
+    });
+  };
 
   const handleSaveLatePolicy = () => {
-    setLatePolicyLoading(true);
+    if (user?.role === "super_admin" && !latePolicyForm.branch_id) {
+      toast.error("Please select a branch to save the late policy.");
+      return;
+    }
+    setLatePolicySaving(true);
+    const payload = { ...latePolicyForm };
+    if (!payload.branch_id) {
+      delete (payload as any).branch_id;
+    }
+
     dispatch({
       type: facultyAction.CREATE_PAYROLL_LATE_POLICY,
       method: "POST",
       endPoint: "/api/v1/payroll/late-policy/",
-      body: latePolicyForm,
+      body: payload,
       auth: true,
       getResponse: () => {
         toast.success("Late policy settings saved successfully.");
         setLatePolicyDialogOpen(false);
-        setLatePolicyLoading(false);
+        setLatePolicySaving(false);
+        fetchLatePolicy();
       },
       getError: (err: any) => {
         toast.error(err?.response?.data?.message || "Failed to save late policy settings");
-        setLatePolicyLoading(false);
+        setLatePolicySaving(false);
       },
     });
   };
@@ -542,7 +618,7 @@ export default function FacultyPage() {
             index={3}
           />
         </div>
-        <Tabs defaultValue="attendance">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="attendance">Attendance</TabsTrigger>
             <TabsTrigger value="sessions">Session Reports</TabsTrigger>
@@ -631,62 +707,6 @@ export default function FacultyPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Faculty & Payroll"
-        subtitle="Manage faculty members, sessions and monthly payroll"
-        // actions={
-        //   <Dialog>
-        //     <DialogTrigger asChild>
-        //       <Button>
-        //         <Plus className="w-4 h-4 mr-1.5" /> Add Faculty
-        //       </Button>
-        //     </DialogTrigger>
-        //     <DialogContent>
-        //       <DialogHeader>
-        //         <DialogTitle>Add Faculty Member</DialogTitle>
-        //       </DialogHeader>
-        //       <div className="grid grid-cols-2 gap-3">
-        //         <div>
-        //           <Label>Name</Label>
-        //           <Input />
-        //         </div>
-        //         <div>
-        //           <Label>Email</Label>
-        //           <Input />
-        //         </div>
-        //         <div>
-        //           <Label>Phone</Label>
-        //           <Input />
-        //         </div>
-        //         <div>
-        //           <Label>Qualification</Label>
-        //           <Input />
-        //         </div>
-        //         <div>
-        //           <Label>Employment Type</Label>
-        //           <Select defaultValue="full-time">
-        //             <SelectTrigger>
-        //               <SelectValue />
-        //             </SelectTrigger>
-        //             <SelectContent>
-        //               <SelectItem value="full-time">Full-time</SelectItem>
-        //               <SelectItem value="part-time">Part-time</SelectItem>
-        //               <SelectItem value="contract">Contract</SelectItem>
-        //             </SelectContent>
-        //           </Select>
-        //         </div>
-        //         <div>
-        //           <Label>Hourly Rate</Label>
-        //           <Input type="number" />
-        //         </div>
-        //       </div>
-        //       <DialogFooter>
-        //         <Button onClick={() => toast.success("Faculty added.")}>Save</Button>
-        //       </DialogFooter>
-        //     </DialogContent>
-        //   </Dialog>
-        // }
-      />
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard title="Total Faculty" value={facultyList.length} icon={Briefcase} index={0} />
         <StatCard
@@ -706,11 +726,12 @@ export default function FacultyPage() {
         />
       </div>
 
-      <Tabs defaultValue="directory">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="directory">Faculty Directory</TabsTrigger>
           <TabsTrigger value="sessions">Session Reports</TabsTrigger>
           {canPayroll && <TabsTrigger value="payroll">Payroll</TabsTrigger>}
+          {canPayroll && <TabsTrigger value="late-policies">Late Policies</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="directory" className="mt-4">
@@ -851,9 +872,6 @@ export default function FacultyPage() {
               <Button variant="outline" onClick={submitApproval}>
                 Submit for Approval
               </Button>
-              <Button variant="outline" onClick={() => setLatePolicyDialogOpen(true)}>
-                Late Policy Settings
-              </Button>
               <Button onClick={() => setConfirmApprove(true)} className="ml-auto bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
                 <CheckCircle2 className="w-4 h-4 mr-1.5" /> Approve & Disburse
               </Button>
@@ -953,116 +971,235 @@ export default function FacultyPage() {
               description={`This will mark all selected branch payrolls as disbursed.`}
               onConfirm={approveAll}
             />
+          </TabsContent>
+        )}
 
-            <Dialog open={latePolicyDialogOpen} onOpenChange={setLatePolicyDialogOpen}>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Late Policy Settings</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-1">
-                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Grace Period (Minutes)
-                    </Label>
-                    <Input
-                      type="number"
-                      value={latePolicyForm.grace_period_minutes}
-                      onChange={(e) =>
+        {canPayroll && (
+          <TabsContent value="late-policies" className="mt-4">
+            <div className="flex justify-end mb-4">
+              <Button onClick={() => {
+                setLatePolicyForm({
+                  branch_id: "",
+                  grace_period_minutes: 5,
+                  deduction_per_minute: "0.00",
+                  max_deduction_per_session: "0.00",
+                  absence_deduction_per_day: "0.00",
+                  late_entry_threshold: 3,
+                  auto_halfday_deduction: true,
+                });
+                setLatePolicyDialogOpen(true);
+              }}>
+                <Plus className="w-4 h-4 mr-1.5" /> Add Policy
+              </Button>
+            </div>
+            <DataTable
+              data={allLatePolicies}
+              columns={[
+                { key: "branch_name", header: "Branch" },
+                { key: "grace_period_minutes", header: "Grace Period (m)" },
+                { key: "deduction_per_minute", header: "Ded/Min (₹)" },
+                { key: "max_deduction_per_session", header: "Max/Session (₹)" },
+                { key: "absence_deduction_per_day", header: "Absence/Day (₹)" },
+                { key: "late_entry_threshold", header: "Threshold" },
+                {
+                  key: "auto_halfday_deduction",
+                  header: "Auto Half-Day",
+                  render: (r: any) => r.auto_halfday_deduction ? "Yes" : "No"
+                },
+                {
+                  key: "actions",
+                  header: "",
+                  render: (r: any) => (
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => {
                         setLatePolicyForm({
-                          ...latePolicyForm,
-                          grace_period_minutes: parseInt(e.target.value) || 0,
-                        })
-                      }
-                      placeholder="e.g. 15"
-                    />
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Penalty Per Minute (₹)
-                    </Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={latePolicyForm.penalty_per_minute}
-                      onChange={(e) =>
-                        setLatePolicyForm({
-                          ...latePolicyForm,
-                          penalty_per_minute: e.target.value,
-                        })
-                      }
-                      placeholder="e.g. 5.00"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Max Allowed Late Minutes
-                    </Label>
-                    <Input
-                      type="number"
-                      value={latePolicyForm.max_late_minutes}
-                      onChange={(e) =>
-                        setLatePolicyForm({
-                          ...latePolicyForm,
-                          max_late_minutes: parseInt(e.target.value) || 0,
-                        })
-                      }
-                      placeholder="e.g. 60"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Flat Deduction Per Late Entry (₹)
-                    </Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={latePolicyForm.deduction_per_late_instance}
-                      onChange={(e) =>
-                        setLatePolicyForm({
-                          ...latePolicyForm,
-                          deduction_per_late_instance: e.target.value,
-                        })
-                      }
-                      placeholder="e.g. 100.00"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 bg-muted/30">
-                    <Label className="text-xs font-semibold text-text-primary cursor-pointer">
-                      Policy Active Status
-                    </Label>
-                    <Switch
-                      checked={latePolicyForm.is_active}
-                      onCheckedChange={(checked) =>
-                        setLatePolicyForm({ ...latePolicyForm, is_active: checked })
-                      }
-                    />
-                  </div>
-                </div>
-                <DialogFooter className="gap-2 sm:gap-0">
-                  <Button
-                    variant="outline"
-                    onClick={() => setLatePolicyDialogOpen(false)}
-                    disabled={latePolicyLoading}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleSaveLatePolicy}
-                    disabled={latePolicyLoading}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold min-w-[80px]"
-                  >
-                    {latePolicyLoading ? "Saving..." : "Save Settings"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                          branch_id: r.branch_id || r.branch?.id || r.branch || "",
+                          grace_period_minutes: r.grace_period_minutes ?? 5,
+                          deduction_per_minute: r.deduction_per_minute ?? "0.00",
+                          max_deduction_per_session: r.max_deduction_per_session ?? "0.00",
+                          absence_deduction_per_day: r.absence_deduction_per_day ?? "0.00",
+                          late_entry_threshold: r.late_entry_threshold ?? 3,
+                          auto_halfday_deduction: r.auto_halfday_deduction ?? true,
+                        });
+                        setLatePolicyDialogOpen(true);
+                      }}>
+                        Edit
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setDeletePolicyId(r.id || r.policy_id || r.uuid)}>
+                        Delete
+                      </Button>
+                    </div>
+                  )
+                }
+              ]}
+            />
           </TabsContent>
         )}
       </Tabs>
+
+      <ConfirmDialog
+        open={!!deletePolicyId}
+        onOpenChange={(open) => !open && setDeletePolicyId(null)}
+        title="Delete Late Policy"
+        description="Are you sure you want to delete this late policy? This action cannot be undone."
+        onConfirm={() => {
+          if (deletePolicyId) handleDeleteLatePolicy(deletePolicyId);
+          setDeletePolicyId(null);
+        }}
+      />
+
+      <Dialog open={latePolicyDialogOpen} onOpenChange={setLatePolicyDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Late Policy Settings</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+            {user?.role === "super_admin" && (
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Branch
+                </Label>
+                <Select
+                  value={latePolicyForm.branch_id || ""}
+                  onValueChange={(val) =>
+                    setLatePolicyForm({
+                      ...latePolicyForm,
+                      branch_id: val,
+                    })
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={branchesLoading ? "Loading branches..." : "Select Branch"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((b: any) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Grace Period (Minutes)
+              </Label>
+              <Input
+                type="number"
+                value={latePolicyForm.grace_period_minutes}
+                onChange={(e) =>
+                  setLatePolicyForm({
+                    ...latePolicyForm,
+                    grace_period_minutes: parseInt(e.target.value) || 0,
+                  })
+                }
+                placeholder="e.g. 5"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Deduction Per Minute (₹)
+              </Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={latePolicyForm.deduction_per_minute}
+                onChange={(e) =>
+                  setLatePolicyForm({
+                    ...latePolicyForm,
+                    deduction_per_minute: e.target.value,
+                  })
+                }
+                placeholder="e.g. 10.00"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Max Deduction Per Session (₹)
+              </Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={latePolicyForm.max_deduction_per_session}
+                onChange={(e) =>
+                  setLatePolicyForm({
+                    ...latePolicyForm,
+                    max_deduction_per_session: e.target.value,
+                  })
+                }
+                placeholder="e.g. 200.00"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Absence Deduction Per Day (₹)
+              </Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={latePolicyForm.absence_deduction_per_day}
+                onChange={(e) =>
+                  setLatePolicyForm({
+                    ...latePolicyForm,
+                    absence_deduction_per_day: e.target.value,
+                  })
+                }
+                placeholder="e.g. 500.00"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Late Entry Threshold
+              </Label>
+              <Input
+                type="number"
+                value={latePolicyForm.late_entry_threshold}
+                onChange={(e) =>
+                  setLatePolicyForm({
+                    ...latePolicyForm,
+                    late_entry_threshold: parseInt(e.target.value) || 0,
+                  })
+                }
+                placeholder="e.g. 3"
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 bg-muted/30">
+              <Label className="text-xs font-semibold text-text-primary cursor-pointer">
+                Auto Half-Day Deduction
+              </Label>
+              <Switch
+                checked={latePolicyForm.auto_halfday_deduction}
+                onCheckedChange={(checked) =>
+                  setLatePolicyForm({ ...latePolicyForm, auto_halfday_deduction: checked })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setLatePolicyDialogOpen(false)}
+              disabled={latePolicySaving || latePolicyFetching}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveLatePolicy}
+              disabled={latePolicySaving || latePolicyFetching}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold min-w-[80px]"
+            >
+              {latePolicySaving ? "Saving..." : "Save Settings"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <FacultyDetailSheet open={isSheetOpen} onOpenChange={setIsSheetOpen} facultyId={selectedFacultyId} />
 

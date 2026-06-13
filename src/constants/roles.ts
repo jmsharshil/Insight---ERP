@@ -4,25 +4,25 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   super_admin: {
     id: "super_admin", label: "Super Admin", description: "Unrestricted access across all branches",
     color: "bg-red-100", textColor: "text-red-800",
-    modules: ["dashboard","crm","students","courses_batches","classroom_timetable","timetable","attendance","fees","exams","exam_supervision","faculty","leave","chat","notifications","audit_logs","reports","payroll","settings","users"],
+    modules: ["dashboard","crm","students","courses_batches","timetable","attendance","fees","exams","exam_supervision","faculty","leave","chat","notifications","audit_logs","reports","payroll","settings","users"],
     canDelete: true, canExport: true,
   },
   branch_manager: {
     id: "branch_manager", label: "Branch Manager", description: "Controls a single assigned branch",
     color: "bg-purple-100", textColor: "text-purple-800",
-    modules: ["dashboard","crm","students","courses_batches","classroom_timetable","timetable","attendance","fees","exams","leave","chat","notifications","audit_logs","reports"],
+    modules: ["dashboard","crm","students","courses_batches","timetable","attendance","fees","exams","leave","chat","notifications","audit_logs","reports"],
     canDelete: false, canExport: true,
   },
   admin_senior_executive: {
     id: "admin_senior_executive", label: "Admin Senior Executive", description: "Operational head for a branch",
     color: "bg-blue-100", textColor: "text-blue-800",
-    modules: ["dashboard","crm","students","courses_batches","classroom_timetable","timetable","attendance","fees","exams","leave","chat","notifications","reports"],
+    modules: ["dashboard","crm","students","courses_batches","timetable","attendance","fees","exams","leave","chat","notifications","reports"],
     canDelete: false, canExport: true,
   },
   admin_executive: {
     id: "admin_executive", label: "Admin Executive", description: "Day-to-day data entry operator",
     color: "bg-sky-100", textColor: "text-sky-800",
-    modules: ["dashboard","students","attendance","courses_batches","classroom_timetable","timetable"],
+    modules: ["dashboard","students","attendance","courses_batches","timetable"],
     canDelete: false, canExport: false,
   },
   front_desk: {
@@ -58,7 +58,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   student: {
     id: "student", label: "Student", description: "Enrolled student — mobile app user",
     color: "bg-green-100", textColor: "text-green-800",
-    modules: ["dashboard","attendance","courses_batches","classroom_timetable","exams","fees","chat","notifications"],
+    modules: ["dashboard","attendance","courses_batches","exams","fees","chat","notifications"],
     canDelete: false, canExport: false,
   },
   parents: {
@@ -70,7 +70,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   faculty: {
     id: "faculty", label: "Faculty", description: "Teaching staff member",
     color: "bg-amber-100", textColor: "text-amber-800",
-    modules: ["dashboard","courses_batches","classroom_timetable","exams","attendance","leave","chat","notifications","payroll"],
+    modules: ["dashboard","courses_batches","exams","attendance","leave","chat","notifications","payroll"],
     canDelete: false, canExport: false,
   },
   exam_supervisor: {
