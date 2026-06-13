@@ -57,6 +57,7 @@ export const API = {
     LIST: "/api/v1/leads/",
     GET: (id: string | number) => `/api/v1/leads/${id}/`,
     STATUS: (id: string | number) => `/api/v1/leads/${id}/status/`,
+    ASSIGN: (id: string | number) => `/api/v1/leads/${id}/assign/`,
   },
 
   /** Admissions endpoints */

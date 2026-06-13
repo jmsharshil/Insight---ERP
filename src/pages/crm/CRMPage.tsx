@@ -339,6 +339,7 @@ export default function CRMPage() {
             onChangeStage={(lead, stage) => {
               setPendingMove({ leadId: String(lead.id), stage });
             }}
+            onAssignSuccess={() => fetchLeads()}
           />
         </TabsContent>
 
