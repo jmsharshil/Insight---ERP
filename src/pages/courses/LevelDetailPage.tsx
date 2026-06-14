@@ -10,6 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   Select,
   SelectContent,
@@ -223,7 +230,7 @@ export default function LevelDetailPage() {
         dispatch(removeLevelFromList(levelId));
         toast.success("Course level deleted successfully.");
         setDeleteConfirmOpen(false);
-        navigate(`/courses-batches`);
+        navigate(-1);
       },
       getError: (err: any) => {
         const msg = err?.response?.data?.message || err?.message || "Failed to delete level";
@@ -358,7 +365,7 @@ export default function LevelDetailPage() {
         <ShieldAlert className="w-12 h-12 text-destructive" />
         <h3 className="text-lg font-semibold">Level Not Found</h3>
         <p className="text-sm text-muted-foreground">The requested course level could not be loaded.</p>
-        <Button onClick={() => navigate("/courses-batches")}>
+        <Button onClick={() => navigate(-1)}>
           <ChevronLeft className="w-4 h-4 mr-2" /> Back to Courses & Batches
         </Button>
       </div>
@@ -372,7 +379,7 @@ export default function LevelDetailPage() {
         subtitle={isEditing ? "Modify level properties below." : "View and manage course level details."}
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate(`/courses-batches`)}>
+            <Button variant="outline" onClick={() => navigate(-1)}>
               <ChevronLeft className="w-4 h-4 mr-2" /> Back
             </Button>
             {canEdit && !isEditing && (
@@ -544,136 +551,180 @@ export default function LevelDetailPage() {
 
             {/* Subjects List */}
             {level.subjects && level.subjects.length > 0 && (
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
+              <Card className="border-none shadow-sm bg-transparent">
+                <CardHeader className="px-0 pt-0 flex flex-row items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-xl">
                     <BookOpen className="w-5 h-5 text-primary" />
-                    Subjects
+                    Curriculum Subjects
                   </CardTitle>
                   {canEdit && !isEditing && (
-                    <Button variant="outline" size="sm" onClick={() => openSubjectModal()}>
-                      <Plus className="w-4 h-4 mr-1" /> Add Subject
+                    <Button onClick={() => openSubjectModal()} className="bg-primary hover:bg-primary-dark">
+                      <Plus className="w-4 h-4 mr-1.5" /> Add Subject
                     </Button>
                   )}
                 </CardHeader>
-                <CardContent>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {level.subjects.map((subject: any) => (
-                      <div key={subject.id} className="p-4 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors">
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-medium text-text-primary">{subject.name}</h4>
-                          <div className="flex items-center gap-2">
-                            <span className={cn(
-                              "text-xs px-2 py-0.5 rounded-full",
-                              subject.is_active ? "bg-green-500/10 text-green-600" : "bg-destructive/10 text-destructive"
-                            )}>
-                              {subject.is_active ? "Active" : "Inactive"}
-                            </span>
-                            {canEdit && !isEditing && (
-                              <div className="flex items-center gap-1">
-                                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary" onClick={() => openSubjectModal(subject)}>
-                                  <Pencil className="w-3.5 h-3.5" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => setDeleteSubjectId(subject.id)}>
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="text-sm text-muted-foreground flex gap-4 mt-2">
-                          {subject.code && <span>Code: {subject.code}</span>}
-                          {subject.total_hours !== undefined && <span>{subject.total_hours} Hours</span>}
-                        </div>
-                        <div className="mt-3 pt-3 border-t border-border/50">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                              <Layers className="w-3.5 h-3.5" />
-                              Chapters ({subject.chapters ? subject.chapters.length : 0})
+                <CardContent className="px-0 space-y-4">
+                  {level.subjects.map((subject: any) => (
+                    <Card key={subject.id} className="overflow-hidden border border-border hover:border-primary/30 transition-all duration-200">
+                      <div className="p-5 bg-card">
+                        <div className="flex justify-between items-start">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-3">
+                              <h4 className="font-semibold text-lg text-text-primary">{subject.name}</h4>
+                              <Badge variant={subject.is_active ? "default" : "secondary"} className={subject.is_active ? "bg-green-500/10 text-green-700 hover:bg-green-500/20" : ""}>
+                                {subject.is_active ? "Active" : "Inactive"}
+                              </Badge>
                             </div>
-                            {canEdit && !isEditing && (
-                              <Button variant="ghost" size="sm" className="h-6 text-xs px-2" onClick={() => openChapterModal(subject.id)}>
-                                <Plus className="w-3 h-3 mr-1" /> Add
-                              </Button>
-                            )}
+                            <div className="text-sm text-muted-foreground flex gap-4">
+                              {subject.code && <span className="font-medium text-primary/80">Code: {subject.code}</span>}
+                              {subject.total_hours !== undefined && <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {subject.total_hours} Hours</span>}
+                            </div>
                           </div>
-                          {subject.chapters && subject.chapters.length > 0 && (
-                            <div className="space-y-2">
-                              {subject.chapters.sort((a: any, b: any) => (a.order || 0) - (b.order || 0)).map((chapter: any) => (
-                                <div key={chapter.id} className="bg-background/50 rounded p-2 text-sm border border-border/50">
-                                  <div className="flex justify-between items-start">
-                                    <span className="font-medium text-text-primary text-xs flex items-center">
-                                      {chapter.order ? `${chapter.order}. ` : ''}{chapter.name}
-                                    </span>
-                                    <div className="flex items-center gap-1 ml-2 shrink-0">
-                                      <span className={cn(
-                                        "text-[10px] px-1.5 py-0.5 rounded-sm",
-                                        chapter.is_active ? "bg-green-500/10 text-green-600" : "bg-destructive/10 text-destructive"
-                                      )}>
-                                        {chapter.is_active ? "Active" : "Inactive"}
-                                      </span>
-                                      {canEdit && !isEditing && (
-                                        <>
-                                          <Button variant="ghost" size="icon" className="h-5 w-5 text-muted-foreground hover:text-primary" onClick={() => openChapterModal(subject.id, chapter)}>
-                                            <Pencil className="w-3 h-3" />
-                                          </Button>
-                                          <Button variant="ghost" size="icon" className="h-5 w-5 text-muted-foreground hover:text-destructive" onClick={() => { setActiveSubjectId(subject.id); setDeleteChapterId(chapter.id); }}>
-                                            <Trash2 className="w-3 h-3" />
-                                          </Button>
-                                        </>
-                                      )}
-                                    </div>
-                                  </div>
-                                  {chapter.description && (
-                                    <p className="text-muted-foreground text-[11px] mt-1 line-clamp-2">
-                                      {chapter.description}
-                                    </p>
-                                  )}
-                                </div>
-                              ))}
+                          
+                          {canEdit && !isEditing && (
+                            <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10" onClick={() => openSubjectModal(subject)}>
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteSubjectId(subject.id)}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
                             </div>
                           )}
                         </div>
+                        
+                        <div className="mt-4">
+                          <Accordion type="single" collapsible className="w-full">
+                            <AccordionItem value="chapters" className="border-0">
+                              <AccordionTrigger className="py-2.5 px-4 rounded-lg bg-muted/40 hover:bg-muted/60 hover:no-underline text-sm font-semibold text-muted-foreground transition-colors">
+                                <div className="flex items-center gap-2">
+                                  <Layers className="w-4 h-4" />
+                                  <span>Chapters ({subject.chapters ? subject.chapters.length : 0})</span>
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent className="pt-4 pb-0">
+                                <div className="flex justify-end mb-3">
+                                  {canEdit && !isEditing && (
+                                    <Button variant="outline" size="sm" className="h-8 text-xs border-primary/20 hover:bg-primary/5 text-primary" onClick={() => openChapterModal(subject.id)}>
+                                      <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Chapter
+                                    </Button>
+                                  )}
+                                </div>
+                                {subject.chapters && subject.chapters.length > 0 ? (
+                                  <div className="space-y-3">
+                                    {subject.chapters.sort((a: any, b: any) => (a.order || 0) - (b.order || 0)).map((chapter: any) => (
+                                      <div key={chapter.id} className="group relative flex items-start justify-between p-4 rounded-xl bg-background border border-border/60 hover:border-primary/40 hover:shadow-sm transition-all">
+                                        <div className="space-y-1.5">
+                                          <div className="flex items-center gap-2.5">
+                                            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary font-bold text-xs">
+                                              {chapter.order || "-"}
+                                            </span>
+                                            <span className="font-semibold text-text-primary text-base">
+                                              {chapter.name}
+                                            </span>
+                                            <Badge variant={chapter.is_active ? "outline" : "secondary"} className={cn("text-[10px] px-2 py-0 h-5", chapter.is_active && "border-green-500/30 text-green-600 bg-green-500/5")}>
+                                              {chapter.is_active ? "Active" : "Inactive"}
+                                            </Badge>
+                                          </div>
+                                          {chapter.description && (
+                                            <p className="text-muted-foreground text-sm pl-8">
+                                              {chapter.description}
+                                            </p>
+                                          )}
+                                          {chapter.hours_allocated > 0 && (
+                                            <p className="text-xs font-medium text-muted-foreground/80 pl-8 flex items-center gap-1">
+                                              <Clock className="w-3 h-3" /> {chapter.hours_allocated} hours allocated
+                                            </p>
+                                          )}
+                                        </div>
+                                        {canEdit && !isEditing && (
+                                          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-background/80 backdrop-blur-sm rounded-lg p-1">
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openChapterModal(subject.id, chapter)}>
+                                              <Pencil className="w-4 h-4" />
+                                            </Button>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => { setActiveSubjectId(subject.id); setDeleteChapterId(chapter.id); }}>
+                                              <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="text-center py-6 text-sm text-muted-foreground bg-background rounded-xl border border-dashed border-border">
+                                    No chapters added yet.
+                                  </div>
+                                )}
+                              </AccordionContent>
+                            </AccordionItem>
+                          </Accordion>
+                        </div>
                       </div>
-                    ))}
-                  </div>
+                    </Card>
+                  ))}
                 </CardContent>
               </Card>
             )}
           </div>
 
           {/* Sidebar Parameters */}
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle>Details</CardTitle>
+          <div className="space-y-6">
+            {level.subjects?.length === 0 && canEdit && !isEditing && (
+              <Card className="border-dashed border-2 bg-muted/20 border-border">
+                <CardContent className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <BookOpen className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg text-text-primary">No Subjects Yet</h3>
+                    <p className="text-sm text-muted-foreground max-w-[200px] mt-1">
+                      Start building the curriculum for this level.
+                    </p>
+                  </div>
+                  <Button onClick={() => openSubjectModal()} className="mt-2 bg-primary hover:bg-primary-dark">
+                    <Plus className="w-4 h-4 mr-2" /> Add First Subject
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            <Card className="shadow-sm border-border">
+              <CardHeader className="bg-muted/30 border-b border-border/50 pb-4">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-primary" /> Key Details
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-5">
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="space-y-1">
+              <CardContent className="space-y-6 pt-6">
+                <div className="grid grid-cols-1 gap-6">
+                  <div className="space-y-1.5">
                     <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Sequence Order</p>
-                    <p className="text-sm font-medium">{level.order}</p>
+                    <p className="text-base font-medium flex items-center gap-2">
+                      <span className="w-6 h-6 rounded bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">{level.order}</span>
+                      Level {level.order}
+                    </p>
                   </div>
 
                   {level.course_type_display && (
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Course Type</p>
-                      <p className="text-sm font-medium capitalize">{level.course_type_display}</p>
+                      <Badge variant="outline" className="text-sm font-medium capitalize py-1">
+                        {level.course_type_display}
+                      </Badge>
                     </div>
                   )}
 
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5" /> Duration
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                      <Clock className="w-4 h-4 text-primary" /> Duration
                     </p>
-                    <p className="text-sm font-medium">{level.duration_months ?? 0} Months</p>
+                    <p className="text-base font-medium">{level.duration_months ?? 0} Months</p>
                   </div>
 
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold flex items-center gap-1">
-                      <Wallet className="w-3.5 h-3.5" /> Fee Amount
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                      <Wallet className="w-4 h-4 text-primary" /> Fee Amount
                     </p>
-                    <p className="text-sm font-medium">₹{Number(level.fee_amount || 0).toLocaleString("en-IN")}</p>
+                    <p className="text-2xl font-bold text-text-primary tracking-tight">₹{Number(level.fee_amount || 0).toLocaleString("en-IN")}</p>
                   </div>
                 </div>
               </CardContent>

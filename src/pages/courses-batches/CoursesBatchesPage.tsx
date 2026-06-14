@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Plus } from "lucide-react";
 
 import PageHeader from "@/components/layout/PageHeader";
@@ -12,18 +12,26 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/store";
-import { courseAction, batchAction } from "@/redux/actions";
+import { courseAction, batchAction, ClassroomAction } from "@/redux/actions";
 import {
   setCourses,
   setCoursesLoading,
   setCoursesError,
   addCourseToList,
 } from "@/redux/slices/coursesSlice";
+import {
+  setClassrooms,
+  addClassroom,
+  updateClassroom,
+  deleteClassroom,
+} from "@/redux/slices/classroomSlice";
 import { API } from "@/service/api";
 
 import CoursesTab from "./components/CoursesTab";
 import CourseSheet from "./components/CourseSheet";
 import BatchesTab from "./components/BatchesTab";
+import ClassroomTab from "./components/ClassroomTab";
+import ClassroomSheet from "./components/ClassroomSheet";
 import LevelsTab from "./components/LevelsTab";
 import BatchDetailsSheet, { SheetMode } from "./components/BatchDetailsModal";
 
@@ -44,7 +52,15 @@ export default function CoursesBatchesPage() {
     setPageTitle("Courses & Batches");
   }, [setPageTitle]);
 
-  const [activeSubTab, setActiveSubTab] = useState("courses");
+  const [params, setParams] = useSearchParams();
+  const activeSubTab = params.get("tab") || "courses";
+
+  const setActiveSubTab = (tab: string) => {
+    setParams((prev) => {
+      prev.set("tab", tab);
+      return prev;
+    }, { replace: true });
+  };
   const [courseSheetOpen, setCourseSheetOpen] = useState(false);
   const [courseUpdateLoading, setCourseUpdateLoading] = useState(false);
 
@@ -52,6 +68,101 @@ export default function CoursesBatchesPage() {
   const [batches, setBatches] = useState<any[]>([]);
   const [batchesLoading, setBatchesLoading] = useState(false);
   const [batchesError, setBatchesError] = useState<string | null>(null);
+
+  // Classroom States
+  const { classrooms, isLoading: classroomsLoading } = useSelector((state: RootState) => state.classRoom);
+  const [classroomSheetOpen, setClassroomSheetOpen] = useState(false);
+  const [classroomUpdateLoading, setClassroomUpdateLoading] = useState(false);
+  const [editingClassroom, setEditingClassroom] = useState<any>(null);
+  const [classroomDeleteConfirmOpen, setClassroomDeleteConfirmOpen] = useState(false);
+  const [classroomToDelete, setClassroomToDelete] = useState<any>(null);
+
+  useEffect(() => {
+    if (activeSubTab === "classrooms") {
+      dispatch({
+        type: ClassroomAction.GET_CLASSROOMS,
+        method: "GET",
+        endPoint: "/api/v1/classrooms/",
+        auth: true,
+        setLoading: (val: boolean) => dispatch({ type: "classRoom/setIsLoading", payload: val }),
+        getResponse: (res: any) => {
+          if (res?.data) {
+            dispatch(setClassrooms(Array.isArray(res.data) ? res.data : []));
+          } else if (Array.isArray(res)) {
+            dispatch(setClassrooms(res));
+          }
+        },
+      });
+    }
+  }, [dispatch, activeSubTab]);
+
+  function handleSaveClassroom(form: { name: string; capacity: number; is_active: boolean }) {
+    if (editingClassroom) {
+      dispatch({
+        type: ClassroomAction.UPDATE_CLASSROOMS,
+        method: "PATCH",
+        endPoint: `/api/v1/classrooms/${editingClassroom.id}/`,
+        body: form,
+        auth: true,
+        setLoading: (val: boolean) => setClassroomUpdateLoading(val),
+        getResponse: (res: any) => {
+          const updated = res?.data ?? res;
+          dispatch(updateClassroom(updated));
+          toast.success("Classroom updated successfully.");
+          setClassroomSheetOpen(false);
+          setEditingClassroom(null);
+        },
+        getError: (err: any) => {
+          const msg = err?.response?.data?.message || err?.message || "Failed to update classroom";
+          toast.error(msg);
+        },
+      });
+    } else {
+      dispatch({
+        type: ClassroomAction.CREATE_CLASSROOMS,
+        method: "POST",
+        endPoint: "/api/v1/classrooms/",
+        body: form,
+        auth: true,
+        setLoading: (val: boolean) => setClassroomUpdateLoading(val),
+        getResponse: (res: any) => {
+          const created = res?.data ?? res;
+          if (created?.id) {
+            dispatch(addClassroom(created));
+            toast.success("Classroom created successfully.");
+            setClassroomSheetOpen(false);
+          } else {
+            toast.error("Unexpected response from server.");
+          }
+        },
+        getError: (err: any) => {
+          const msg = err?.response?.data?.message || err?.message || "Failed to create classroom";
+          toast.error(msg);
+        },
+      });
+    }
+  }
+
+  function handleDeleteClassroom() {
+    if (!classroomToDelete) return;
+    dispatch({
+      type: ClassroomAction.DELETE_CLASSROOMS,
+      method: "DELETE",
+      endPoint: `/api/v1/classrooms/${classroomToDelete.id}/`,
+      auth: true,
+      getResponse: () => {
+        dispatch(deleteClassroom(classroomToDelete.id));
+        toast.success("Classroom deleted successfully.");
+        setClassroomDeleteConfirmOpen(false);
+        setClassroomSheetOpen(false);
+        setEditingClassroom(null);
+      },
+      getError: (err: any) => {
+        const msg = err?.response?.data?.message || err?.message || "Failed to delete classroom";
+        toast.error(msg);
+      },
+    });
+  }
 
   // Unified Sheet State
   const [sheetMode, setSheetMode] = useState<SheetMode>(null);
@@ -399,6 +510,17 @@ export default function CoursesBatchesPage() {
             >
               <Plus className="w-4 h-4" /> Add Batch
             </Button>
+          ) : activeSubTab === "classrooms" && canEdit ? (
+            <Button
+              variant="outline"
+              className="bg-primary hover:bg-primary-dark text-primary-foreground"
+              onClick={() => {
+                setEditingClassroom(null);
+                setClassroomSheetOpen(true);
+              }}
+            >
+              <Plus className="w-4 h-4" /> Add Classroom
+            </Button>
           ) : activeSubTab === "courses" && canEdit ? (
             <Button
               variant="outline"
@@ -417,6 +539,7 @@ export default function CoursesBatchesPage() {
             <TabsTrigger value="courses">Courses</TabsTrigger>
             <TabsTrigger value="levels">Levels</TabsTrigger>
             <TabsTrigger value="batches">Batches</TabsTrigger>
+            <TabsTrigger value="classrooms">Classrooms</TabsTrigger>
           </TabsList>
 
           <TabsContent value="courses" className="mt-0">
@@ -455,6 +578,26 @@ export default function CoursesBatchesPage() {
 
           <TabsContent value="levels" className="mt-0">
             <LevelsTab />
+          </TabsContent>
+
+          <TabsContent value="classrooms" className="mt-0">
+            <ClassroomTab
+              classrooms={classrooms}
+              loading={classroomsLoading}
+              canEdit={!!canEdit}
+              onAddClassroomClick={() => {
+                setEditingClassroom(null);
+                setClassroomSheetOpen(true);
+              }}
+              onEditClassroomClick={(c) => {
+                setEditingClassroom(c);
+                setClassroomSheetOpen(true);
+              }}
+              onDeleteClassroomClick={(c) => {
+                setClassroomToDelete(c);
+                setClassroomDeleteConfirmOpen(true);
+              }}
+            />
           </TabsContent>
 
           <TabsContent value="batches" className="mt-0">
@@ -510,6 +653,29 @@ export default function CoursesBatchesPage() {
         description="This action cannot be undone. All timetable scheduling slots for this batch will be lost."
         confirmLabel="Delete"
         onConfirm={handleDeleteBatch}
+      />
+      <ClassroomSheet
+        open={classroomSheetOpen}
+        onOpenChange={(isOpen) => {
+          setClassroomSheetOpen(isOpen);
+          if (!isOpen) setEditingClassroom(null);
+        }}
+        loading={classroomUpdateLoading}
+        classroom={editingClassroom}
+        onSave={handleSaveClassroom}
+        onDelete={() => {
+          setClassroomToDelete(editingClassroom);
+          setClassroomDeleteConfirmOpen(true);
+        }}
+      />
+
+      <ConfirmDialog
+        open={classroomDeleteConfirmOpen}
+        onOpenChange={setClassroomDeleteConfirmOpen}
+        title={`Delete "${classroomToDelete?.name}"?`}
+        description="This action cannot be undone. All timetable scheduling slots for this classroom will be affected."
+        confirmLabel="Delete"
+        onConfirm={handleDeleteClassroom}
       />
     </div>
   );

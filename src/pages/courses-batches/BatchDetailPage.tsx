@@ -384,7 +384,7 @@ export default function BatchDetailPage() {
       auth: true,
       getResponse: () => {
         toast.success("Batch deleted successfully.");
-        navigate("/courses-batches");
+        navigate(-1);
       },
       getError: (err: any) => {
         const msg = err?.response?.data?.message || err?.message || "Failed to delete batch";
@@ -408,7 +408,7 @@ export default function BatchDetailPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate("/courses-batches")}
+            onClick={() => navigate(-1)}
             className="rounded-full border border-border"
           >
             <ArrowLeft className="w-5 h-5" />

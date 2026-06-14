@@ -36,10 +36,17 @@ import SuperAdminDashboard from "../dashboard/SuperAdminDashboard";
 export default function StudentsPage() {
   const { setPageTitle } = useUI();
   const { user } = useAuth();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
 
-  const [activeTab, setActiveTab] = useState("admissions");
+  const activeTab = params.get("tab") || "admissions";
   const [addOpen, setAddOpen] = useState(false);
+
+  const setActiveTab = (tab: string) => {
+    setParams((prev) => {
+      prev.set("tab", tab);
+      return prev;
+    }, { replace: true });
+  };
 
   const canManage = user && !["student", "parent", "faculty"].includes(user.role);
 
