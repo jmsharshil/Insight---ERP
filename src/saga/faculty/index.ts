@@ -12,4 +12,6 @@ export function* watchFacultySaga() {
   yield takeLatest(facultyAction.GET_PAYROLL_DETAILS, genericSaga);
   yield takeLatest(facultyAction.GET_PAYROLL_LATE_POLICY, genericSaga);
   yield takeLatest(facultyAction.CREATE_PAYROLL_LATE_POLICY, genericSaga);
+  yield takeLatest(facultyAction.GET_SESSIONS, genericSaga);
+  yield takeLatest(facultyAction.CREATE_SESSIONS, genericSaga);
 }

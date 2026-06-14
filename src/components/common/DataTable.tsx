@@ -29,6 +29,7 @@ interface DataTableProps<T> {
   pageSize?: number;
   emptyTitle?: string;
   onRowClick?: (row: T) => void;
+  loading?: boolean;
 }
 
 export default function DataTable<T extends Record<string, any>>({

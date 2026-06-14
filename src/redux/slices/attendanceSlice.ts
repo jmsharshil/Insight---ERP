@@ -58,14 +58,17 @@ export interface StudentDetail {
 }
 
 export interface HistoryRecord {
+  id: string;
+  student_name: string;
+  roll_number: string;
+  batch_name: string;
+  branch_name: string;
   date: string;
-  check_in_time: string | null;
-  check_out_time: string | null;
-  status: "present" | "absent" | "late";
-  late_status: string;
-  session: string;
-  subject: string;
-  scanner_device: string;
+  status: "present" | "absent" | "late" | "half_day" | "on_leave";
+  status_display: string;
+  checked_in_at: string | null;
+  checked_out_at: string | null;
+  marked_by_name: string;
 }
 
 export interface FacultySummary {

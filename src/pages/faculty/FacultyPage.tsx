@@ -95,6 +95,26 @@ export default function FacultyPage() {
   const [branches, setBranches] = useState<any[]>([]);
   const [branchesLoading, setBranchesLoading] = useState(false);
 
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+
+  const [sessionReportForm, setSessionReportForm] = useState({
+    faculty_id: "",
+    batch_id: "",
+    subject_id: "",
+    session_date: new Date().toISOString().split('T')[0],
+    chapter_covered: "",
+    topics_covered: "",
+    completion_percentage: 100,
+    status: "completed",
+    start_time: "10:00",
+    end_time: "12:00",
+    notes: ""
+  });
+  const [submittingSession, setSubmittingSession] = useState(false);
+  const [chapters, setChapters] = useState<any[]>([]);
+  const [chaptersLoading, setChaptersLoading] = useState(false);
+
   const [latePolicyForm, setLatePolicyForm] = useState({
     branch_id: "",
     grace_period_minutes: 5,
@@ -139,6 +159,29 @@ export default function FacultyPage() {
   useEffect(() => {
     setPageTitle("Faculty & Payroll");
   }, [setPageTitle]);
+
+  useEffect(() => {
+    if (activeTab === "sessions") {
+      setSessionsLoading(true);
+      dispatch({
+        type: facultyAction.GET_SESSIONS,
+        method: "GET",
+        endPoint: "/api/v1/faculty/sessions/",
+        auth: true,
+        getResponse: (res: any) => {
+          const list = res?.data || res?.results || res;
+          if (Array.isArray(list)) {
+            setSessions(list);
+          }
+          setSessionsLoading(false);
+        },
+        getError: () => {
+          toast.error("Failed to load sessions");
+          setSessionsLoading(false);
+        }
+      } as any);
+    }
+  }, [activeTab, dispatch, toast]);
 
   useEffect(() => {
     if (canPayroll) {
@@ -291,10 +334,70 @@ export default function FacultyPage() {
   };
 
   useEffect(() => {
-    if (assignModalOpen) {
+    if (assignModalOpen || sessionDialogOpen) {
       fetchDropdowns();
     }
-  }, [assignModalOpen]);
+  }, [assignModalOpen, sessionDialogOpen]);
+
+  useEffect(() => {
+    if (sessionReportForm.subject_id && subjects.length > 0) {
+      const selectedSubj = subjects.find(s => s.id === sessionReportForm.subject_id);
+      if (selectedSubj && Array.isArray(selectedSubj.chapters)) {
+        setChapters(selectedSubj.chapters);
+      } else {
+        setChapters([]);
+      }
+    } else {
+      setChapters([]);
+    }
+  }, [sessionReportForm.subject_id, subjects]);
+
+  const handleSubmitSessionReport = () => {
+    if (!sessionReportForm.batch_id || !sessionReportForm.subject_id) {
+      toast.error("Batch and Subject are required.");
+      return;
+    }
+    if (!sessionReportForm.faculty_id && !isFaculty) {
+      toast.error("Faculty is required.");
+      return;
+    }
+    setSubmittingSession(true);
+    const start_time = sessionReportForm.start_time.length === 5 ? `${sessionReportForm.start_time}:00` : sessionReportForm.start_time;
+    const end_time = sessionReportForm.end_time.length === 5 ? `${sessionReportForm.end_time}:00` : sessionReportForm.end_time;
+
+    dispatch({
+      type: facultyAction.CREATE_SESSIONS,
+      method: "POST",
+      endPoint: "/api/v1/faculty/sessions/",
+      body: {
+        ...sessionReportForm,
+        start_time,
+        end_time
+      },
+      auth: true,
+      getResponse: () => {
+        toast.success("Session report submitted successfully.");
+        setSessionDialogOpen(false);
+        setSubmittingSession(false);
+        if (activeTab === "sessions") {
+          dispatch({
+            type: dropdownActions.GET_DROPDOWN,
+            method: "GET",
+            endPoint: "/api/v1/faculty/sessions/",
+            auth: true,
+            getResponse: (res: any) => {
+              const list = res?.data || res?.results || res;
+              if (Array.isArray(list)) setSessions(list);
+            }
+          } as any);
+        }
+      },
+      getError: (err: any) => {
+        toast.error(err?.response?.data?.message || "Failed to submit session report");
+        setSubmittingSession(false);
+      }
+    } as any);
+  };
 
   const fetchFacultyDetails = (id: string) => {
     dispatch({
@@ -545,54 +648,24 @@ export default function FacultyPage() {
           title="My Faculty Hub"
           subtitle="Attendance, sessions, leave and payroll in one place"
           actions={
-            <Dialog open={sessionDialogOpen} onOpenChange={setSessionDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="w-4 h-4 mr-1.5" /> Submit Session Report
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>New Session Report</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-3">
-                  <div>
-                    <Label>Batch</Label>
-                    <Input placeholder="JEE-A1" />
-                  </div>
-                  <div>
-                    <Label>Subject</Label>
-                    <Input placeholder="Physics" />
-                  </div>
-                  <div>
-                    <Label>Topic</Label>
-                    <Input placeholder="Newton's Laws" />
-                  </div>
-                  <div>
-                    <Label>Chapter</Label>
-                    <Input placeholder="Ch 5" />
-                  </div>
-                  <div>
-                    <Label>Completion %</Label>
-                    <Input type="number" defaultValue={100} />
-                  </div>
-                  <div>
-                    <Label>Remarks</Label>
-                    <Textarea placeholder="Any notes..." />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    onClick={() => {
-                      setSessionDialogOpen(false);
-                      toast.success("Session report submitted.");
-                    }}
-                  >
-                    Submit
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <Button onClick={() => {
+              setSessionReportForm({
+                faculty_id: isFaculty ? (user?.id || "") : "",
+                batch_id: "",
+                subject_id: "",
+                session_date: new Date().toISOString().split('T')[0],
+                chapter_covered: "",
+                topics_covered: "",
+                completion_percentage: 100,
+                status: "completed",
+                start_time: "10:00",
+                end_time: "12:00",
+                notes: ""
+              });
+              setSessionDialogOpen(true);
+            }}>
+              <Plus className="w-4 h-4 mr-1.5" /> Submit Session Report
+            </Button>
           }
         />
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -647,18 +720,49 @@ export default function FacultyPage() {
           </TabsContent>
           <TabsContent value="sessions" className="mt-4">
             <DataTable
-              data={myReports}
+              data={sessions}
+              loading={sessionsLoading}
               columns={[
-                { key: "date", header: "Date" },
-                { key: "batch", header: "Batch" },
-                { key: "subject", header: "Subject" },
-                { key: "topic", header: "Topic" },
-                {
-                  key: "completionPercent",
-                  header: "%",
-                  render: (r: any) => `${r.completionPercent}%`,
+                { 
+                  key: "date", 
+                  header: "Date",
+                  render: (r: any) => r.session_date ? new Date(r.session_date).toLocaleDateString() : (r.date ? new Date(r.date).toLocaleDateString() : "—")
                 },
-                { key: "remarks", header: "Remarks" },
+                { 
+                  key: "batch", 
+                  header: "Batch",
+                  render: (r: any) => r.batch_name || r.batch?.name || r.batch || "—"
+                },
+                { 
+                  key: "subject", 
+                  header: "Subject",
+                  render: (r: any) => r.subject_name || r.subject?.name || r.subject || "—"
+                },
+                { 
+                  key: "chapter", 
+                  header: "Chapter",
+                  render: (r: any) => r.chapter_covered || r.chapter || "—"
+                },
+                { 
+                  key: "topic", 
+                  header: "Topic",
+                  render: (r: any) => r.topics_covered || r.topic || "—"
+                },
+                { 
+                  key: "time", 
+                  header: "Time",
+                  render: (r: any) => r.start_time && r.end_time ? `${r.start_time.substring(0, 5)} - ${r.end_time.substring(0, 5)}` : "—"
+                },
+                {
+                  key: "completion",
+                  header: "%",
+                  render: (r: any) => `${r.completion_percentage || r.completionPercent || 0}%`,
+                },
+                { 
+                  key: "status", 
+                  header: "Status",
+                  render: (r: any) => <Badge variant={r.status === "completed" ? "default" : "secondary"} className="capitalize">{r.status_display || r.status?.replace("_", " ") || "—"}</Badge> 
+                },
               ]}
             />
           </TabsContent>
@@ -830,21 +934,81 @@ export default function FacultyPage() {
         </TabsContent>
 
         <TabsContent value="sessions" className="mt-4">
+          <div className="flex justify-end mb-4">
+            <Button onClick={() => {
+              setSessionReportForm({
+                faculty_id: isFaculty ? (user?.id || "") : "",
+                batch_id: "",
+                subject_id: "",
+                session_date: new Date().toISOString().split('T')[0],
+                chapter_covered: "",
+                topics_covered: "",
+                completion_percentage: 100,
+                status: "completed",
+                start_time: "10:00",
+                end_time: "12:00",
+                notes: ""
+              });
+              setSessionDialogOpen(true);
+            }}>
+              <Plus className="w-4 h-4 mr-1.5" /> Submit Session Report
+            </Button>
+          </div>
           <DataTable
             exportable
-            data={[]}
+            data={sessions}
+            loading={sessionsLoading}
             columns={[
-              { key: "date", header: "Date" },
-              { key: "facultyId", header: "Faculty" },
-              { key: "batch", header: "Batch" },
-              { key: "subject", header: "Subject" },
-              { key: "topic", header: "Topic" },
-              {
-                key: "completionPercent",
-                header: "%",
-                render: (r: any) => `${r.completionPercent}%`,
+              { 
+                key: "date", 
+                header: "Date",
+                render: (r: any) => r.session_date ? new Date(r.session_date).toLocaleDateString() : (r.date ? new Date(r.date).toLocaleDateString() : "—")
               },
-              { key: "remarks", header: "Remarks" },
+              { 
+                key: "faculty", 
+                header: "Faculty",
+                render: (r: any) => r.faculty_name || r.faculty?.full_name || r.facultyId || "—"
+              },
+              { 
+                key: "batch", 
+                header: "Batch",
+                render: (r: any) => r.batch_name || r.batch?.name || r.batch || "—"
+              },
+              { 
+                key: "subject", 
+                header: "Subject",
+                render: (r: any) => r.subject_name || r.subject?.name || r.subject || "—"
+              },
+              { 
+                key: "chapter", 
+                header: "Chapter",
+                render: (r: any) => r.chapter_covered || r.chapter || "—"
+              },
+              { 
+                key: "topic", 
+                header: "Topic",
+                render: (r: any) => r.topics_covered || r.topic || "—"
+              },
+              { 
+                key: "time", 
+                header: "Time",
+                render: (r: any) => r.start_time && r.end_time ? `${r.start_time.substring(0, 5)} - ${r.end_time.substring(0, 5)}` : "—"
+              },
+              {
+                key: "completion",
+                header: "%",
+                render: (r: any) => `${r.completion_percentage || r.completionPercent || 0}%`,
+              },
+              { 
+                key: "status", 
+                header: "Status",
+                render: (r: any) => <Badge variant={r.status === "completed" ? "default" : "secondary"} className="capitalize">{r.status_display || r.status?.replace("_", " ") || "—"}</Badge> 
+              },
+              { 
+                key: "notes", 
+                header: "Notes",
+                render: (r: any) => r.notes || r.remarks || "—" 
+              },
             ]}
           />
         </TabsContent>
@@ -1315,6 +1479,99 @@ export default function FacultyPage() {
               className="bg-primary hover:bg-primary-dark"
             >
               {assignLoading ? "Assigning..." : "Assign"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={sessionDialogOpen} onOpenChange={setSessionDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>New Session Report</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto pr-2">
+            {!isFaculty && (
+              <div className="col-span-2 sm:col-span-1 space-y-1">
+                <Label className="text-xs font-semibold uppercase text-muted-foreground">Faculty</Label>
+                <Select value={sessionReportForm.faculty_id} onValueChange={(val) => setSessionReportForm({...sessionReportForm, faculty_id: val})}>
+                  <SelectTrigger><SelectValue placeholder="Select faculty" /></SelectTrigger>
+                  <SelectContent>
+                    {facultyList.map((f: any) => <SelectItem key={f.id} value={f.id}>{f.full_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className="col-span-2 sm:col-span-1 space-y-1">
+              <Label className="text-xs font-semibold uppercase text-muted-foreground">Batch</Label>
+              <Select value={sessionReportForm.batch_id} onValueChange={(val) => setSessionReportForm({...sessionReportForm, batch_id: val})}>
+                <SelectTrigger><SelectValue placeholder="Select batch" /></SelectTrigger>
+                <SelectContent>
+                  {batches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="col-span-2 sm:col-span-1 space-y-1">
+              <Label className="text-xs font-semibold uppercase text-muted-foreground">Subject</Label>
+              <Select value={sessionReportForm.subject_id} onValueChange={(val) => setSessionReportForm({...sessionReportForm, subject_id: val})}>
+                <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
+                <SelectContent>
+                  {subjects.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="col-span-2 sm:col-span-1 space-y-1">
+              <Label className="text-xs font-semibold uppercase text-muted-foreground">Date</Label>
+              <Input type="date" value={sessionReportForm.session_date} onChange={(e) => setSessionReportForm({...sessionReportForm, session_date: e.target.value})} />
+            </div>
+            <div className="col-span-2 sm:col-span-1 space-y-1">
+              <Label className="text-xs font-semibold uppercase text-muted-foreground">Status</Label>
+              <Select value={sessionReportForm.status} onValueChange={(val) => setSessionReportForm({...sessionReportForm, status: val})}>
+                <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="col-span-2 sm:col-span-1 space-y-1">
+              <Label className="text-xs font-semibold uppercase text-muted-foreground">Start Time</Label>
+              <Input type="time" value={sessionReportForm.start_time} onChange={(e) => setSessionReportForm({...sessionReportForm, start_time: e.target.value})} />
+            </div>
+            <div className="col-span-2 sm:col-span-1 space-y-1">
+              <Label className="text-xs font-semibold uppercase text-muted-foreground">End Time</Label>
+              <Input type="time" value={sessionReportForm.end_time} onChange={(e) => setSessionReportForm({...sessionReportForm, end_time: e.target.value})} />
+            </div>
+            <div className="col-span-2 space-y-1">
+              <Label className="text-xs font-semibold uppercase text-muted-foreground">Chapter Covered</Label>
+              <Select value={sessionReportForm.chapter_covered} onValueChange={(val) => setSessionReportForm({...sessionReportForm, chapter_covered: val})}>
+                <SelectTrigger><SelectValue placeholder="Select chapter" /></SelectTrigger>
+                <SelectContent>
+                  {chapters.length === 0 && <SelectItem value="none" disabled>No chapters available</SelectItem>}
+                  {chapters.map((c: any) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="col-span-2 space-y-1">
+              <Label className="text-xs font-semibold uppercase text-muted-foreground">Topics Covered</Label>
+              <Input placeholder="e.g. QuerySet, Filters" value={sessionReportForm.topics_covered} onChange={(e) => setSessionReportForm({...sessionReportForm, topics_covered: e.target.value})} />
+            </div>
+            <div className="col-span-2 space-y-1">
+              <Label className="text-xs font-semibold uppercase text-muted-foreground">Completion %</Label>
+              <Input type="number" min="0" max="100" value={sessionReportForm.completion_percentage} onChange={(e) => setSessionReportForm({...sessionReportForm, completion_percentage: parseInt(e.target.value) || 0})} />
+            </div>
+            <div className="col-span-2 space-y-1">
+              <Label className="text-xs font-semibold uppercase text-muted-foreground">Notes/Remarks</Label>
+              <Textarea placeholder="Any additional notes..." value={sessionReportForm.notes} onChange={(e) => setSessionReportForm({...sessionReportForm, notes: e.target.value})} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSessionDialogOpen(false)} disabled={submittingSession}>Cancel</Button>
+            <Button
+              onClick={handleSubmitSessionReport}
+              disabled={submittingSession}
+              className="bg-primary hover:bg-primary-dark"
+            >
+              {submittingSession ? "Submitting..." : "Submit Report"}
             </Button>
           </DialogFooter>
         </DialogContent>

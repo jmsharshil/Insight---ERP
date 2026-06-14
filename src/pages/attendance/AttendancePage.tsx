@@ -11,6 +11,7 @@ import FacultyTab from "./tabs/FacultyTab";
 import AnalyticsTab from "./tabs/AnalyticsTab";
 import DefaultersTab from "./tabs/DefaultersTab";
 import ViolationsTab from "./tabs/ViolationsTab";
+import RegisterTab from "./tabs/RegisterTab";
 
 export default function AttendancePage() {
   const dispatch = useDispatch();
@@ -98,6 +99,7 @@ export default function AttendancePage() {
         <TabsList className="">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="students">Students</TabsTrigger>
+          <TabsTrigger value="register">Register</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
           <TabsTrigger value="faculty">Faculty</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
@@ -111,6 +113,10 @@ export default function AttendancePage() {
 
         <TabsContent value="students" className="mt-4">
           <StudentsAttendanceTab dropdowns={dropdowns} />
+        </TabsContent>
+
+        <TabsContent value="register" className="mt-4">
+          <RegisterTab dropdowns={dropdowns} />
         </TabsContent>
 
         <TabsContent value="history" className="mt-4">
