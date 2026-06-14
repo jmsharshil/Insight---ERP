@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Plus, List, LayoutGrid, Clock, User, MapPin, BookOpen } from "lucide-react";
+import { useState, useEffect, Fragment } from "react";
+import { Plus, List, LayoutGrid, Clock, User, MapPin, BookOpen, Coffee, Utensils } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -191,7 +191,8 @@ export default function TimetableGridView({
 
             <tbody>
               {SLOT_CODES.map((slot, rowIdx) => (
-                <tr key={slot.code} className={rowIdx % 2 === 0 ? "bg-white" : "bg-muted/5"}>
+                <Fragment key={slot.code}>
+                <tr className={rowIdx % 2 === 0 ? "bg-white" : "bg-muted/5"}>
                   {/* Time column */}
                   <td className="w-[90px] px-3 py-4 border-b border-r border-border text-center">
                     <div className="text-sm font-bold text-foreground">{slot.code}</div>
@@ -287,6 +288,50 @@ export default function TimetableGridView({
                     );
                   })}
                 </tr>
+                {/* Break Indicators */}
+                {slot.code === "P1" && (
+                  <tr>
+                    <td className="border-b border-r border-border text-center bg-muted/20 py-2.5">
+                      <div className="text-[10px] text-muted-foreground font-mono">10:00</div>
+                      <div className="text-[10px] text-muted-foreground font-mono">10:15</div>
+                    </td>
+                    <td colSpan={DAYS.length} className="border-b border-border bg-muted/20 py-2.5">
+                      <div className="flex items-center justify-center gap-2 text-muted-foreground/80">
+                        <Coffee className="w-4 h-4" />
+                        <span className="text-xs font-semibold uppercase tracking-widest">Short Break (15m)</span>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {slot.code === "P2" && (
+                  <tr>
+                    <td className="border-b border-r border-border text-center bg-orange-50/50 py-2.5">
+                      <div className="text-[10px] text-orange-600/70 font-mono">12:15</div>
+                      <div className="text-[10px] text-orange-600/70 font-mono">12:45</div>
+                    </td>
+                    <td colSpan={DAYS.length} className="border-b border-border bg-orange-50/50 py-2.5">
+                      <div className="flex items-center justify-center gap-2 text-orange-600/80">
+                        <Utensils className="w-4 h-4" />
+                        <span className="text-xs font-semibold uppercase tracking-widest">Lunch Break (30m)</span>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {slot.code === "P3" && (
+                  <tr>
+                    <td className="border-b border-r border-border text-center bg-muted/20 py-2.5">
+                      <div className="text-[10px] text-muted-foreground font-mono">14:45</div>
+                      <div className="text-[10px] text-muted-foreground font-mono">15:00</div>
+                    </td>
+                    <td colSpan={DAYS.length} className="border-b border-border bg-muted/20 py-2.5">
+                      <div className="flex items-center justify-center gap-2 text-muted-foreground/80">
+                        <Coffee className="w-4 h-4" />
+                        <span className="text-xs font-semibold uppercase tracking-widest">Short Break (15m)</span>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               ))}
             </tbody>
           </table>

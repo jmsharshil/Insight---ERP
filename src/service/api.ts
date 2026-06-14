@@ -148,6 +148,20 @@ export const API = {
       FACULTY_VIEW:       (facultyId: string) => `/api/v1/timetable/faculty/${facultyId}/`,
       STUDENT_VIEW:       (studentId: string) => `/api/v1/timetable/student/${studentId}/`,
     },
+
+    /** Exams endpoints */
+    EXAMS: {
+      LIST:                     "/api/v1/exams/",
+      DETAIL:                   (id: string) => `/api/v1/exams/${id}/`,
+      QUESTIONS:                (examId: string) => `/api/v1/exams/${examId}/questions/`,
+      QUESTION_DETAIL:          (examId: string, qId: string) => `/api/v1/exams/${examId}/questions/${qId}/`,
+      SEATING:                  (examId: string) => `/api/v1/exams/${examId}/seating/`,
+      SEAT_DETAIL:              (examId: string, seatId: string) => `/api/v1/exams/${examId}/seating/${seatId}/`,
+      DISTRIBUTE_ANSWER_KEY:    (examId: string) => `/api/v1/exams/${examId}/answer-key/distribute/`,
+      ANSWER_KEY_PUBLIC:        (examId: string) => `/api/v1/answer-key/${examId}/`,
+      MALPRACTICE:              (examId: string) => `/api/v1/exams/${examId}/malpractice/`,
+      MALPRACTICE_DETAIL:       (examId: string, rId: string) => `/api/v1/exams/${examId}/malpractice/${rId}/`,
+    },
 } as const;
 
 

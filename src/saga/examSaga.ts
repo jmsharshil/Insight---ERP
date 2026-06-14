@@ -1,0 +1,23 @@
+import { takeLatest } from "redux-saga/effects";
+import { examActions } from "@/redux/actions";
+import { genericSaga } from "@/saga/createGenericSaga/genericSaga";
+
+export function* watchExamSaga() {
+  yield takeLatest(examActions.GET_EXAMS, genericSaga);
+  yield takeLatest(examActions.GET_EXAM_DETAIL, genericSaga);
+  yield takeLatest(examActions.UPDATE_EXAM, genericSaga);
+  yield takeLatest(examActions.DELETE_EXAM, genericSaga);
+  yield takeLatest(examActions.GET_QUESTIONS, genericSaga);
+  yield takeLatest(examActions.ADD_QUESTIONS, genericSaga);
+  yield takeLatest(examActions.UPDATE_QUESTION, genericSaga);
+  yield takeLatest(examActions.DELETE_QUESTION, genericSaga);
+  yield takeLatest(examActions.GET_SEATING, genericSaga);
+  yield takeLatest(examActions.ASSIGN_SEATING, genericSaga);
+  yield takeLatest(examActions.UPDATE_SEAT, genericSaga);
+  yield takeLatest(examActions.DELETE_SEAT, genericSaga);
+  yield takeLatest(examActions.DISTRIBUTE_ANSWER_KEY, genericSaga);
+  yield takeLatest(examActions.GET_MALPRACTICE, genericSaga);
+  yield takeLatest(examActions.REPORT_MALPRACTICE, genericSaga);
+  yield takeLatest(examActions.UPDATE_MALPRACTICE, genericSaga);
+  yield takeLatest(examActions.DELETE_MALPRACTICE, genericSaga);
+}

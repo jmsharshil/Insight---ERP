@@ -215,12 +215,12 @@ export default function TimetablePage() {
             />
           </TabsContent>
 
-          <TabsContent value="exam_types" className="mt-0">
-            <ExamTypesTab />
-          </TabsContent>
 
           <TabsContent value="personal" className="mt-0">
             <PersonalTimetableTab />
+          </TabsContent>
+          <TabsContent value="exam_types" className="mt-0">
+            <ExamTypesTab />
           </TabsContent>
         </Tabs>
       </motion.div>

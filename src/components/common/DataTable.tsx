@@ -37,7 +37,7 @@ export default function DataTable<T extends Record<string, any>>({
   data,
   searchable = true,
   exportable = false,
-  pageSize = 10,
+  pageSize = 50,
   emptyTitle = "No records found",
   onRowClick,
 }: DataTableProps<T>) {

@@ -18,6 +18,7 @@ interface KanbanBoardProps {
   leads: APILead[];
   leadsLoading: boolean;
   stages: LeadStatus[];
+  
   onDragEnd: (result: DropResult) => void;
   onView: (lead: APILead) => void;
 }
