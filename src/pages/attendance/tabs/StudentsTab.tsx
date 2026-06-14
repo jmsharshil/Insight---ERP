@@ -45,6 +45,18 @@ export default function StudentsAttendanceTab({ dropdowns }: { dropdowns?: any }
     late_entries: "", active_violations: "",
   });
 
+  const filteredBatches = filters.branch_id && filters.branch_id !== "all"
+    ? batches.filter((b: any) => b.branch === filters.branch_id || b.branch_id === filters.branch_id)
+    : batches;
+
+  useEffect(() => {
+    if (filters.batch_id && filters.batch_id !== "all" && filters.branch_id && filters.branch_id !== "all") {
+       if (!filteredBatches.find((b: any) => b.id === filters.batch_id)) {
+         setFilters(prev => ({ ...prev, batch_id: "" }));
+       }
+    }
+  }, [filters.branch_id, batches]);
+
   const fetchStudents = () => {
     const q = buildQuery(filters);
     dispatch({
@@ -96,7 +108,7 @@ export default function StudentsAttendanceTab({ dropdowns }: { dropdowns?: any }
             <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Batch" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Batches</SelectItem>
-              {batches?.map((b: any) => (
+              {filteredBatches?.map((b: any) => (
                 <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
               ))}
             </SelectContent>

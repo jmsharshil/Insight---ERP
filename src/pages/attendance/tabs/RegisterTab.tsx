@@ -25,6 +25,16 @@ export default function RegisterTab({ dropdowns }: RegisterTabProps) {
   const [branchId, setBranchId] = useState("");
   const [batchId, setBatchId] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+
+  const filteredBatches = branchId 
+    ? batches.filter((b: any) => b.branch === branchId || b.branch_id === branchId) 
+    : batches;
+
+  useEffect(() => {
+    if (batchId && branchId && !filteredBatches.find((b: any) => b.id === batchId)) {
+      setBatchId("");
+    }
+  }, [branchId, batches]);
   
   const [students, setStudents] = useState<any[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
@@ -159,7 +169,7 @@ export default function RegisterTab({ dropdowns }: RegisterTabProps) {
                 <SelectValue placeholder="Select Batch" />
               </SelectTrigger>
               <SelectContent>
-                {batches.map((b: any) => (
+                {filteredBatches.map((b: any) => (
                   <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                 ))}
               </SelectContent>

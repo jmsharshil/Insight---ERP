@@ -32,8 +32,20 @@ export default function HistoryTab({ dropdowns }: { dropdowns?: any }) {
   const facultyList = dropdowns?.faculty || [];
 
   const [f, setF] = useState({
-    student_id: "", batch_id: "", date: "", status: "",
+    student_id: "", branch_id: "", batch_id: "", date: "", status: "",
   });
+
+  const filteredBatches = f.branch_id && f.branch_id !== "all"
+    ? batches.filter((b: any) => b.branch === f.branch_id || b.branch_id === f.branch_id)
+    : batches;
+
+  useEffect(() => {
+    if (f.batch_id && f.batch_id !== "all" && f.branch_id && f.branch_id !== "all") {
+       if (!filteredBatches.find((b: any) => b.id === f.batch_id)) {
+         setF(prev => ({ ...prev, batch_id: "" }));
+       }
+    }
+  }, [f.branch_id, batches]);
 
   const fetch = () => {
     const p = new URLSearchParams();
@@ -54,7 +66,7 @@ export default function HistoryTab({ dropdowns }: { dropdowns?: any }) {
 
   useEffect(() => { fetch(); }, []);
 
-  const clear = () => setF({ student_id: "", batch_id: "", date: "", status: "" });
+  const clear = () => setF({ student_id: "", branch_id: "", batch_id: "", date: "", status: "" });
 
   return (
     <div className="space-y-4">
@@ -83,7 +95,7 @@ export default function HistoryTab({ dropdowns }: { dropdowns?: any }) {
             <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Batch" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Batches</SelectItem>
-              {batches.map((b: any) => (
+              {filteredBatches.map((b: any) => (
                 <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
               ))}
             </SelectContent>
