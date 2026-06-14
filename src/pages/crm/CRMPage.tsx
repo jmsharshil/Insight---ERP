@@ -332,17 +332,18 @@ export default function CRMPage() {
           {leadsLoading ? (
             <TableSkeleton rows={10} columns={8} className="mt-3" />
           ) : (
-            <LeadsTable
-              leads={leads}
-              onView={(lead) => {
-                setSelectedLead(lead);
-                fetchLeadDetails(lead);
-              }}
-              onChangeStage={(lead, stage) => {
-                setPendingMove({ leadId: String(lead.id), stage });
-              }}
-            />
-          )}
+          <LeadsTable
+            leads={leads}
+            onView={(lead) => {
+              setSelectedLead(lead);
+              fetchLeadDetails(lead);
+            }}
+            onChangeStage={(lead, stage) => {
+              setPendingMove({ leadId: String(lead.id), stage });
+            }}
+            onAssignSuccess={() => fetchLeads()}
+          />
+        )}
         </TabsContent>
 
         {/* Pipeline (Kanban) */}

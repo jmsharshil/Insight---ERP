@@ -77,6 +77,9 @@ export interface APILead {
   followup_date?:string;
   visit_date?:string;
   reference_display?:string;
+  assigned_to?: string | null;
+  assigned_to_name?: string | null;
+  assigned_by?: string | null;
   
 }
 

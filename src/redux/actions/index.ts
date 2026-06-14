@@ -6,6 +6,7 @@ export const authActions = {
 
 export const userActions = {
   GET_USERS: "GET_USERS",
+  GET_USERS_FOR_ASSIGN: "GET_USERS_FOR_ASSIGN",
   GET_USER_DETAILS: "GET_USER_DETAILS",
   UPDATE_USER: "UPDATE_USER",
   ADD_USER: "ADD_USER",
@@ -21,6 +22,7 @@ export const leadActions = {
   GET_LEAD_DETAILS: "GET_LEAD_DETAILS",
   UPDATE_LEAD_STATUS: "UPDATE_LEAD_STATUS",
   UPDATE_LEAD: "UPDATE_LEAD",
+  ASSIGN_LEAD: "ASSIGN_LEAD",
 } as const;
 
 export const crmActions = {
