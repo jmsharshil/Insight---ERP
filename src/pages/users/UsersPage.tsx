@@ -192,7 +192,6 @@ export default function UsersPage() {
     fetchOptions: fetchBranchOptions,
     loading: branchLoading,
   } = useDropdown("branches", false);
-  console.log("branchOptions", branchOptions);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
@@ -449,7 +448,6 @@ export default function UsersPage() {
     formData.append("email", editForm.email);
     formData.append("phone", editForm.phone);
     formData.append("is_active", String(editForm.is_active));
-    console.log("form data", editForm);
     if (editForm.branch) formData.append("branch", editForm.branch);
     if (profilePicFile) formData.append("profile_pic", profilePicFile);
 

@@ -105,7 +105,10 @@ const filterChildren = (children: React.ReactNode, query: string): React.ReactNo
     }
 
     if ((child.props as { children?: React.ReactNode })?.children) {
-      const filtered = filterChildren((child.props as { children?: React.ReactNode }).children, query);
+      const filtered = filterChildren(
+        (child.props as { children?: React.ReactNode }).children,
+        query,
+      );
       if (React.Children.count(filtered) === 0) {
         return null;
       }
@@ -173,7 +176,9 @@ const SelectContent = React.forwardRef<
           )}
         >
           {visibleItemsCount === 0 ? (
-            <div className="py-2 px-8 text-xs text-muted-foreground text-center">No results found</div>
+            <div className="py-2 px-8 text-xs text-muted-foreground text-center">
+              No results found
+            </div>
           ) : (
             filteredChildren
           )}

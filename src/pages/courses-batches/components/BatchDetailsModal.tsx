@@ -109,7 +109,6 @@ export default function BatchDetailsSheet({
       endPoint: "/api/v1/students/",
       auth: true,
       getResponse: (res: any) => {
-        console.log(res);
         const data = res?.data?.results || res?.results || res?.data?.data || res?.data || res;
         if (Array.isArray(data)) setStudents(data);
       },
@@ -179,7 +178,6 @@ export default function BatchDetailsSheet({
   const isCSEET = selectedLevelName.includes("cseet");
   const isExecutive = selectedLevelName.includes("executive");
   const isProfessional = selectedLevelName.includes("professional");
-  console.log(isProfessional);
 
   useEffect(() => {
     if (!batchForm.course_level) return;

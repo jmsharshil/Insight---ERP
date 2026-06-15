@@ -35,18 +35,6 @@ export default function HistoryTab({ dropdowns }: { dropdowns?: any }) {
     student_id: "", branch_id: "", batch_id: "", date: "", status: "",
   });
 
-  const filteredBatches = f.branch_id && f.branch_id !== "all"
-    ? batches.filter((b: any) => b.branch === f.branch_id || b.branch_id === f.branch_id)
-    : batches;
-
-  useEffect(() => {
-    if (f.batch_id && f.batch_id !== "all" && f.branch_id && f.branch_id !== "all") {
-       if (!filteredBatches.find((b: any) => b.id === f.batch_id)) {
-         setF(prev => ({ ...prev, batch_id: "" }));
-       }
-    }
-  }, [f.branch_id, batches]);
-
   const fetch = () => {
     const p = new URLSearchParams();
     Object.entries(f).forEach(([k, v]) => { if (v) p.set(k, v); });
@@ -73,36 +61,67 @@ export default function HistoryTab({ dropdowns }: { dropdowns?: any }) {
       {/* Filters */}
       <div className="bg-white rounded-xl border border-border p-4 space-y-3">
         <div className="flex flex-wrap gap-3">
-          <Select value={f.student_id} onValueChange={v => setF(p => ({ ...p, student_id: v === "all" ? "" : v }))}>
-            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Select Student" /></SelectTrigger>
+          <Select
+            value={f.student_id}
+            onValueChange={(v) => setF((p) => ({ ...p, student_id: v === "all" ? "" : v }))}
+          >
+            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10">
+              <SelectValue placeholder="Select Student" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Students</SelectItem>
               {studentsList.map((s: any) => (
-                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Select value={f.branch_id} onValueChange={v => setF(p => ({ ...p, branch_id: v === "all" ? "" : v }))}>
-            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Branch" /></SelectTrigger>
+          <Select
+            value={f.branch_id}
+            onValueChange={(v) => setF((p) => ({ ...p, branch_id: v === "all" ? "" : v }))}
+          >
+            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10">
+              <SelectValue placeholder="Branch" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Branches</SelectItem>
               {branches.map((b: any) => (
-                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                <SelectItem key={b.id} value={b.id}>
+                  {b.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Select value={f.batch_id} onValueChange={v => setF(p => ({ ...p, batch_id: v === "all" ? "" : v }))}>
-            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Batch" /></SelectTrigger>
+          <Select
+            value={f.batch_id}
+            onValueChange={(v) => setF((p) => ({ ...p, batch_id: v === "all" ? "" : v }))}
+          >
+            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10">
+              <SelectValue placeholder="Batch" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Batches</SelectItem>
-              {filteredBatches.map((b: any) => (
-                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+              {batches?.map((b: any) => (
+                <SelectItem key={b.id} value={b.id}>
+                  {b.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Input type="date" className="h-9 text-sm w-40" value={f.date} onChange={e => setF(p => ({ ...p, date: e.target.value }))} />
-          <Select value={f.status} onValueChange={v => setF(p => ({ ...p, status: v === "all" ? "" : v }))}>
-            <SelectTrigger className="h-9 text-sm w-36"><SelectValue placeholder="Status" /></SelectTrigger>
+          <Input
+            type="date"
+            className="h-9 text-sm w-40"
+            value={f.date}
+            onChange={(e) => setF((p) => ({ ...p, date: e.target.value }))}
+          />
+          <Select
+            value={f.status}
+            onValueChange={(v) => setF((p) => ({ ...p, status: v === "all" ? "" : v }))}
+          >
+            <SelectTrigger className="h-9 text-sm w-36">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="present">Present</SelectItem>
@@ -112,12 +131,22 @@ export default function HistoryTab({ dropdowns }: { dropdowns?: any }) {
               <SelectItem value="on_leave">On Leave</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={fetch} className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm">Apply</Button>
-          <Button variant="outline" className="h-9 text-sm" onClick={clear}><X className="w-3 h-3 mr-1" />Clear</Button>
+          <Button
+            onClick={fetch}
+            className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm"
+          >
+            Apply
+          </Button>
+          <Button variant="outline" className="h-9 text-sm" onClick={clear}>
+            <X className="w-3 h-3 mr-1" />
+            Clear
+          </Button>
         </div>
       </div>
 
-      {historyLoading ? <TableSkeleton columns={7} rows={8} className="mt-0" /> : (
+      {historyLoading ? (
+        <TableSkeleton columns={7} rows={8} className="mt-0" />
+      ) : (
         <div className="bg-white rounded-xl border border-border overflow-hidden">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <span className="text-sm font-medium text-foreground">Attendance History</span>
@@ -125,27 +154,71 @@ export default function HistoryTab({ dropdowns }: { dropdowns?: any }) {
           </div>
           <table className="w-full text-sm">
             <thead className="bg-muted/40">
-              <tr>{["Student", "Roll Number", "Batch", "Branch", "Date", "Check-in", "Check-out", "Status", "Marked By"].map(h => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">{h}</th>
-              ))}</tr>
+              <tr>
+                {[
+                  "Student",
+                  "Roll Number",
+                  "Batch",
+                  "Branch",
+                  "Date",
+                  "Check-in",
+                  "Check-out",
+                  "Status",
+                  "Marked By",
+                ].map((h) => (
+                  <th
+                    key={h}
+                    className="px-4 py-3 text-left text-xs font-medium text-muted-foreground"
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
             </thead>
             <tbody>
               {history.length === 0 ? (
-                <tr><td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">No records found.</td></tr>
-              ) : history.map((row, i) => (
-                <motion.tr key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}
-                  className="border-b border-border/50 hover:bg-muted/20 transition-colors">
-                  <td className="px-4 py-3 text-xs font-medium">{row.student_name}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{row.roll_number || "—"}</td>
-                  <td className="px-4 py-3 text-xs">{row.batch_name || "—"}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{row.branch_name || "—"}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{row.date}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{row.checked_in_at ? new Date(row.checked_in_at).toLocaleTimeString() : "—"}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{row.checked_out_at ? new Date(row.checked_out_at).toLocaleTimeString() : "—"}</td>
-                  <td className="px-4 py-3"><Badge className={`text-xs ${STATUS_BADGE[row.status] ?? "bg-gray-100 text-gray-700"}`}>{row.status_display || row.status}</Badge></td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{row.marked_by_name || "—"}</td>
-                </motion.tr>
-              ))}
+                <tr>
+                  <td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">
+                    No records found.
+                  </td>
+                </tr>
+              ) : (
+                history.map((row, i) => (
+                  <motion.tr
+                    key={i}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: i * 0.02 }}
+                    className="border-b border-border/50 hover:bg-muted/20 transition-colors"
+                  >
+                    <td className="px-4 py-3 text-xs font-medium">{row.student_name}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">
+                      {row.roll_number || "—"}
+                    </td>
+                    <td className="px-4 py-3 text-xs">{row.batch_name || "—"}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">
+                      {row.branch_name || "—"}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs">{row.date}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">
+                      {row.checked_in_at ? new Date(row.checked_in_at).toLocaleTimeString() : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">
+                      {row.checked_out_at ? new Date(row.checked_out_at).toLocaleTimeString() : "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge
+                        className={`text-xs ${STATUS_BADGE[row.status] ?? "bg-gray-100 text-gray-700"}`}
+                      >
+                        {row.status_display || row.status}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">
+                      {row.marked_by_name || "—"}
+                    </td>
+                  </motion.tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

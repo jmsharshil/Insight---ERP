@@ -28,18 +28,6 @@ export default function DefaultersTab({ dropdowns }: { dropdowns?: any }) {
     min_violations: "",
   });
 
-  const filteredBatches = filters.branch_id && filters.branch_id !== "all"
-    ? batches.filter((b: any) => b.branch === filters.branch_id || b.branch_id === filters.branch_id)
-    : batches;
-
-  useEffect(() => {
-    if (filters.batch_id && filters.batch_id !== "all" && filters.branch_id && filters.branch_id !== "all") {
-       if (!filteredBatches.find((b: any) => b.id === filters.batch_id)) {
-         setFilters(prev => ({ ...prev, batch_id: "" }));
-       }
-    }
-  }, [filters.branch_id, batches]);
-
   const fetchDefaulters = () => {
     const p = new URLSearchParams();
     Object.entries(filters).forEach(([k, v]) => { if (v) p.set(k, v); });
@@ -66,43 +54,90 @@ export default function DefaultersTab({ dropdowns }: { dropdowns?: any }) {
       <div className="bg-white rounded-xl border border-border p-4 flex flex-wrap gap-3 items-end">
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">Branch</Label>
-          <Select value={filters.branch_id} onValueChange={v => setFilters(f => ({ ...f, branch_id: v === "all" ? "" : v }))}>
-            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Branch" /></SelectTrigger>
+          <Select
+            value={filters.branch_id}
+            onValueChange={(v) => setFilters((f) => ({ ...f, branch_id: v === "all" ? "" : v }))}
+          >
+            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10">
+              <SelectValue placeholder="Branch" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Branches</SelectItem>
               {branches.map((b: any) => (
-                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                <SelectItem key={b.id} value={b.id}>
+                  {b.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">Batch</Label>
-          <Select value={filters.batch_id} onValueChange={v => setFilters(f => ({ ...f, batch_id: v === "all" ? "" : v }))}>
-            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Batch" /></SelectTrigger>
+          <Select
+            value={filters.batch_id}
+            onValueChange={(v) => setFilters((f) => ({ ...f, batch_id: v === "all" ? "" : v }))}
+          >
+            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10">
+              <SelectValue placeholder="Batch" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Batches</SelectItem>
-              {filteredBatches.map((b: any) => (
-                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+              {batches?.map((b: any) => (
+                <SelectItem key={b.id} value={b.id}>
+                  {b.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">Attendance Below (%)</Label>
-          <Input type="number" placeholder="75" className="h-9 text-sm w-28" value={filters.attendance_percentage_below} onChange={e => setFilters(f => ({ ...f, attendance_percentage_below: e.target.value }))} />
+          <Input
+            type="number"
+            placeholder="75"
+            className="h-9 text-sm w-28"
+            value={filters.attendance_percentage_below}
+            onChange={(e) =>
+              setFilters((f) => ({ ...f, attendance_percentage_below: e.target.value }))
+            }
+          />
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">Min Violations</Label>
-          <Input type="number" placeholder="1" className="h-9 text-sm w-28" value={filters.min_violations} onChange={e => setFilters(f => ({ ...f, min_violations: e.target.value }))} />
+          <Input
+            type="number"
+            placeholder="1"
+            className="h-9 text-sm w-28"
+            value={filters.min_violations}
+            onChange={(e) => setFilters((f) => ({ ...f, min_violations: e.target.value }))}
+          />
         </div>
-        <Button onClick={fetchDefaulters} className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm">Apply</Button>
-        <Button variant="outline" className="h-9 text-sm" onClick={() => setFilters({ branch_id: "", batch_id: "", attendance_percentage_below: "", min_violations: "" })}>
-          <X className="w-3 h-3 mr-1" />Clear
+        <Button
+          onClick={fetchDefaulters}
+          className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm"
+        >
+          Apply
+        </Button>
+        <Button
+          variant="outline"
+          className="h-9 text-sm"
+          onClick={() =>
+            setFilters({
+              branch_id: "",
+              batch_id: "",
+              attendance_percentage_below: "",
+              min_violations: "",
+            })
+          }
+        >
+          <X className="w-3 h-3 mr-1" />
+          Clear
         </Button>
       </div>
 
-      {defaultersLoading ? <TableSkeleton columns={6} rows={6} className="mt-0" /> : (
+      {defaultersLoading ? (
+        <TableSkeleton columns={6} rows={6} className="mt-0" />
+      ) : (
         <div className="bg-white rounded-xl border border-border overflow-hidden">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -114,46 +149,74 @@ export default function DefaultersTab({ dropdowns }: { dropdowns?: any }) {
           <table className="w-full text-sm">
             <thead className="bg-muted/40">
               <tr>
-                {["Student", "Admission No.", "Branch / Batch", "Attendance %", "Active Violations"].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">{h}</th>
+                {[
+                  "Student",
+                  "Admission No.",
+                  "Branch / Batch",
+                  "Attendance %",
+                  "Active Violations",
+                ].map((h) => (
+                  <th
+                    key={h}
+                    className="px-4 py-3 text-left text-xs font-medium text-muted-foreground"
+                  >
+                    {h}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {defaulters.length === 0 ? (
-                <tr><td colSpan={5} className="text-center py-12 text-muted-foreground text-sm">No defaulters found.</td></tr>
-              ) : defaulters.map((d, i) => (
-                <motion.tr key={d.id}
-                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
-                  className="border-b border-border/50 hover:bg-muted/20 transition-colors"
-                >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-600 text-xs font-semibold">
-                        {d.student_profile.name.slice(0, 2).toUpperCase()}
+                <tr>
+                  <td colSpan={5} className="text-center py-12 text-muted-foreground text-sm">
+                    No defaulters found.
+                  </td>
+                </tr>
+              ) : (
+                defaulters.map((d, i) => (
+                  <motion.tr
+                    key={d.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.03 }}
+                    className="border-b border-border/50 hover:bg-muted/20 transition-colors"
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-600 text-xs font-semibold">
+                          {d.student_profile.name.slice(0, 2).toUpperCase()}
+                        </div>
+                        <span className="font-medium text-foreground">
+                          {d.student_profile.name}
+                        </span>
                       </div>
-                      <span className="font-medium text-foreground">{d.student_profile.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{d.student_profile.admission_number}</td>
-                  <td className="px-4 py-3 text-xs">
-                    <div>{d.student_profile.branch_name}</div>
-                    <div className="text-muted-foreground">{d.student_profile.batch_name ?? "—"}</div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge className={`text-xs font-semibold ${pct(d.attendance_percentage)}`}>
-                      {d.attendance_percentage.toFixed(1)}%
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    {d.active_violations > 0 ? (
-                      <Badge className="text-xs bg-red-100 text-red-700 font-semibold">{d.active_violations} violations</Badge>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">None</span>
-                    )}
-                  </td>
-                </motion.tr>
-              ))}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                      {d.student_profile.admission_number}
+                    </td>
+                    <td className="px-4 py-3 text-xs">
+                      <div>{d.student_profile.branch_name}</div>
+                      <div className="text-muted-foreground">
+                        {d.student_profile.batch_name ?? "—"}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge className={`text-xs font-semibold ${pct(d.attendance_percentage)}`}>
+                        {d.attendance_percentage.toFixed(1)}%
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      {d.active_violations > 0 ? (
+                        <Badge className="text-xs bg-red-100 text-red-700 font-semibold">
+                          {d.active_violations} violations
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">None</span>
+                      )}
+                    </td>
+                  </motion.tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

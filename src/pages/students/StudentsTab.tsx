@@ -93,7 +93,6 @@ export default function StudentsTab() {
       auth: true,
       getResponse: (res: any) => {
         const fullStudent = res?.data || res;
-        console.log("Full Student Detail response:", fullStudent);
         if (fullStudent) {
           setSelectedStudent(fullStudent);
         }

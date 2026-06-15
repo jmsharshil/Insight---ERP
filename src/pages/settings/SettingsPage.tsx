@@ -162,7 +162,6 @@ export default function SettingsPage() {
       setLoading: (val: boolean) => setSaving(val),
       getResponse: (res: any) => {
         const updated = res?.id ? res : res?.data;
-        console.log(updated);
         if (updated) {
           dispatch(setProfile(updated));
           dispatch(

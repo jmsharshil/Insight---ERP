@@ -4,7 +4,15 @@ import { feesActions } from "@/redux/actions";
 
 export function* watchFeesSaga() {
     yield takeLatest(feesActions.GET_FEE_STRUCTURES, genericSaga);
-//     yield takeLatest(feesActions.CREATE_FEE_STRUCTURES, genericSaga);
-//     yield takeLatest(feesActions.UPDATE_FEE_STRUCTURES, genericSaga);
-//     yield takeLatest(feesActions.DELETE_FEE_STRUCTURES, genericSaga);
+    yield takeLatest(feesActions.GET_FEE_STRUCTURE_DETAIL, genericSaga);
+    yield takeLatest(feesActions.CREATE_FEE_STRUCTURES, genericSaga);
+    yield takeLatest(feesActions.UPDATE_FEE_STRUCTURES, genericSaga);
+    yield takeLatest(feesActions.DELETE_FEE_STRUCTURES, genericSaga);
+    yield takeLatest(feesActions.GET_STUDENT_FEES, genericSaga);
+    yield takeLatest(feesActions.CREATE_STUDENT_FEE, genericSaga);
+    yield takeLatest(feesActions.GET_STUDENT_FEES_BY_STUDENT, genericSaga);
+    yield takeLatest(feesActions.GET_STUDENT_FEES_SUMMARY, genericSaga);
+    yield takeLatest(feesActions.GET_INSTALLMENTS, genericSaga);
+    yield takeLatest(feesActions.CREATE_INSTALLMENT_PLAN, genericSaga);
+    yield takeLatest(feesActions.APPROVE_INSTALLMENT_PLAN, genericSaga);
 }

@@ -36,18 +36,6 @@ export default function DashboardTab({ dropdowns }: { dropdowns?: any }) {
 
   const [filters, setFilters] = useState({ date: "", branch: "", batch: "", faculty: "" });
 
-  const filteredBatches = filters.branch && filters.branch !== "all"
-    ? batches.filter((b: any) => b.branch === filters.branch || b.branch_id === filters.branch)
-    : batches;
-
-  useEffect(() => {
-    if (filters.batch && filters.batch !== "all" && filters.branch && filters.branch !== "all") {
-       if (!filteredBatches.find((b: any) => b.id === filters.batch)) {
-         setFilters(prev => ({ ...prev, batch: "" }));
-       }
-    }
-  }, [filters.branch, batches]);
-
   const fetchDashboard = () => {
     const params = new URLSearchParams();
     if (filters.date)    params.set("date",    filters.date);
@@ -103,7 +91,7 @@ export default function DashboardTab({ dropdowns }: { dropdowns?: any }) {
             <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Batch" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Batches</SelectItem>
-              {filteredBatches.map((b: any) => (
+              {batches?.map((b: any) => (
                 <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
               ))}
             </SelectContent>

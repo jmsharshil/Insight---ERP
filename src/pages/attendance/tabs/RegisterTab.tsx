@@ -11,6 +11,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CheckCircle2, XCircle, Clock, CalendarDays, HelpCircle } from "lucide-react";
 import { motion } from "framer-motion";
 
+const STATUS_BADGES: Record<string, { label: string; className: string }> = {
+  present: { label: "Present", className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  absent: { label: "Absent", className: "bg-red-50 text-red-700 border-red-200" },
+  late: { label: "Late", className: "bg-amber-50 text-amber-700 border-amber-200" },
+  half_day: { label: "Half Day", className: "bg-blue-50 text-blue-700 border-blue-200" },
+  on_leave: { label: "On Leave", className: "bg-zinc-100 text-zinc-700 border-zinc-200" },
+};
+
 interface RegisterTabProps {
   dropdowns?: any;
 }
@@ -22,19 +30,9 @@ export default function RegisterTab({ dropdowns }: RegisterTabProps) {
   const branches = dropdowns?.branches || [];
   const batches = dropdowns?.batches || [];
 
-  const [branchId, setBranchId] = useState("");
-  const [batchId, setBatchId] = useState("");
+  const [branchId, setBranchId] = useState("all");
+  const [batchId, setBatchId] = useState("all");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-
-  const filteredBatches = branchId 
-    ? batches.filter((b: any) => b.branch === branchId || b.branch_id === branchId) 
-    : batches;
-
-  useEffect(() => {
-    if (batchId && branchId && !filteredBatches.find((b: any) => b.id === batchId)) {
-      setBatchId("");
-    }
-  }, [branchId, batches]);
   
   const [students, setStudents] = useState<any[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
@@ -42,46 +40,52 @@ export default function RegisterTab({ dropdowns }: RegisterTabProps) {
   const [records, setRecords] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
+  const isAllFilter = !branchId || branchId === "all" || !batchId || batchId === "all";
+
   useEffect(() => {
-    if (batchId) {
-      setLoadingStudents(true);
-      dispatch({
-        type: dropdownActions.GET_DROPDOWN,
-        method: "GET",
-        endPoint: API.ATTENDANCE.BATCH_REGISTER(batchId),
-        auth: true,
-        getResponse: (res: any) => {
-          const list = res?.data?.register || res?.register || res?.data?.data?.register;
-          if (Array.isArray(list)) {
-            const formattedList = list.map((item: any) => ({
-              id: item.student_id,
-              name: item.student_name || "Unknown",
-              roll_number: item.roll_number,
-              admission_number: item.admission_number,
-              photo: item.photo,
-              attendance: item.attendance || {}
-            }));
-            setStudents(formattedList);
-            
-            const initRecords: Record<string, string> = {};
-            formattedList.forEach(s => {
-              // Pre-fill existing attendance status for the selected date if present, otherwise default to 'present'
-              initRecords[s.id] = s.attendance[date]?.status || "present";
-            });
-            setRecords(initRecords);
-          }
-          setLoadingStudents(false);
-        },
-        getError: () => {
-          toast.error("Failed to fetch students for this batch.");
-          setLoadingStudents(false);
+    setLoadingStudents(true);
+    dispatch({
+      type: dropdownActions.GET_DROPDOWN,
+      method: "GET",
+      endPoint: API.ATTENDANCE.REGISTER_ALL({
+        branch_id: branchId,
+        batch_id: batchId,
+      }),
+      auth: true,
+      getResponse: (res: any) => {
+        const list = res?.data?.register || res?.register || res?.data?.data?.register;
+        if (Array.isArray(list)) {
+          const formattedList = list.map((item: any) => ({
+            id: item.student_id,
+            name: item.student_name || "Unknown",
+            roll_number: item.roll_number,
+            admission_number: item.admission_number,
+            photo: item.photo,
+            branch_name: item.branch_name || "—",
+            batch_name: item.batch_name || "—",
+            attendance: item.attendance || {}
+          }));
+          setStudents(formattedList);
+          
+          const initRecords: Record<string, string> = {};
+          formattedList.forEach(s => {
+            initRecords[s.id] = s.attendance[date]?.status || "present";
+          });
+          setRecords(initRecords);
+        } else {
+          setStudents([]);
+          setRecords({});
         }
-      } as any);
-    } else {
-      setStudents([]);
-      setRecords({});
-    }
-  }, [batchId, dispatch, toast]);
+        setLoadingStudents(false);
+      },
+      getError: () => {
+        toast.error("Failed to fetch register data.");
+        setLoadingStudents(false);
+        setStudents([]);
+        setRecords({});
+      }
+    } as any);
+  }, [branchId, batchId, dispatch, toast]);
 
   useEffect(() => {
     // If the date changes, update the records based on existing attendance for that date
@@ -107,8 +111,13 @@ export default function RegisterTab({ dropdowns }: RegisterTabProps) {
   };
 
   const handleSubmit = () => {
-    if (!branchId || !batchId || !date) {
-      toast.error("Please select branch, batch and date.");
+    if (isAllFilter) {
+      toast.error("Please select a specific branch and batch to mark attendance.");
+      return;
+    }
+
+    if (!date) {
+      toast.error("Please select a date.");
       return;
     }
 
@@ -156,8 +165,11 @@ export default function RegisterTab({ dropdowns }: RegisterTabProps) {
                 <SelectValue placeholder="Select Branch" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Branches</SelectItem>
                 {branches.map((b: any) => (
-                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                  <SelectItem key={b.id} value={b.id?.toString()}>
+                    {b.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -169,42 +181,72 @@ export default function RegisterTab({ dropdowns }: RegisterTabProps) {
                 <SelectValue placeholder="Select Batch" />
               </SelectTrigger>
               <SelectContent>
-                {filteredBatches.map((b: any) => (
-                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                <SelectItem value="all">All Batches</SelectItem>
+                {batches?.map((b: any) => (
+                  <SelectItem key={b.id} value={b.id?.toString()}>
+                    {b.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Date</Label>
-            <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
         </div>
       </div>
 
       {loadingStudents ? (
-        <div className="text-center py-12 text-muted-foreground text-sm">Loading students...</div>
-      ) : batchId && students.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground text-sm bg-white rounded-xl border border-border">No students found in this batch.</div>
-      ) : students.length > 0 ? (
+        <div className="text-center py-12 text-muted-foreground text-sm">Loading register...</div>
+      ) : students.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground text-sm bg-white rounded-xl border border-border">
+          No attendance records found for the selected filters.
+        </div>
+      ) : (
         <div className="bg-white rounded-xl border border-border overflow-hidden">
           <div className="p-4 border-b border-border flex justify-between items-center bg-muted/20">
-            <h3 className="font-semibold text-foreground">Students List</h3>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" className="h-8 text-xs text-green-600 border-green-200 hover:bg-green-50" onClick={() => handleMarkAll("present")}>
-                Mark All Present
-              </Button>
-              <Button size="sm" variant="outline" className="h-8 text-xs text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleMarkAll("absent")}>
-                Mark All Absent
-              </Button>
+            <div>
+              <h3 className="font-semibold text-foreground">Students List</h3>
+              {isAllFilter && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Viewing register (select a specific branch and batch to mark attendance)
+                </p>
+              )}
             </div>
+            {!isAllFilter && (
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs text-green-600 border-green-200 hover:bg-green-50"
+                  onClick={() => handleMarkAll("present")}
+                >
+                  Mark All Present
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs text-red-600 border-red-200 hover:bg-red-50"
+                  onClick={() => handleMarkAll("absent")}
+                >
+                  Mark All Absent
+                </Button>
+              </div>
+            )}
           </div>
           <table className="w-full text-sm">
             <thead className="bg-muted/40 border-b border-border">
               <tr>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Student</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Admission No</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Attendance Status</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Branch</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Batch</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  Admission No
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  Attendance Status
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -227,57 +269,78 @@ export default function RegisterTab({ dropdowns }: RegisterTabProps) {
                       <span className="font-medium text-foreground">{s.name}</span>
                     </div>
                   </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground font-medium">
+                    {s.branch_name}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground font-medium">
+                    {s.batch_name}
+                  </td>
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
                     {s.admission_number || "—"}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        variant={records[s.id] === "present" ? "default" : "outline"}
-                        className={`h-8 px-3 text-xs ${records[s.id] === "present" ? "bg-green-600 hover:bg-green-700 text-white" : ""}`}
-                        onClick={() => handleStatusChange(s.id, "present")}
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Present
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={records[s.id] === "absent" ? "default" : "outline"}
-                        className={`h-8 px-3 text-xs ${records[s.id] === "absent" ? "bg-red-600 hover:bg-red-700 text-white" : ""}`}
-                        onClick={() => handleStatusChange(s.id, "absent")}
-                      >
-                        <XCircle className="w-3.5 h-3.5 mr-1" /> Absent
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={records[s.id] === "late" ? "default" : "outline"}
-                        className={`h-8 px-3 text-xs ${records[s.id] === "late" ? "bg-yellow-600 hover:bg-yellow-700 text-white" : ""}`}
-                        onClick={() => handleStatusChange(s.id, "late")}
-                      >
-                        <Clock className="w-3.5 h-3.5 mr-1" /> Late
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={records[s.id] === "half_day" ? "default" : "outline"}
-                        className={`h-8 px-3 text-xs ${records[s.id] === "half_day" ? "bg-blue-600 hover:bg-blue-700 text-white" : ""}`}
-                        onClick={() => handleStatusChange(s.id, "half_day")}
-                      >
-                        <HelpCircle className="w-3.5 h-3.5 mr-1" /> Half Day
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={records[s.id] === "on_leave" ? "default" : "outline"}
-                        className={`h-8 px-3 text-xs ${records[s.id] === "on_leave" ? "bg-gray-600 hover:bg-gray-700 text-white" : ""}`}
-                        onClick={() => handleStatusChange(s.id, "on_leave")}
-                      >
-                        <CalendarDays className="w-3.5 h-3.5 mr-1" /> On Leave
-                      </Button>
-                    </div>
+                    {isAllFilter ? (
+                      STATUS_BADGES[records[s.id]] ? (
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${STATUS_BADGES[records[s.id]].className}`}
+                        >
+                          {STATUS_BADGES[records[s.id]].label}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border bg-gray-100 text-gray-800 border-gray-200">
+                          Not Marked
+                        </span>
+                      )
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          variant={records[s.id] === "present" ? "default" : "outline"}
+                          className={`h-8 px-3 text-xs ${records[s.id] === "present" ? "bg-green-600 hover:bg-green-700 text-white" : ""}`}
+                          onClick={() => handleStatusChange(s.id, "present")}
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Present
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={records[s.id] === "absent" ? "default" : "outline"}
+                          className={`h-8 px-3 text-xs ${records[s.id] === "absent" ? "bg-red-600 hover:bg-red-700 text-white" : ""}`}
+                          onClick={() => handleStatusChange(s.id, "absent")}
+                        >
+                          <XCircle className="w-3.5 h-3.5 mr-1" /> Absent
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={records[s.id] === "late" ? "default" : "outline"}
+                          className={`h-8 px-3 text-xs ${records[s.id] === "late" ? "bg-yellow-600 hover:bg-yellow-700 text-white" : ""}`}
+                          onClick={() => handleStatusChange(s.id, "late")}
+                        >
+                          <Clock className="w-3.5 h-3.5 mr-1" /> Late
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={records[s.id] === "half_day" ? "default" : "outline"}
+                          className={`h-8 px-3 text-xs ${records[s.id] === "half_day" ? "bg-blue-600 hover:bg-blue-700 text-white" : ""}`}
+                          onClick={() => handleStatusChange(s.id, "half_day")}
+                        >
+                          <HelpCircle className="w-3.5 h-3.5 mr-1" /> Half Day
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={records[s.id] === "on_leave" ? "default" : "outline"}
+                          className={`h-8 px-3 text-xs ${records[s.id] === "on_leave" ? "bg-gray-600 hover:bg-gray-700 text-white" : ""}`}
+                          onClick={() => handleStatusChange(s.id, "on_leave")}
+                        >
+                          <CalendarDays className="w-3.5 h-3.5 mr-1" /> On Leave
+                        </Button>
+                      </div>
+                    )}
                   </td>
                 </motion.tr>
               ))}
             </tbody>
           </table>
+          {!isAllFilter && (
           <div className="p-4 border-t border-border flex justify-end bg-muted/10">
             <Button
               onClick={handleSubmit}
@@ -287,10 +350,7 @@ export default function RegisterTab({ dropdowns }: RegisterTabProps) {
               {submitting ? "Submitting..." : "Submit Attendance"}
             </Button>
           </div>
-        </div>
-      ) : (
-        <div className="text-center py-12 text-muted-foreground text-sm bg-white rounded-xl border border-border">
-          Please select a batch to load students.
+          )}
         </div>
       )}
     </div>

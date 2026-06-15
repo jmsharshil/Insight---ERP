@@ -79,89 +79,123 @@ export const API = {
   /** Courses endpoints */
   COURSES: {
     LIST: "/api/v1/courses/",
-      CREATE: "/api/v1/courses/",
-      DETAIL: (id: string | number) => `/api/v1/courses/${id}/`,
-      UPDATE: (id: string | number) => `/api/v1/courses/${id}/`,
-      DELETE: (id: string | number) => `/api/v1/courses/${id}/`,
-      LEVELS: {
-        LIST: (courseId: string | number) => `/api/v1/courses/${courseId}/levels/`,
-        CREATE: (courseId: string | number) => `/api/v1/courses/${courseId}/levels/`,
-        DETAIL: (courseId: string | number, levelId: string | number) => `/api/v1/courses/${courseId}/levels/${levelId}/`,
-        UPDATE: (courseId: string | number, levelId: string | number) => `/api/v1/courses/${courseId}/levels/${levelId}/`,
-        DELETE: (courseId: string | number, levelId: string | number) => `/api/v1/courses/${courseId}/levels/${levelId}/`,
-      },
+    CREATE: "/api/v1/courses/",
+    DETAIL: (id: string | number) => `/api/v1/courses/${id}/`,
+    UPDATE: (id: string | number) => `/api/v1/courses/${id}/`,
+    DELETE: (id: string | number) => `/api/v1/courses/${id}/`,
+    LEVELS: {
+      LIST: (courseId: string | number) => `/api/v1/courses/${courseId}/levels/`,
+      CREATE: (courseId: string | number) => `/api/v1/courses/${courseId}/levels/`,
+      DETAIL: (courseId: string | number, levelId: string | number) =>
+        `/api/v1/courses/${courseId}/levels/${levelId}/`,
+      UPDATE: (courseId: string | number, levelId: string | number) =>
+        `/api/v1/courses/${courseId}/levels/${levelId}/`,
+      DELETE: (courseId: string | number, levelId: string | number) =>
+        `/api/v1/courses/${courseId}/levels/${levelId}/`,
     },
+  },
 
-    /** Batches endpoints */
-    BATCHES: {
-      LIST: "/api/v1/batches/",
-      CREATE: "/api/v1/batches/",
-      DETAIL: (id: string | number) => `/api/v1/batches/${id}/`,
-      UPDATE: (id: string | number) => `/api/v1/batches/${id}/`,
-      DELETE: (id: string | number) => `/api/v1/batches/${id}/`,
-      ASSIGN_STUDENT: (id: string | number,) => `/api/v1/batches/${id}/assign-students/`,
-      REMOVE_STUDENT: (id: string | number, student_id: string | number) => `/api/v1/batches/${id}/remove-student/${student_id}/`,
-      ASSIGN_FACULTY: (id: string | number,) => `/api/v1/batches/${id}/assign-faculty/`,
-      REMOVE_FACULTY: (id: string | number, faculty_id: string | number) => `/api/v1/batches/${id}/remove-faculty/${faculty_id}/`,
-    },
+  /** Batches endpoints */
+  BATCHES: {
+    LIST: "/api/v1/batches/",
+    CREATE: "/api/v1/batches/",
+    DETAIL: (id: string | number) => `/api/v1/batches/${id}/`,
+    UPDATE: (id: string | number) => `/api/v1/batches/${id}/`,
+    DELETE: (id: string | number) => `/api/v1/batches/${id}/`,
+    ASSIGN_STUDENT: (id: string | number) => `/api/v1/batches/${id}/assign-students/`,
+    REMOVE_STUDENT: (id: string | number, student_id: string | number) =>
+      `/api/v1/batches/${id}/remove-student/${student_id}/`,
+    ASSIGN_FACULTY: (id: string | number) => `/api/v1/batches/${id}/assign-faculty/`,
+    REMOVE_FACULTY: (id: string | number, faculty_id: string | number) =>
+      `/api/v1/batches/${id}/remove-faculty/${faculty_id}/`,
+  },
 
-    /** Subjects endpoints */
-    SUBJECTS: {
-      CREATE: "/api/v1/subjects/",
-      UPDATE: (id: string | number) => `/api/v1/subjects/${id}/`,
-      DELETE: (id: string | number) => `/api/v1/subjects/${id}/`,
-    },
+  /** Subjects endpoints */
+  SUBJECTS: {
+    CREATE: "/api/v1/subjects/",
+    UPDATE: (id: string | number) => `/api/v1/subjects/${id}/`,
+    DELETE: (id: string | number) => `/api/v1/subjects/${id}/`,
+  },
 
-    /** Chapters endpoints */
-    CHAPTERS: {
-      CREATE: (subjectId: string | number) => `/api/v1/subjects/${subjectId}/chapters/`,
-      UPDATE: (subjectId: string | number, chapterId: string | number) => `/api/v1/subjects/${subjectId}/chapters/${chapterId}/`,
-      DELETE: (subjectId: string | number, chapterId: string | number) => `/api/v1/subjects/${subjectId}/chapters/${chapterId}/`,
-    },
+  /** Chapters endpoints */
+  CHAPTERS: {
+    CREATE: (subjectId: string | number) => `/api/v1/subjects/${subjectId}/chapters/`,
+    UPDATE: (subjectId: string | number, chapterId: string | number) =>
+      `/api/v1/subjects/${subjectId}/chapters/${chapterId}/`,
+    DELETE: (subjectId: string | number, chapterId: string | number) =>
+      `/api/v1/subjects/${subjectId}/chapters/${chapterId}/`,
+  },
 
-    /** Reports endpoints */
-    REPORTS: {
-      LEADS: "/api/v1/reports/leads/",
-    },
+  /** Reports endpoints */
+  REPORTS: {
+    LEADS: "/api/v1/reports/leads/",
+  },
 
-    /** Attendance endpoints */
-    ATTENDANCE: {
-      DASHBOARD:        "/api/v1/attendance/dashboard/",
-      STUDENTS:         "/api/v1/attendance/students/",
-      STUDENT_DETAIL:   (id: string) => `/api/v1/attendance/students/${id}/`,
-      HISTORY:          "/api/v1/attendance/history/",
-      FACULTY:          "/api/v1/attendance/faculty/",
-      FACULTY_DETAIL:   (id: string) => `/api/v1/attendance/faculty/${id}/`,
-      ANALYTICS:        "/api/v1/attendance/analytics/",
-      DEFAULTERS:       "/api/v1/attendance/defaulters/",
-      VIOLATIONS:       "/api/v1/attendance/violations/",
-      BATCH_REGISTER:   (batchId: string) => `/api/v1/attendance/batches/${batchId}/register/`,
-      EXPORT:           "/api/v1/attendance/export/",
+  /** Attendance endpoints */
+  ATTENDANCE: {
+    DASHBOARD: "/api/v1/attendance/dashboard/",
+    STUDENTS: "/api/v1/attendance/students/",
+    STUDENT_DETAIL: (id: string) => `/api/v1/attendance/students/${id}/`,
+    HISTORY: "/api/v1/attendance/history/",
+    FACULTY: "/api/v1/attendance/faculty/",
+    FACULTY_DETAIL: (id: string) => `/api/v1/attendance/faculty/${id}/`,
+    ANALYTICS: "/api/v1/attendance/analytics/",
+    DEFAULTERS: "/api/v1/attendance/defaulters/",
+    VIOLATIONS: "/api/v1/attendance/violations/",
+    BATCH_REGISTER: (batchId?: string) =>
+      batchId && batchId !== "all"
+        ? `/api/v1/attendance/batches/${batchId}/register/`
+        : `/api/v1/attendance/batches/register/`,
+    REGISTER_ALL: (params?: { branch_id?: string; batch_id?: string }) => {
+      const url = "/api/v1/attendance/batches/register/";
+      if (!params) return url;
+      const q: Record<string, string> = {};
+      if (params.branch_id && params.branch_id !== "all") q.branch_id = params.branch_id;
+      if (params.batch_id && params.batch_id !== "all") q.batch_id = params.batch_id;
+      const qs = new URLSearchParams(q).toString();
+      return qs ? `${url}?${qs}` : url;
     },
+    EXPORT: "/api/v1/attendance/export/",
+  },
 
-    /** Timetable endpoints (new slot-based API) */
-    TIMETABLE: {
-      SLOTS:              "/api/v1/timetable/",
-      SLOT_DETAIL:        (id: string) => `/api/v1/timetable/${id}/`,
-      EXAM_TYPES:         "/api/v1/timetable/exam-types/",
-      EXAM_TYPE_DETAIL:   (id: string) => `/api/v1/timetable/exam-types/${id}/`,
-      FACULTY_VIEW:       (facultyId: string) => `/api/v1/timetable/faculty/${facultyId}/`,
-      STUDENT_VIEW:       (studentId: string) => `/api/v1/timetable/student/${studentId}/`,
-    },
+  /** Timetable endpoints (new slot-based API) */
+  TIMETABLE: {
+    SLOTS: "/api/v1/timetable/",
+    SLOT_DETAIL: (id: string) => `/api/v1/timetable/${id}/`,
+    EXAM_TYPES: "/api/v1/timetable/exam-types/",
+    EXAM_TYPE_DETAIL: (id: string) => `/api/v1/timetable/exam-types/${id}/`,
+    FACULTY_VIEW: (facultyId: string) => `/api/v1/timetable/faculty/${facultyId}/`,
+    STUDENT_VIEW: (studentId: string) => `/api/v1/timetable/student/${studentId}/`,
+  },
 
-    /** Exams endpoints */
-    EXAMS: {
-      LIST:                     "/api/v1/exams/",
-      DETAIL:                   (id: string) => `/api/v1/exams/${id}/`,
-      QUESTIONS:                (examId: string) => `/api/v1/exams/${examId}/questions/`,
-      QUESTION_DETAIL:          (examId: string, qId: string) => `/api/v1/exams/${examId}/questions/${qId}/`,
-      SEATING:                  (examId: string) => `/api/v1/exams/${examId}/seating/`,
-      SEAT_DETAIL:              (examId: string, seatId: string) => `/api/v1/exams/${examId}/seating/${seatId}/`,
-      DISTRIBUTE_ANSWER_KEY:    (examId: string) => `/api/v1/exams/${examId}/answer-key/distribute/`,
-      ANSWER_KEY_PUBLIC:        (examId: string) => `/api/v1/answer-key/${examId}/`,
-      MALPRACTICE:              (examId: string) => `/api/v1/exams/${examId}/malpractice/`,
-      MALPRACTICE_DETAIL:       (examId: string, rId: string) => `/api/v1/exams/${examId}/malpractice/${rId}/`,
-    },
+  /** Exams endpoints */
+  EXAMS: {
+    LIST: "/api/v1/exams/",
+    DETAIL: (id: string) => `/api/v1/exams/${id}/`,
+    QUESTIONS: (examId: string) => `/api/v1/exams/${examId}/questions/`,
+    QUESTION_DETAIL: (examId: string, qId: string) => `/api/v1/exams/${examId}/questions/${qId}/`,
+    SEATING: (examId: string) => `/api/v1/exams/${examId}/seating/`,
+    SEAT_DETAIL: (examId: string, seatId: string) => `/api/v1/exams/${examId}/seating/${seatId}/`,
+    DISTRIBUTE_ANSWER_KEY: (examId: string) => `/api/v1/exams/${examId}/answer-key/distribute/`,
+    ANSWER_KEY_PUBLIC: (examId: string) => `/api/v1/answer-key/${examId}/`,
+    MALPRACTICE: (examId: string) => `/api/v1/exams/${examId}/malpractice/`,
+    MALPRACTICE_DETAIL: (examId: string, rId: string) =>
+      `/api/v1/exams/${examId}/malpractice/${rId}/`,
+  },
+
+  /** Fees endpoints */
+  FEES: {
+    STRUCTURES: "/api/v1/fee-structures/",
+    STRUCTURE_DETAIL: (id: string | number) => `/api/v1/fee-structures/${id}/`,
+    STUDENT_FEES_LIST: "/api/v1/student-fees/",
+    STUDENT_FEES_DETAIL: (studentId: string | number) => `/api/v1/fees/student/${studentId}/`,
+    STUDENT_FEES_SUMMARY: "/api/v1/student-fees/summary/",
+  },
+  INSTALLMENTS: {
+    LIST: "/api/v1/installments/",
+    CREATE_PLAN: "/api/v1/installments/create/",
+    APPROVE: (id: string | number) => `/api/v1/installments/${id}/approve/`,
+  },
 } as const;
 
 

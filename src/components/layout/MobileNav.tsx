@@ -11,7 +11,6 @@ export default function MobileNav() {
   const modules = ROLES[user.role].modules
     .filter((m) => !(m === "dashboard"))
     .slice(0, 5);
-  console.log(modules)
 
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-card border-t border-border flex items-stretch h-16">
