@@ -127,7 +127,7 @@ export default function CoursesTab({
                       {c.name}
                     </h4>
                     <p className="text-xs text-muted-foreground mt-0.5 capitalize">
-                      Type: {c.course_type.replace("_", " ")}
+                      Type: {(c.course_type ?? "").replace("_", " ")}
                     </p>
                   </div>
                   <span
