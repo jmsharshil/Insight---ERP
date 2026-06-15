@@ -126,9 +126,9 @@ export default function CoursesTab({
                     <h4 className="font-semibold text-lg text-text-primary group-hover:text-primary transition-colors">
                       {c.name}
                     </h4>
-                    <p className="text-xs text-muted-foreground mt-0.5 capitalize">
-                      Type: {(c.course_type ?? "").replace("_", " ")}
-                    </p>
+                    {/* <p className="text-xs text-muted-foreground mt-0.5 capitalize">
+                      Type: {c.course_type.replace("_", " ")}
+                    </p> */}
                   </div>
                   <span
                     className={cn(
@@ -153,7 +153,7 @@ export default function CoursesTab({
                     <BookOpen className="w-3.5 h-3.5 text-primary shrink-0" />
                     <span className="truncate">Code: {c.code}</span>
                   </div>
-                  <div className="flex items-center gap-1.5 min-w-0">
+                  {/* <div className="flex items-center gap-1.5 min-w-0">
                     <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
                     <span className="truncate">{c.duration_months} Months</span>
                   </div>
@@ -162,7 +162,7 @@ export default function CoursesTab({
                     <span className="truncate font-medium text-text-primary">
                       Fee: ₹{Number(c.fee_amount).toLocaleString()}
                     </span>
-                  </div>
+                  </div> */}
                 </div>
               </div>
 

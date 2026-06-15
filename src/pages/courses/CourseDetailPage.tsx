@@ -20,7 +20,8 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
-import PageLoader from "@/components/common/PageLoader";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
@@ -38,6 +39,73 @@ import {
   removeSubjectFromCourse,
   SubjectRecord,
 } from "@/redux/slices/coursesSlice";
+
+function CourseDetailSkeleton() {
+  return (
+    <div className="mx-auto space-y-6">
+      {/* Page Header Skeleton */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div>
+          <Skeleton width={200} height={32} className="mb-2" />
+          <Skeleton width={300} height={16} />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton width={100} height={36} className="rounded-md" />
+          <Skeleton width={100} height={36} className="rounded-md" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Panel */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <Skeleton width={150} height={24} />
+              <Skeleton width={60} height={20} borderRadius={12} />
+            </CardHeader>
+            <CardContent>
+              <Skeleton count={3} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <Skeleton width={180} height={24} />
+              <Skeleton width={100} height={32} className="rounded-md" />
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="rounded-xl border border-border bg-muted/20 p-4">
+                    <Skeleton width="60%" height={20} className="mb-2" />
+                    <Skeleton width="40%" height={14} />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sidebar Panel */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <Skeleton width={120} height={24} />
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="space-y-1">
+                  <Skeleton width={80} height={14} />
+                  <Skeleton width={120} height={18} />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -163,7 +231,7 @@ export default function CourseDetailPage() {
         dispatch(removeCourseFromList(id));
         toast.success("Course deleted successfully.");
         setDeleteConfirmOpen(false);
-        navigate("/timetable");
+        navigate(-1);
       },
       getError: (err: any) => {
         const msg = err?.response?.data?.message || err?.message || "Failed to delete course";
@@ -292,7 +360,7 @@ export default function CourseDetailPage() {
   };
 
   if (selectedCourseLoading && !isEditing) {
-    return <PageLoader />;
+    return <CourseDetailSkeleton />;
   }
 
   if (!selectedCourse && !selectedCourseLoading) {
@@ -316,7 +384,7 @@ export default function CourseDetailPage() {
         subtitle={isEditing ? "Modify course properties below." : `Course details and syllabus schedule.`}
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate("/courses-batches")}>
+            <Button variant="outline" onClick={() => navigate(-1)}>
               <ChevronLeft className="w-4 h-4 mr-2" /> Back
             </Button>
             {canEdit && !isEditing && (

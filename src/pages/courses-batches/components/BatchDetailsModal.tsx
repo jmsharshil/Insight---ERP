@@ -1,6 +1,16 @@
 import { useEffect, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Users, Calendar, Clock, MapPin, BookOpen, Edit2, X } from "lucide-react";
+import {
+  Users,
+  Calendar,
+  Clock,
+  MapPin,
+  BookOpen,
+  Edit2,
+  X,
+  Layers,
+  Building2,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -15,7 +25,9 @@ import {
 } from "@/components/ui/select";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/store";
-import { dropdownActions, studentActions } from "@/redux/actions";
+import { dropdownActions, studentActions, levelActions, branchAction } from "@/redux/actions";
+import { API } from "@/service/api";
+import { useDropdown } from "@/hooks/useDropdown";
 
 interface Course {
   id: string;
@@ -25,11 +37,12 @@ interface Course {
 
 interface BatchForm {
   course: string;
+  course_level?: string;
   name: string;
   batch_code: string;
   group_module: "full" | "both" | "module_1" | "module_2";
   batch_attempt: "june" | "oct" | "dec" | "feb";
-  location: string;
+  branch: string;
   start_date: string;
   end_date: string;
   max_students: number;
@@ -85,6 +98,8 @@ export default function BatchDetailsSheet({
 
   const [students, setStudents] = useState<any[]>([]);
   const [facultyList, setFacultyList] = useState<any[]>([]);
+  const [courseLevels, setCourseLevels] = useState<any[]>([]);
+  const [levelsLoading, setLevelsLoading] = useState(false);
 
   useEffect(() => {
     // Fetch Subjects
@@ -94,7 +109,7 @@ export default function BatchDetailsSheet({
       endPoint: "/api/v1/students/",
       auth: true,
       getResponse: (res: any) => {
-        console.log(res)
+        console.log(res);
         const data = res?.data?.results || res?.results || res?.data?.data || res?.data || res;
         if (Array.isArray(data)) setStudents(data);
       },
@@ -107,12 +122,84 @@ export default function BatchDetailsSheet({
       endPoint: "/api/v1/faculty/",
       auth: true,
       getResponse: (res: any) => {
-        console.log('abcd')
         const data = res?.data || [];
         setFacultyList(data);
       },
     });
   }, [dispatch]);
+
+  const {
+    options: branches,
+    loading: branchesLoading,
+    fetchOptions: fetchBranches,
+  } = useDropdown("branches", false);
+
+  useEffect(() => {
+    if (open) {
+      fetchBranches();
+    }
+  }, [open, fetchBranches]);
+
+  useEffect(() => {
+    if (open && batchForm.course) {
+      setLevelsLoading(true);
+      dispatch({
+        type: levelActions.GET_LEVELS,
+        method: "GET",
+        endPoint: API.COURSES.LEVELS.LIST(batchForm.course),
+        auth: true,
+        getResponse: (res: any) => {
+          const fetchedLevels = res?.data ?? res;
+          if (Array.isArray(fetchedLevels)) {
+            const sortedLevels = [...fetchedLevels].sort(
+              (a: any, b: any) => (a.order || 0) - (b.order || 0),
+            );
+            setCourseLevels(sortedLevels);
+          } else {
+            setCourseLevels([]);
+          }
+          setLevelsLoading(false);
+        },
+        getError: (err: any) => {
+          console.error("Failed to fetch levels", err);
+          setCourseLevels([]);
+          setLevelsLoading(false);
+        },
+      });
+    } else {
+      setCourseLevels([]);
+    }
+  }, [open, batchForm.course, dispatch]);
+
+  const selectedLevelName =
+    courseLevels
+      .find((l) => String(l.id) === String(batchForm.course_level))
+      ?.name?.toLowerCase() || "";
+
+  const isCSEET = selectedLevelName.includes("cseet");
+  const isExecutive = selectedLevelName.includes("executive");
+  const isProfessional = selectedLevelName.includes("professional");
+  console.log(isProfessional);
+
+  useEffect(() => {
+    if (!batchForm.course_level) return;
+
+    if (isCSEET) {
+      if (batchForm.group_module !== "full") {
+        setBatchForm({ ...batchForm, group_module: "full" });
+      }
+      if (!["june", "oct", "feb"].includes(batchForm.batch_attempt)) {
+        setBatchForm({ ...batchForm, batch_attempt: "june" });
+      }
+    } else if (isExecutive || isProfessional) {
+      if (batchForm.group_module === "full") {
+        setBatchForm({ ...batchForm, group_module: "both" });
+      }
+      if (!["june", "dec"].includes(batchForm.batch_attempt)) {
+        setBatchForm({ ...batchForm, batch_attempt: "june" });
+      }
+    }
+  }, [batchForm.course_level, isCSEET, isExecutive, isProfessional, courseLevels]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -168,6 +255,41 @@ export default function BatchDetailsSheet({
 
             <div className="space-y-1">
               <Label
+                htmlFor="batch-level"
+                className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+              >
+                Course Level
+              </Label>
+              <Select
+                value={batchForm.course_level || ""}
+                onValueChange={(val) => setBatchForm({ ...batchForm, course_level: val })}
+                disabled={!batchForm.course || levelsLoading || courseLevels.length === 0}
+              >
+                <SelectTrigger id="batch-level" className="bg-muted/10">
+                  <SelectValue
+                    placeholder={
+                      !batchForm.course
+                        ? "Select a course first"
+                        : levelsLoading
+                          ? "Loading levels..."
+                          : courseLevels.length === 0
+                            ? "No levels available"
+                            : "Select a level..."
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {courseLevels.map((l) => (
+                    <SelectItem key={l.id} value={String(l.id)}>
+                      {l.name} {l.order ? `(Order: ${l.order})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label
                 htmlFor="batch-name"
                 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
               >
@@ -177,7 +299,7 @@ export default function BatchDetailsSheet({
                 id="batch-name"
                 value={batchForm.name}
                 onChange={(e) => setBatchForm({ ...batchForm, name: e.target.value })}
-                placeholder="e.g. Batch A"
+                placeholder="e.g. CSEET_OCT_26_101"
               />
             </div>
 
@@ -197,10 +319,22 @@ export default function BatchDetailsSheet({
                     <SelectValue placeholder="Select module" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="full">Full</SelectItem>
-                    <SelectItem value="both">Both</SelectItem>
-                    <SelectItem value="module_1">Module 1</SelectItem>
-                    <SelectItem value="module_2">Module 2</SelectItem>
+                    {isCSEET ? (
+                      <SelectItem value="full">Full</SelectItem>
+                    ) : isExecutive || isProfessional ? (
+                      <>
+                        <SelectItem value="module_1">Module 1</SelectItem>
+                        <SelectItem value="module_2">Module 2</SelectItem>
+                        <SelectItem value="both">Both</SelectItem>
+                      </>
+                    ) : (
+                      <>
+                        <SelectItem value="full">Full</SelectItem>
+                        <SelectItem value="both">Both</SelectItem>
+                        <SelectItem value="module_1">Module 1</SelectItem>
+                        <SelectItem value="module_2">Module 2</SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -220,10 +354,25 @@ export default function BatchDetailsSheet({
                     <SelectValue placeholder="Select attempt" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="june">June</SelectItem>
-                    <SelectItem value="oct">October</SelectItem>
-                    <SelectItem value="dec">December</SelectItem>
-                    <SelectItem value="feb">February</SelectItem>
+                    {isCSEET ? (
+                      <>
+                        <SelectItem value="june">June</SelectItem>
+                        <SelectItem value="oct">October</SelectItem>
+                        <SelectItem value="feb">February</SelectItem>
+                      </>
+                    ) : isExecutive || isProfessional ? (
+                      <>
+                        <SelectItem value="june">June</SelectItem>
+                        <SelectItem value="dec">December</SelectItem>
+                      </>
+                    ) : (
+                      <>
+                        <SelectItem value="june">June</SelectItem>
+                        <SelectItem value="oct">October</SelectItem>
+                        <SelectItem value="dec">December</SelectItem>
+                        <SelectItem value="feb">February</SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -281,17 +430,27 @@ export default function BatchDetailsSheet({
 
               <div className="space-y-1">
                 <Label
-                  htmlFor="batch-location"
+                  htmlFor="batch-branch"
                   className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
                 >
-                  Location / Classroom
+                  Branch Name
                 </Label>
-                <Input
-                  id="batch-location"
-                  value={batchForm.location}
-                  onChange={(e) => setBatchForm({ ...batchForm, location: e.target.value })}
-                  placeholder="e.g. Campus 1"
-                />
+                <Select
+                  value={batchForm.branch || ""}
+                  onValueChange={(val) => setBatchForm({ ...batchForm, branch: val })}
+                  disabled={branchesLoading}
+                >
+                  <SelectTrigger id="batch-branch" className="bg-muted/10">
+                    <SelectValue placeholder={branchesLoading ? "Loading branches..." : "Select Branch"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((b) => (
+                      <SelectItem key={b.value} value={String(b.value)}>
+                        {b.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -504,11 +663,11 @@ export default function BatchDetailsSheet({
                 </div>
                 <div className="space-y-1">
                   <span className="text-xs font-semibold text-muted-foreground uppercase">
-                    Location
+                    Branch
                   </span>
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <MapPin className="w-4 h-4 text-primary" />
-                    {batch.location || "N/A"}
+                    {batch.branch_name || batch.branch || "N/A"}
                   </div>
                 </div>
               </div>
@@ -572,6 +731,26 @@ export default function BatchDetailsSheet({
                   </div>
                 </div>
               </div>
+
+              {(batch.course_level_name ||
+                batch.level_name ||
+                batch.course_level ||
+                batch.level) && (
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-1">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5 text-primary" />
+                      Course Level
+                    </span>
+                    <div className="text-sm font-medium text-text-primary">
+                      {batch.course_level_name ||
+                        batch.level_name ||
+                        batch.course_level ||
+                        batch.level}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-6 pt-2">
                 <div className="space-y-2">

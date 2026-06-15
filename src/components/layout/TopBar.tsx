@@ -46,30 +46,13 @@ export default function TopBar() {
         <h2 className="font-heading font-semibold text-lg text-text-primary truncate">{pageTitle}</h2>
 
         <div className="ml-auto flex items-center gap-2">
-          <button
-            onClick={() => {
-              const evt = new KeyboardEvent("keydown", { key: "k", metaKey: true });
-              window.dispatchEvent(evt);
-            }}
-            className="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted hover:bg-muted/70 text-sm text-muted-foreground"
-            aria-label="Global search"
-          >
-            <Search className="w-4 h-4" />
-            <span>Search...</span>
-            <kbd className="ml-2 text-[10px] bg-card border border-border rounded px-1.5 py-0.5">⌘K</kbd>
-          </button>
+         
 
-          {user?.role === "super_admin" && (
-            <div className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-light text-primary-dark text-xs font-semibold">
-              <Building2 className="w-3.5 h-3.5" /> All Branches
-            </div>
-          )}
+       
 
           <Button variant="ghost" size="icon" className="relative" aria-label="Messages" onClick={() => navigate("/chat")}>
             <MessageSquare className="w-5 h-5" />
-            <Badge className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px] bg-primary text-primary-foreground border-0">
-              2
-            </Badge>
+           
           </Button>
 
           <DropdownMenu>

@@ -66,7 +66,7 @@ export default function LoginPage() {
           refreshToken: res.refresh,
         }));
         toast.success(`Welcome back, ${res.user.name}! 🤝`);
-        navigate("/dashboard");
+        navigate("/crm");
       },
       getError: (err: any) => {
         const errorMsg = err?.response?.data?.message || err?.response?.data?.error || err?.message || "Login failed. Please check your credentials.";

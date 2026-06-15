@@ -26,7 +26,7 @@ export function* genericSaga(action: GenericSagaAction): Generator {
       method,
       url: endPoint,
       data: body,
-      timeout: 20000, // Prevent indefinite hanging
+      // timeout: 20000, // Prevent indefinite hanging
     };
 
     if (auth) {
@@ -60,7 +60,8 @@ export function* genericSaga(action: GenericSagaAction): Generator {
     }
 
     console.error(error);
-  } finally {
+  } 
+  finally {
     if (yield cancelled()) {
       if (setLoading) setLoading(false);
     }
