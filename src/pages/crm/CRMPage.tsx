@@ -112,10 +112,14 @@ export default function CRMPage() {
 
   /* ─── Fetch analytics ──────────────────────────────────────── */
   useEffect(() => {
+    const endPoint = user && user.role === "branch_manager" && user.branch
+      ? `${API.REPORTS.LEADS}${API.REPORTS.LEADS.includes('?') ? '&' : '?'}branch_id=${user.branch}`
+      : API.REPORTS.LEADS;
+
     dispatch({
       type: crmActions.GET_CRM_ANALYTICS,
       method: "GET",
-      endPoint: API.REPORTS.LEADS,
+      endPoint: endPoint,
       auth: true,
       setLoading: (val: boolean) => dispatch(setCRMLoading(val)),
       getResponse: (res: any) => {
@@ -130,10 +134,14 @@ export default function CRMPage() {
 
   /* ─── Fetch leads list ─────────────────────────────────────── */
   const fetchLeads = useCallback(() => {
+    const endPoint = user && user.role === "branch_manager" && user.branch
+      ? `${API.LEADS.LIST}${API.LEADS.LIST.includes('?') ? '&' : '?'}branch_id=${user.branch}`
+      : API.LEADS.LIST;
+
     dispatch({
       type: leadActions.GET_LEADS,
       method: "GET",
-      endPoint: API.LEADS.LIST,
+      endPoint: endPoint,
       auth: true,
       setLoading: (val: boolean) => dispatch(setLeadsLoading(val)),
       getResponse: (res: any) => {

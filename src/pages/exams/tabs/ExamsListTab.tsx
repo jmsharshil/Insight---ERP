@@ -99,10 +99,14 @@ export default function ExamsListTab({ onSelectExam, selectedExamId }: ExamsList
   }, [studentDetail]);
 
   const fetchExams = () => {
+    const endPoint = user && user.role === "branch_manager" && user.branch 
+      ? `${API.EXAMS.LIST}?branch_id=${user.branch}` 
+      : API.EXAMS.LIST;
+
     dispatch({
       type: examActions.GET_EXAMS,
       method: "GET",
-      endPoint: API.EXAMS.LIST,
+      endPoint: endPoint,
       auth: true,
       setLoading: (v: boolean) => dispatch(setExamsLoading(v)),
       getResponse: (res: any) => {

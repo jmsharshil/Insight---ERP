@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CheckCircle2, XCircle, Clock, CalendarDays, HelpCircle } from "lucide-react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/hooks/useAuth";
+import { useMemo } from "react";
 
 const STATUS_BADGES: Record<string, { label: string; className: string }> = {
   present: { label: "Present", className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
@@ -26,13 +28,36 @@ interface RegisterTabProps {
 export default function RegisterTab({ dropdowns }: RegisterTabProps) {
   const dispatch = useDispatch();
   const toast = useToast();
+  const { user } = useAuth();
+  const isBranchManager = user && user.role === "branch_manager";
 
   const branches = dropdowns?.branches || [];
   const batches = dropdowns?.batches || [];
 
-  const [branchId, setBranchId] = useState("all");
-  const [batchId, setBatchId] = useState("all");
+  const [branchId, setBranchId] = useState(isBranchManager && user.branch ? user.branch : "");
+  const [batchId, setBatchId] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+
+  useEffect(() => {
+    if (isBranchManager && user.branch && branchId !== user.branch) {
+      setBranchId(user.branch);
+    }
+  }, [user]);
+
+  const filteredBranches = useMemo(() => {
+    if (!isBranchManager) return branches;
+    return branches.filter((b: any) => b.id === user.branch);
+  }, [branches, user]);
+
+  const filteredBatches = branchId 
+    ? batches.filter((b: any) => b.branch === branchId || b.branch_id === branchId) 
+    : batches;
+
+  useEffect(() => {
+    if (batchId && branchId && !filteredBatches.find((b: any) => b.id === batchId)) {
+      setBatchId("");
+    }
+  }, [branchId, batches]);
   
   const [students, setStudents] = useState<any[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
@@ -165,11 +190,8 @@ export default function RegisterTab({ dropdowns }: RegisterTabProps) {
                 <SelectValue placeholder="Select Branch" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Branches</SelectItem>
-                {branches.map((b: any) => (
-                  <SelectItem key={b.id} value={b.id?.toString()}>
-                    {b.name}
-                  </SelectItem>
+                {filteredBranches.map((b: any) => (
+                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

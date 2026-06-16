@@ -44,10 +44,14 @@ export default function StudentsTab() {
   }, [students, user]);
 
   const fetchStudents = () => {
+    const endPoint = user && user.role === "branch_manager" && user.branch
+      ? `${API.STUDENTS.LIST}${API.STUDENTS.LIST.includes('?') ? '&' : '?'}branch_id=${user.branch}`
+      : API.STUDENTS.LIST;
+
     dispatch({
       type: studentActions.GET_STUDENTS,
       method: "GET",
-      endPoint: API.STUDENTS.LIST,
+      endPoint: endPoint,
       auth: true,
       setLoading: (val: boolean) => dispatch(setStudentsLoading(val)),
       getResponse: (res: any) => {
@@ -72,10 +76,14 @@ export default function StudentsTab() {
 
   useEffect(() => {
     if (!assignModalOpen) return;
+    const endPoint = user && user.role === "branch_manager" && user.branch
+      ? `/api/v1/batches/?branch_id=${user.branch}`
+      : "/api/v1/batches/";
+
     dispatch({
       type: batchAction.GET_BATCHES,
       method: "GET",
-      endPoint: "/api/v1/batches/",
+      endPoint: endPoint,
       auth: true,
       setLoading: setBatchesLoading,
       getResponse: (res: any) => {

@@ -7,6 +7,7 @@ import { API } from "@/service/api";
 import { setViolations, setViolationsLoading } from "@/redux/slices/attendanceSlice";
 import type { RootState, AppDispatch } from "@/store";
 import { useToast } from "@/hooks/useToast";
+import { useAuth } from "@/hooks/useAuth";
 import { TableSkeleton } from "@/components/common/Skeletons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,11 +25,17 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
   const { violations, violationsLoading, violationsCount } = useSelector((s: RootState) => s.attendance);
+  const { user } = useAuth();
 
-  const studentsList = dropdowns?.students || [];
+  const studentsList = dropdowns?.students?.filter((s: any) => {
+    if (user && user.role === "branch_manager" && user.branch) {
+      return !s.branch_id || s.branch_id === user.branch;
+    }
+    return true;
+  }) || [];
 
   const [f, setF] = useState({
-    student_id: "", violation_type: "", is_resolved: "", date_from: "", date_to: "",
+    student_id: "", branch_id: (user && user.role === "branch_manager" && user.branch) ? user.branch : "", violation_type: "", is_resolved: "", date_from: "", date_to: "",
   });
 
   const fetchViolations = () => {
@@ -50,7 +57,7 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
 
   useEffect(() => { fetchViolations(); }, []);
 
-  const clear = () => setF({ student_id: "", violation_type: "", is_resolved: "", date_from: "", date_to: "" });
+  const clear = () => setF({ student_id: "", branch_id: (user && user.role === "branch_manager" && user.branch) ? user.branch : "", violation_type: "", is_resolved: "", date_from: "", date_to: "" });
 
   return (
     <div className="space-y-4">
