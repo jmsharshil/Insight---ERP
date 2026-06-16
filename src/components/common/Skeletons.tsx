@@ -131,6 +131,266 @@ export function ChatSkeleton() {
   );
 }
 
+/* ---------- Fee-related Skeletons ---------- */
+
+export function ReportsSkeleton() {
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300">
+      {/* Controls bar */}
+      <div className="rounded-xl border border-border bg-card p-4 flex items-center justify-between">
+        <div className="space-y-2">
+          <Skeleton width={260} height={18} />
+          <Skeleton width={180} height={12} />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton width={120} height={36} className="rounded-lg" />
+          <Skeleton width={90} height={36} className="rounded-lg" />
+        </div>
+      </div>
+
+      {/* 4 stat cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div
+            key={i}
+            className="rounded-2xl border border-border bg-card p-5 space-y-3"
+          >
+            <div className="flex justify-between items-start">
+              <Skeleton width={100} height={12} />
+              <Skeleton width={32} height={32} className="rounded-lg" />
+            </div>
+            <Skeleton width={140} height={28} />
+            <Skeleton width={180} height={10} />
+          </div>
+        ))}
+      </div>
+
+      {/* 3 secondary stat cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div
+            key={i}
+            className="rounded-2xl border border-border bg-card p-5 space-y-3"
+          >
+            <div className="flex justify-between items-start">
+              <Skeleton width={100} height={12} />
+              <Skeleton width={32} height={32} className="rounded-lg" />
+            </div>
+            <Skeleton width={120} height={28} />
+            <Skeleton width={160} height={10} />
+          </div>
+        ))}
+      </div>
+
+      {/* Charts area */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 rounded-xl border border-border bg-card p-5 space-y-4">
+          <Skeleton width={200} height={16} />
+          <Skeleton width={150} height={12} />
+          <Skeleton height={260} className="rounded-lg" />
+        </div>
+        <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+          <Skeleton width={160} height={16} />
+          <Skeleton width={200} height={12} />
+          <Skeleton height={160} className="rounded-lg" />
+          <div className="space-y-3 pt-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Skeleton circle width={10} height={10} />
+                  <Skeleton width={60} height={12} />
+                </div>
+                <Skeleton width={80} height={12} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function StructuresSkeleton({ count = 6 }: { count?: number }) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-300">
+      {Array.from({ length: count }).map((_, i) => (
+        <div
+          key={i}
+          className="rounded-2xl border border-border bg-card p-5 space-y-4"
+        >
+          {/* Title + badge */}
+          <div className="flex justify-between items-start">
+            <Skeleton width="60%" height={20} />
+            <Skeleton width={70} height={20} className="rounded-full" />
+          </div>
+          {/* Description */}
+          <Skeleton width="90%" height={12} />
+          <Skeleton width="50%" height={12} />
+          {/* Fee breakdown */}
+          <div className="border-t pt-3 space-y-2.5">
+            {Array.from({ length: 4 }).map((_, j) => (
+              <div key={j} className="flex justify-between">
+                <Skeleton width={90} height={12} />
+                <Skeleton width={70} height={12} />
+              </div>
+            ))}
+            <div className="border-t border-dashed pt-2">
+              <div className="flex justify-between">
+                <Skeleton width={70} height={14} />
+                <Skeleton width={90} height={14} />
+              </div>
+            </div>
+          </div>
+          {/* Actions */}
+          <div className="flex gap-2.5 border-t pt-3">
+            <Skeleton width="50%" height={32} className="rounded-md" />
+            <Skeleton width="50%" height={32} className="rounded-md" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function FeeTableSkeleton({
+  rows = 6,
+  columns = 8,
+  hasFilter = true,
+}: {
+  rows?: number;
+  columns?: number;
+  hasFilter?: boolean;
+}) {
+  const colWidths = ["50%", "65%", "45%", "40%", "35%", "50%", "55%", "30%"];
+  return (
+    <div className="space-y-4 animate-in fade-in duration-300">
+      {/* Filter bar */}
+      {hasFilter && (
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-2">
+              <Skeleton width={160} height={14} />
+              <Skeleton width={240} height={10} />
+            </div>
+            <div className="flex gap-3">
+              <Skeleton width={192} height={36} className="rounded-md" />
+              <Skeleton width={160} height={36} className="rounded-md" />
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Table */}
+      <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+        {/* Header */}
+        <div
+          className="grid border-b border-border bg-muted/40 px-6 py-3"
+          style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+        >
+          {Array.from({ length: columns }).map((_, c) => (
+            <div key={c} className="pr-4">
+              <Skeleton height={14} width="55%" />
+            </div>
+          ))}
+        </div>
+        {/* Rows */}
+        <div className="divide-y divide-border">
+          {Array.from({ length: rows }).map((_, r) => (
+            <div
+              key={r}
+              className="grid px-6 py-4 items-center"
+              style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+            >
+              {Array.from({ length: columns }).map((_, c) => (
+                <div key={c} className="pr-4">
+                  <Skeleton height={14} width={colWidths[c % colWidths.length]} />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function StudentDetailSkeleton() {
+  return (
+    <div className="space-y-4 animate-in fade-in duration-300">
+      {/* Header */}
+      <div className="rounded-xl border border-border bg-card p-5 flex items-center justify-between">
+        <div className="space-y-2 flex-1">
+          <Skeleton width={140} height={24} />
+          <Skeleton width={200} height={14} />
+        </div>
+        <Skeleton width={140} height={36} className="rounded-md" />
+      </div>
+
+      {/* Summary card */}
+      <div className="rounded-xl bg-muted/30 border border-border p-5 space-y-3">
+        <Skeleton width={120} height={12} />
+        <Skeleton width={200} height={10} />
+        <div className="grid grid-cols-3 gap-4 mt-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="space-y-1.5">
+              <Skeleton width={80} height={10} />
+              <Skeleton width={110} height={24} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Fee allocations */}
+      <div>
+        <Skeleton width={160} height={18} className="mb-3" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div
+              key={i}
+              className="rounded-xl border border-border bg-card p-4 space-y-3"
+            >
+              <div className="flex justify-between">
+                <Skeleton width="55%" height={14} />
+                <Skeleton width={60} height={18} className="rounded-full" />
+              </div>
+              <div className="space-y-2">
+                {Array.from({ length: 4 }).map((_, j) => (
+                  <div key={j} className="flex justify-between">
+                    <Skeleton width={90} height={12} />
+                    <Skeleton width={70} height={12} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Payment history */}
+      <Skeleton width={140} height={18} className="mt-4" />
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="grid grid-cols-6 border-b border-border bg-muted/40 px-6 py-3">
+          {Array.from({ length: 6 }).map((_, c) => (
+            <div key={c} className="pr-4">
+              <Skeleton height={14} width="55%" />
+            </div>
+          ))}
+        </div>
+        <div className="divide-y divide-border">
+          {Array.from({ length: 3 }).map((_, r) => (
+            <div key={r} className="grid grid-cols-6 px-6 py-4 items-center">
+              {Array.from({ length: 6 }).map((_, c) => (
+                <div key={c} className="pr-4">
+                  <Skeleton height={14} width={c === 0 ? "50%" : "65%"} />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function RoomDetailsSkeleton() {
   return (
     <div className="h-full flex flex-col bg-surface overflow-hidden w-80 border-l border-border flex-shrink-0 animate-in slide-in-from-right-8 duration-300">

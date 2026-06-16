@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { ReportsSkeleton } from "@/components/common/Skeletons";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -90,14 +91,7 @@ export default function ReportsTab({
 }: ReportsTabProps) {
 
   if (reportLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 space-y-4">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
-        <p className="text-sm text-muted-foreground font-medium animate-pulse">
-          Fetching financial analytics...
-        </p>
-      </div>
-    );
+    return <ReportsSkeleton />;
   }
 
   return (

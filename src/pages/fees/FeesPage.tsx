@@ -13,7 +13,7 @@ import {
   Legend,
   Cell,
   PieChart,
-  Pie
+  Pie,
 } from "recharts";
 import {
   Wallet,
@@ -58,6 +58,7 @@ import {
 import PageHeader from "@/components/layout/PageHeader";
 import StatCard from "@/components/common/StatCard";
 import DataTable, { type DataTableColumn } from "@/components/common/DataTable";
+import { StudentDetailSkeleton, FeeTableSkeleton } from "@/components/common/Skeletons";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -128,11 +129,9 @@ const defaultReportData = {
     cash: 200000.0,
     cheque: 200000.0,
     dd: 22500.0,
-    online: 24000.0
+    online: 24000.0,
   },
-  monthly_trend: [
-    { month: "2026-06", collected: 446500.0 }
-  ]
+  monthly_trend: [{ month: "2026-06", collected: 446500.0 }],
 };
 
 const toNumber = (value: any) => {
@@ -199,27 +198,6 @@ export default function FeesPage() {
   }, [setPageTitle]);
 
   useEffect(() => {
-    dispatch({
-      type: feesActions.GET_FEE_STRUCTURES,
-      method: "GET",
-      endPoint: API.FEES.STRUCTURES,
-      auth: true,
-      getResponse: (response: any) => {
-        if (response?.data) {
-          dispatch(setFeeStructure(response.data));
-        } else if (Array.isArray(response)) {
-          dispatch(setFeeStructure(response));
-        }
-      },
-      getError: (error: any) => {
-        const msg =
-          error?.response?.data?.message || error?.message || "Failed to load fee structures";
-        toast.error(msg);
-      },
-    });
-  }, [dispatch]);
-
-  useEffect(() => {
     if (courses.length === 0) {
       dispatch({
         type: courseAction.GET_COURSES,
@@ -253,39 +231,38 @@ export default function FeesPage() {
     });
   }, [dispatch]);
 
-  const fetchStudentFees = useCallback((studentName?: string, status?: string) => {
-    let url: string = API.FEES.STUDENT_FEES_LIST;
-    const params = new URLSearchParams();
-    if (studentName?.trim()) params.append("search", studentName.trim());
-    if (status && status !== "all") params.append("status", status);
+  const fetchStudentFees = useCallback(
+    (studentName?: string, status?: string) => {
+      let url: string = API.FEES.STUDENT_FEES_LIST;
+      const params = new URLSearchParams();
+      if (studentName?.trim()) params.append("search", studentName.trim());
+      if (status && status !== "all") params.append("status", status);
 
-    const queryString = params.toString();
-    if (queryString) {
-      url = `${url}?${queryString}`;
-    }
+      const queryString = params.toString();
+      if (queryString) {
+        url = `${url}?${queryString}`;
+      }
 
-    dispatch({
-      type: feesActions.GET_STUDENT_FEES,
-      method: "GET",
-      endPoint: url,
-      auth: true,
-      getResponse: (res: any) => {
-        const data = res?.data ?? res;
-        if (Array.isArray(data)) {
-          dispatch(setStudentFees(data));
-        }
-      },
-      getError: (err: any) => {
-        const msg = err?.response?.data?.message || err?.message || "Failed to load student fees";
-        toast.error(msg);
-      },
-    });
-  }, [dispatch]);
-
-  useEffect(() => {
-    fetchStudentFees(debouncedSfStudentName, sfStatus);
-  }, [fetchStudentFees, debouncedSfStudentName, sfStatus]);
-
+      dispatch({
+        type: feesActions.GET_STUDENT_FEES,
+        method: "GET",
+        endPoint: url,
+        auth: true,
+        setLoading: setStudentFeesLoading,
+        getResponse: (res: any) => {
+          const data = res?.data ?? res;
+          if (Array.isArray(data)) {
+            dispatch(setStudentFees(data));
+          }
+        },
+        getError: (err: any) => {
+          const msg = err?.response?.data?.message || err?.message || "Failed to load student fees";
+          toast.error(msg);
+        },
+      });
+    },
+    [dispatch],
+  );
   useEffect(() => {
     if (students.length === 0) {
       dispatch({
@@ -337,6 +314,8 @@ export default function FeesPage() {
   const [deleteOpen, setDeleteOpen] = useState<FeesStructure | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [fsLoading, setFsLoading] = useState(false);
+  const [feeStructuresLoading, setFeeStructuresLoading] = useState(false);
+  const [studentFeesLoading, setStudentFeesLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("reports");
   const [reportData, setReportData] = useState<any>(null);
   const [reportLoading, setReportLoading] = useState(false);
@@ -368,58 +347,64 @@ export default function FeesPage() {
   const [createRefundOpen, setCreateRefundOpen] = useState(false);
   const [createRefundLoading, setCreateRefundLoading] = useState(false);
 
-  const fetchInstallments = useCallback((studentName?: string, status?: string) => {
-    let url: string = API.INSTALLMENTS.LIST;
-    const params = new URLSearchParams();
-    if (studentName?.trim()) params.append("search", studentName.trim());
-    if (status && status !== "all") params.append("status", status);
+  const fetchInstallments = useCallback(
+    (studentName?: string, status?: string) => {
+      let url: string = API.INSTALLMENTS.LIST;
+      const params = new URLSearchParams();
+      if (studentName?.trim()) params.append("search", studentName.trim());
+      if (status && status !== "all") params.append("status", status);
 
-    const queryString = params.toString();
-    if (queryString) {
-      url = `${url}?${queryString}`;
-    }
+      const queryString = params.toString();
+      if (queryString) {
+        url = `${url}?${queryString}`;
+      }
 
-    dispatch({
-      type: feesActions.GET_INSTALLMENTS,
-      method: "GET",
-      endPoint: url,
-      auth: true,
-      setLoading: setInstallmentsLoading,
-      getResponse: (res: any) => {
-        setInstallments(res?.data || res || []);
-      },
-      getError: (err: any) => {
-        console.error("Failed to load installments", err);
-      },
-    });
-  }, [dispatch]);
+      dispatch({
+        type: feesActions.GET_INSTALLMENTS,
+        method: "GET",
+        endPoint: url,
+        auth: true,
+        setLoading: setInstallmentsLoading,
+        getResponse: (res: any) => {
+          setInstallments(res?.data || res || []);
+        },
+        getError: (err: any) => {
+          console.error("Failed to load installments", err);
+        },
+      });
+    },
+    [dispatch],
+  );
 
-  const fetchPayments = useCallback((studentName?: string, status?: string) => {
-    let url: string = API.PAYMENTS.LIST;
-    const params = new URLSearchParams();
-    if (studentName?.trim()) params.append("search", studentName.trim());
-    if (status && status !== "all") params.append("status", status);
+  const fetchPayments = useCallback(
+    (studentName?: string, status?: string) => {
+      let url: string = API.PAYMENTS.LIST;
+      const params = new URLSearchParams();
+      if (studentName?.trim()) params.append("search", studentName.trim());
+      if (status && status !== "all") params.append("status", status);
 
-    const queryString = params.toString();
-    if (queryString) {
-      url = `${url}?${queryString}`;
-    }
+      const queryString = params.toString();
+      if (queryString) {
+        url = `${url}?${queryString}`;
+      }
 
-    dispatch({
-      type: feesActions.GET_PAYMENTS,
-      method: "GET",
-      endPoint: url,
-      auth: true,
-      setLoading: setPaymentsLoading,
-      getResponse: (res: any) => {
-        setPayments(res?.data || res || []);
-      },
-      getError: (err: any) => {
-        console.error("Failed to load payments", err);
-      },
-    });
-  }, [dispatch]);  
-  
+      dispatch({
+        type: feesActions.GET_PAYMENTS,
+        method: "GET",
+        endPoint: url,
+        auth: true,
+        setLoading: setPaymentsLoading,
+        getResponse: (res: any) => {
+          setPayments(res?.data || res || []);
+        },
+        getError: (err: any) => {
+          console.error("Failed to load payments", err);
+        },
+      });
+    },
+    [dispatch],
+  );
+
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedRefStudentName(refStudentName);
@@ -428,7 +413,12 @@ export default function FeesPage() {
   }, [refStudentName]);
 
   useEffect(() => {
-    if (activeTab === "installments" || role === "student" || role === "parent" || role === "parents") {
+    if (
+      activeTab === "installments" ||
+      role === "student" ||
+      role === "parent" ||
+      role === "parents"
+    ) {
       fetchInstallments(debouncedInstStudentName, instStatus);
     }
   }, [activeTab, role, fetchInstallments, debouncedInstStudentName, instStatus]);
@@ -445,31 +435,64 @@ export default function FeesPage() {
     }
   }, [createRefundOpen, fetchPayments]);
 
-  const fetchRefunds = useCallback((studentName?: string, status?: string) => {
-    let url: string = API.REFUNDS.LIST;
-    const params = new URLSearchParams();
-    if (studentName?.trim()) params.append("search", studentName.trim());
-    if (status && status !== "all") params.append("status", status);
-
-    const queryString = params.toString();
-    if (queryString) {
-      url = `${url}?${queryString}`;
+  useEffect(() => {
+    if (activeTab === "structures") {
+      dispatch({
+        type: feesActions.GET_FEE_STRUCTURES,
+        method: "GET",
+        endPoint: API.FEES.STRUCTURES,
+        auth: true,
+        setLoading: setFeeStructuresLoading,
+        getResponse: (response: any) => {
+          if (response?.data) {
+            dispatch(setFeeStructure(response.data));
+          } else if (Array.isArray(response)) {
+            dispatch(setFeeStructure(response));
+          }
+        },
+        getError: (error: any) => {
+          const msg =
+            error?.response?.data?.message || error?.message || "Failed to load fee structures";
+          toast.error(msg);
+        },
+      });
     }
+  }, [dispatch, activeTab]);
 
-    dispatch({
-      type: feesActions.GET_REFUNDS,
-      method: "GET",
-      endPoint: url,
-      auth: true,
-      setLoading: setRefundsLoading,
-      getResponse: (res: any) => {
-        setRefunds(res?.data || res || []);
-      },
-      getError: (err: any) => {
-        console.error("Failed to load refunds", err);
-      },
-    });
-  }, [dispatch]);
+  useEffect(() => {
+    if (activeTab === "student-fees") {
+      fetchStudentFees(debouncedSfStudentName, sfStatus);
+    }
+  }, [fetchStudentFees, debouncedSfStudentName, sfStatus, activeTab]);
+
+  const fetchRefunds = useCallback(
+    (studentName?: string, status?: string) => {
+      let url: string = API.REFUNDS.LIST;
+      const params = new URLSearchParams();
+      if (studentName?.trim()) params.append("search", studentName.trim());
+      if (status && status !== "all") params.append("status", status);
+
+      const queryString = params.toString();
+      if (queryString) {
+        url = `${url}?${queryString}`;
+      }
+
+      dispatch({
+        type: feesActions.GET_REFUNDS,
+        method: "GET",
+        endPoint: url,
+        auth: true,
+        setLoading: setRefundsLoading,
+        getResponse: (res: any) => {
+          setRefunds(res?.data || res || []);
+        },
+        getError: (err: any) => {
+          console.error("Failed to load refunds", err);
+        },
+      });
+    },
+    [dispatch],
+  );
 
   useEffect(() => {
     if (activeTab === "refunds" || role === "student" || role === "parent" || role === "parents") {
@@ -489,7 +512,8 @@ export default function FeesPage() {
         fetchRefunds(debouncedRefStudentName, refStatus);
       },
       getError: (err: any) => {
-        const msg = err?.response?.data?.message || err?.message || "Failed to update refund status";
+        const msg =
+          err?.response?.data?.message || err?.message || "Failed to update refund status";
         toast.error(msg);
       },
     });
@@ -509,7 +533,8 @@ export default function FeesPage() {
         fetchRefunds(debouncedRefStudentName, refStatus);
       },
       getError: (err: any) => {
-        const msg = err?.response?.data?.message || err?.message || "Failed to create refund request";
+        const msg =
+          err?.response?.data?.message || err?.message || "Failed to create refund request";
         toast.error(msg);
       },
     });
@@ -532,7 +557,12 @@ export default function FeesPage() {
   }, [dispatch]);
 
   useEffect(() => {
-    if (activeTab === "bank-accounts" || activeTab === "payments" || adminRecordPaymentOpen || uploadOpen) {
+    if (
+      activeTab === "bank-accounts" ||
+      activeTab === "payments" ||
+      adminRecordPaymentOpen ||
+      uploadOpen
+    ) {
       fetchBankAccounts();
     }
   }, [activeTab, adminRecordPaymentOpen, uploadOpen, fetchBankAccounts]);
@@ -771,7 +801,8 @@ export default function FeesPage() {
           fetchBankAccounts();
         },
         getError: (err: any) => {
-          const msg = err?.response?.data?.message || err?.message || "Failed to update bank account";
+          const msg =
+            err?.response?.data?.message || err?.message || "Failed to update bank account";
           toast.error(msg);
         },
       });
@@ -789,7 +820,8 @@ export default function FeesPage() {
           fetchBankAccounts();
         },
         getError: (err: any) => {
-          const msg = err?.response?.data?.message || err?.message || "Failed to create bank account";
+          const msg =
+            err?.response?.data?.message || err?.message || "Failed to create bank account";
           toast.error(msg);
         },
       });
@@ -846,22 +878,35 @@ export default function FeesPage() {
   const studentFeeStructures = useMemo(() => {
     if (!isStudentLike || !studentDetail || !feeStructure) return [];
     return feeStructure.filter((fs) => {
-      const matchesCourseId = studentDetail.course && String(fs.course) === String(studentDetail.course);
-      const matchesCourseName = studentDetail.course_name && fs.course_name === studentDetail.course_name;
-      const matchesCourseString = studentDetail.course && fs.course_name && fs.course_name.toLowerCase().replace(/[^a-z0-9]/g, "") === String(studentDetail.course).toLowerCase().replace(/[^a-z0-9]/g, "");
+      const matchesCourseId =
+        studentDetail.course && String(fs.course) === String(studentDetail.course);
+      const matchesCourseName =
+        studentDetail.course_name && fs.course_name === studentDetail.course_name;
+      const matchesCourseString =
+        studentDetail.course &&
+        fs.course_name &&
+        fs.course_name.toLowerCase().replace(/[^a-z0-9]/g, "") ===
+          String(studentDetail.course)
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, "");
       const matchesCourse = matchesCourseId || matchesCourseName || matchesCourseString;
 
-      const matchesBatchId = studentDetail.batch && String(fs.batch) === String(studentDetail.batch);
-      const matchesBatchName = studentDetail.batch_name && fs.batch_name === studentDetail.batch_name;
-      const matchesCurrentBatchName = studentDetail.current_batch_name && fs.batch_name === studentDetail.current_batch_name;
+      const matchesBatchId =
+        studentDetail.batch && String(fs.batch) === String(studentDetail.batch);
+      const matchesBatchName =
+        studentDetail.batch_name && fs.batch_name === studentDetail.batch_name;
+      const matchesCurrentBatchName =
+        studentDetail.current_batch_name && fs.batch_name === studentDetail.current_batch_name;
       const matchesBatch = matchesBatchId || matchesBatchName || matchesCurrentBatchName;
-      
+
       // Match by course, or by batch, or by both
       return matchesCourse || matchesBatch;
     });
   }, [isStudentLike, studentDetail, feeStructure]);
 
-  const studentId = isStudentLike ? (studentDetail?.id || user?.linked_student || user?.id || "") : "";
+  const studentId = isStudentLike
+    ? studentDetail?.id || user?.linked_student || user?.id || ""
+    : "";
 
   const myStudentFees = useMemo(() => {
     if (!studentId) return [];
@@ -1011,7 +1056,9 @@ export default function FeesPage() {
   const discountVal = Number(reportData?.total_discount ?? defaultReportData.total_discount);
   const overdueVal = Number(reportData?.total_overdue ?? defaultReportData.total_overdue);
   const partialVal = Number(reportData?.total_partial ?? defaultReportData.total_partial);
-  const approvalPendingVal = Number(reportData?.total_approval_pending ?? defaultReportData.total_approval_pending);
+  const approvalPendingVal = Number(
+    reportData?.total_approval_pending ?? defaultReportData.total_approval_pending,
+  );
 
   const trendChartData = useMemo(() => {
     const rawTrend = reportData?.monthly_trend ?? defaultReportData.monthly_trend;
@@ -1023,10 +1070,12 @@ export default function FeesPage() {
 
   const modeChartData = useMemo(() => {
     const rawModes = reportData?.collection_by_mode ?? defaultReportData.collection_by_mode;
-    return Object.entries(rawModes).map(([mode, val]) => ({
-      name: mode,
-      value: Number(val || 0),
-    })).filter(item => item.value > 0);
+    return Object.entries(rawModes)
+      .map(([mode, val]) => ({
+        name: mode,
+        value: Number(val || 0),
+      }))
+      .filter((item) => item.value > 0);
   }, [reportData]);
 
   const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
@@ -1136,6 +1185,7 @@ export default function FeesPage() {
         <TabsContent value="structures">
           <StructuresTab
             feeStructure={feeStructure}
+            loading={feeStructuresLoading}
             viewLoadingId={viewLoadingId}
             handleCardClick={handleCardClick}
             isAccountant={isAccountant}
@@ -1155,6 +1205,7 @@ export default function FeesPage() {
             students={students}
             feeStructure={feeStructure}
             handleViewOverview={handleViewOverview}
+            loading={studentFeesLoading}
           />
         </TabsContent>
 
@@ -1453,14 +1504,7 @@ function StudentFeesView({
   const outstanding = studentFees.reduce((sum, sf) => sum + Number(sf.amount_due || 0), 0);
 
   if (studentDetailLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-muted-foreground">Loading your fee details...</p>
-        </div>
-      </div>
-    );
+    return <StudentDetailSkeleton />;
   }
 
   return (
@@ -1486,7 +1530,8 @@ function StudentFeesView({
         <p className="text-xs uppercase tracking-wider opacity-80">My Fee Summary</p>
         {courseName && (
           <p className="text-xs opacity-70 mt-1">
-            {courseName}{batchName ? ` — ${batchName}` : ""}
+            {courseName}
+            {batchName ? ` — ${batchName}` : ""}
           </p>
         )}
         <div className="grid grid-cols-3 gap-4 mt-3">
@@ -1502,7 +1547,9 @@ function StudentFeesView({
           </div>
           <div>
             <p className="text-xs opacity-80">Outstanding</p>
-            <p className="text-xl font-heading font-bold text-rose-400">{formatCurrency(outstanding > 0 ? outstanding : 0)}</p>
+            <p className="text-xl font-heading font-bold text-rose-400">
+              {formatCurrency(outstanding > 0 ? outstanding : 0)}
+            </p>
           </div>
         </div>
       </motion.div>
@@ -1520,7 +1567,9 @@ function StudentFeesView({
                 className="rounded-xl bg-card border border-border p-4"
               >
                 <div className="flex justify-between items-start mb-2">
-                  <h4 className="font-heading font-semibold text-sm">{sf.fee_structure_name || sf.id}</h4>
+                  <h4 className="font-heading font-semibold text-sm">
+                    {sf.fee_structure_name || sf.id}
+                  </h4>
                   <span
                     className={cn(
                       "px-2 py-0.5 rounded-full text-xs font-semibold border capitalize",
@@ -1547,11 +1596,15 @@ function StudentFeesView({
                   )}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Paid Amount</span>
-                    <span className="font-medium text-primary">{formatCurrency(Number(sf.amount_paid))}</span>
+                    <span className="font-medium text-primary">
+                      {formatCurrency(Number(sf.amount_paid))}
+                    </span>
                   </div>
                   <div className="flex justify-between border-t pt-1 mt-1">
                     <span className="text-muted-foreground font-medium">Due Amount</span>
-                    <span className="font-semibold text-destructive">{formatCurrency(Number(sf.amount_due))}</span>
+                    <span className="font-semibold text-destructive">
+                      {formatCurrency(Number(sf.amount_due))}
+                    </span>
                   </div>
                   <div className="flex justify-between text-xs text-muted-foreground mt-1.5">
                     <span>Due Date</span>
@@ -1566,9 +1619,7 @@ function StudentFeesView({
 
       <h3 className="font-heading font-semibold mb-2 mt-6">Payment History</h3>
       {paymentHistoryLoading ? (
-        <div className="py-8 text-center text-muted-foreground bg-muted/10 border border-dashed rounded-xl">
-          Loading payment history...
-        </div>
+        <FeeTableSkeleton columns={6} rows={3} hasFilter={false} />
       ) : paymentHistory.length === 0 ? (
         <div className="py-8 text-center text-muted-foreground bg-muted/10 border border-dashed rounded-xl">
           No payments recorded yet.
@@ -1636,7 +1687,9 @@ function PaymentsTable({
     {
       key: "payment_mode",
       header: "Mode",
-      render: (r) => <span className="uppercase text-xs font-semibold">{r.payment_mode?.replace("_", " ")}</span>,
+      render: (r) => (
+        <span className="uppercase text-xs font-semibold">{r.payment_mode?.replace("_", " ")}</span>
+      ),
     },
     {
       key: "transaction_ref",
@@ -1659,7 +1712,12 @@ function PaymentsTable({
         };
         const label = r.status === "pending_verification" ? "Pending Verification" : r.status;
         return (
-          <span className={cn("px-2 py-0.5 rounded-full text-xs font-semibold border capitalize whitespace-nowrap", statusColors[r.status] || "bg-muted text-muted-foreground border-muted-foreground/20")}>
+          <span
+            className={cn(
+              "px-2 py-0.5 rounded-full text-xs font-semibold border capitalize whitespace-nowrap",
+              statusColors[r.status] || "bg-muted text-muted-foreground border-muted-foreground/20",
+            )}
+          >
             {label?.replace("_", " ")}
           </span>
         );
@@ -1697,13 +1755,7 @@ function PaymentsTable({
   return <DataTable columns={cols} data={data} />;
 }
 
-function PaymentsHistoryTable({
-  data,
-  studentFees,
-}: {
-  data: any[];
-  studentFees: StudentFee[];
-}) {
+function PaymentsHistoryTable({ data, studentFees }: { data: any[]; studentFees: StudentFee[] }) {
   const cols: DataTableColumn<any>[] = [
     { key: "receipt_number", header: "Receipt #", className: "font-mono text-xs" },
     {
@@ -1718,7 +1770,9 @@ function PaymentsHistoryTable({
     {
       key: "payment_mode",
       header: "Mode",
-      render: (r) => <span className="uppercase text-xs font-semibold">{r.payment_mode?.replace("_", " ")}</span>,
+      render: (r) => (
+        <span className="uppercase text-xs font-semibold">{r.payment_mode?.replace("_", " ")}</span>
+      ),
     },
     {
       key: "status",
@@ -1731,7 +1785,12 @@ function PaymentsHistoryTable({
         };
         const label = r.status === "pending_verification" ? "Pending Verification" : r.status;
         return (
-          <span className={cn("px-2 py-0.5 rounded-full text-xs font-semibold border capitalize whitespace-nowrap", statusColors[r.status] || "bg-muted text-muted-foreground border-muted-foreground/20")}>
+          <span
+            className={cn(
+              "px-2 py-0.5 rounded-full text-xs font-semibold border capitalize whitespace-nowrap",
+              statusColors[r.status] || "bg-muted text-muted-foreground border-muted-foreground/20",
+            )}
+          >
             {label?.replace("_", " ")}
           </span>
         );
@@ -1741,4 +1800,3 @@ function PaymentsHistoryTable({
   ];
   return <DataTable columns={cols} data={data} />;
 }
-

@@ -1,6 +1,7 @@
 import { Pencil, Trash2 } from "lucide-react";
 import DataTable, { type DataTableColumn } from "@/components/common/DataTable";
 import { Button } from "@/components/ui/button";
+import { FeeTableSkeleton } from "@/components/common/Skeletons";
 import { cn } from "@/lib/utils";
 
 interface BankAccountsTabProps {
@@ -17,12 +18,7 @@ export default function BankAccountsTab({
   onDelete,
 }: BankAccountsTabProps) {
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 space-y-3">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <p className="text-sm text-muted-foreground">Loading bank accounts...</p>
-      </div>
-    );
+    return <FeeTableSkeleton columns={5} rows={4} hasFilter={false} />;
   }
 
   if (data?.length === 0) {
