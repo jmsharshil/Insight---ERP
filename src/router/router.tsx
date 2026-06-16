@@ -48,7 +48,7 @@ const UsersPage = lazy(() => import("@/pages/users/UsersPage"));
 
 function RootRedirect() {
   const { isAuthenticated } = useAuth();
-  return <Navigate to={isAuthenticated ? "/crm" : "/login"} replace />;
+  return <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />;
 }
 
 /**

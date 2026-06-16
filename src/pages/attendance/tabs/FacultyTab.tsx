@@ -10,6 +10,7 @@ import {
 } from "@/redux/slices/attendanceSlice";
 import type { RootState, AppDispatch } from "@/store";
 import { useToast } from "@/hooks/useToast";
+import { useAuth } from "@/hooks/useAuth";
 import { TableSkeleton } from "@/components/common/Skeletons";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -21,11 +22,22 @@ export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
   const navigate = useNavigate();
   const toast = useToast();
   const { faculty, facultyLoading } = useSelector((s: RootState) => s.attendance);
+  const { user } = useAuth();
 
-  const branches = dropdowns?.branches || [];
-  const facultyList = dropdowns?.faculty || [];
+  const branches = dropdowns?.branches?.filter((b: any) => {
+    if (user && user.role === "branch_manager" && user.branch) {
+      return b.id === user.branch;
+    }
+    return true;
+  }) || [];
+  const facultyList = dropdowns?.faculty?.filter((f: any) => {
+    if (user && user.role === "branch_manager" && user.branch) {
+      return !f.branch_id || f.branch_id === user.branch;
+    }
+    return true;
+  }) || [];
 
-  const [f, setF] = useState({ faculty_id: "", branch_id: "", date_from: "", date_to: "" });
+  const [f, setF] = useState({ faculty_id: "", branch_id: (user && user.role === "branch_manager" && user.branch) ? user.branch : "", date_from: "", date_to: "" });
 
   const fetchFaculty = () => {
     const p = new URLSearchParams();
@@ -72,7 +84,7 @@ export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
         <Input type="date" className="h-9 text-sm w-40" value={f.date_from} onChange={e => setF(p => ({ ...p, date_from: e.target.value }))} />
         <Input type="date" className="h-9 text-sm w-40" value={f.date_to}   onChange={e => setF(p => ({ ...p, date_to:   e.target.value }))} />
         <Button onClick={fetchFaculty} className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm">Apply</Button>
-        <Button variant="outline" className="h-9 text-sm" onClick={() => setF({ faculty_id: "", branch_id: "", date_from: "", date_to: "" })}><X className="w-3 h-3 mr-1" />Clear</Button>
+        <Button variant="outline" className="h-9 text-sm" onClick={() => setF({ faculty_id: "", branch_id: (user && user.role === "branch_manager" && user.branch) ? user.branch : "", date_from: "", date_to: "" })}><X className="w-3 h-3 mr-1" />Clear</Button>
       </div>
 
       {facultyLoading ? <TableSkeleton columns={6} rows={5} className="mt-0" /> : (

@@ -190,6 +190,11 @@ export const API = {
     STUDENT_FEES_LIST: "/api/v1/student-fees/",
     STUDENT_FEES_DETAIL: (studentId: string | number) => `/api/v1/fees/student/${studentId}/`,
     STUDENT_FEES_SUMMARY: "/api/v1/student-fees/summary/",
+    REPORT: (month?: number | string, year?: number | string) => {
+      const base = "/api/v1/fees/report/";
+      if (!month || !year) return base;
+      return `${base}?month=${month}&year=${year}`;
+    },
   },
   INSTALLMENTS: {
     LIST: "/api/v1/installments/",
@@ -220,6 +225,20 @@ export const API = {
     // Late Entries
     LATE_ENTRIES:         "/api/v1/leave/late-entries/",
     LATE_ENTRY_DETAIL:    (id: string) => `/api/v1/leave/late-entries/${id}/`,
+  PAYMENTS: {
+    LIST: "/api/v1/payments/",
+    RECORD: "/api/v1/payments/",
+    VERIFY: (id: string | number) => `/api/v1/payments/${id}/verify/`,
+  },
+  BANK_ACCOUNTS: {
+    LIST: "/api/v1/bank-accounts/",
+    CREATE: "/api/v1/bank-accounts/",
+    DETAIL: (id: string | number) => `/api/v1/bank-accounts/${id}/`,
+  },
+  REFUNDS: {
+    LIST: "/api/v1/refunds/",
+    CREATE: "/api/v1/refunds/create/",
+    UPDATE: (id: string | number) => `/api/v1/refunds/${id}/`,
   },
 } as const;
 

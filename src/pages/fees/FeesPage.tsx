@@ -1,6 +1,21 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  Cell,
+  PieChart,
+  Pie
+} from "recharts";
+import {
   Wallet,
   Clock,
   AlertCircle,
@@ -13,7 +28,32 @@ import {
   Plus,
   Pencil,
   Trash2,
+  MoreVertical,
 } from "lucide-react";
+
+import ReportsTab from "./tabs/ReportsTab";
+import StructuresTab from "./tabs/StructuresTab";
+import StudentFeesTab from "./tabs/StudentFeesTab";
+import InstallmentsTab from "./tabs/InstallmentsTab";
+import PaymentsTab from "./tabs/PaymentsTab";
+import BankAccountsTab from "./tabs/BankAccountsTab";
+import RefundsTab from "./tabs/RefundsTab";
+import {
+  RecordPaymentDialog,
+  VerifyPaymentDialog,
+  RejectDialog,
+  RefundDialog,
+  CashEntryDialog,
+  FeeStructureDialog,
+  ViewFeeStructureDialog,
+  AssignStudentFeeDialog,
+  ViewStudentFeeOverviewDialog,
+  ViewInstallmentPlanDialog,
+  RejectInstallmentDialog,
+  BankAccountDialog,
+  CreateRefundDialog,
+  CreateInstallmentDialog,
+} from "./dialogs";
 
 import PageHeader from "@/components/layout/PageHeader";
 import StatCard from "@/components/common/StatCard";
@@ -39,6 +79,12 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { useUI } from "@/hooks/useUI";
 import { useAuth } from "@/hooks/useAuth";
@@ -70,6 +116,25 @@ import { setCourses } from "@/redux/slices/coursesSlice";
 import { RootState, AppDispatch } from "@/store";
 import { API } from "@/service/api";
 
+const defaultReportData = {
+  total_billed: 551000.0,
+  total_collected: 469000.0,
+  total_pending: 0,
+  total_discount: 104500.0,
+  total_overdue: 0,
+  total_partial: 0,
+  total_approval_pending: 0,
+  collection_by_mode: {
+    cash: 200000.0,
+    cheque: 200000.0,
+    dd: 22500.0,
+    online: 24000.0
+  },
+  monthly_trend: [
+    { month: "2026-06", collected: 446500.0 }
+  ]
+};
+
 const toNumber = (value: any) => {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
@@ -81,34 +146,53 @@ export default function FeesPage() {
   const toast = useToast();
   const dispatch = useDispatch<AppDispatch>();
 
+  // API Query Filters
+  const [sfStudentName, setSfStudentName] = useState("");
+  const [debouncedSfStudentName, setDebouncedSfStudentName] = useState("");
+  const [sfStatus, setSfStatus] = useState("all");
+
+  const [payStudentName, setPayStudentName] = useState("");
+  const [debouncedPayStudentName, setDebouncedPayStudentName] = useState("");
+  const [payStatus, setPayStatus] = useState("all");
+
+  const [instStudentName, setInstStudentName] = useState("");
+  const [debouncedInstStudentName, setDebouncedInstStudentName] = useState("");
+  const [instStatus, setInstStatus] = useState("all");
+
+  // Debounce hook effects
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSfStudentName(sfStudentName);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [sfStudentName]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedPayStudentName(payStudentName);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [payStudentName]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedInstStudentName(instStudentName);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [instStudentName]);
+
+  const role = user?.role;
+  const isStudentLike = role === "student" || role === "parent" || role === "parents";
+  const isAccountant = role === "accountant";
+  const isBM = role === "branch_manager";
+  const isAdmin = role === "super_admin" || isBM;
+  const isAdminSr = role === "admin_senior_exec";
+
   const feeStructure = useSelector((state: RootState) => state.fees.feeStructure);
   const studentFees = useSelector((state: RootState) => state.fees.studentFees);
   const { students } = useSelector((state: RootState) => state.students);
   const courses = useSelector((state: RootState) => state.courses.courses);
   const [batches, setBatches] = useState<any[]>([]);
-
-  const [summaryData, setSummaryData] = useState<any>(null);
-  const [summaryLoading, setSummaryLoading] = useState(false);
-
-  const fetchSummary = useCallback(() => {
-    dispatch({
-      type: feesActions.GET_STUDENT_FEES_SUMMARY,
-      method: "GET",
-      endPoint: API.FEES.STUDENT_FEES_SUMMARY,
-      auth: true,
-      setLoading: setSummaryLoading,
-      getResponse: (res: any) => {
-        setSummaryData(res?.data || res || null);
-      },
-      getError: (err: any) => {
-        console.error("Failed to fetch student fees summary", err);
-      },
-    });
-  }, [dispatch]);
-
-  useEffect(() => {
-    fetchSummary();
-  }, [fetchSummary]);
 
   useEffect(() => {
     setPageTitle("Fees");
@@ -169,11 +253,21 @@ export default function FeesPage() {
     });
   }, [dispatch]);
 
-  useEffect(() => {
+  const fetchStudentFees = useCallback((studentName?: string, status?: string) => {
+    let url: string = API.FEES.STUDENT_FEES_LIST;
+    const params = new URLSearchParams();
+    if (studentName?.trim()) params.append("search", studentName.trim());
+    if (status && status !== "all") params.append("status", status);
+
+    const queryString = params.toString();
+    if (queryString) {
+      url = `${url}?${queryString}`;
+    }
+
     dispatch({
       type: feesActions.GET_STUDENT_FEES,
       method: "GET",
-      endPoint: API.FEES.STUDENT_FEES_LIST,
+      endPoint: url,
       auth: true,
       getResponse: (res: any) => {
         const data = res?.data ?? res;
@@ -187,6 +281,10 @@ export default function FeesPage() {
       },
     });
   }, [dispatch]);
+
+  useEffect(() => {
+    fetchStudentFees(debouncedSfStudentName, sfStatus);
+  }, [fetchStudentFees, debouncedSfStudentName, sfStatus]);
 
   useEffect(() => {
     if (students.length === 0) {
@@ -220,12 +318,30 @@ export default function FeesPage() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [cashOpen, setCashOpen] = useState(false);
 
+  const [payments, setPayments] = useState<any[]>([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [verifyingPayment, setVerifyingPayment] = useState<any | null>(null);
+  const [verifyPaymentLoading, setVerifyPaymentLoading] = useState(false);
+  const [recordPaymentLoading, setRecordPaymentLoading] = useState(false);
+  const [adminRecordPaymentOpen, setAdminRecordPaymentOpen] = useState(false);
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [bankAccountsLoading, setBankAccountsLoading] = useState(false);
+  const [bankAccountDialogOpen, setBankAccountDialogOpen] = useState(false);
+  const [editingBankAccount, setEditingBankAccount] = useState<any | null>(null);
+  const [deleteBankAccountOpen, setDeleteBankAccountOpen] = useState<any | null>(null);
+  const [deleteBankAccountLoading, setDeleteBankAccountLoading] = useState(false);
+  const [bankAccountFormLoading, setBankAccountFormLoading] = useState(false);
+
   const [createOpen, setCreateOpen] = useState(false);
   const [editingStructure, setEditingStructure] = useState<FeesStructure | null>(null);
   const [deleteOpen, setDeleteOpen] = useState<FeesStructure | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [fsLoading, setFsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("structures");
+  const [activeTab, setActiveTab] = useState("reports");
+  const [reportData, setReportData] = useState<any>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportMonth, setReportMonth] = useState<number>(new Date().getMonth() + 1); // 1-12
+  const [reportYear, setReportYear] = useState<number>(new Date().getFullYear());
   const [viewingStructure, setViewingStructure] = useState<FeesStructure | null>(null);
   const [viewLoadingId, setViewLoadingId] = useState<string | null>(null);
 
@@ -234,17 +350,39 @@ export default function FeesPage() {
   const [createInstallmentOpen, setCreateInstallmentOpen] = useState(false);
   const [createInstallmentLoading, setCreateInstallmentLoading] = useState(false);
   const [approveLoadingId, setApproveLoadingId] = useState<string | null>(null);
+  const [viewingInstallment, setViewingInstallment] = useState<any | null>(null);
+  const [installmentCreatedMessage, setInstallmentCreatedMessage] = useState<string | null>(null);
+  const [rejectInstallment, setRejectInstallment] = useState<any | null>(null);
 
   const [instStudentId, setInstStudentId] = useState("");
   const [instStudentFeeId, setInstStudentFeeId] = useState("");
   const [instTotalAmount, setInstTotalAmount] = useState<number>(0);
   const [instItems, setInstItems] = useState<{ amount: string; due_date: string }[]>([]);
 
-  const fetchInstallments = useCallback(() => {
+  // Refund states
+  const [refunds, setRefunds] = useState<any[]>([]);
+  const [refundsLoading, setRefundsLoading] = useState(false);
+  const [refStudentName, setRefStudentName] = useState("");
+  const [debouncedRefStudentName, setDebouncedRefStudentName] = useState("");
+  const [refStatus, setRefStatus] = useState("all");
+  const [createRefundOpen, setCreateRefundOpen] = useState(false);
+  const [createRefundLoading, setCreateRefundLoading] = useState(false);
+
+  const fetchInstallments = useCallback((studentName?: string, status?: string) => {
+    let url: string = API.INSTALLMENTS.LIST;
+    const params = new URLSearchParams();
+    if (studentName?.trim()) params.append("search", studentName.trim());
+    if (status && status !== "all") params.append("status", status);
+
+    const queryString = params.toString();
+    if (queryString) {
+      url = `${url}?${queryString}`;
+    }
+
     dispatch({
       type: feesActions.GET_INSTALLMENTS,
       method: "GET",
-      endPoint: API.INSTALLMENTS.LIST,
+      endPoint: url,
       auth: true,
       setLoading: setInstallmentsLoading,
       getResponse: (res: any) => {
@@ -256,39 +394,174 @@ export default function FeesPage() {
     });
   }, [dispatch]);
 
-  useEffect(() => {
-    if (activeTab === "installments") {
-      fetchInstallments();
+  const fetchPayments = useCallback((studentName?: string, status?: string) => {
+    let url: string = API.PAYMENTS.LIST;
+    const params = new URLSearchParams();
+    if (studentName?.trim()) params.append("search", studentName.trim());
+    if (status && status !== "all") params.append("status", status);
+
+    const queryString = params.toString();
+    if (queryString) {
+      url = `${url}?${queryString}`;
     }
-  }, [activeTab, fetchInstallments]);
+
+    dispatch({
+      type: feesActions.GET_PAYMENTS,
+      method: "GET",
+      endPoint: url,
+      auth: true,
+      setLoading: setPaymentsLoading,
+      getResponse: (res: any) => {
+        setPayments(res?.data || res || []);
+      },
+      getError: (err: any) => {
+        console.error("Failed to load payments", err);
+      },
+    });
+  }, [dispatch]);  
+  
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedRefStudentName(refStudentName);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [refStudentName]);
+
+  useEffect(() => {
+    if (activeTab === "installments" || role === "student" || role === "parent" || role === "parents") {
+      fetchInstallments(debouncedInstStudentName, instStatus);
+    }
+  }, [activeTab, role, fetchInstallments, debouncedInstStudentName, instStatus]);
+
+  useEffect(() => {
+    if (activeTab === "payments" || role === "student" || role === "parent" || role === "parents") {
+      fetchPayments(debouncedPayStudentName, payStatus);
+    }
+  }, [activeTab, role, fetchPayments, debouncedPayStudentName, payStatus]);
+
+  useEffect(() => {
+    if (createRefundOpen) {
+      fetchPayments(undefined, "verified");
+    }
+  }, [createRefundOpen, fetchPayments]);
+
+  const fetchRefunds = useCallback((studentName?: string, status?: string) => {
+    let url: string = API.REFUNDS.LIST;
+    const params = new URLSearchParams();
+    if (studentName?.trim()) params.append("search", studentName.trim());
+    if (status && status !== "all") params.append("status", status);
+
+    const queryString = params.toString();
+    if (queryString) {
+      url = `${url}?${queryString}`;
+    }
+
+    dispatch({
+      type: feesActions.GET_REFUNDS,
+      method: "GET",
+      endPoint: url,
+      auth: true,
+      setLoading: setRefundsLoading,
+      getResponse: (res: any) => {
+        setRefunds(res?.data || res || []);
+      },
+      getError: (err: any) => {
+        console.error("Failed to load refunds", err);
+      },
+    });
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (activeTab === "refunds" || role === "student" || role === "parent" || role === "parents") {
+      fetchRefunds(debouncedRefStudentName, refStatus);
+    }
+  }, [activeTab, role, fetchRefunds, debouncedRefStudentName, refStatus]);
+
+  function handleUpdateRefundStatus(id: string, status: "completed" | "rejected") {
+    dispatch({
+      type: feesActions.UPDATE_REFUND,
+      method: "PATCH",
+      endPoint: API.REFUNDS.UPDATE(id),
+      body: { status },
+      auth: true,
+      getResponse: (res: any) => {
+        toast.success(`Refund status updated to ${status}.`);
+        fetchRefunds(debouncedRefStudentName, refStatus);
+      },
+      getError: (err: any) => {
+        const msg = err?.response?.data?.message || err?.message || "Failed to update refund status";
+        toast.error(msg);
+      },
+    });
+  }
+
+  function handleCreateRefund(payload: any) {
+    dispatch({
+      type: feesActions.CREATE_REFUND,
+      method: "POST",
+      endPoint: API.REFUNDS.CREATE,
+      body: payload,
+      auth: true,
+      setLoading: setCreateRefundLoading,
+      getResponse: (res: any) => {
+        toast.success(res?.message || "Refund request created successfully.");
+        setCreateRefundOpen(false);
+        fetchRefunds(debouncedRefStudentName, refStatus);
+      },
+      getError: (err: any) => {
+        const msg = err?.response?.data?.message || err?.message || "Failed to create refund request";
+        toast.error(msg);
+      },
+    });
+  }
+
+  const fetchBankAccounts = useCallback(() => {
+    dispatch({
+      type: feesActions.GET_BANK_ACCOUNTS,
+      method: "GET",
+      endPoint: API.BANK_ACCOUNTS.LIST,
+      auth: true,
+      setLoading: setBankAccountsLoading,
+      getResponse: (res: any) => {
+        setBankAccounts(res?.data || res || []);
+      },
+      getError: (err: any) => {
+        console.error("Failed to load bank accounts", err);
+      },
+    });
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (activeTab === "bank-accounts" || activeTab === "payments" || adminRecordPaymentOpen || uploadOpen) {
+      fetchBankAccounts();
+    }
+  }, [activeTab, adminRecordPaymentOpen, uploadOpen, fetchBankAccounts]);
+
+  const fetchReportData = useCallback(() => {
+    dispatch({
+      type: feesActions.GET_FEE_REPORT,
+      method: "GET",
+      endPoint: API.FEES.REPORT(reportMonth, reportYear),
+      auth: true,
+      setLoading: setReportLoading,
+      getResponse: (res: any) => {
+        setReportData(res?.data || res || null);
+      },
+      getError: (err: any) => {
+        console.error("Failed to load fee report", err);
+      },
+    });
+  }, [dispatch, reportMonth, reportYear]);
+
+  useEffect(() => {
+    if (activeTab === "reports" && (isAccountant || isAdmin)) {
+      fetchReportData();
+    }
+  }, [activeTab, fetchReportData, isAccountant, isAdmin]);
 
   const [assignFeeOpen, setAssignFeeOpen] = useState(false);
   const [assignFeeLoading, setAssignFeeLoading] = useState(false);
-  const [studentFilter, setStudentFilter] = useState<string>("all");
-  const [filteredStudentFees, setFilteredStudentFees] = useState<StudentFee[]>([]);
-
-  useEffect(() => {
-    if (studentFilter === "all") {
-      setFilteredStudentFees(studentFees);
-    } else {
-      dispatch({
-        type: feesActions.GET_STUDENT_FEES_BY_STUDENT,
-        method: "GET",
-        endPoint: API.FEES.STUDENT_FEES_DETAIL(studentFilter),
-        auth: true,
-        getResponse: (res: any) => {
-          setOverviewLoading(false);
-          const data = res?.data ?? res;
-          setOverviewData(data?.fees || []);
-        },
-        getError: (err: any) => {
-          const msg =
-            err?.response?.data?.message || err?.message || "Failed to load student fee overview";
-          toast.error(msg);
-        },
-      });
-    }
-  }, [studentFilter, studentFees, dispatch]);
+  const filteredStudentFees = studentFees;
 
   function handleAssignStudentFee(payload: any) {
     dispatch({
@@ -303,7 +576,6 @@ export default function FeesPage() {
         dispatch(addStudentFee(created));
         toast.success("Student fee assigned successfully.");
         setAssignFeeOpen(false);
-        fetchSummary();
       },
       getError: (err: any) => {
         const msg = err?.response?.data?.message || err?.message || "Failed to assign student fee";
@@ -321,10 +593,11 @@ export default function FeesPage() {
       auth: true,
       setLoading: setCreateInstallmentLoading,
       getResponse: (res: any) => {
-        toast.success("Installment plan created successfully.");
+        toast.success(res?.message || "Installment plan created successfully.");
         setCreateInstallmentOpen(false);
+        setViewingInstallment(res?.data || res);
+        setInstallmentCreatedMessage(res?.message || null);
         fetchInstallments();
-        fetchSummary();
       },
       getError: (err: any) => {
         const msg =
@@ -334,19 +607,20 @@ export default function FeesPage() {
     });
   }
 
-  function handleApproveRejectInstallment(id: string, approved: boolean) {
+  function handleApproveRejectInstallment(id: string, status: string, rejection_reason = "") {
     setApproveLoadingId(id);
     dispatch({
       type: feesActions.APPROVE_INSTALLMENT_PLAN,
       method: "POST",
       endPoint: API.INSTALLMENTS.APPROVE(id),
-      body: { approved },
+      body: { status, rejection_reason },
       auth: true,
       getResponse: (res: any) => {
-        toast.success(`Installment plan ${approved ? "approved" : "rejected"} successfully.`);
+        toast.success(
+          `Installment plan ${status === "approved" ? "approved" : "rejected"} successfully.`,
+        );
         setApproveLoadingId(null);
         fetchInstallments();
-        fetchSummary();
       },
       getError: (err: any) => {
         setApproveLoadingId(null);
@@ -358,6 +632,13 @@ export default function FeesPage() {
       },
     });
   }
+
+  const handleRejectSubmit = (reason: string) => {
+    if (rejectInstallment) {
+      handleApproveRejectInstallment(rejectInstallment.id, "rejected", reason);
+      setRejectInstallment(null);
+    }
+  };
 
   const [overviewStudentId, setOverviewStudentId] = useState<string | null>(null);
   const [overviewLoading, setOverviewLoading] = useState(false);
@@ -474,12 +755,66 @@ export default function FeesPage() {
     }
   }
 
-  const role = user?.role;
-  const isStudentLike = role === "student" || role === "parent" || role === "parents";
-  const isAccountant = role === "accountant";
-  const isBM = role === "branch_manager";
-  const isAdmin = role === "super_admin" || isBM;
-  const isAdminSr = role === "admin_senior_exec";
+  function handleSaveBankAccount(payload: any) {
+    if (editingBankAccount) {
+      dispatch({
+        type: feesActions.UPDATE_BANK_ACCOUNT,
+        method: "PATCH",
+        endPoint: API.BANK_ACCOUNTS.DETAIL(editingBankAccount.id),
+        body: payload,
+        auth: true,
+        setLoading: setBankAccountFormLoading,
+        getResponse: (res: any) => {
+          toast.success("Bank account updated successfully.");
+          setBankAccountDialogOpen(false);
+          setEditingBankAccount(null);
+          fetchBankAccounts();
+        },
+        getError: (err: any) => {
+          const msg = err?.response?.data?.message || err?.message || "Failed to update bank account";
+          toast.error(msg);
+        },
+      });
+    } else {
+      dispatch({
+        type: feesActions.CREATE_BANK_ACCOUNT,
+        method: "POST",
+        endPoint: API.BANK_ACCOUNTS.CREATE,
+        body: payload,
+        auth: true,
+        setLoading: setBankAccountFormLoading,
+        getResponse: (res: any) => {
+          toast.success("Bank account created successfully.");
+          setBankAccountDialogOpen(false);
+          fetchBankAccounts();
+        },
+        getError: (err: any) => {
+          const msg = err?.response?.data?.message || err?.message || "Failed to create bank account";
+          toast.error(msg);
+        },
+      });
+    }
+  }
+
+  function handleDeleteBankAccount() {
+    if (!deleteBankAccountOpen) return;
+    dispatch({
+      type: feesActions.DELETE_BANK_ACCOUNT,
+      method: "DELETE",
+      endPoint: API.BANK_ACCOUNTS.DETAIL(deleteBankAccountOpen.id),
+      auth: true,
+      setLoading: setDeleteBankAccountLoading,
+      getResponse: () => {
+        toast.success("Bank account deleted successfully.");
+        setDeleteBankAccountOpen(null);
+        fetchBankAccounts();
+      },
+      getError: (err: any) => {
+        const msg = err?.response?.data?.message || err?.message || "Failed to delete bank account";
+        toast.error(msg);
+      },
+    });
+  }
 
   // Fetch student detail for student/parent role
   const [studentDetail, setStudentDetail] = useState<any>(null);
@@ -526,17 +861,101 @@ export default function FeesPage() {
     });
   }, [isStudentLike, studentDetail, feeStructure]);
 
+  const studentId = isStudentLike ? (studentDetail?.id || user?.linked_student || user?.id || "") : "";
+
+  const myStudentFees = useMemo(() => {
+    if (!studentId) return [];
+    return studentFees.filter((sf) => String(sf.student) === String(studentId));
+  }, [studentFees, studentId]);
+
+  const myPayments = useMemo(() => {
+    if (!studentId) return [];
+    return payments.filter((p) => String(p.student) === String(studentId));
+  }, [payments, studentId]);
+
+  function handleRecordPayment(payload: any) {
+    dispatch({
+      type: feesActions.RECORD_PAYMENT,
+      method: "POST",
+      endPoint: API.PAYMENTS.RECORD,
+      body: payload,
+      auth: true,
+      setLoading: setRecordPaymentLoading,
+      getResponse: (res: any) => {
+        toast.success(res?.message || "Payment recorded successfully.");
+        setUploadOpen(false);
+        fetchPayments();
+        dispatch({
+          type: feesActions.GET_STUDENT_FEES,
+          method: "GET",
+          endPoint: API.FEES.STUDENT_FEES_LIST,
+          auth: true,
+          getResponse: (res: any) => {
+            const data = res?.data ?? res;
+            if (Array.isArray(data)) {
+              dispatch(setStudentFees(data));
+            }
+          },
+        });
+      },
+      getError: (err: any) => {
+        const msg = err?.response?.data?.message || err?.message || "Failed to record payment";
+        toast.error(msg);
+      },
+    });
+  }
+
+  function handleVerifyPayment(payload: { status: string; note: string }) {
+    if (!verifyingPayment) return;
+    dispatch({
+      type: feesActions.VERIFY_PAYMENT,
+      method: "POST",
+      endPoint: API.PAYMENTS.VERIFY(verifyingPayment.id),
+      body: payload,
+      auth: true,
+      setLoading: setVerifyPaymentLoading,
+      getResponse: (res: any) => {
+        toast.success(res?.message || `Payment status updated successfully.`);
+        setVerifyingPayment(null);
+        fetchPayments();
+        if (activeTab === "reports") {
+          fetchReportData();
+        }
+        dispatch({
+          type: feesActions.GET_STUDENT_FEES,
+          method: "GET",
+          endPoint: API.FEES.STUDENT_FEES_LIST,
+          auth: true,
+          getResponse: (res: any) => {
+            const data = res?.data ?? res;
+            if (Array.isArray(data)) {
+              dispatch(setStudentFees(data));
+            }
+          },
+        });
+      },
+      getError: (err: any) => {
+        const msg = err?.response?.data?.message || err?.message || "Failed to verify payment";
+        toast.error(msg);
+      },
+    });
+  }
+
   // Student/Parent view ----------------------
   if (isStudentLike)
     return (
       <StudentFeesView
-        txns={txns}
-        setTxns={setTxns}
+        studentFees={myStudentFees}
+        installments={installments}
         uploadOpen={uploadOpen}
         setUploadOpen={setUploadOpen}
         studentDetail={studentDetail}
         studentDetailLoading={studentDetailLoading}
         feeStructures={studentFeeStructures}
+        onSubmitPayment={handleRecordPayment}
+        paymentHistory={myPayments}
+        paymentHistoryLoading={paymentsLoading}
+        bankAccounts={bankAccounts}
       />
     );
 
@@ -545,7 +964,6 @@ export default function FeesPage() {
   );
   const cashApprovals = txns.filter((t) => t.paymentMode === "cash" && t.status === "verified");
   const overdueStudents = DUMMY_STUDENTS.filter((s) => s.feePaid < s.feeTotal * 0.5);
-  const refunds = txns.filter((t) => t.status === "refund_pending");
 
   const totalThisMonth = txns
     .filter(
@@ -587,25 +1005,31 @@ export default function FeesPage() {
     setRefundOpen(null);
   }
 
-  const summaryArray = Array.isArray(summaryData)
-    ? summaryData
-    : summaryData && typeof summaryData === "object"
-      ? [summaryData]
-      : [];
+  const billed = Number(reportData?.total_billed ?? defaultReportData.total_billed);
+  const collected = Number(reportData?.total_collected ?? defaultReportData.total_collected);
+  const pendingVal = Number(reportData?.total_pending ?? defaultReportData.total_pending);
+  const discountVal = Number(reportData?.total_discount ?? defaultReportData.total_discount);
+  const overdueVal = Number(reportData?.total_overdue ?? defaultReportData.total_overdue);
+  const partialVal = Number(reportData?.total_partial ?? defaultReportData.total_partial);
+  const approvalPendingVal = Number(reportData?.total_approval_pending ?? defaultReportData.total_approval_pending);
 
-  const totalBilled = summaryArray.reduce(
-    (acc: number, curr: any) => acc + toNumber(curr.total_amount ?? curr.total_billed),
-    0,
-  );
-  const totalDiscount = summaryArray.reduce(
-    (acc: number, curr: any) => acc + toNumber(curr.total_discount),
-    0,
-  );
-  const totalPaid = summaryArray.reduce((acc: number, curr: any) => acc + toNumber(curr.total_paid), 0);
-  const totalOutstanding = summaryArray.reduce(
-    (acc: number, curr: any) => acc + toNumber(curr.amount_due ?? curr.total_due),
-    0,
-  );
+  const trendChartData = useMemo(() => {
+    const rawTrend = reportData?.monthly_trend ?? defaultReportData.monthly_trend;
+    return rawTrend.map((t: any) => ({
+      name: t.month || "—",
+      amount: Number(t.collected || 0),
+    }));
+  }, [reportData]);
+
+  const modeChartData = useMemo(() => {
+    const rawModes = reportData?.collection_by_mode ?? defaultReportData.collection_by_mode;
+    return Object.entries(rawModes).map(([mode, val]) => ({
+      name: mode,
+      value: Number(val || 0),
+    })).filter(item => item.value > 0);
+  }, [reportData]);
+
+  const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
 
   return (
     <div>
@@ -634,6 +1058,30 @@ export default function FeesPage() {
             >
               <Plus className="w-4 h-4" /> Create Installment Plan
             </Button>
+          ) : activeTab === "payments" && (isAccountant || isAdmin) ? (
+            <Button
+              onClick={() => setAdminRecordPaymentOpen(true)}
+              className="bg-primary hover:bg-primary-dark text-primary-foreground gap-1.5"
+            >
+              <Plus className="w-4 h-4" /> Create Payment
+            </Button>
+          ) : activeTab === "bank-accounts" && (isAccountant || isAdmin) ? (
+            <Button
+              onClick={() => {
+                setEditingBankAccount(null);
+                setBankAccountDialogOpen(true);
+              }}
+              className="bg-primary hover:bg-primary-dark text-primary-foreground gap-1.5"
+            >
+              <Plus className="w-4 h-4" /> Add Bank Account
+            </Button>
+          ) : activeTab === "refunds" && (isAccountant || isAdmin) ? (
+            <Button
+              onClick={() => setCreateRefundOpen(true)}
+              className="bg-primary hover:bg-primary-dark text-primary-foreground gap-1.5"
+            >
+              <Plus className="w-4 h-4" /> Create Refund
+            </Button>
           ) : isAdminSr ? (
             <Button
               onClick={() => setCashOpen(true)}
@@ -644,497 +1092,145 @@ export default function FeesPage() {
           ) : undefined
         }
       />
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-        <StatCard
-          title="Total Amount"
-          value={formatCurrency(totalBilled)}
-          icon={Wallet}
-          trendType="up"
-          index={0}
-        />
-        <StatCard
-          title="Total Discount"
-          value={formatCurrency(totalDiscount)}
-          icon={Clock}
-          trendType="warning"
-          index={1}
-        />
-        <StatCard
-          title="Total Paid"
-          value={formatCurrency(totalPaid)}
-          icon={Wallet}
-          trendType="up"
-          index={2}
-        />
-        <StatCard
-          title="Total Due"
-          value={formatCurrency(totalOutstanding)}
-          icon={AlertCircle}
-          trendType="down"
-          index={3}
-        />
-      </div>
-
-      <div className="mb-3 inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-full bg-primary-light/50 border border-primary/30">
-        <Bell className="w-3.5 h-3.5 text-primary-dark" />
-        <span>3 auto-reminders scheduled for today</span>
-      </div>
-
-      <Tabs defaultValue="structures" value={activeTab} onValueChange={setActiveTab}>
+      <Tabs defaultValue="reports" value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          {/* <TabsTrigger value="pending">Pending Verifications ({pending.length})</TabsTrigger> */}
-          {/* <TabsTrigger value="all">All Transactions</TabsTrigger>
-          {(isBM || isAdmin) && (
-            <TabsTrigger value="cash">Cash Approvals ({cashApprovals.length})</TabsTrigger>
-          )} */}
+          {(isAccountant || isAdmin) && (
+            <TabsTrigger value="reports">Reports & Analytics</TabsTrigger>
+          )}
           <TabsTrigger value="structures">Fee Structures</TabsTrigger>
-          {/* <TabsTrigger value="overdue">Overdue ({overdueStudents.length})</TabsTrigger>
-          <TabsTrigger value="refunds">Refunds ({refunds.length})</TabsTrigger> */}
           <TabsTrigger value="student-fees">
             Student Fees ({filteredStudentFees.length})
           </TabsTrigger>
-          <TabsTrigger value="installments">
-            Installment Plans ({installments.length})
-          </TabsTrigger>
+          <TabsTrigger value="installments">Installment Plans ({installments.length})</TabsTrigger>
+          <TabsTrigger value="payments">Payments ({payments.length})</TabsTrigger>
+          {(isAccountant || isAdmin) && (
+            <TabsTrigger value="bank-accounts">Bank Accounts ({bankAccounts.length})</TabsTrigger>
+          )}
+          {(isAccountant || isAdmin) && (
+            <TabsTrigger value="refunds">Refunds ({refunds.length})</TabsTrigger>
+          )}
         </TabsList>
-
-        {/* <TabsContent value="pending">
-          <TxnTable
-            data={pending}
-            actions={(t) => (
-              <>
-                <Button size="sm" variant="ghost" onClick={() => setScreenshot(t.screenshotUrl!)}>
-                  View
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => setApprove(t)}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  Approve
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setReject(t)}
-                  className="text-destructive"
-                >
-                  Reject
-                </Button>
-              </>
-            )}
-          />
-        </TabsContent> */}
-
-        <TabsContent value="all">
-          <TxnTable data={txns} exportable />
-        </TabsContent>
-
-        {(isBM || isAdmin) && (
-          <TabsContent value="cash">
-            <TxnTable
-              data={cashApprovals}
-              actions={(t) => (
-                <>
-                  <Button
-                    size="sm"
-                    onClick={() => setApprove(t)}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setReject(t)}
-                    className="text-destructive"
-                  >
-                    Reject
-                  </Button>
-                </>
-              )}
+        {(isAccountant || isAdmin) && (
+          <TabsContent value="reports">
+            <ReportsTab
+              reportLoading={reportLoading}
+              reportMonth={reportMonth}
+              setReportMonth={setReportMonth}
+              reportYear={reportYear}
+              setReportYear={setReportYear}
+              fetchReportData={fetchReportData}
+              billed={billed}
+              collected={collected}
+              pendingVal={pendingVal}
+              discountVal={discountVal}
+              overdueVal={overdueVal}
+              partialVal={partialVal}
+              approvalPendingVal={approvalPendingVal}
+              trendChartData={trendChartData}
+              modeChartData={modeChartData}
+              COLORS={COLORS}
             />
           </TabsContent>
         )}
 
         <TabsContent value="structures">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {feeStructure?.length === 0 ? (
-              <div className="col-span-full py-8 text-center text-muted-foreground bg-muted/20 border border-dashed rounded-xl">
-                No fee structures found. Click &quot;Create Fee Structure&quot; to add one.
-              </div>
-            ) : (
-              feeStructure?.map((fs, i) => (
-                <motion.div
-                  key={fs.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  onClick={() => handleCardClick(fs.id)}
-                  className="relative rounded-xl bg-card border border-border p-4 cursor-pointer hover:shadow-md transition-all duration-200"
-                >
-                  {viewLoadingId === fs.id && (
-                    <div className="absolute inset-0 bg-background/50 rounded-xl flex items-center justify-center backdrop-blur-[1px] z-10">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-                    </div>
-                  )}
-                  <div className="flex justify-between items-start gap-2">
-                    <h3 className="font-heading font-semibold line-clamp-1">{fs.name}</h3>
-                    <span
-                      className={cn(
-                        "px-2 py-0.5 rounded-full text-[10px] font-medium border whitespace-nowrap",
-                        fs.is_active
-                          ? "bg-green-500/10 text-green-500 border-green-500/20"
-                          : "bg-muted text-muted-foreground border-muted-foreground/20",
-                      )}
-                    >
-                      {fs.is_active ? "Active" : "Inactive"}
-                    </span>
-                  </div>
-                  <div className="mt-3 space-y-1.5 text-sm">
-                    <Row label="Course" value={fs.course_name} />
-                    <Row label="Batch" value={fs.batch_name} />
-                    <Row label="Total Amount" value={formatCurrency(Number(fs.total_amount))} />
-                    {fs.description && (
-                      <div className="text-xs text-muted-foreground mt-2 border-t pt-1.5 line-clamp-2">
-                        {fs.description}
-                      </div>
-                    )}
-                  </div>
-                  {(isAccountant || isAdmin) && (
-                    <div className="flex gap-2 mt-4 relative z-20">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 gap-1.5"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingStructure(fs);
-                        }}
-                      >
-                        <Pencil className="w-3.5 h-3.5" /> Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-destructive hover:bg-destructive/10 gap-1.5"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteOpen(fs);
-                        }}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" /> Delete
-                      </Button>
-                    </div>
-                  )}
-                </motion.div>
-              ))
-            )}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="overdue">
-          <DataTable
-            columns={[
-              { key: "name", header: "Student" },
-              { key: "admissionNumber", header: "Admission No", className: "font-mono text-xs" },
-              {
-                key: "outstanding",
-                header: "Outstanding",
-                render: (s: any) => formatCurrency(s.feeTotal - s.feePaid),
-              },
-              {
-                key: "daysOverdue",
-                header: "Days Overdue",
-                render: () => `${Math.floor(Math.random() * 30 + 5)}d`,
-              },
-              {
-                key: "actions",
-                header: "",
-                render: (s: any) => (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => toast.success(`Reminder sent to ${s.name} and parent.`)}
-                  >
-                    <Send className="w-3.5 h-3.5" /> Reminder
-                  </Button>
-                ),
-              },
-            ]}
-            data={overdueStudents}
-          />
-        </TabsContent>
-
-        <TabsContent value="refunds">
-          <TxnTable
-            data={refunds}
-            actions={(t) => (
-              <Button
-                size="sm"
-                onClick={() => setRefundOpen(t)}
-                className="bg-primary hover:bg-primary-dark text-primary-foreground"
-              >
-                Approve Refund
-              </Button>
-            )}
+          <StructuresTab
+            feeStructure={feeStructure}
+            viewLoadingId={viewLoadingId}
+            handleCardClick={handleCardClick}
+            isAccountant={isAccountant}
+            isAdmin={isAdmin}
+            setEditingStructure={setEditingStructure}
+            setDeleteOpen={setDeleteOpen}
           />
         </TabsContent>
 
         <TabsContent value="student-fees">
-          <div className="bg-card border border-border rounded-xl p-4 mb-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-sm font-semibold mb-1">Filter by Student</h3>
-                <p className="text-xs text-muted-foreground">
-                  Select a student to view their detailed fee overview.
-                </p>
-              </div>
-              <div className="w-full md:w-72">
-                <Select value={studentFilter} onValueChange={setStudentFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Students" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60 overflow-y-auto">
-                    <SelectItem value="all">All Students</SelectItem>
-                    {students.map((student) => (
-                      <SelectItem key={student.id} value={student.id}>
-                        {student.full_name} ({student.admission_number})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-
-          <DataTable
-            columns={[
-              {
-                key: "student",
-                header: "Student",
-                render: (item: StudentFee) => {
-                  const s = students.find((x) => x.id === item.student);
-                  return (
-                    <div>
-                      <div className="font-semibold">{s?.full_name || "—"}</div>
-                      <div className="text-[10px] text-muted-foreground font-mono">
-                        {s?.admission_number || "—"}
-                      </div>
-                    </div>
-                  );
-                },
-              },
-              {
-                key: "fee_structure",
-                header: "Fee Structure",
-                render: (item: StudentFee) => {
-                  const fs = feeStructure.find((x) => x.id === item.fee_structure);
-                  return fs?.name || "—";
-                },
-              },
-              {
-                key: "total_amount",
-                header: "Total Amount",
-                render: (item: StudentFee) => formatCurrency(Number(item.total_amount)),
-              },
-              {
-                key: "discount",
-                header: "Discount",
-                render: (item: StudentFee) =>
-                  Number(item.discount) > 0 ? (
-                    <div>
-                      <div className="font-medium text-green-600">
-                        -{formatCurrency(Number(item.discount))}
-                      </div>
-                      {item.discount_reason && (
-                        <div className="text-[10px] text-muted-foreground italic line-clamp-1">
-                          {item.discount_reason}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    "—"
-                  ),
-              },
-              {
-                key: "amount_paid",
-                header: "Paid",
-                render: (item: StudentFee) => formatCurrency(Number(item.amount_paid)),
-              },
-              {
-                key: "amount_due",
-                header: "Due",
-                render: (item: StudentFee) => (
-                  <span
-                    className={
-                      Number(item.amount_due) > 0 ? "font-semibold text-destructive" : "font-medium"
-                    }
-                  >
-                    {formatCurrency(Number(item.amount_due))}
-                  </span>
-                ),
-              },
-              {
-                key: "status",
-                header: "Status",
-                render: (item: StudentFee) => {
-                  const statusColors = {
-                    paid: "bg-green-500/10 text-green-500 border-green-500/20",
-                    partially_paid: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-                    unpaid: "bg-red-500/10 text-red-500 border-red-500/20",
-                  };
-                  return (
-                    <span
-                      className={cn(
-                        "px-2 py-0.5 rounded-full text-xs font-semibold border capitalize",
-                        statusColors[item.status] ||
-                          "bg-muted text-muted-foreground border-muted-foreground/20",
-                      )}
-                    >
-                      {item.status?.replace("_", " ") || "unpaid"}
-                    </span>
-                  );
-                },
-              },
-              {
-                key: "due_date",
-                header: "Due Date",
-                render: (item: StudentFee) => formatDate(item.due_date),
-              },
-              {
-                key: "actions",
-                header: "",
-                render: (item: StudentFee) => (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleViewOverview(item.student);
-                    }}
-                    className="text-primary hover:text-primary-dark hover:bg-primary-light"
-                  >
-                    View Overview
-                  </Button>
-                ),
-              },
-            ]}
-            data={filteredStudentFees}
-            onRowClick={(row) => handleViewOverview(row.student)}
+          <StudentFeesTab
+            sfStudentName={sfStudentName}
+            setSfStudentName={setSfStudentName}
+            sfStatus={sfStatus}
+            setSfStatus={setSfStatus}
+            filteredStudentFees={filteredStudentFees}
+            students={students}
+            feeStructure={feeStructure}
+            handleViewOverview={handleViewOverview}
           />
         </TabsContent>
 
         <TabsContent value="installments">
-          <DataTable
-            loading={installmentsLoading}
-            columns={[
-              {
-                key: "student_name",
-                header: "Student",
-                render: (item: any) => {
-                  return (
-                    <div>
-                      <div className="font-semibold">{item.student_name || item.student?.full_name || "—"}</div>
-                      <div className="text-[10px] text-muted-foreground font-mono">
-                        {item.admission_number || item.student?.admission_number || "—"}
-                      </div>
-                    </div>
-                  );
-                },
-              },
-              {
-                key: "fee_structure_name",
-                header: "Fee Structure",
-                render: (item: any) =>
-                  item.fee_structure_name || item.student_fee?.fee_structure_name || "—",
-              },
-              {
-                key: "total_amount",
-                header: "Total Amount",
-                render: (item: any) => {
-                  const val =
-                    item.total_amount ??
-                    item.student_fee?.total_amount ??
-                    item.items?.reduce((acc: number, curr: any) => acc + toNumber(curr.amount), 0) ??
-                    0;
-                  return formatCurrency(Number(val));
-                },
-              },
-              {
-                key: "installments_count",
-                header: "Installments",
-                render: (item: any) => {
-                  const itemsCount = item.items?.length || 0;
-                  return `${itemsCount} installment${itemsCount !== 1 ? "s" : ""}`;
-                },
-              },
-              {
-                key: "status",
-                header: "Status",
-                render: (item: any) => {
-                  const statusColors: any = {
-                    approved: "bg-green-500/10 text-green-500 border-green-500/20",
-                    pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-                    rejected: "bg-red-500/10 text-red-500 border-red-500/20",
-                  };
-                  const displayStatus = item.status || "pending";
-                  return (
-                    <span
-                      className={cn(
-                        "px-2 py-0.5 rounded-full text-xs font-semibold border capitalize",
-                        statusColors[displayStatus] ||
-                          "bg-muted text-muted-foreground border-muted-foreground/20",
-                      )}
-                    >
-                      {displayStatus}
-                    </span>
-                  );
-                },
-              },
-              {
-                key: "actions",
-                header: "",
-                render: (item: any) => {
-                  const isPending = (item.status || "pending") === "pending";
-                  const canApprove = isPending && (isAccountant || isAdmin);
-                  if (!canApprove) return null;
-                  const isLoading = approveLoadingId === item.id;
-                  return (
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        disabled={isLoading}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleApproveRejectInstallment(item.id, true);
-                        }}
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        Approve
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={isLoading}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleApproveRejectInstallment(item.id, false);
-                        }}
-                        className="text-destructive hover:bg-destructive/10"
-                      >
-                        Reject
-                      </Button>
-                    </div>
-                  );
-                },
-              },
-            ]}
-            data={installments}
+          <InstallmentsTab
+            instStudentName={instStudentName}
+            setInstStudentName={setInstStudentName}
+            instStatus={instStatus}
+            setInstStatus={setInstStatus}
+            installments={installments}
+            installmentsLoading={installmentsLoading}
+            approveLoadingId={approveLoadingId}
+            handleApproveRejectInstallment={handleApproveRejectInstallment}
+            setRejectInstallment={setRejectInstallment}
+            setViewingInstallment={setViewingInstallment}
+            isAccountant={isAccountant}
+            isAdmin={isAdmin}
           />
         </TabsContent>
+
+        <TabsContent value="payments">
+          <PaymentsTab
+            payments={payments}
+            paymentsLoading={paymentsLoading}
+            setVerifyingPayment={setVerifyingPayment}
+            students={students}
+            studentFees={studentFees}
+            payStudentName={payStudentName}
+            setPayStudentName={setPayStudentName}
+            payStatus={payStatus}
+            setPayStatus={setPayStatus}
+          />
+        </TabsContent>
+
+        {(isAccountant || isAdmin) && (
+          <TabsContent value="bank-accounts">
+            <BankAccountsTab
+              data={bankAccounts}
+              onEdit={(account) => {
+                setEditingBankAccount(account);
+                setBankAccountDialogOpen(true);
+              }}
+              onDelete={(account) => {
+                setDeleteBankAccountOpen(account);
+              }}
+              loading={bankAccountsLoading}
+            />
+          </TabsContent>
+        )}
+
+        {(isAccountant || isAdmin) && (
+          <TabsContent value="refunds">
+            <RefundsTab
+              refunds={refunds}
+              refundsLoading={refundsLoading}
+              onUpdateStatus={handleUpdateRefundStatus}
+              students={students}
+              payments={payments}
+              refStudentName={refStudentName}
+              setRefStudentName={setRefStudentName}
+              refStatus={refStatus}
+              setRefStatus={setRefStatus}
+              isAccountant={isAccountant}
+              isAdmin={isAdmin}
+            />
+          </TabsContent>
+        )}
       </Tabs>
+
+      <VerifyPaymentDialog
+        open={!!verifyingPayment}
+        onClose={() => setVerifyingPayment(null)}
+        payment={verifyingPayment}
+        onSubmit={handleVerifyPayment}
+        loading={verifyPaymentLoading}
+      />
 
       {/* Screenshot modal */}
       <Dialog open={!!screenshot} onOpenChange={(o) => !o && setScreenshot(null)}>
@@ -1241,210 +1337,106 @@ export default function FeesPage() {
         loading={overviewLoading}
       />
 
-      <Dialog open={createInstallmentOpen} onOpenChange={setCreateInstallmentOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Create Installment Plan</DialogTitle>
-            <DialogDescription>
-              Set up a multi-part payment schedule for a student's assigned fee.
-            </DialogDescription>
-          </DialogHeader>
+      <ViewInstallmentPlanDialog
+        open={!!viewingInstallment}
+        onClose={() => {
+          setViewingInstallment(null);
+          setInstallmentCreatedMessage(null);
+        }}
+        installment={viewingInstallment}
+        message={installmentCreatedMessage}
+      />
 
-          <div className="space-y-4 my-2">
-            <div>
-              <Label className="text-xs font-semibold">Select Student</Label>
-              <Select
-                value={instStudentId}
-                onValueChange={(val) => {
-                  setInstStudentId(val);
-                  setInstStudentFeeId("");
-                  setInstItems([]);
-                }}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select a student" />
-                </SelectTrigger>
-                <SelectContent className="max-h-56 overflow-y-auto">
-                  {students.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.full_name} ({s.admission_number})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      <RejectInstallmentDialog
+        installment={rejectInstallment}
+        onClose={() => setRejectInstallment(null)}
+        onSubmit={handleRejectSubmit}
+      />
 
-            {instStudentId && (
-              <div>
-                <Label className="text-xs font-semibold">Select Student Fee Record</Label>
-                <Select
-                  value={instStudentFeeId}
-                  onValueChange={(val) => {
-                    setInstStudentFeeId(val);
-                    const selectedSf = studentFees.find((sf) => sf.id === val);
-                    const totalDue = selectedSf ? Number(selectedSf.amount_due) : 0;
-                    setInstTotalAmount(totalDue);
-                    setInstItems([
-                      { amount: String(Math.floor(totalDue / 2)), due_date: "" },
-                      { amount: String(totalDue - Math.floor(totalDue / 2)), due_date: "" },
-                    ]);
-                  }}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select assigned fee" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-56 overflow-y-auto">
-                    {studentFees
-                      .filter((sf) => sf.student === instStudentId)
-                      .map((sf) => {
-                        const fs = feeStructure.find((x) => x.id === sf.fee_structure);
-                        return (
-                          <SelectItem key={sf.id} value={sf.id}>
-                            {fs?.name || "Assigned Fee"} — Due: {formatCurrency(Number(sf.amount_due))}
-                          </SelectItem>
-                        );
-                      })}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+      <RecordPaymentDialog
+        open={adminRecordPaymentOpen}
+        onClose={() => setAdminRecordPaymentOpen(false)}
+        onSubmit={(payload) => {
+          handleRecordPayment(payload);
+        }}
+        studentFees={studentFees}
+        installments={installments}
+        students={students}
+        bankAccounts={bankAccounts}
+        loading={recordPaymentLoading}
+      />
 
-            {instStudentFeeId && (
-              <div className="space-y-3">
-                <div className="flex justify-between items-center border-b pb-2">
-                  <span className="text-xs font-semibold text-muted-foreground">
-                    Installment Breakdown (Total: {formatCurrency(instTotalAmount)})
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 px-2 text-xs"
-                    onClick={() => {
-                      setInstItems((prev) => [...prev, { amount: "0", due_date: "" }]);
-                    }}
-                  >
-                    <Plus className="w-3 h-3 mr-1" /> Add Installment
-                  </Button>
-                </div>
+      <BankAccountDialog
+        open={bankAccountDialogOpen}
+        onClose={() => {
+          setBankAccountDialogOpen(false);
+          setEditingBankAccount(null);
+        }}
+        onSubmit={handleSaveBankAccount}
+        account={editingBankAccount}
+        loading={bankAccountFormLoading}
+      />
 
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                  {instItems.map((item, idx) => (
-                    <div key={idx} className="flex gap-2 items-center">
-                      <div className="flex-1">
-                        <Label className="text-[10px] text-muted-foreground">Amount (₹)</Label>
-                        <Input
-                          type="number"
-                          placeholder="Amount"
-                          className="h-8 text-xs mt-0.5"
-                          value={item.amount}
-                          onChange={(e) => {
-                            const newItems = [...instItems];
-                            newItems[idx].amount = e.target.value;
-                            setInstItems(newItems);
-                          }}
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <Label className="text-[10px] text-muted-foreground">Due Date</Label>
-                        <Input
-                          type="date"
-                          className="h-8 text-xs mt-0.5"
-                          value={item.due_date}
-                          onChange={(e) => {
-                            const newItems = [...instItems];
-                            newItems[idx].due_date = e.target.value;
-                            setInstItems(newItems);
-                          }}
-                        />
-                      </div>
-                      {instItems.length > 1 && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-destructive mt-4"
-                          onClick={() => {
-                            setInstItems(instItems.filter((_, i) => i !== idx));
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                </div>
+      <ConfirmDialog
+        open={!!deleteBankAccountOpen}
+        onOpenChange={(o) => !o && setDeleteBankAccountOpen(null)}
+        title="Delete Bank Account?"
+        description={
+          deleteBankAccountOpen
+            ? `Are you sure you want to delete the bank account "${deleteBankAccountOpen.bank_name} - ${deleteBankAccountOpen.name}"? This action cannot be undone.`
+            : ""
+        }
+        confirmLabel={deleteBankAccountLoading ? "Deleting..." : "Delete"}
+        onConfirm={handleDeleteBankAccount}
+      />
 
-                {(() => {
-                  const sum = instItems.reduce((acc, curr) => acc + toNumber(curr.amount), 0);
-                  const isCorrect = Math.abs(sum - instTotalAmount) < 0.01;
-                  return (
-                    <div className="flex justify-between items-center text-xs mt-2 border-t pt-2">
-                      <span className="text-muted-foreground">Sum of installments:</span>
-                      <span
-                        className={cn("font-bold", isCorrect ? "text-green-600" : "text-destructive")}
-                      >
-                        {formatCurrency(sum)} / {formatCurrency(instTotalAmount)}
-                      </span>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-          </div>
+      <CreateRefundDialog
+        open={createRefundOpen}
+        onClose={() => setCreateRefundOpen(false)}
+        onSubmit={handleCreateRefund}
+        payments={payments}
+        students={students}
+        loading={createRefundLoading}
+      />
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateInstallmentOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              disabled={
-                createInstallmentLoading ||
-                !instStudentId ||
-                !instStudentFeeId ||
-                instItems.length === 0 ||
-                instItems.some((x) => !x.due_date || toNumber(x.amount) <= 0) ||
-                Math.abs(
-                  instItems.reduce((acc, curr) => acc + toNumber(curr.amount), 0) - instTotalAmount,
-                ) >= 0.01
-              }
-              onClick={() => {
-                const payload = {
-                  student: instStudentId,
-                  student_fee_id: instStudentFeeId,
-                  total_amount: instTotalAmount,
-                  items: instItems.map((it) => ({
-                    amount: toNumber(it.amount),
-                    due_date: it.due_date,
-                  })),
-                };
-                handleCreateInstallmentPlan(payload);
-              }}
-            >
-              {createInstallmentLoading ? "Creating..." : "Create Plan"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CreateInstallmentDialog
+        open={createInstallmentOpen}
+        onClose={() => setCreateInstallmentOpen(false)}
+        onSubmit={handleCreateInstallmentPlan}
+        students={students}
+        studentFees={studentFees}
+        feeStructure={feeStructure}
+        loading={createInstallmentLoading}
+      />
     </div>
   );
 }
 
 /* --- Sub views --- */
 function StudentFeesView({
-  txns,
-  setTxns,
+  studentFees,
+  installments,
   uploadOpen,
   setUploadOpen,
   studentDetail,
   studentDetailLoading,
   feeStructures,
+  onSubmitPayment,
+  paymentHistory,
+  paymentHistoryLoading,
+  bankAccounts = [],
 }: {
-  txns: FeeTransaction[];
-  setTxns: React.Dispatch<React.SetStateAction<FeeTransaction[]>>;
+  studentFees: StudentFee[];
+  installments: any[];
   uploadOpen: boolean;
   setUploadOpen: (b: boolean) => void;
   studentDetail: any;
   studentDetailLoading: boolean;
   feeStructures: FeesStructure[];
+  onSubmitPayment: (payload: any) => void;
+  paymentHistory: any[];
+  paymentHistoryLoading: boolean;
+  bankAccounts?: any[];
 }) {
   const toast = useToast();
   const { user } = useAuth();
@@ -1455,15 +1447,10 @@ function StudentFeesView({
   const courseName = studentDetail?.course_name || studentDetail?.course || "";
   const batchName = studentDetail?.current_batch_name || studentDetail?.batch_name || "";
 
-  // Calculate fee totals from fee structures
-  const totalFee = feeStructures.reduce((sum, fs) => sum + Number(fs.total_amount || 0), 0);
-  // For paid amount, sum approved transactions for this student
-  const paidAmount = txns
-    .filter((t) => t.studentId === studentId && t.status === "approved")
-    .reduce((sum, t) => sum + t.amount, 0);
-  const outstanding = totalFee - paidAmount;
-
-  const my = txns.filter((t) => t.studentId === studentId);
+  // Calculate fee totals from assigned studentFees
+  const totalFee = studentFees.reduce((sum, sf) => sum + Number(sf.total_amount || 0), 0);
+  const paidAmount = studentFees.reduce((sum, sf) => sum + Number(sf.amount_paid || 0), 0);
+  const outstanding = studentFees.reduce((sum, sf) => sum + Number(sf.amount_due || 0), 0);
 
   if (studentDetailLoading) {
     return (
@@ -1484,9 +1471,9 @@ function StudentFeesView({
         actions={
           <Button
             onClick={() => setUploadOpen(true)}
-            className="bg-primary hover:bg-primary-dark text-primary-foreground"
+            className="bg-primary hover:bg-primary-dark text-primary-foreground gap-1.5"
           >
-            <Upload className="w-4 h-4" /> Upload Payment Screenshot
+            <Wallet className="w-4 h-4" /> Record Payment
           </Button>
         }
       />
@@ -1504,47 +1491,71 @@ function StudentFeesView({
         )}
         <div className="grid grid-cols-3 gap-4 mt-3">
           <div>
-            <p className="text-xs opacity-80">Total</p>
+            <p className="text-xs opacity-80">Total Billed</p>
             <p className="text-xl font-heading font-bold">{formatCurrency(totalFee)}</p>
           </div>
           <div>
-            <p className="text-xs opacity-80">Paid</p>
+            <p className="text-xs opacity-80">Total Paid</p>
             <p className="text-xl font-heading font-bold text-primary">
               {formatCurrency(paidAmount)}
             </p>
           </div>
           <div>
             <p className="text-xs opacity-80">Outstanding</p>
-            <p className="text-xl font-heading font-bold">{formatCurrency(outstanding > 0 ? outstanding : 0)}</p>
+            <p className="text-xl font-heading font-bold text-rose-400">{formatCurrency(outstanding > 0 ? outstanding : 0)}</p>
           </div>
         </div>
       </motion.div>
 
-      {/* My Fee Structures */}
-      {feeStructures.length > 0 && (
+      {/* My Fee Allocations */}
+      {studentFees.length > 0 && (
         <div className="mb-4">
-          <h3 className="font-heading font-semibold mb-2">My Fee Structure</h3>
+          <h3 className="font-heading font-semibold mb-2">My Fee Allocations</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {feeStructures.map((fs) => (
+            {studentFees.map((sf) => (
               <motion.div
-                key={fs.id}
+                key={sf.id}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="rounded-xl bg-card border border-border p-4"
               >
-                <h4 className="font-heading font-semibold">{fs.name}</h4>
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="font-heading font-semibold text-sm">{sf.fee_structure_name || sf.id}</h4>
+                  <span
+                    className={cn(
+                      "px-2 py-0.5 rounded-full text-xs font-semibold border capitalize",
+                      sf.status === "paid"
+                        ? "bg-green-500/10 text-green-500 border-green-500/20"
+                        : sf.status === "partially_paid"
+                          ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+                          : "bg-red-500/10 text-red-500 border-red-500/20",
+                    )}
+                  >
+                    {sf.status?.replace("_", " ") || "unpaid"}
+                  </span>
+                </div>
                 <div className="mt-3 space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Course</span>
-                    <span className="font-medium">{fs.course_name}</span>
+                    <span className="text-muted-foreground">Total Fee</span>
+                    <span className="font-medium">{formatCurrency(Number(sf.total_amount))}</span>
                   </div>
+                  {Number(sf.discount) > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Discount ({sf.discount_reason || "Scholarship"})</span>
+                      <span>-{formatCurrency(Number(sf.discount))}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Batch</span>
-                    <span className="font-medium">{fs.batch_name}</span>
+                    <span className="text-muted-foreground">Paid Amount</span>
+                    <span className="font-medium text-primary">{formatCurrency(Number(sf.amount_paid))}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total Amount</span>
-                    <span className="font-medium">{fs.total_amount}</span>
+                  <div className="flex justify-between border-t pt-1 mt-1">
+                    <span className="text-muted-foreground font-medium">Due Amount</span>
+                    <span className="font-semibold text-destructive">{formatCurrency(Number(sf.amount_due))}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground mt-1.5">
+                    <span>Due Date</span>
+                    <span>{formatDate(sf.due_date)}</span>
                   </div>
                 </div>
               </motion.div>
@@ -1553,943 +1564,181 @@ function StudentFeesView({
         </div>
       )}
 
-      <h3 className="font-heading font-semibold mb-2">Payment History</h3>
-      <TxnTable data={my} />
+      <h3 className="font-heading font-semibold mb-2 mt-6">Payment History</h3>
+      {paymentHistoryLoading ? (
+        <div className="py-8 text-center text-muted-foreground bg-muted/10 border border-dashed rounded-xl">
+          Loading payment history...
+        </div>
+      ) : paymentHistory.length === 0 ? (
+        <div className="py-8 text-center text-muted-foreground bg-muted/10 border border-dashed rounded-xl">
+          No payments recorded yet.
+        </div>
+      ) : (
+        <PaymentsHistoryTable data={paymentHistory} studentFees={studentFees} />
+      )}
 
-      <UploadPaymentDialog
+      <RecordPaymentDialog
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
-        onSubmit={(data) => {
-          setTxns((prev) => [
-            {
-              id: `RCP-2024-${String(prev.length + 1).padStart(3, "0")}`,
-              studentId: studentId,
-              studentName: studentName,
-              amount: data.amount,
-              paymentMode: data.mode,
-              status: "pending",
-              screenshotUrl: "https://placehold.co/600x400?text=Uploaded",
-              submittedBy: user?.name ?? studentName,
-              submittedAt: new Date().toISOString(),
-              remarks: data.remarks,
-            },
-            ...prev,
-          ]);
-          toast.success("Payment submitted for verification. You'll be notified once approved.");
-          setUploadOpen(false);
-        }}
+        onSubmit={onSubmitPayment}
+        studentFees={studentFees}
+        installments={installments}
+        studentId={studentId}
+        bankAccounts={bankAccounts}
+        loading={false}
       />
     </div>
   );
 }
 
-function TxnTable({
+function PaymentsTable({
   data,
-  actions,
-  exportable,
+  onVerify,
+  loading,
+  students,
+  studentFees,
 }: {
-  data: FeeTransaction[];
-  actions?: (t: FeeTransaction) => React.ReactNode;
-  exportable?: boolean;
+  data: any[];
+  onVerify: (payment: any) => void;
+  loading: boolean;
+  students: any[];
+  studentFees: any[];
 }) {
-  const cols: DataTableColumn<FeeTransaction>[] = [
-    { key: "id", header: "Receipt", className: "font-mono text-xs" },
-    { key: "studentName", header: "Student" },
-    { key: "amount", header: "Amount", render: (r) => formatCurrency(r.amount) },
+  const cols: DataTableColumn<any>[] = [
     {
-      key: "paymentMode",
+      key: "receipt_number",
+      header: "Receipt #",
+      className: "font-mono text-xs font-semibold",
+      render: (r) => r.receipt_number || "—",
+    },
+    {
+      key: "student",
+      header: "Student",
+      render: (r) => {
+        if (r.student_name) return r.student_name;
+        const student = students.find((s) => s.id === r.student);
+        return student ? student.full_name : r.student;
+      },
+    },
+    {
+      key: "student_fee",
+      header: "Fee Allocation",
+      render: (r) => {
+        const fee = studentFees.find((f) => f.id === r.student_fee);
+        return fee ? fee.fee_structure_name || fee.name || "Fee Allocation" : "Fee Allocation";
+      },
+    },
+    {
+      key: "amount",
+      header: "Amount",
+      render: (r) => formatCurrency(Number(r.amount)),
+    },
+    {
+      key: "payment_mode",
       header: "Mode",
-      render: (r) => <span className="uppercase text-xs">{r.paymentMode}</span>,
+      render: (r) => <span className="uppercase text-xs font-semibold">{r.payment_mode?.replace("_", " ")}</span>,
+    },
+    {
+      key: "transaction_ref",
+      header: "Txn Ref",
+      render: (r) => <span className="font-mono text-xs">{r.transaction_ref || "—"}</span>,
+    },
+    {
+      key: "payment_date",
+      header: "Payment Date",
+      render: (r) => formatDate(r.payment_date),
     },
     {
       key: "status",
       header: "Status",
       render: (r) => {
-        const m = FEE_STATUS_META[r.status];
+        const statusColors: Record<string, string> = {
+          pending_verification: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+          verified: "bg-green-500/10 text-green-500 border-green-500/20",
+          rejected: "bg-red-500/10 text-red-500 border-red-500/20",
+        };
+        const label = r.status === "pending_verification" ? "Pending Verification" : r.status;
         return (
-          <span className={cn("px-2 py-0.5 rounded text-xs font-medium", m.bg, m.color)}>
-            {m.label}
+          <span className={cn("px-2 py-0.5 rounded-full text-xs font-semibold border capitalize whitespace-nowrap", statusColors[r.status] || "bg-muted text-muted-foreground border-muted-foreground/20")}>
+            {label?.replace("_", " ")}
           </span>
         );
       },
     },
-    { key: "submittedAt", header: "Date", render: (r) => formatDate(r.submittedAt) },
-    ...(actions
-      ? [
-          {
-            key: "actions",
-            header: "",
-            render: (r: FeeTransaction) => <div className="flex gap-1">{actions(r)}</div>,
-          },
-        ]
-      : []),
+    {
+      key: "actions",
+      header: "Actions",
+      render: (r) => {
+        const canVerify = r.status === "pending_verification";
+        // if (!canVerify) return <span className="text-xs text-muted-foreground">—</span>;
+        return (
+          <div className="flex" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => onVerify(r)}
+                  className="text-primary hover:bg-primary/10 cursor-pointer font-medium"
+                >
+                  Verify Payment
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      },
+    },
   ];
-  return <DataTable columns={cols} data={data} exportable={exportable} />;
+
+  return <DataTable columns={cols} data={data} />;
 }
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium">{value}</span>
-    </div>
-  );
-}
-
-function RejectDialog({
-  txn,
-  onClose,
-  onSubmit,
+function PaymentsHistoryTable({
+  data,
+  studentFees,
 }: {
-  txn: FeeTransaction | null;
-  onClose: () => void;
-  onSubmit: (r: string) => void;
+  data: any[];
+  studentFees: StudentFee[];
 }) {
-  const [reason, setReason] = useState("");
-  useEffect(() => {
-    setReason("");
-  }, [txn?.id]);
-  return (
-    <Dialog open={!!txn} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle className="font-heading">Reject Payment</DialogTitle>
-          <DialogDescription>
-            {txn?.studentName} · {txn && formatCurrency(txn.amount)}
-          </DialogDescription>
-        </DialogHeader>
-        <Textarea
-          placeholder="Reason for rejection"
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          rows={3}
-        />
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            disabled={!reason.trim()}
-            onClick={() => onSubmit(reason)}
-            className="bg-destructive hover:bg-destructive/90 text-white"
-          >
-            Reject
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+  const cols: DataTableColumn<any>[] = [
+    { key: "receipt_number", header: "Receipt #", className: "font-mono text-xs" },
+    {
+      key: "student_fee",
+      header: "Fee Allocation",
+      render: (r) => {
+        const sf = studentFees.find((f) => f.id === r.student_fee);
+        return sf?.fee_structure_name || r.student_fee;
+      },
+    },
+    { key: "amount", header: "Amount", render: (r) => formatCurrency(Number(r.amount)) },
+    {
+      key: "payment_mode",
+      header: "Mode",
+      render: (r) => <span className="uppercase text-xs font-semibold">{r.payment_mode?.replace("_", " ")}</span>,
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (r) => {
+        const statusColors: Record<string, string> = {
+          pending_verification: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+          verified: "bg-green-500/10 text-green-500 border-green-500/20",
+          rejected: "bg-red-500/10 text-red-500 border-red-500/20",
+        };
+        const label = r.status === "pending_verification" ? "Pending Verification" : r.status;
+        return (
+          <span className={cn("px-2 py-0.5 rounded-full text-xs font-semibold border capitalize whitespace-nowrap", statusColors[r.status] || "bg-muted text-muted-foreground border-muted-foreground/20")}>
+            {label?.replace("_", " ")}
+          </span>
+        );
+      },
+    },
+    { key: "payment_date", header: "Date", render: (r) => formatDate(r.payment_date) },
+  ];
+  return <DataTable columns={cols} data={data} />;
 }
 
-function RefundDialog({
-  txn,
-  onClose,
-  onApprove,
-}: {
-  txn: FeeTransaction | null;
-  onClose: () => void;
-  onApprove: (r: string) => void;
-}) {
-  const [ref, setRef] = useState("");
-  useEffect(() => {
-    setRef("");
-  }, [txn?.id]);
-  return (
-    <Dialog open={!!txn} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle className="font-heading">Approve Refund</DialogTitle>
-          <DialogDescription>
-            {txn?.studentName} · {txn && formatCurrency(txn.amount)}
-          </DialogDescription>
-        </DialogHeader>
-        <div>
-          <Label>Transaction Ref *</Label>
-          <Input
-            value={ref}
-            onChange={(e) => setRef(e.target.value)}
-            className="mt-1"
-            placeholder="TXN..."
-          />
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            disabled={!ref.trim()}
-            onClick={() => onApprove(ref)}
-            className="bg-primary hover:bg-primary-dark text-primary-foreground"
-          >
-            Process Refund
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function CashEntryDialog({
-  open,
-  onClose,
-  onSubmit,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (data: { studentId: string; amount: number; remarks: string }) => void;
-}) {
-  const toast = useToast();
-  const [studentId, setStudentId] = useState(DUMMY_STUDENTS[0].id);
-  const [amount, setAmount] = useState("");
-  const [remarks, setRemarks] = useState("");
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle className="font-heading">Add Cash Entry</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <Label>Student</Label>
-            <Select value={studentId} onValueChange={setStudentId}>
-              <SelectTrigger className="mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {DUMMY_STUDENTS.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Amount *</Label>
-            <Input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="mt-1"
-            />
-          </div>
-          <div>
-            <Label>Remarks</Label>
-            <Textarea
-              value={remarks}
-              onChange={(e) => setRemarks(e.target.value)}
-              rows={2}
-              className="mt-1"
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            onClick={() => {
-              const n = Number(amount);
-              if (!n) {
-                toast.error("Please fix the errors before submitting.");
-                return;
-              }
-              onSubmit({ studentId, amount: n, remarks });
-            }}
-            className="bg-primary hover:bg-primary-dark text-primary-foreground"
-          >
-            Submit
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function UploadPaymentDialog({
-  open,
-  onClose,
-  onSubmit,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (d: { amount: number; mode: PaymentMode; remarks: string }) => void;
-}) {
-  const toast = useToast();
-  const [amount, setAmount] = useState("");
-  const [mode, setMode] = useState<PaymentMode>("online");
-  const [remarks, setRemarks] = useState("");
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle className="font-heading">Upload Payment Screenshot</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <Label>Amount *</Label>
-            <Input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="mt-1"
-            />
-          </div>
-          <div>
-            <Label>Payment Mode *</Label>
-            <Select value={mode} onValueChange={(v) => setMode(v as PaymentMode)}>
-              <SelectTrigger className="mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="online">Online</SelectItem>
-                <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                <SelectItem value="cheque">Cheque</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="rounded-lg border-2 border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            <Upload className="w-6 h-6 mx-auto mb-1" />
-            Tap to upload screenshot (demo)
-          </div>
-          <div>
-            <Label>Remarks</Label>
-            <Textarea
-              value={remarks}
-              onChange={(e) => setRemarks(e.target.value)}
-              rows={2}
-              className="mt-1"
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            onClick={() => {
-              const n = Number(amount);
-              if (!n) {
-                toast.error("Please fix the errors before submitting.");
-                return;
-              }
-              onSubmit({ amount: n, mode, remarks });
-            }}
-            className="bg-primary hover:bg-primary-dark text-primary-foreground"
-          >
-            Submit
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function FeeStructureDialog({
-  open,
-  onClose,
-  onSubmit,
-  structure,
-  courses,
-  batches,
-  loading,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (data: any) => void;
-  structure: FeesStructure | null;
-  courses: any[];
-  batches: any[];
-  loading: boolean;
-}) {
-  const [name, setName] = useState("");
-  const [course, setCourse] = useState("");
-  const [batch, setBatch] = useState("");
-  const [totalAmount, setTotalAmount] = useState("");
-  const [description, setDescription] = useState("");
-  const [isActive, setIsActive] = useState(true);
-
-  useEffect(() => {
-    if (structure) {
-      setName(structure.name || "");
-      setCourse(structure.course || "");
-      setBatch(structure.batch || "");
-      setTotalAmount(String(structure.total_amount) || "");
-      setDescription(structure.description || "");
-      setIsActive(structure.is_active !== false);
-    } else {
-      setName("");
-      setCourse("");
-      setBatch("");
-      setTotalAmount("");
-      setDescription("");
-      setIsActive(true);
-    }
-  }, [structure, open]);
-
-  const isEdit = !!structure;
-
-  const handleSave = () => {
-    if (!name.trim() || !course || !batch || !totalAmount) {
-      return;
-    }
-
-    const payload: any = {
-      name,
-      course,
-      batch,
-      total_amount: parseFloat(totalAmount),
-      description,
-      is_active: isActive,
-    };
-
-    onSubmit(payload);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="font-heading">
-            {isEdit ? "Edit Fee Structure" : "Create Fee Structure"}
-          </DialogTitle>
-          <DialogDescription>
-            {isEdit
-              ? "Modify the details for this fee structure."
-              : "Set up a new fee structure for a course and batch combination."}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-2">
-          <div>
-            <Label htmlFor="fs-name">Structure Name *</Label>
-            <Input
-              id="fs-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Class 10 - Standard Science Batch 2026"
-              className="mt-1"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Course *</Label>
-              <Select value={course} onValueChange={setCourse}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select Course" />
-                </SelectTrigger>
-                <SelectContent>
-                  {courses?.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Batch *</Label>
-              <Select value={batch} onValueChange={setBatch}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select Batch" />
-                </SelectTrigger>
-                <SelectContent>
-                  {batches?.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>
-                      {b.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="fs-desc">Description</Label>
-            <Textarea
-              id="fs-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Standard annual fee description..."
-              rows={2}
-              className="mt-1"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="fs-amount">Total Amount *</Label>
-            <Input
-              id="fs-amount"
-              type="number"
-              value={totalAmount}
-              onChange={(e) => setTotalAmount(e.target.value)}
-              placeholder="e.g., 50000.00"
-              className="mt-1"
-            />
-          </div>
-
-          <div className="flex items-center gap-2 mt-2">
-            <input
-              type="checkbox"
-              id="fs-active"
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-            />
-            <Label htmlFor="fs-active" className="cursor-pointer select-none">
-              Is Active
-            </Label>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={loading}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={loading || !name.trim() || !course || !batch || !totalAmount}
-            className="bg-primary hover:bg-primary-dark text-primary-foreground"
-          >
-            {loading ? "Saving..." : "Save"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function ViewFeeStructureDialog({
-  open,
-  onClose,
-  structure,
-}: {
-  open: boolean;
-  onClose: () => void;
-  structure: FeesStructure | null;
-}) {
-  if (!structure) return null;
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-[450px]">
-        <DialogHeader>
-          <DialogTitle className="font-heading">Fee Structure Details</DialogTitle>
-          <DialogDescription>
-            Detailed information retrieved from the server for this structure.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-3.5 py-3 border-y border-border my-2 text-sm">
-          <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
-            <span className="text-muted-foreground font-medium">Status</span>
-            <span
-              className={cn(
-                "px-2 py-0.5 rounded-full text-xs font-semibold border",
-                structure.is_active
-                  ? "bg-green-500/10 text-green-500 border-green-500/20"
-                  : "bg-muted text-muted-foreground border-muted-foreground/20",
-              )}
-            >
-              {structure.is_active ? "Active" : "Inactive"}
-            </span>
-          </div>
-          <div className="flex justify-between items-start pb-1.5 border-b border-border/50">
-            <span className="text-muted-foreground font-medium shrink-0">Name</span>
-            <span className="font-semibold text-right max-w-[280px] break-words">
-              {structure.name}
-            </span>
-          </div>
-          <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
-            <span className="text-muted-foreground font-medium">Course</span>
-            <span className="font-semibold">{structure.course_name}</span>
-          </div>
-          <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
-            <span className="text-muted-foreground font-medium">Batch</span>
-            <span className="font-semibold">{structure.batch_name}</span>
-          </div>
-          <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
-            <span className="text-muted-foreground font-medium">Total Amount</span>
-            <span className="font-semibold text-primary">
-              {formatCurrency(Number(structure.total_amount))}
-            </span>
-          </div>
-          {structure.description && (
-            <div className="pt-1.5">
-              <span className="text-muted-foreground font-medium block mb-1">Description</span>
-              <p className="text-xs text-muted-foreground bg-muted/30 p-2.5 rounded-lg border leading-relaxed">
-                {structure.description}
-              </p>
-            </div>
-          )}
-          {structure.created_at && (
-            <div className="flex justify-between items-center pt-1.5 text-xs text-muted-foreground">
-              <span>Created At</span>
-              <span>{formatDate(structure.created_at)}</span>
-            </div>
-          )}
-        </div>
-        <DialogFooter>
-          <Button
-            onClick={onClose}
-            className="w-full bg-primary hover:bg-primary-dark text-primary-foreground"
-          >
-            Close
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function AssignStudentFeeDialog({
-  open,
-  onClose,
-  onSubmit,
-  students,
-  feeStructures,
-  loading,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (payload: any) => void;
-  students: any[];
-  feeStructures: FeesStructure[];
-  loading: boolean;
-}) {
-  const [studentId, setStudentId] = useState("");
-  const [feeStructureId, setFeeStructureId] = useState("");
-  const [totalAmount, setTotalAmount] = useState("");
-  const [discount, setDiscount] = useState("0");
-  const [discountReason, setDiscountReason] = useState("");
-  const [dueDate, setDueDate] = useState("");
-
-  useEffect(() => {
-    if (feeStructureId) {
-      const selectedFs = feeStructures.find((fs) => fs.id === feeStructureId);
-      if (selectedFs) {
-        setTotalAmount(String(selectedFs.total_amount));
-      }
-    } else {
-      setTotalAmount("");
-    }
-  }, [feeStructureId, feeStructures]);
-
-  useEffect(() => {
-    if (open) {
-      setStudentId("");
-      setFeeStructureId("");
-      setTotalAmount("");
-      setDiscount("0");
-      setDiscountReason("");
-      setDueDate("");
-    }
-  }, [open]);
-
-  const handleSave = () => {
-    if (!studentId || !feeStructureId || !totalAmount || !dueDate) {
-      return;
-    }
-    onSubmit({
-      student: studentId,
-      fee_structure: feeStructureId,
-      total_amount: parseFloat(totalAmount),
-      discount: parseFloat(discount) || 0,
-      discount_reason: discountReason || undefined,
-      due_date: dueDate,
-    });
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && !loading && onClose()}>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle className="font-heading">Assign Student Fee</DialogTitle>
-          <DialogDescription>
-            Assign a fee structure to a student and optionally configure a discount.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="student">Student</Label>
-            <Select value={studentId} onValueChange={setStudentId}>
-              <SelectTrigger id="student">
-                <SelectValue placeholder="Select student..." />
-              </SelectTrigger>
-              <SelectContent className="max-h-60 overflow-y-auto">
-                {students.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.full_name} ({s.admission_number})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="fee_structure">Fee Structure</Label>
-            <Select value={feeStructureId} onValueChange={setFeeStructureId}>
-              <SelectTrigger id="fee_structure">
-                <SelectValue placeholder="Select fee structure..." />
-              </SelectTrigger>
-              <SelectContent>
-                {feeStructures.map((fs) => (
-                  <SelectItem key={fs.id} value={fs.id}>
-                    {fs.name} ({formatCurrency(Number(fs.total_amount))})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="total_amount">Total Amount</Label>
-              <Input
-                id="total_amount"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={totalAmount}
-                onChange={(e) => setTotalAmount(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="discount">Discount Amount</Label>
-              <Input
-                id="discount"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={discount}
-                onChange={(e) => setDiscount(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="discount_reason">Discount Reason</Label>
-            <Input
-              id="discount_reason"
-              placeholder="e.g. Early bird discount, Scholarship"
-              value={discountReason}
-              onChange={(e) => setDiscountReason(e.target.value)}
-              disabled={parseFloat(discount) <= 0}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="due_date">Due Date</Label>
-            <Input
-              id="due_date"
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={loading}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={loading || !studentId || !feeStructureId || !totalAmount || !dueDate}
-            className="bg-primary hover:bg-primary-dark text-primary-foreground"
-          >
-            {loading ? "Assigning..." : "Assign Fee"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function ViewStudentFeeOverviewDialog({
-  open,
-  onClose,
-  studentId,
-  students,
-  feeStructures,
-  overviewData,
-  loading,
-}: {
-  open: boolean;
-  onClose: () => void;
-  studentId: string | null;
-  students: any[];
-  feeStructures: FeesStructure[];
-  overviewData: any;
-  loading: boolean;
-}) {
-  const student = students.find((s) => s.id === studentId);
-  const displayName = student?.full_name || overviewData?.student_name || "—";
-  const displayAdmission = student?.admission_number || "—";
-
-  const firstFee = overviewData?.fees?.[0];
-  const displayCourseBatch = student
-    ? `${student.batch_name || student.course || "—"}`
-    : firstFee
-      ? `${firstFee.batch_name || ""} ${firstFee.course_name ? `/ ${firstFee.course_name}` : ""}`.trim() ||
-        "—"
-      : "—";
-
-  const displayStatus = student?.status || "—";
-
-  const summary = overviewData?.summary;
-  const totalAllocated = summary?.total_billed ?? 0;
-  const totalDiscount = summary?.total_discount ?? 0;
-  const totalPaid = summary?.total_paid ?? 0;
-  const totalDue = summary?.total_due ?? 0;
-
-  const fees = overviewData?.fees || [];
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="font-heading text-lg">Student Fee Overview</DialogTitle>
-          <DialogDescription>
-            Detailed billing history, outstanding amounts, and discounts for the student.
-          </DialogDescription>
-        </DialogHeader>
-
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-12 space-y-3">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <p className="text-sm text-muted-foreground">Retrieving fee details...</p>
-          </div>
-        ) : (
-          <div className="space-y-6 py-3">
-            <div className="bg-muted/40 border rounded-xl p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div>
-                <span className="text-xs text-muted-foreground block">Student Name</span>
-                <span className="font-semibold text-foreground">{displayName}</span>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground block">Admission Number</span>
-                <span className="font-semibold font-mono text-foreground">{displayAdmission}</span>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground block">Batch / Course</span>
-                <span className="font-semibold text-foreground">{displayCourseBatch}</span>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground block">Status</span>
-                <span className="capitalize font-semibold text-foreground">{displayStatus}</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="border border-border bg-card rounded-xl p-3 text-center">
-                <span className="text-xs text-muted-foreground block">Total Allocated</span>
-                <span className="text-lg font-bold font-heading">
-                  {formatCurrency(totalAllocated)}
-                </span>
-              </div>
-              <div className="border border-border bg-card rounded-xl p-3 text-center">
-                <span className="text-xs text-muted-foreground block">Total Discount</span>
-                <span className="text-lg font-bold font-heading text-green-600">
-                  {formatCurrency(totalDiscount)}
-                </span>
-              </div>
-              <div className="border border-border bg-card rounded-xl p-3 text-center">
-                <span className="text-xs text-muted-foreground block">Total Paid</span>
-                <span className="text-lg font-bold font-heading text-primary">
-                  {formatCurrency(totalPaid)}
-                </span>
-              </div>
-              <div className="border border-border bg-card rounded-xl p-3 text-center">
-                <span className="text-xs text-muted-foreground block">Net Due</span>
-                <span className="text-lg font-bold font-heading text-destructive">
-                  {formatCurrency(totalDue)}
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <h4 className="font-heading font-semibold text-sm">Linked Fee Structures</h4>
-              {fees.length === 0 ? (
-                <div className="border border-dashed rounded-xl p-6 text-center text-sm text-muted-foreground">
-                  No fee structures assigned to this student.
-                </div>
-              ) : (
-                <div className="border rounded-xl overflow-hidden bg-card">
-                  <table className="w-full text-left border-collapse text-sm">
-                    <thead>
-                      <tr className="bg-muted/40 border-b border-border font-medium">
-                        <th className="p-3">Fee Structure</th>
-                        <th className="p-3">Total Amount</th>
-                        <th className="p-3">Discount</th>
-                        <th className="p-3">Paid</th>
-                        <th className="p-3">Due</th>
-                        <th className="p-3">Status</th>
-                        <th className="p-3">Due Date</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {fees.map((item: any) => {
-                        const fs = feeStructures.find((x) => x.id === item.fee_structure);
-                        const statusColors: Record<string, string> = {
-                          paid: "bg-green-500/10 text-green-500 border-green-500/20",
-                          partially_paid: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-                          unpaid: "bg-red-500/10 text-red-500 border-red-500/20",
-                          approval_pending: "bg-orange-500/10 text-orange-500 border-orange-500/20",
-                        };
-                        return (
-                          <tr key={item.id} className="hover:bg-muted/10 transition-colors">
-                            <td className="p-3 font-medium">{fs?.name || item.fee_name || "—"}</td>
-                            <td className="p-3">{formatCurrency(toNumber(item.total_amount))}</td>
-                            <td className="p-3">
-                              {Number(item.discount) > 0 ? (
-                                <div>
-                                  <div className="text-green-600 font-medium">
-                                    -{formatCurrency(toNumber(item.discount))}
-                                  </div>
-                                  {item.discount_reason && (
-                                    <div className="text-[10px] text-muted-foreground italic">
-                                      {item.discount_reason}
-                                    </div>
-                                  )}
-                                </div>
-                              ) : (
-                                "—"
-                              )}
-                            </td>
-                            <td className="p-3">{formatCurrency(toNumber(item.amount_paid))}</td>
-                            <td className="p-3 font-semibold text-destructive">
-                              {formatCurrency(toNumber(item.amount_due))}
-                            </td>
-                            <td className="p-3">
-                              <span
-                                className={cn(
-                                  "px-2 py-0.5 rounded-full text-xs font-semibold border capitalize whitespace-nowrap",
-                                  statusColors[item.status] ||
-                                    "bg-muted text-muted-foreground border-muted-foreground/20",
-                                )}
-                              >
-                                {item.status?.replace("_", " ") || "unpaid"}
-                              </span>
-                            </td>
-                            <td className="p-3 text-muted-foreground">
-                              {formatDate(item.due_date)}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Close
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}

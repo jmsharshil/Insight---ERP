@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
 import { Plus, Pencil, Trash2, X, Search } from "lucide-react";
@@ -59,6 +59,7 @@ export default function SlotsTab({
   const toast = useToast();
   const { user } = useAuth();
   const { slots, slotsLoading, slotsCount } = useSelector((s: RootState) => s.timetableNew);
+  const isBranchManager = user && user.role === "branch_manager";
 
   const [filters, setFilters] = useState({ batch_id: "", day_of_week: "", faculty_id: "", subject_id: "", session_type: "" });
   const [formOpen, setFormOpen] = useState(false);
@@ -73,6 +74,11 @@ export default function SlotsTab({
   const fetchSlots = () => {
     const p = new URLSearchParams();
     Object.entries(filters).forEach(([k, v]) => { if (v) p.set(k, v); });
+    
+    if (isBranchManager && user?.branch) {
+      p.set("branch_id", user.branch);
+    }
+
     dispatch({
       type: timetableActions.GET_SLOTS,
       method: "GET",
@@ -90,6 +96,12 @@ export default function SlotsTab({
   };
 
   useEffect(() => { fetchSlots(); }, []);
+
+  const filteredSlots = useMemo(() => {
+    if (!isBranchManager) return slots;
+    const permittedBatchIds = new Set(batches.map(b => b.id));
+    return slots.filter((slot: any) => permittedBatchIds.has(slot.batch));
+  }, [slots, isBranchManager, batches]);
 
   const handleCreateOrUpdate = (payload: Record<string, any>) => {
     const isEdit = !!editingSlot;
@@ -148,7 +160,7 @@ export default function SlotsTab({
       <div className="space-y-4">
         {slotsLoading ? <TableSkeleton columns={7} rows={6} className="mt-0" /> : (
           <TimetableGridView
-            slots={slots}
+            slots={filteredSlots}
             batches={batches}
             canEdit={canEdit}
             onAddClick={(day, slotCode, batchId) => {
@@ -277,9 +289,9 @@ export default function SlotsTab({
                 ))}</tr>
               </thead>
               <tbody>
-                {slots.length === 0 ? (
+                {filteredSlots.length === 0 ? (
                   <tr><td colSpan={9} className="text-center py-12 text-muted-foreground text-sm">No slots found.</td></tr>
-                ) : slots.map((slot, i) => (
+                ) : filteredSlots.map((slot: any, i: number) => (
                   <motion.tr key={slot.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.025 }}
                     className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                     <td className="px-4 py-3">

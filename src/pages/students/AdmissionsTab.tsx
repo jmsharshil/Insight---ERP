@@ -38,10 +38,14 @@ export default function AdmissionsTab() {
   }, [admissions, user]);
 
   useEffect(() => {
+    const endPoint = user && user.role === "branch_manager" && user.branch
+      ? `${API.ADMISSIONS.LIST}${API.ADMISSIONS.LIST.includes('?') ? '&' : '?'}branch_id=${user.branch}`
+      : API.ADMISSIONS.LIST;
+
     dispatch({
       type: admissionActions.GET_ADMISSIONS,
       method: "GET",
-      endPoint: API.ADMISSIONS.LIST,
+      endPoint: endPoint,
       auth: true,
       setLoading: (val: boolean) => dispatch(setAdmissionsLoading(val)),
       getResponse: (res: any) => {
@@ -90,10 +94,14 @@ export default function AdmissionsTab() {
                     setLoading: (val: boolean) => dispatch(setAdmissionsLoading(val)),
                     getResponse: () => {
                       toast.success("Admission approved successfully!");
+                      const endPoint = user && user.role === "branch_manager" && user.branch
+                        ? `${API.ADMISSIONS.LIST}${API.ADMISSIONS.LIST.includes('?') ? '&' : '?'}branch_id=${user.branch}`
+                        : API.ADMISSIONS.LIST;
+
                       dispatch({
                         type: admissionActions.GET_ADMISSIONS,
                         method: "GET",
-                        endPoint: API.ADMISSIONS.LIST,
+                        endPoint: endPoint,
                         auth: true,
                         setLoading: (val: boolean) => dispatch(setAdmissionsLoading(val)),
                         getResponse: (res: any) => {
@@ -160,10 +168,14 @@ export default function AdmissionsTab() {
             setLoading: (val: boolean) => dispatch(setAdmissionsLoading(val)),
             getResponse: () => {
               toast.success("Admission rejected.");
+              const endPoint = user && user.role === "branch_manager" && user.branch
+                ? `${API.ADMISSIONS.LIST}${API.ADMISSIONS.LIST.includes('?') ? '&' : '?'}branch_id=${user.branch}`
+                : API.ADMISSIONS.LIST;
+
               dispatch({
                 type: admissionActions.GET_ADMISSIONS,
                 method: "GET",
-                endPoint: API.ADMISSIONS.LIST,
+                endPoint: endPoint,
                 auth: true,
                 setLoading: (val: boolean) => dispatch(setAdmissionsLoading(val)),
                 getResponse: (res: any) => {

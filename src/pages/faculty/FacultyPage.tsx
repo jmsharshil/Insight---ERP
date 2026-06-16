@@ -127,10 +127,14 @@ export default function FacultyPage() {
 
   const fetchLatePolicy = () => {
     setLatePolicyFetching(true);
+    const endPoint = user && user.role === "branch_manager" && user.branch
+      ? `/api/v1/payroll/late-policy/?branch_id=${user.branch}`
+      : "/api/v1/payroll/late-policy/";
+
     dispatch({
       type: facultyAction.GET_PAYROLL_LATE_POLICY,
       method: "GET",
-      endPoint: "/api/v1/payroll/late-policy/",
+      endPoint: endPoint,
       auth: true,
       getResponse: (res: any) => {
         const policyData = res?.data || res;
@@ -163,10 +167,14 @@ export default function FacultyPage() {
   useEffect(() => {
     if (activeTab === "sessions") {
       setSessionsLoading(true);
+      const endPoint = user && user.role === "branch_manager" && user.branch
+        ? `/api/v1/faculty/sessions/?branch_id=${user.branch}`
+        : "/api/v1/faculty/sessions/";
+
       dispatch({
         type: facultyAction.GET_SESSIONS,
         method: "GET",
-        endPoint: "/api/v1/faculty/sessions/",
+        endPoint: endPoint,
         auth: true,
         getResponse: (res: any) => {
           const list = res?.data || res?.results || res;
@@ -274,10 +282,14 @@ export default function FacultyPage() {
 
   const fetchPayroll = () => {
     setPayrollLoading(true);
+    const endPoint = user && user.role === "branch_manager" && user.branch
+      ? `/api/v1/payroll/?branch_id=${user.branch}`
+      : "/api/v1/payroll/";
+
     dispatch({
       type: facultyAction.GET_PAYROLL,
       method: "GET",
-      endPoint: "/api/v1/payroll/",
+      endPoint: endPoint,
       auth: true,
       getResponse: (res: any) => {
         const list = res?.data || res?.results || res;
@@ -380,10 +392,14 @@ export default function FacultyPage() {
         setSessionDialogOpen(false);
         setSubmittingSession(false);
         if (activeTab === "sessions") {
+          const endPoint = user && user.role === "branch_manager" && user.branch
+            ? `/api/v1/faculty/sessions/?branch_id=${user.branch}`
+            : "/api/v1/faculty/sessions/";
+
           dispatch({
             type: dropdownActions.GET_DROPDOWN,
             method: "GET",
-            endPoint: "/api/v1/faculty/sessions/",
+            endPoint: endPoint,
             auth: true,
             getResponse: (res: any) => {
               const list = res?.data || res?.results || res;
@@ -513,10 +529,14 @@ export default function FacultyPage() {
   };
 
   useEffect(() => {
+    const endPoint = user && user.role === "branch_manager" && user.branch
+      ? `/api/v1/faculty/?branch_id=${user.branch}`
+      : "/api/v1/faculty/";
+
     dispatch({
       type: facultyAction.GET_FACULTY,
       method: "GET",
-      endPoint: "/api/v1/faculty/",
+      endPoint: endPoint,
       auth: true,
       setLoading: (val: boolean) => dispatch(setFacultyLoading(val)),
       getResponse: (res: any) => {
@@ -529,20 +549,60 @@ export default function FacultyPage() {
     } as any);
   }, [dispatch, toast]);
 
+  const filteredFacultyList = useMemo(() => {
+    let list = facultyList;
+    if (user && user.role !== "super_admin" && user.branch) {
+      list = list.filter(f => {
+        const branchId = typeof f.branch === "object" && f.branch !== null ? f.branch.id : f.branch;
+        return branchId === user.branch;
+      });
+    }
+    return list;
+  }, [facultyList, user]);
+
+  const filteredSessions = useMemo(() => {
+    let list = sessions;
+    if (user && user.role !== "super_admin" && user.branch) {
+      list = list.filter(s => {
+        const branchId = typeof s.branch === "object" && s.branch !== null ? s.branch.id : s.branch;
+        return branchId === user.branch;
+      });
+    }
+    return list;
+  }, [sessions, user]);
+
+  const filteredLatePolicies = useMemo(() => {
+    let list = allLatePolicies;
+    if (user && user.role !== "super_admin" && user.branch) {
+      list = list.filter(p => {
+        const branchId = typeof p.branch_id === "string" ? p.branch_id : (p.branch?.id || p.branch);
+        return branchId === user.branch;
+      });
+    }
+    return list;
+  }, [allLatePolicies, user]);
+
   const payrollRows = useMemo(() => {
-    if (!payrollMonth || payrollMonth === "All Months") return payrolls;
-    return payrolls.filter((p) => {
+    let list = payrolls;
+    if (user && user.role !== "super_admin" && user.branch) {
+      list = list.filter(p => {
+        const branchId = typeof p.branch === "object" && p.branch !== null ? p.branch.id : (p.branch_id || p.branch);
+        return branchId === user.branch;
+      });
+    }
+    if (!payrollMonth || payrollMonth === "All Months") return list;
+    return list.filter((p) => {
       const pMonthStr = `${monthNames[p.month - 1]} ${p.year}`;
       return pMonthStr === payrollMonth;
     });
-  }, [payrolls, payrollMonth, monthNames]);
+  }, [payrolls, payrollMonth, monthNames, user]);
 
   const totalPayrollDue = useMemo(() => {
-    return payrolls.reduce(
+    return payrollRows.reduce(
       (s, p) => s + (p.status !== "disbursed" ? parseFloat(p.total_amount || 0) : 0),
       0,
     );
-  }, [payrolls]);
+  }, [payrollRows]);
 
   const computePayroll = () => {
     toast.success(`Payroll computed for ${payrollMonth || "selected period"}.`);
@@ -720,7 +780,7 @@ export default function FacultyPage() {
           </TabsContent>
           <TabsContent value="sessions" className="mt-4">
             <DataTable
-              data={sessions}
+              data={filteredSessions}
               loading={sessionsLoading}
               columns={[
                 { 
@@ -812,10 +872,10 @@ export default function FacultyPage() {
   return (
     <div>
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard title="Total Faculty" value={facultyList.length} icon={Briefcase} index={0} />
+        <StatCard title="Total Faculty" value={filteredFacultyList.length} icon={Briefcase} index={0} />
         <StatCard
           title="Active"
-          value={facultyList.filter((f) => f.is_active).length}
+          value={filteredFacultyList.filter((f) => f.is_active).length}
           icon={Users}
           trendType="up"
           index={1}
@@ -840,7 +900,7 @@ export default function FacultyPage() {
 
         <TabsContent value="directory" className="mt-4">
           <DataTable
-            data={facultyList}
+            data={filteredFacultyList}
             searchable
             exportable
             pageSize={20}
@@ -956,7 +1016,7 @@ export default function FacultyPage() {
           </div>
           <DataTable
             exportable
-            data={sessions}
+            data={filteredSessions}
             loading={sessionsLoading}
             columns={[
               { 
@@ -1143,7 +1203,7 @@ export default function FacultyPage() {
             <div className="flex justify-end mb-4">
               <Button onClick={() => {
                 setLatePolicyForm({
-                  branch_id: "",
+                  branch_id: (user && user.role === "branch_manager" && user.branch) ? user.branch : "",
                   grace_period_minutes: 5,
                   deduction_per_minute: "0.00",
                   max_deduction_per_session: "0.00",
@@ -1157,7 +1217,7 @@ export default function FacultyPage() {
               </Button>
             </div>
             <DataTable
-              data={allLatePolicies}
+              data={filteredLatePolicies}
               columns={[
                 { key: "branch_name", header: "Branch" },
                 { key: "grace_period_minutes", header: "Grace Period (m)" },
