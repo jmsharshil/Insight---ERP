@@ -196,6 +196,32 @@ export const API = {
     CREATE_PLAN: "/api/v1/installments/create/",
     APPROVE: (id: string | number) => `/api/v1/installments/${id}/approve/`,
   },
+
+  /** Leave Management endpoints */
+  LEAVE: {
+    // Policies
+    POLICIES:             "/api/v1/leave/policy/",
+    POLICY_DETAIL:        (id: string) => `/api/v1/leave/policy/${id}/`,
+
+    // Holidays
+    HOLIDAYS:             "/api/v1/leave/public-holidays/",
+    HOLIDAY_DETAIL:       (id: string) => `/api/v1/leave/public-holidays/${id}/`,
+
+    // Balances
+    MY_BALANCE:           "/api/v1/leave/balance/",
+    USER_BALANCE:         (userId: string) => `/api/v1/leave/balance/${userId}/`,
+
+    // Applications
+    LIST:                 "/api/v1/leave/",
+    DETAIL:               (id: string) => `/api/v1/leave/${id}/`,
+    APPROVE:              (id: string) => `/api/v1/leave/${id}/approve/`,
+    REJECT:               (id: string) => `/api/v1/leave/${id}/reject/`,
+
+    // Late Entries
+    LATE_ENTRIES:         "/api/v1/leave/late-entries/",
+    LATE_ENTRY_DETAIL:    (id: string) => `/api/v1/leave/late-entries/${id}/`,
+  },
 } as const;
+
 
 
