@@ -31,7 +31,7 @@ import { COURSE_LIST, BATCH_LIST } from "@/constants/dummy/students";
 
 import AdmissionsTab from "./AdmissionsTab";
 import StudentsTab from "./StudentsTab";
-import SuperAdminDashboard from "../dashboard/SuperAdminDashboard";
+import BranchesTab from "./BranchesTab";
 
 export default function StudentsPage() {
   const { setPageTitle } = useUI();
@@ -82,7 +82,7 @@ export default function StudentsPage() {
         </TabsList>
 
         <TabsContent value="branches" className="mt-0">
-          <SuperAdminDashboard />
+          <BranchesTab />
         </TabsContent>
 
         <TabsContent value="admissions" className="mt-0">

@@ -15,4 +15,15 @@ export function* watchFeesSaga() {
     yield takeLatest(feesActions.GET_INSTALLMENTS, genericSaga);
     yield takeLatest(feesActions.CREATE_INSTALLMENT_PLAN, genericSaga);
     yield takeLatest(feesActions.APPROVE_INSTALLMENT_PLAN, genericSaga);
+    yield takeLatest(feesActions.GET_PAYMENTS, genericSaga);
+    yield takeLatest(feesActions.RECORD_PAYMENT, genericSaga);
+    yield takeLatest(feesActions.VERIFY_PAYMENT, genericSaga);
+    yield takeLatest(feesActions.GET_BANK_ACCOUNTS, genericSaga);
+    yield takeLatest(feesActions.CREATE_BANK_ACCOUNT, genericSaga);
+    yield takeLatest(feesActions.UPDATE_BANK_ACCOUNT, genericSaga);
+    yield takeLatest(feesActions.DELETE_BANK_ACCOUNT, genericSaga);
+    yield takeLatest(feesActions.GET_FEE_REPORT, genericSaga);
+    yield takeLatest(feesActions.GET_REFUNDS, genericSaga);
+    yield takeLatest(feesActions.CREATE_REFUND, genericSaga);
+    yield takeLatest(feesActions.UPDATE_REFUND, genericSaga);
 }

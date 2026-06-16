@@ -8,9 +8,7 @@ export default function MobileNav() {
   const { user } = useAuth();
   if (!user) return null;
 
-  const modules = ROLES[user.role].modules
-    .filter((m) => !(m === "dashboard"))
-    .slice(0, 5);
+  const modules = ROLES[user.role].modules.slice(0, 5);
 
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-card border-t border-border flex items-stretch h-16">
