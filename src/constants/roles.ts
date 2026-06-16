@@ -10,7 +10,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   branch_manager: {
     id: "branch_manager", label: "Branch Manager", description: "Controls a single assigned branch",
     color: "bg-purple-100", textColor: "text-purple-800",
-    modules: ["dashboard","crm","students","courses_batches","timetable","attendance","fees","exams","leave","chat","notifications","audit_logs","reports"],
+    modules: ["dashboard","crm","students","courses_batches","timetable","attendance","fees","exams","exam_supervision","faculty","payroll","leave","chat","notifications","audit_logs","reports"],
     canDelete: false, canExport: true,
   },
   admin_senior_executive: {

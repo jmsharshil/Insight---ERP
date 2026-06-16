@@ -7,6 +7,7 @@ import { API } from "@/service/api";
 import { setDefaulters, setDefaultersLoading } from "@/redux/slices/attendanceSlice";
 import type { RootState, AppDispatch } from "@/store";
 import { useToast } from "@/hooks/useToast";
+import { useAuth } from "@/hooks/useAuth";
 import { TableSkeleton } from "@/components/common/Skeletons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,12 +19,18 @@ export default function DefaultersTab({ dropdowns }: { dropdowns?: any }) {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
   const { defaulters, defaultersLoading, defaultersCount } = useSelector((s: RootState) => s.attendance);
+  const { user } = useAuth();
 
-  const branches = dropdowns?.branches || [];
+  const branches = dropdowns?.branches?.filter((b: any) => {
+    if (user && user.role === "branch_manager" && user.branch) {
+      return b.id === user.branch;
+    }
+    return true;
+  }) || [];
   const batches = dropdowns?.batches || [];
 
   const [filters, setFilters] = useState({
-    branch_id: "", batch_id: "",
+    branch_id: (user && user.role === "branch_manager" && user.branch) ? user.branch : "", batch_id: "",
     attendance_percentage_below: "",
     min_violations: "",
   });
@@ -97,7 +104,7 @@ export default function DefaultersTab({ dropdowns }: { dropdowns?: any }) {
           <Input type="number" placeholder="1" className="h-9 text-sm w-28" value={filters.min_violations} onChange={e => setFilters(f => ({ ...f, min_violations: e.target.value }))} />
         </div>
         <Button onClick={fetchDefaulters} className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm">Apply</Button>
-        <Button variant="outline" className="h-9 text-sm" onClick={() => setFilters({ branch_id: "", batch_id: "", attendance_percentage_below: "", min_violations: "" })}>
+        <Button variant="outline" className="h-9 text-sm" onClick={() => setFilters({ branch_id: (user && user.role === "branch_manager" && user.branch) ? user.branch : "", batch_id: "", attendance_percentage_below: "", min_violations: "" })}>
           <X className="w-3 h-3 mr-1" />Clear
         </Button>
       </div>

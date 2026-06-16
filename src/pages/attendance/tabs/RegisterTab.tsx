@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CheckCircle2, XCircle, Clock, CalendarDays, HelpCircle } from "lucide-react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/hooks/useAuth";
+import { useMemo } from "react";
 
 interface RegisterTabProps {
   dropdowns?: any;
@@ -18,13 +20,26 @@ interface RegisterTabProps {
 export default function RegisterTab({ dropdowns }: RegisterTabProps) {
   const dispatch = useDispatch();
   const toast = useToast();
+  const { user } = useAuth();
+  const isBranchManager = user && user.role === "branch_manager";
 
   const branches = dropdowns?.branches || [];
   const batches = dropdowns?.batches || [];
 
-  const [branchId, setBranchId] = useState("");
+  const [branchId, setBranchId] = useState(isBranchManager && user.branch ? user.branch : "");
   const [batchId, setBatchId] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+
+  useEffect(() => {
+    if (isBranchManager && user.branch && branchId !== user.branch) {
+      setBranchId(user.branch);
+    }
+  }, [user]);
+
+  const filteredBranches = useMemo(() => {
+    if (!isBranchManager) return branches;
+    return branches.filter((b: any) => b.id === user.branch);
+  }, [branches, user]);
 
   const filteredBatches = branchId 
     ? batches.filter((b: any) => b.branch === branchId || b.branch_id === branchId) 
@@ -156,7 +171,7 @@ export default function RegisterTab({ dropdowns }: RegisterTabProps) {
                 <SelectValue placeholder="Select Branch" />
               </SelectTrigger>
               <SelectContent>
-                {branches.map((b: any) => (
+                {filteredBranches.map((b: any) => (
                   <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                 ))}
               </SelectContent>

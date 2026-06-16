@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import PageHeader from "@/components/layout/PageHeader";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useUI } from "@/hooks/useUI";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
 import { dropdownActions, subjectAction, batchAction, ClassroomAction } from "@/redux/actions";
 import { API } from "@/service/api";
@@ -33,6 +34,7 @@ type TabValue = typeof TABS[number]["value"];
 
 export default function TimetablePage() {
   const { setPageTitle } = useUI();
+  const { user } = useAuth();
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
 
@@ -58,11 +60,15 @@ export default function TimetablePage() {
 
   // ── Fetch all dropdown data on mount (attendance pattern) ─────────────────
   useEffect(() => {
+    const batchesEndpoint = user && user.role === "branch_manager" && user.branch
+      ? `/api/v1/batches/dropdowns/?branch_id=${user.branch}`
+      : "/api/v1/batches/dropdowns/";
+
     // 1. Fetch common dropdowns (batches, subjects, courses) in one call
     dispatch({
       type: dropdownActions.GET_DROPDOWN,
       method: "GET",
-      endPoint: "/api/v1/batches/dropdowns/",
+      endPoint: batchesEndpoint,
       auth: true,
       getResponse: (res: any) => {
         const data = res?.data || res;
@@ -97,11 +103,15 @@ export default function TimetablePage() {
       getError: () => {},
     });
 
+    const facultyEndpoint = user && user.role === "branch_manager" && user.branch
+      ? `/api/v1/faculty/?branch_id=${user.branch}`
+      : "/api/v1/faculty/";
+
     // 2. Fetch faculty
     dispatch({
       type: dropdownActions.GET_DROPDOWN,
       method: "GET",
-      endPoint: "/api/v1/faculty/",
+      endPoint: facultyEndpoint,
       auth: true,
       getResponse: (res: any) => {
         const list = res?.data || res;
@@ -170,6 +180,7 @@ export default function TimetablePage() {
 
   // ── Derive flat arrays for child components ───────────────────────────────
   const batches = Array.isArray(dropdowns.batches) ? dropdowns.batches : [];
+
   const subjects = Array.isArray(dropdowns.subjects) ? dropdowns.subjects : [];
   const facultyList = Array.isArray(dropdowns.faculty) ? dropdowns.faculty : [];
 

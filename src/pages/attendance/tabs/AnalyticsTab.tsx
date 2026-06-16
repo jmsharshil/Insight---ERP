@@ -10,6 +10,7 @@ import { setAnalytics, setAnalyticsLoading, setAttendanceError } from "@/redux/s
 import type { RootState, AppDispatch } from "@/store";
 import { useToast } from "@/hooks/useToast";
 import { TableSkeleton } from "@/components/common/Skeletons";
+import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -22,11 +23,17 @@ export default function AnalyticsTab({ dropdowns }: { dropdowns?: any }) {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
   const { analytics, analyticsLoading } = useSelector((s: RootState) => s.attendance);
+  const { user } = useAuth();
 
-  const branches = dropdowns?.branches || [];
+  const branches = dropdowns?.branches?.filter((b: any) => {
+    if (user && user.role === "branch_manager" && user.branch) {
+      return b.id === user.branch;
+    }
+    return true;
+  }) || [];
   const batches = dropdowns?.batches || [];
 
-  const [filters, setFilters] = useState({ branch_id: "", batch_id: "", date_from: "", date_to: "", trend_type: "daily" });
+  const [filters, setFilters] = useState({ branch_id: (user && user.role === "branch_manager" && user.branch) ? user.branch : "", batch_id: "", date_from: "", date_to: "", trend_type: "daily" });
 
   const filteredBatches = filters.branch_id && filters.branch_id !== "all"
     ? batches.filter((b: any) => b.branch === filters.branch_id || b.branch_id === filters.branch_id)
@@ -109,7 +116,7 @@ export default function AnalyticsTab({ dropdowns }: { dropdowns?: any }) {
           <Input type="date" className="h-9 text-sm w-40" value={filters.date_to} onChange={e => setFilters(f => ({ ...f, date_to: e.target.value }))} />
         </div>
         <Button onClick={fetchAnalytics} className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm">Apply</Button>
-        <Button variant="outline" className="h-9 text-sm" onClick={() => setFilters({ branch_id: "", batch_id: "", date_from: "", date_to: "", trend_type: "daily" })}><X className="w-3 h-3 mr-1" />Clear</Button>
+        <Button variant="outline" className="h-9 text-sm" onClick={() => setFilters({ branch_id: (user && user.role === "branch_manager" && user.branch) ? user.branch : "", batch_id: "", date_from: "", date_to: "", trend_type: "daily" })}><X className="w-3 h-3 mr-1" />Clear</Button>
       </div>
 
       {analytics && (

@@ -12,6 +12,7 @@ import { API } from "@/service/api";
 import { setDashboard, setDashboardLoading, setAttendanceError } from "@/redux/slices/attendanceSlice";
 import type { RootState, AppDispatch } from "@/store";
 import { useToast } from "@/hooks/useToast";
+import { useAuth } from "@/hooks/useAuth";
 import { TableSkeleton } from "@/components/common/Skeletons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,11 +31,17 @@ export default function DashboardTab({ dropdowns }: { dropdowns?: any }) {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
   const { dashboard, dashboardLoading } = useSelector((s: RootState) => s.attendance);
+  const { user } = useAuth();
 
-  const branches = dropdowns?.branches || [];
+  const branches = dropdowns?.branches?.filter((b: any) => {
+    if (user && user.role === "branch_manager" && user.branch) {
+      return b.id === user.branch;
+    }
+    return true;
+  }) || [];
   const batches = dropdowns?.batches || [];
 
-  const [filters, setFilters] = useState({ date: "", branch: "", batch: "", faculty: "" });
+  const [filters, setFilters] = useState({ date: "", branch: (user && user.role === "branch_manager" && user.branch) ? user.branch : "", batch: "", faculty: "" });
 
   const filteredBatches = filters.branch && filters.branch !== "all"
     ? batches.filter((b: any) => b.branch === filters.branch || b.branch_id === filters.branch)

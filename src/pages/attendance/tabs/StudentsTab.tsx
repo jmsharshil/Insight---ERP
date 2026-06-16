@@ -11,6 +11,7 @@ import {
 } from "@/redux/slices/attendanceSlice";
 import type { RootState, AppDispatch } from "@/store";
 import { useToast } from "@/hooks/useToast";
+import { useAuth } from "@/hooks/useAuth";
 import { TableSkeleton } from "@/components/common/Skeletons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,12 +35,18 @@ export default function StudentsAttendanceTab({ dropdowns }: { dropdowns?: any }
   const navigate = useNavigate();
   const toast = useToast();
   const { students, studentsLoading } = useSelector((s: RootState) => s.attendance);
+  const { user } = useAuth();
 
-  const branches = dropdowns?.branches || [];
+  const branches = dropdowns?.branches?.filter((b: any) => {
+    if (user && user.role === "branch_manager" && user.branch) {
+      return b.id === user.branch;
+    }
+    return true;
+  }) || [];
   const batches = dropdowns?.batches || [];
 
   const [filters, setFilters] = useState({
-    search: "", branch_id: "", batch_id: "", course_id: "",
+    search: "", branch_id: (user && user.role === "branch_manager" && user.branch) ? user.branch : "", batch_id: "", course_id: "",
     attendance_percentage_min: "", attendance_percentage_max: "",
     date_from: "", date_to: "",
     late_entries: "", active_violations: "",
@@ -143,7 +150,7 @@ export default function StudentsAttendanceTab({ dropdowns }: { dropdowns?: any }
           </Select>
           <Button onClick={fetchStudents} className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm">Apply Filters</Button>
           <Button variant="outline" className="h-9 text-sm" onClick={() => {
-            setFilters({ search: "", branch_id: "", batch_id: "", course_id: "", attendance_percentage_min: "", attendance_percentage_max: "", date_from: "", date_to: "", late_entries: "", active_violations: "" });
+            setFilters({ search: "", branch_id: (user && user.role === "branch_manager" && user.branch) ? user.branch : "", batch_id: "", course_id: "", attendance_percentage_min: "", attendance_percentage_max: "", date_from: "", date_to: "", late_entries: "", active_violations: "" });
           }}>
             <X className="w-3 h-3 mr-1" /> Clear
           </Button>

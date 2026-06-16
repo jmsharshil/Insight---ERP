@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/hooks/useAuth";
+import { useMemo } from "react";
 
 const STATUS_BADGE: Record<string, string> = {
   present: "bg-green-100 text-green-700",
@@ -24,16 +26,35 @@ const STATUS_BADGE: Record<string, string> = {
 export default function HistoryTab({ dropdowns }: { dropdowns?: any }) {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
+  const { user } = useAuth();
+  const isBranchManager = user && user.role === "branch_manager";
+
   const { history, historyLoading, historyCount } = useSelector((s: RootState) => s.attendance);
 
   const branches = dropdowns?.branches || [];
   const batches = dropdowns?.batches || [];
-  const studentsList = dropdowns?.students || [];
-  const facultyList = dropdowns?.faculty || [];
+  const studentsList = dropdowns?.students?.filter((s: any) => {
+    if (user && user.role === "branch_manager" && user.branch) {
+      return !s.branch_id || s.branch_id === user.branch;
+    }
+    return true;
+  }) || [];
+  const facultyList = dropdowns?.faculty?.filter((f: any) => {
+    if (user && user.role === "branch_manager" && user.branch) {
+      return !f.branch_id || f.branch_id === user.branch;
+    }
+    return true;
+  }) || [];
 
   const [f, setF] = useState({
-    student_id: "", branch_id: "", batch_id: "", date: "", status: "",
+    student_id: "", branch_id: isBranchManager && user.branch ? user.branch : "", batch_id: "", date: "", status: "",
   });
+
+  useEffect(() => {
+    if (isBranchManager && user.branch && f.branch_id !== user.branch) {
+      setF(prev => ({ ...prev, branch_id: user.branch }));
+    }
+  }, [user]);
 
   const filteredBatches = f.branch_id && f.branch_id !== "all"
     ? batches.filter((b: any) => b.branch === f.branch_id || b.branch_id === f.branch_id)
@@ -66,7 +87,20 @@ export default function HistoryTab({ dropdowns }: { dropdowns?: any }) {
 
   useEffect(() => { fetch(); }, []);
 
-  const clear = () => setF({ student_id: "", branch_id: "", batch_id: "", date: "", status: "" });
+  const clear = () => setF({ student_id: "", branch_id: isBranchManager && user.branch ? user.branch : "", batch_id: "", date: "", status: "" });
+
+  const filteredBranches = useMemo(() => {
+    if (!isBranchManager) return branches;
+    return branches.filter((b: any) => b.id === user.branch);
+  }, [branches, user]);
+
+  const filteredHistory = useMemo(() => {
+    if (!isBranchManager) return history;
+    return history.filter((h: any) => {
+      const bId = typeof h.branch === "object" && h.branch !== null ? h.branch.id : (h.branch_id || h.branch);
+      return bId === user.branch;
+    });
+  }, [history, user]);
 
   return (
     <div className="space-y-4">
@@ -85,8 +119,8 @@ export default function HistoryTab({ dropdowns }: { dropdowns?: any }) {
           <Select value={f.branch_id} onValueChange={v => setF(p => ({ ...p, branch_id: v === "all" ? "" : v }))}>
             <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Branch" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Branches</SelectItem>
-              {branches.map((b: any) => (
+              {!isBranchManager && <SelectItem value="all">All Branches</SelectItem>}
+              {filteredBranches.map((b: any) => (
                 <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
               ))}
             </SelectContent>
@@ -130,9 +164,9 @@ export default function HistoryTab({ dropdowns }: { dropdowns?: any }) {
               ))}</tr>
             </thead>
             <tbody>
-              {history.length === 0 ? (
+              {filteredHistory.length === 0 ? (
                 <tr><td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">No records found.</td></tr>
-              ) : history.map((row, i) => (
+              ) : filteredHistory.map((row, i) => (
                 <motion.tr key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}
                   className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                   <td className="px-4 py-3 text-xs font-medium">{row.student_name}</td>

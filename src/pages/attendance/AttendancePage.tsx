@@ -4,6 +4,7 @@ import { batchAction, dropdownActions } from "@/redux/actions";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import PageHeader from "@/components/layout/PageHeader";
 import { useUI } from "@/hooks/useUI";
+import { useAuth } from "@/hooks/useAuth";
 import DashboardTab from "./tabs/DashboardTab";
 import StudentsAttendanceTab from "./tabs/StudentsTab";
 import HistoryTab from "./tabs/HistoryTab";
@@ -16,6 +17,7 @@ import RegisterTab from "./tabs/RegisterTab";
 export default function AttendancePage() {
   const dispatch = useDispatch();
   const { setPageTitle } = useUI();
+  const { user } = useAuth();
   const [dropdowns, setDropdowns] = useState<any>({
     branches: [],
     batches: [],
@@ -30,11 +32,14 @@ export default function AttendancePage() {
   }, [setPageTitle]);
 
   useEffect(() => {
+    const isBranchManager = user && user.role === "branch_manager" && user.branch;
+    const branchQuery = isBranchManager ? `?branch_id=${user.branch}` : "";
+
     // 1. Fetch common dropdowns
     dispatch({
       type: dropdownActions.GET_DROPDOWN,
       method: "GET",
-      endPoint: "/api/v1/batches/dropdowns/",
+      endPoint: `/api/v1/batches/dropdowns/${branchQuery}`,
       auth: true,
       getResponse: (res: any) => {
         const data = res?.data || res;
@@ -51,7 +56,7 @@ export default function AttendancePage() {
     dispatch({
       type: dropdownActions.GET_DROPDOWN,
       method: "GET",
-      endPoint: "/api/v1/students/",
+      endPoint: `/api/v1/students/${branchQuery}`,
       auth: true,
       getResponse: (res: any) => {
         const list = res?.data?.results || res?.results || res?.data?.data || res?.data || res;
@@ -61,6 +66,7 @@ export default function AttendancePage() {
             students: list.map((item: any) => ({
               id: item.id,
               name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim(),
+              branch_id: item.branch || item.branch_id,
             })),
           }));
         }
@@ -71,7 +77,7 @@ export default function AttendancePage() {
     dispatch({
       type: dropdownActions.GET_DROPDOWN,
       method: "GET",
-      endPoint: "/api/v1/faculty/",
+      endPoint: `/api/v1/faculty/${branchQuery}`,
       auth: true,
       getResponse: (res: any) => {
         const list = res?.data || res;
@@ -81,12 +87,13 @@ export default function AttendancePage() {
             faculty: list.map((item: any) => ({
               id: item.id,
               name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim(),
+              branch_id: item.branch || item.branch_id,
             })),
           }));
         }
       },
     });
-  }, [dispatch]);
+  }, [dispatch, user]);
 
   return (
     <div>
