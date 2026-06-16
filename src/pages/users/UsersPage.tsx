@@ -1,6 +1,7 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useUI } from "@/hooks/useUI";
+import { useAuth } from "@/hooks/useAuth";
 import { useDropdown } from "@/hooks/useDropdown";
 import { userActions } from "@/redux/actions";
 import {
@@ -186,6 +187,15 @@ export default function UsersPage() {
   const { users, loading, selectedUser, selectedUserLoading } = useSelector(
     (state: RootState) => state.users,
   );
+  
+  const { user } = useAuth();
+  const filteredUsers = useMemo(() => {
+    if (!user || user.role === "super_admin" || !user.branch) return users;
+    return users.filter((u: any) => {
+      const branchId = typeof u.branch === "object" && u.branch !== null ? u.branch.id : u.branch;
+      return branchId === user.branch;
+    });
+  }, [users, user]);
 
   const {
     options: branchOptions,
@@ -484,8 +494,9 @@ export default function UsersPage() {
   };
 
   /* ── Table ── */
+
   const table = useReactTable({
-    data: users,
+    data: filteredUsers,
     columns,
     state: { sorting },
     onSortingChange: setSorting,

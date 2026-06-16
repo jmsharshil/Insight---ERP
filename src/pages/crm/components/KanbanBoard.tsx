@@ -1,12 +1,15 @@
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
-import { Phone, Mail, MapPin } from "lucide-react";
+import { Phone, Mail, MapPin, UserCheck } from "lucide-react";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 
 import { APILead, LeadStatus } from "@/types/crm";
 import { STAGE_COLORS, LEAD_STATUS_META } from "@/constants/dummy/crm";
 import { formatDate, cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import AssignLeadDialog from "./AssignLeadDialog";
 
 const COURSE_LABELS: Record<string, string> = {
   cs_executive: "CS Executive",
@@ -21,6 +24,7 @@ interface KanbanBoardProps {
   
   onDragEnd: (result: DropResult) => void;
   onView: (lead: APILead) => void;
+  onAssignSuccess?: (lead: APILead, assignedToName: string) => void;
 }
 
 function KanbanCardSkeleton() {
@@ -70,7 +74,9 @@ function KanbanColumnSkeleton({ meta, colors }: any) {
   );
 }
 
-export default function KanbanBoard({ leads, leadsLoading, stages, onDragEnd, onView }: KanbanBoardProps) {
+export default function KanbanBoard({ leads, leadsLoading, stages, onDragEnd, onView, onAssignSuccess }: KanbanBoardProps) {
+  const [assignLead, setAssignLead] = useState<APILead | null>(null);
+
   if (leadsLoading && leads.length === 0) {
     return (
       <div className="flex gap-3 overflow-x-auto pb-4 mt-3 -mx-1 px-1">
@@ -84,6 +90,7 @@ export default function KanbanBoard({ leads, leadsLoading, stages, onDragEnd, on
   }
 
   return (
+    <>
     <DragDropContext onDragEnd={onDragEnd}>
       <div className="flex gap-3 overflow-x-auto pb-4 mt-3 -mx-1 px-1">
         {stages.map((stage, stageIdx) => {
@@ -212,6 +219,24 @@ export default function KanbanBoard({ leads, leadsLoading, stages, onDragEnd, on
                                   </div>
                                 )}
                               </div>
+                              <div className="flex items-center justify-between mt-2">
+                                {lead.assigned_to_name ? (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                                    <UserCheck className="w-2.5 h-2.5 flex-shrink-0" />
+                                    <span className="truncate max-w-[120px]">{lead.assigned_to_name}</span>
+                                  </span>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-5 text-[10px] px-1.5 py-0 gap-1 bg-background"
+                                    onClick={(e) => { e.stopPropagation(); setAssignLead(lead); }}
+                                  >
+                                    <UserCheck className="w-2.5 h-2.5" />
+                                    Assign
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                           )}
                         </Draggable>
@@ -233,5 +258,19 @@ export default function KanbanBoard({ leads, leadsLoading, stages, onDragEnd, on
         })}
       </div>
     </DragDropContext>
+
+      {/* Assign Lead Dialog */}
+      <AssignLeadDialog
+        lead={assignLead}
+        open={!!assignLead}
+        onOpenChange={(open) => {
+          if (!open) setAssignLead(null);
+        }}
+        onSuccess={(lead, assignedToName) => {
+          setAssignLead(null);
+          if (onAssignSuccess) onAssignSuccess(lead, assignedToName);
+        }}
+      />
+    </>
   );
 }

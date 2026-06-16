@@ -23,11 +23,11 @@ import ResultsTab      from "./tabs/ResultsTab";
 // ─── Role-based tab config ────────────────────────────────────────────────────
 const getVisibleTabs = (role: string) => {
   const all = [
-    { value: "list",        label: "Exams",       roles: ["super_admin","branch_manager","admin","faculty","student","parent"] },
+    { value: "list",        label: "Exams",       roles: ["super_admin","branch_manager","admin","faculty","student","parent","parents"] },
     { value: "questions",   label: "Questions",   roles: ["super_admin","branch_manager","admin","faculty"] },
     { value: "seating",     label: "Seating",     roles: ["super_admin","branch_manager","admin","faculty"] },
     { value: "malpractice", label: "Malpractice", roles: ["super_admin","branch_manager","admin","faculty"] },
-    { value: "results",     label: "Results",     roles: ["super_admin","branch_manager","admin","faculty","student","parent"] },
+    { value: "results",     label: "Results",     roles: ["super_admin","branch_manager","admin","faculty","student","parent","parents"] },
   ];
   return all.filter(t => t.roles.includes(role));
 };
@@ -55,7 +55,7 @@ export default function ExamsPage() {
     dispatch(setSeating([]));
     dispatch(setMalpractice([]));
     // Switch to questions tab for admins/faculty, results for students/parents
-    if (["student","parent"].includes(role)) {
+    if (["student","parent","parents"].includes(role)) {
       setActiveTab("results");
     } else {
       setActiveTab("questions");

@@ -35,6 +35,14 @@ export default function StudentsTab() {
   const { students, loading: studentsLoading } = useSelector((state: RootState) => state.students);
   const isSuperAdmin = user?.role === "super_admin";
 
+  const filteredStudents = useMemo(() => {
+    if (!user || user.role === "super_admin" || !user.branch) return students;
+    return students.filter((s: any) => {
+      const branchId = typeof s.branch === "object" && s.branch !== null ? s.branch.id : s.branch;
+      return branchId === user.branch;
+    });
+  }, [students, user]);
+
   const fetchStudents = () => {
     dispatch({
       type: studentActions.GET_STUDENTS,
@@ -303,7 +311,7 @@ export default function StudentsTab() {
     <div className="mt-0 space-y-6">
       <DataTable 
         columns={cols} 
-        data={students} 
+        data={filteredStudents} 
         exportable={isSuperAdmin || user?.role === "branch_manager"} 
         onRowClick={(r) => navigate(`/students/${r.id}`)}
       />

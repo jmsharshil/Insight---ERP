@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Plus } from "lucide-react";
 
@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/store";
-import { courseAction, batchAction, ClassroomAction } from "@/redux/actions";
+import { courseAction, batchAction, ClassroomAction, studentActions } from "@/redux/actions";
 import {
   setCourses,
   setCoursesLoading,
@@ -48,9 +48,52 @@ export default function CoursesBatchesPage() {
     error: coursesError,
   } = useSelector((state: RootState) => state.courses);
 
+  const isStudent = user?.role === "student" || user?.role === "parent" || user?.role === "parents";
+
+  // Student detail state — used to filter courses & batches for student role
+  const [studentDetail, setStudentDetail] = useState<any>(null);
+  const [studentDetailLoading, setStudentDetailLoading] = useState(false);
+
   useEffect(() => {
     setPageTitle("Courses & Batches");
   }, [setPageTitle]);
+
+  // Fetch student detail when logged in as student
+  useEffect(() => {
+    const targetStudentId = user?.linked_student || user?.id;
+    if (isStudent && targetStudentId) {
+      setStudentDetailLoading(true);
+      dispatch({
+        type: studentActions.GET_STUDENT_DETAIL,
+        method: "GET",
+        endPoint: API.STUDENTS.GET(targetStudentId),
+        auth: true,
+        setLoading: (val: boolean) => setStudentDetailLoading(val),
+        getResponse: (res: any) => {
+          const data = res?.data ?? res;
+          setStudentDetail(data);
+          setStudentDetailLoading(false);
+        },
+        getError: () => {
+          setStudentDetailLoading(false);
+        },
+      });
+    }
+  }, [isStudent, user?.linked_student, dispatch]);
+
+  // Compute student's assigned course/batch IDs for filtering
+  const studentCourseId = studentDetail?.course || null;
+  const studentBatchIds = useMemo(() => {
+    if (!studentDetail) return new Set<string>();
+    const ids = new Set<string>();
+    if (studentDetail.batch) ids.add(String(studentDetail.batch));
+    if (studentDetail.batch_history) {
+      studentDetail.batch_history.forEach((bh: any) => {
+        if (bh.batch || bh.batch_id) ids.add(String(bh.batch || bh.batch_id));
+      });
+    }
+    return ids;
+  }, [studentDetail]);
 
   const [params, setParams] = useSearchParams();
   const activeSubTab = params.get("tab") || "courses";
@@ -404,6 +447,42 @@ export default function CoursesBatchesPage() {
   const canEdit =
     user && ["super_admin", "branch_manager", "admin_senior_exec"].includes(user.role);
 
+  // Student-filtered data
+  const displayCourses = useMemo(() => {
+    if (!isStudent) return courses;
+    if (!studentDetail) return [];
+    return courses.filter((c) => {
+      const matchId = studentDetail.course && String(c.id) === String(studentDetail.course);
+      const matchName = studentDetail.course_name && c.name === studentDetail.course_name;
+      const matchCode = studentDetail.course && c.code === studentDetail.course;
+      const matchString = studentDetail.course && c.name.toLowerCase().replace(/[^a-z0-9]/g, "") === String(studentDetail.course).toLowerCase().replace(/[^a-z0-9]/g, "");
+      return matchId || matchName || matchCode || matchString;
+    });
+  }, [courses, isStudent, studentDetail]);
+
+  const displayBatches = useMemo(() => {
+    let filtered = batches;
+    if (user && user.role !== "super_admin" && user.branch) {
+      filtered = filtered.filter((b: any) => {
+        const branchId = typeof b.branch === "object" && b.branch !== null ? b.branch.id : b.branch;
+        return branchId === user.branch;
+      });
+    }
+
+    if (!isStudent) return filtered;
+    if (!studentDetail) return [];
+
+    const normalizeStr = (s: any) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    
+    return filtered.filter((b: any) => {
+      const matchId = studentBatchIds.has(String(b.id));
+      const matchName = studentDetail.batch_name && normalizeStr(b.name) === normalizeStr(studentDetail.batch_name);
+      const matchCurrentName = studentDetail.current_batch_name && normalizeStr(b.name) === normalizeStr(studentDetail.current_batch_name);
+      const matchCode = studentDetail.batch_name && normalizeStr(b.batch_code) === normalizeStr(studentDetail.batch_name);
+      return matchId || matchName || matchCurrentName || matchCode;
+    });
+  }, [batches, isStudent, studentBatchIds, studentDetail, user]);
+
   /* ── Fetch course details on card click ── */
   function handleCourseCardClick(courseId: string | number) {
     navigate(`/courses-batches/${courseId}`);
@@ -495,11 +574,13 @@ export default function CoursesBatchesPage() {
   return (
     <div className="space-y-4 mx-auto w-full pb-10">
       <PageHeader
-        title={activeSubTab === "courses" ? "Courses" : "Student Batches"}
+        title={isStudent ? "My Courses & Batches" : (activeSubTab === "courses" ? "Courses" : "Student Batches")}
         subtitle={
-          activeSubTab === "courses"
-            ? "Manage courses, syllabus, and academic structure."
-            : "Manage student batches, classrooms, and mentors."
+          isStudent
+            ? "Your enrolled course and assigned batch."
+            : activeSubTab === "courses"
+              ? "Manage courses, syllabus, and academic structure."
+              : "Manage student batches, classrooms, and mentors."
         }
         actions={
           activeSubTab === "batches" && canEdit ? (
@@ -537,15 +618,15 @@ export default function CoursesBatchesPage() {
         <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="w-full">
           <TabsList className="mb-4 bg-muted/50">
             <TabsTrigger value="courses">Courses</TabsTrigger>
-            <TabsTrigger value="levels">Levels</TabsTrigger>
+            {!isStudent && <TabsTrigger value="levels">Levels</TabsTrigger>}
             <TabsTrigger value="batches">Batches</TabsTrigger>
-            <TabsTrigger value="classrooms">Classrooms</TabsTrigger>
+            {!isStudent && <TabsTrigger value="classrooms">Classrooms</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="courses" className="mt-0">
             <CoursesTab
-              courses={courses}
-              loading={coursesLoading}
+              courses={displayCourses}
+              loading={coursesLoading || (isStudent && studentDetailLoading)}
               error={coursesError}
               onCourseClick={handleCourseCardClick}
               onRetry={() => {
@@ -602,8 +683,8 @@ export default function CoursesBatchesPage() {
 
           <TabsContent value="batches" className="mt-0">
             <BatchesTab
-              batches={batches}
-              loading={batchesLoading}
+              batches={displayBatches}
+              loading={batchesLoading || (isStudent && studentDetailLoading)}
               error={batchesError}
               courses={courses}
               canEdit={!!canEdit}

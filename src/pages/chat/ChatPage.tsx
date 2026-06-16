@@ -633,7 +633,7 @@ export default function ChatPage() {
 
 
   const isFaculty = user?.role === "faculty";
-  const isStudentOrParent = user?.role === "student" || user?.role === "parent";
+  const isStudentOrParent = user?.role === "student" || user?.role === "parent" || user?.role === "parents";
 
   return (
     <div>

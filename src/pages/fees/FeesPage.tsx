@@ -475,11 +475,56 @@ export default function FeesPage() {
   }
 
   const role = user?.role;
-  const isStudentLike = role === "student" || role === "parent";
+  const isStudentLike = role === "student" || role === "parent" || role === "parents";
   const isAccountant = role === "accountant";
   const isBM = role === "branch_manager";
   const isAdmin = role === "super_admin" || isBM;
   const isAdminSr = role === "admin_senior_exec";
+
+  // Fetch student detail for student/parent role
+  const [studentDetail, setStudentDetail] = useState<any>(null);
+  const [studentDetailLoading, setStudentDetailLoading] = useState(false);
+
+  useEffect(() => {
+    const targetStudentId = user?.linked_student || user?.id;
+    if (isStudentLike && targetStudentId) {
+      setStudentDetailLoading(true);
+      dispatch({
+        type: studentActions.GET_STUDENT_DETAIL,
+        method: "GET",
+        endPoint: API.STUDENTS.GET(targetStudentId),
+        auth: true,
+        setLoading: (val: boolean) => setStudentDetailLoading(val),
+        getResponse: (res: any) => {
+          const data = res?.data ?? res;
+          setStudentDetail(data);
+          setStudentDetailLoading(false);
+        },
+        getError: () => {
+          setStudentDetailLoading(false);
+        },
+      });
+    }
+  }, [isStudentLike, user?.linked_student, dispatch]);
+
+  // Filter fee structures for the student's course/batch
+  const studentFeeStructures = useMemo(() => {
+    if (!isStudentLike || !studentDetail || !feeStructure) return [];
+    return feeStructure.filter((fs) => {
+      const matchesCourseId = studentDetail.course && String(fs.course) === String(studentDetail.course);
+      const matchesCourseName = studentDetail.course_name && fs.course_name === studentDetail.course_name;
+      const matchesCourseString = studentDetail.course && fs.course_name && fs.course_name.toLowerCase().replace(/[^a-z0-9]/g, "") === String(studentDetail.course).toLowerCase().replace(/[^a-z0-9]/g, "");
+      const matchesCourse = matchesCourseId || matchesCourseName || matchesCourseString;
+
+      const matchesBatchId = studentDetail.batch && String(fs.batch) === String(studentDetail.batch);
+      const matchesBatchName = studentDetail.batch_name && fs.batch_name === studentDetail.batch_name;
+      const matchesCurrentBatchName = studentDetail.current_batch_name && fs.batch_name === studentDetail.current_batch_name;
+      const matchesBatch = matchesBatchId || matchesBatchName || matchesCurrentBatchName;
+      
+      // Match by course, or by batch, or by both
+      return matchesCourse || matchesBatch;
+    });
+  }, [isStudentLike, studentDetail, feeStructure]);
 
   // Student/Parent view ----------------------
   if (isStudentLike)
@@ -489,6 +534,9 @@ export default function FeesPage() {
         setTxns={setTxns}
         uploadOpen={uploadOpen}
         setUploadOpen={setUploadOpen}
+        studentDetail={studentDetail}
+        studentDetailLoading={studentDetailLoading}
+        feeStructures={studentFeeStructures}
       />
     );
 
@@ -1386,23 +1434,53 @@ function StudentFeesView({
   setTxns,
   uploadOpen,
   setUploadOpen,
+  studentDetail,
+  studentDetailLoading,
+  feeStructures,
 }: {
   txns: FeeTransaction[];
   setTxns: React.Dispatch<React.SetStateAction<FeeTransaction[]>>;
   uploadOpen: boolean;
   setUploadOpen: (b: boolean) => void;
+  studentDetail: any;
+  studentDetailLoading: boolean;
+  feeStructures: FeesStructure[];
 }) {
   const toast = useToast();
   const { user } = useAuth();
-  const student = DUMMY_STUDENTS[0];
-  const my = txns.filter((t) => t.studentId === student.id);
-  const outstanding = student.feeTotal - student.feePaid;
+
+  // Derive student info from real API data, fallback to dummy if not loaded yet
+  const studentName = studentDetail?.full_name || user?.name || "Loading...";
+  const studentId = studentDetail?.id || user?.linked_student || user?.id || "";
+  const courseName = studentDetail?.course_name || studentDetail?.course || "";
+  const batchName = studentDetail?.current_batch_name || studentDetail?.batch_name || "";
+
+  // Calculate fee totals from fee structures
+  const totalFee = feeStructures.reduce((sum, fs) => sum + Number(fs.total_amount || 0), 0);
+  // For paid amount, sum approved transactions for this student
+  const paidAmount = txns
+    .filter((t) => t.studentId === studentId && t.status === "approved")
+    .reduce((sum, t) => sum + t.amount, 0);
+  const outstanding = totalFee - paidAmount;
+
+  const my = txns.filter((t) => t.studentId === studentId);
+
+  if (studentDetailLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-muted-foreground">Loading your fee details...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
       <PageHeader
         title="My Fees"
-        subtitle={`Account: ${student.name}`}
+        subtitle={`Account: ${studentName}`}
         actions={
           <Button
             onClick={() => setUploadOpen(true)}
@@ -1419,26 +1497,61 @@ function StudentFeesView({
         className="rounded-xl bg-gradient-to-br from-navy to-navy-light text-white p-5 mb-4"
       >
         <p className="text-xs uppercase tracking-wider opacity-80">My Fee Summary</p>
+        {courseName && (
+          <p className="text-xs opacity-70 mt-1">
+            {courseName}{batchName ? ` — ${batchName}` : ""}
+          </p>
+        )}
         <div className="grid grid-cols-3 gap-4 mt-3">
           <div>
             <p className="text-xs opacity-80">Total</p>
-            <p className="text-xl font-heading font-bold">{formatCurrency(student.feeTotal)}</p>
+            <p className="text-xl font-heading font-bold">{formatCurrency(totalFee)}</p>
           </div>
           <div>
             <p className="text-xs opacity-80">Paid</p>
             <p className="text-xl font-heading font-bold text-primary">
-              {formatCurrency(student.feePaid)}
+              {formatCurrency(paidAmount)}
             </p>
           </div>
           <div>
             <p className="text-xs opacity-80">Outstanding</p>
-            <p className="text-xl font-heading font-bold">{formatCurrency(outstanding)}</p>
+            <p className="text-xl font-heading font-bold">{formatCurrency(outstanding > 0 ? outstanding : 0)}</p>
           </div>
         </div>
-        <p className="text-xs mt-3 opacity-80">
-          Next due: <b>15 Oct 2024</b>
-        </p>
       </motion.div>
+
+      {/* My Fee Structures */}
+      {feeStructures.length > 0 && (
+        <div className="mb-4">
+          <h3 className="font-heading font-semibold mb-2">My Fee Structure</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {feeStructures.map((fs) => (
+              <motion.div
+                key={fs.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-xl bg-card border border-border p-4"
+              >
+                <h4 className="font-heading font-semibold">{fs.name}</h4>
+                <div className="mt-3 space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Course</span>
+                    <span className="font-medium">{fs.course_name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Batch</span>
+                    <span className="font-medium">{fs.batch_name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total Amount</span>
+                    <span className="font-medium">{fs.total_amount}</span>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <h3 className="font-heading font-semibold mb-2">Payment History</h3>
       <TxnTable data={my} />
@@ -1450,13 +1563,13 @@ function StudentFeesView({
           setTxns((prev) => [
             {
               id: `RCP-2024-${String(prev.length + 1).padStart(3, "0")}`,
-              studentId: student.id,
-              studentName: student.name,
+              studentId: studentId,
+              studentName: studentName,
               amount: data.amount,
               paymentMode: data.mode,
               status: "pending",
               screenshotUrl: "https://placehold.co/600x400?text=Uploaded",
-              submittedBy: user?.name ?? student.name,
+              submittedBy: user?.name ?? studentName,
               submittedAt: new Date().toISOString(),
               remarks: data.remarks,
             },

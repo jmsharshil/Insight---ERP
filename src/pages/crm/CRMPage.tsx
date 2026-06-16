@@ -88,6 +88,14 @@ export default function CRMPage() {
   const dispatch = useDispatch<AppDispatch>();
   const { analytics, leads, leadsLoading } = useSelector((state: RootState) => state.crm);
 
+  const filteredLeads = useMemo(() => {
+    if (!user || user.role === "super_admin" || !user.branch) return leads;
+    return leads.filter((l: any) => {
+      const branchId = typeof l.branch === "object" && l.branch !== null ? l.branch.id : l.branch;
+      return branchId === user.branch;
+    });
+  }, [leads, user]);
+
   const [tab, setTab] = useState("table");
   const [selectedLead, setSelectedLead] = useState<APILead | null>(null);
   const [isLeadDetailLoading, setIsLeadDetailLoading] = useState(false);
@@ -182,9 +190,9 @@ export default function CRMPage() {
         lost: analytics.lost,
       };
     }
-    const count = (stage: string) => leads.filter((l) => l.current_stage === stage).length;
+    const count = (stage: string) => filteredLeads.filter((l) => l.current_stage === stage).length;
     return {
-      total: leads.length,
+      total: filteredLeads.length,
       new: count("new"),
       contacted: count("contacted"),
       interested: count("interested"),
@@ -333,7 +341,7 @@ export default function CRMPage() {
             <TableSkeleton rows={10} columns={8} className="mt-3" />
           ) : (
           <LeadsTable
-            leads={leads}
+            leads={filteredLeads}
             onView={(lead) => {
               setSelectedLead(lead);
               fetchLeadDetails(lead);
@@ -349,7 +357,7 @@ export default function CRMPage() {
         {/* Pipeline (Kanban) */}
         <TabsContent value="pipeline">
           <KanbanBoard
-            leads={leads}
+            leads={filteredLeads}
             leadsLoading={leadsLoading}
             stages={STAGES}
             onDragEnd={onDragEnd}
@@ -357,6 +365,7 @@ export default function CRMPage() {
               setSelectedLead(lead);
               fetchLeadDetails(lead);
             }}
+            onAssignSuccess={() => fetchLeads()}
           />
         </TabsContent>
 

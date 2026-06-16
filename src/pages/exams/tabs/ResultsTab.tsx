@@ -26,7 +26,7 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
   const isAdmin   = user && ["super_admin", "branch_manager", "admin"].includes(user.role ?? "");
   const isFaculty = user?.role === "faculty";
   const isStudent = user?.role === "student";
-  const isParent  = user?.role === "parent";
+  const isParent  = user?.role === "parent" || user?.role === "parents";
 
   const canDistribute = isAdmin || isFaculty;
 

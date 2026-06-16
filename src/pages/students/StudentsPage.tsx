@@ -48,7 +48,7 @@ export default function StudentsPage() {
     }, { replace: true });
   };
 
-  const canManage = user && !["student", "parent", "faculty"].includes(user.role);
+  const canManage = user && !["student", "parent", "parents", "faculty"].includes(user.role);
 
   useEffect(() => {
     setPageTitle("Students & Admissions");

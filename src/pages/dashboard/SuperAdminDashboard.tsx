@@ -22,6 +22,7 @@ import {
   ChevronLeft,
 } from "lucide-react";
 import { useEffect, useState, useRef, useMemo } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { useAppDispatch } from "@/store/hooks";
 import { branchAction } from "@/redux/actions";
 import { cn, formatDate } from "@/lib/utils";
@@ -202,14 +203,21 @@ export default function SuperAdminDashboard() {
   const { branchList } = useSelector((state: RootState) => state.branch);
   const dispatch = useAppDispatch();
   const toast = useToast();
+  const { user } = useAuth();
 
   const filteredBranches = useMemo(() => {
     return branchList.filter((branch: any) => {
       if (statusFilter === "true" && !branch.is_active) return false;
       if (statusFilter === "false" && branch.is_active) return false;
+      
+      // Filter out branches that don't match the user's branch (if they are not super admin)
+      if (user && user.role !== "super_admin" && user.branch) {
+        if (branch.id !== user.branch) return false;
+      }
+      
       return true;
     });
-  }, [branchList, statusFilter]);
+  }, [branchList, statusFilter, user]);
 
   const [sorting, setSorting] = useState<SortingState>([]);
 

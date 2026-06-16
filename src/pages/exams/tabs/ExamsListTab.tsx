@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
 import { Eye, Trash2, Pencil, Search, X, RefreshCw, Info } from "lucide-react";
-import { examActions } from "@/redux/actions";
+import { examActions, studentActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import {
   setExams, setExamsLoading,
@@ -56,9 +56,47 @@ export default function ExamsListTab({ onSelectExam, selectedExamId }: ExamsList
 
   const isAdmin   = user && ["super_admin", "branch_manager", "admin"].includes(user.role ?? "");
   const isStudent = user?.role === "student";
-  const isParent  = user?.role === "parent";
+  const isParent  = user?.role === "parent" || user?.role === "parents";
   const canEdit   = isAdmin;
   const canDelete = isAdmin;
+
+  // Student details for filtering exams by batch
+  const [studentDetail, setStudentDetail] = useState<any>(null);
+  const [studentDetailLoading, setStudentDetailLoading] = useState(false);
+
+  useEffect(() => {
+    const targetStudentId = user?.linked_student || user?.id;
+    if ((isStudent || isParent) && targetStudentId) {
+      setStudentDetailLoading(true);
+      dispatch({
+        type: studentActions.GET_STUDENT_DETAIL,
+        method: "GET",
+        endPoint: API.STUDENTS.GET(targetStudentId),
+        auth: true,
+        setLoading: (val: boolean) => setStudentDetailLoading(val),
+        getResponse: (res: any) => {
+          const data = res?.data ?? res;
+          setStudentDetail(data);
+          setStudentDetailLoading(false);
+        },
+        getError: () => {
+          setStudentDetailLoading(false);
+        },
+      } as any);
+    }
+  }, [isStudent, isParent, user?.linked_student, user?.id, dispatch]);
+
+  const studentBatchIds = useMemo(() => {
+    if (!studentDetail) return new Set<string>();
+    const ids = new Set<string>();
+    if (studentDetail.batch) ids.add(String(studentDetail.batch));
+    if (studentDetail.batch_history) {
+      studentDetail.batch_history.forEach((bh: any) => {
+        if (bh.batch || bh.batch_id) ids.add(String(bh.batch || bh.batch_id));
+      });
+    }
+    return ids;
+  }, [studentDetail]);
 
   const fetchExams = () => {
     dispatch({
@@ -133,6 +171,15 @@ export default function ExamsListTab({ onSelectExam, selectedExamId }: ExamsList
   };
 
   const filtered = exams.filter(e => {
+    if (user && user.role !== "super_admin" && user.branch) {
+      const branchId = typeof e.branch === "object" && e.branch !== null ? (e.branch as any).id : e.branch;
+      if (branchId !== user.branch) return false;
+    }
+    if ((isStudent || isParent) && studentDetail) {
+      if (e.batch && !studentBatchIds.has(String(e.batch))) {
+        return false;
+      }
+    }
     const matchSearch = !search || e.title?.toLowerCase().includes(search.toLowerCase());
     const matchType   = !examTypeFilter || e.exam_type === examTypeFilter;
     return matchSearch && matchType;

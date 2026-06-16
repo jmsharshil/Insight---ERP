@@ -5,6 +5,11 @@ import TopBar from "./TopBar";
 import MobileNav from "./MobileNav";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useUI } from "@/hooks/useUI";
+import { useAuth } from "@/hooks/useAuth";
+import { useAppDispatch } from "@/store/hooks";
+import { userActions } from "@/redux/actions";
+import { updateUser } from "@/redux/slices/authSlice";
+import { useEffect } from "react";
 
 const pageVariants = {
   initial: { opacity: 0, y: 12 },
@@ -15,6 +20,25 @@ const pageVariants = {
 export default function AppShell() {
   const location = useLocation();
   const { sidebarOpen, closeMobileSidebar } = useUI();
+  const { user } = useAuth();
+  const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    if (user && user.id && user.role !== "super_admin" && !user.branch) {
+      dispatch({
+        type: userActions.GET_USER_DETAILS,
+        method: "GET",
+        endPoint: `/api/auth/users/${user.id}/`,
+        auth: true,
+        getResponse: (res: any) => {
+          const fetchedUser = res?.data ?? res;
+          if (fetchedUser && fetchedUser.branch) {
+            dispatch(updateUser(fetchedUser));
+          }
+        },
+      } as any);
+    }
+  }, [user, dispatch]);
 
   return (
     <div className="flex min-h-screen bg-surface">
