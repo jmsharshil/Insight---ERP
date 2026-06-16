@@ -225,6 +225,7 @@ export const API = {
     // Late Entries
     LATE_ENTRIES:         "/api/v1/leave/late-entries/",
     LATE_ENTRY_DETAIL:    (id: string) => `/api/v1/leave/late-entries/${id}/`,
+  },
   PAYMENTS: {
     LIST: "/api/v1/payments/",
     RECORD: "/api/v1/payments/",
