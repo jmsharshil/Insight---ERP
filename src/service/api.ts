@@ -149,6 +149,12 @@ export const API = {
       STUDENT_VIEW:       (studentId: string) => `/api/v1/timetable/student/${studentId}/`,
     },
 
+    /** Fees endpoints */
+    FEES: {
+      STRUCTURES: "/api/v1/fee-structures/",
+      STUDENT_FEES: (studentId: string) => `/api/v1/students/${studentId}/fees/`,
+    },
+
     /** Exams endpoints */
     EXAMS: {
       LIST:                     "/api/v1/exams/",

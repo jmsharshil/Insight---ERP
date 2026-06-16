@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { admissionActions } from "@/redux/actions";
@@ -28,6 +28,14 @@ export default function AdmissionsTab() {
   const [rejectState, setRejectState] = useState<{ id: string | number; reason: string } | null>(null);
 
   const isSuperAdmin = user?.role === "super_admin";
+
+  const filteredAdmissions = useMemo(() => {
+    if (!user || user.role === "super_admin" || !user.branch) return admissions;
+    return admissions.filter((a: any) => {
+      const branchId = typeof a.branch === "object" && a.branch !== null ? a.branch.id : a.branch;
+      return branchId === user.branch;
+    });
+  }, [admissions, user]);
 
   useEffect(() => {
     dispatch({
@@ -129,7 +137,7 @@ export default function AdmissionsTab() {
     <div className="mt-0">
       <DataTable 
         columns={admissionCols} 
-        data={admissions} 
+        data={filteredAdmissions} 
         exportable={isSuperAdmin || user?.role === "branch_manager"} 
         onRowClick={(r) => navigate(`/admissions/${r.id}`)}
       />

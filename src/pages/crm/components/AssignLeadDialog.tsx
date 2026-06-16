@@ -17,14 +17,19 @@ import { AppDispatch } from "@/store";
 import { APILead } from "@/types/crm";
 import { useToast } from "@/hooks/useToast";
 import { leadActions, userActions } from "@/redux/actions";
+import { useAuth } from "@/hooks/useAuth";
 
 /* ─── Types ──────────────────────────────────────────────────── */
 
 interface UserOption {
   id: string;
-  full_name: string;
+  full_name?: string;
+  name?: string;
+  first_name?: string;
+  last_name?: string;
   email?: string;
   role?: string;
+  branch?: any;
 }
 
 interface AssignLeadDialogProps {
@@ -44,6 +49,7 @@ export default function AssignLeadDialog({
 }: AssignLeadDialogProps) {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
+  const { user } = useAuth();
 
   const [users, setUsers] = useState<UserOption[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
@@ -78,11 +84,26 @@ export default function AssignLeadDialog({
     } as any);
   }, [open, dispatch, toast]);
 
+  /* ─── Allowed CRM Roles ───────────────────────────────────── */
+  const ALLOWED_ROLES = ["counsellor", "tele_caller", "sales_senior_executive", "sales_executive"];
+
   /* ─── Filtered users ──────────────────────────────────────── */
   const filtered = users.filter((u) => {
+    // Only show users who have one of the allowed roles
+    if (!u.role || !ALLOWED_ROLES.includes(u.role)) {
+      return false;
+    }
+    
+    // // Filter by branch
+    // if (user && user.role !== "super_admin" && user.branch) {
+    //   const branchId = typeof u.branch === "object" && u.branch !== null ? u.branch.id : u.branch;
+    //   if (branchId !== user.branch) return false;
+    // }
+
     const q = search.toLowerCase();
+    const displayName = u.name || u.full_name || u.first_name || "Unknown User";
     return (
-      u.full_name?.toLowerCase().includes(q) ||
+      displayName.toLowerCase().includes(q) ||
       u.email?.toLowerCase().includes(q) ||
       u.role?.toLowerCase().includes(q)
     );
@@ -104,9 +125,9 @@ export default function AssignLeadDialog({
       },
       getResponse: (res: any) => {
         setAssigning(false);
-        toast.success(`Lead assigned to ${res?.data?.assigned_to_name ?? selectedUser.full_name}`);
+        toast.success(`Lead assigned to ${res?.data?.assigned_to_name ?? (selectedUser.name || selectedUser.full_name || selectedUser.first_name || "User")}`);
         onOpenChange(false);
-        if (onSuccess) onSuccess(lead, res?.data?.assigned_to_name ?? selectedUser.full_name);
+        if (onSuccess) onSuccess(lead, res?.data?.assigned_to_name ?? (selectedUser.name || selectedUser.full_name || selectedUser.first_name || "User"));
       },
       getError: (err: any) => {
         setAssigning(false);
@@ -187,10 +208,10 @@ export default function AssignLeadDialog({
                               : "bg-muted text-muted-foreground"
                           )}
                         >
-                          {u.full_name?.[0]?.toUpperCase() ?? "?"}
+                          {(u.name || u.full_name || u.first_name || "?")?.[0]?.toUpperCase() ?? "?"}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{u.full_name}</p>
+                          <p className="text-sm font-medium truncate">{u.name || u.full_name || u.first_name || "Unknown User"}</p>
                           {u.email && (
                             <p className="text-xs text-muted-foreground truncate">
                               {u.email}
