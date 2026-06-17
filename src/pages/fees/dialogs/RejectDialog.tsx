@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
@@ -30,21 +30,21 @@ export function RejectDialog({
   }, [txn?.id]);
 
   return (
-    <Dialog open={!!txn} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle className="font-heading">Reject Payment</DialogTitle>
-          <DialogDescription>
+    <Sheet open={!!txn} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="font-heading">Reject Payment</SheetTitle>
+          <SheetDescription>
             {txn?.studentName} · {txn && formatCurrency(txn.amount)}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
         <Textarea
           placeholder="Reason for rejection"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           rows={3}
         />
-        <DialogFooter>
+        <SheetFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
@@ -55,8 +55,8 @@ export function RejectDialog({
           >
             Reject
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }

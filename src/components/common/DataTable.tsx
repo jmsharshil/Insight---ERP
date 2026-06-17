@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import EmptyState from "./EmptyState";
 import { FileSearch } from "lucide-react";
+import { TableSkeleton } from "./Skeletons";
 
 export interface DataTableColumn<T> {
   key: keyof T | string;
@@ -40,6 +41,7 @@ export default function DataTable<T extends Record<string, any>>({
   pageSize = 50,
   emptyTitle = "No records found",
   onRowClick,
+  loading = false,
 }: DataTableProps<T>) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -91,58 +93,64 @@ export default function DataTable<T extends Record<string, any>>({
         </div>
       )}
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/40">
-              {columns.map((c) => (
-                <TableHead key={String(c.key)} className={c.className}>{c.header}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paged.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="p-0">
-                  <EmptyState icon={FileSearch} title={emptyTitle} description="Try changing your filters." />
-                </TableCell>
-              </TableRow>
-            ) : (
-              paged.map((row, i) => (
-                <motion.tr
-                  key={i}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2, delay: i * 0.02 }}
-                  className={`border-b border-border last:border-0 hover:bg-muted/30 transition-colors ${
-                    onRowClick ? "cursor-pointer" : ""
-                  }`}
-                  onClick={() => onRowClick && onRowClick(row)}
-                >
+      {loading ? (
+        <TableSkeleton rows={5} columns={columns.length} />
+      ) : (
+        <>
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/40">
                   {columns.map((c) => (
-                    <TableCell key={String(c.key)} className={c.className}>
-                      {c.render ? c.render(row) : String(row[c.key as keyof T] ?? "")}
-                    </TableCell>
+                    <TableHead key={String(c.key)} className={c.className}>{c.header}</TableHead>
                   ))}
-                </motion.tr>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {filtered.length > pageSize && (
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>Page {page} of {totalPages} · {filtered.length} records</span>
-          <div className="flex gap-1">
-            <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paged.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={columns.length} className="p-0">
+                      <EmptyState icon={FileSearch} title={emptyTitle} description="Try changing your filters." />
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paged.map((row, i) => (
+                    <motion.tr
+                      key={i}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, delay: i * 0.02 }}
+                      className={`border-b border-border last:border-0 hover:bg-muted/30 transition-colors ${
+                        onRowClick ? "cursor-pointer" : ""
+                      }`}
+                      onClick={() => onRowClick && onRowClick(row)}
+                    >
+                      {columns.map((c) => (
+                        <TableCell key={String(c.key)} className={c.className}>
+                          {c.render ? c.render(row) : String(row[c.key as keyof T] ?? "")}
+                        </TableCell>
+                      ))}
+                    </motion.tr>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
-        </div>
+
+          {filtered.length > pageSize && (
+            <div className="flex items-center justify-between text-sm text-muted-foreground mt-3">
+              <span>Page {page} of {totalPages} · {filtered.length} records</span>
+              <div className="flex gap-1">
+                <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { ReportsSkeleton } from "@/components/common/Skeletons";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -11,14 +12,7 @@ import {
   Tooltip,
   Cell,
 } from "recharts";
-import {
-  Wallet,
-  Clock,
-  AlertCircle,
-  RotateCcw,
-  CheckCircle2,
-  Send,
-} from "lucide-react";
+import { Wallet, Clock, AlertCircle, RotateCcw, CheckCircle2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -29,26 +23,18 @@ import {
 } from "@/components/ui/select";
 import { formatCurrency } from "@/lib/utils";
 
-const defaultReportData = {
-  total_billed: 551000.0,
-  total_collected: 469000.0,
-  total_pending: 0,
-  total_discount: 104500.0,
-  total_overdue: 0,
-  total_partial: 0,
-  total_approval_pending: 0,
-  collection_by_mode: {
-    cash: 200000.0,
-    cheque: 200000.0,
-    dd: 22500.0,
-    online: 24000.0,
-  },
-  monthly_trend: [
-    {
-      month: "2026-06",
-      collected: 446500.0,
-    },
-  ],
+const currentYear = new Date().getFullYear();
+
+const formatModeName = (name: string) => {
+  if (!name) return "";
+  const modes: Record<string, string> = {
+    cash: "Cash",
+    cheque: "Cheque",
+    upi: "UPI",
+    dd: "Demand Draft",
+    online: "Online",
+  };
+  return modes[name.toLowerCase()] || name.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 };
 
 interface ReportsTabProps {
@@ -88,16 +74,8 @@ export default function ReportsTab({
   modeChartData,
   COLORS,
 }: ReportsTabProps) {
-
   if (reportLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 space-y-4">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
-        <p className="text-sm text-muted-foreground font-medium animate-pulse">
-          Fetching financial analytics...
-        </p>
-      </div>
-    );
+    return <ReportsSkeleton />;
   }
 
   return (
@@ -140,9 +118,9 @@ export default function ReportsTab({
                 <SelectValue placeholder="Year" />
               </SelectTrigger>
               <SelectContent>
-                {[2024, 2025, 2026, 2027, 2028].map((y) => (
-                  <SelectItem key={y} value={String(y)}>
-                    {y}
+                {Array.from({ length: 5 }, (_, i) => currentYear + i).map((year) => (
+                  <SelectItem key={year} value={String(year)}>
+                    {year}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -169,9 +147,7 @@ export default function ReportsTab({
           <div className="text-2xl font-bold font-mono tracking-tight text-blue-950 dark:text-blue-100">
             {formatCurrency(billed)}
           </div>
-          <p className="text-[10px] text-muted-foreground mt-2">
-            Overall invoice amount generated
-          </p>
+          <p className="text-[10px] text-muted-foreground mt-2">Overall invoice amount generated</p>
         </div>
 
         <div className="bg-gradient-to-br from-green-500/5 to-emerald-500/5 border border-green-500/10 rounded-2xl p-5 shadow-sm relative overflow-hidden">
@@ -233,9 +209,7 @@ export default function ReportsTab({
           <div className="text-2xl font-bold font-mono tracking-tight text-purple-950 dark:text-purple-100">
             {formatCurrency(discountVal)}
           </div>
-          <p className="text-[10px] text-muted-foreground mt-2">
-            Total discounts/waivers granted
-          </p>
+          <p className="text-[10px] text-muted-foreground mt-2">Total discounts/waivers granted</p>
         </div>
       </div>
 
@@ -271,9 +245,7 @@ export default function ReportsTab({
           <div className="text-2xl font-bold font-mono tracking-tight text-orange-950 dark:text-orange-100">
             {formatCurrency(partialVal)}
           </div>
-          <p className="text-[10px] text-muted-foreground mt-2">
-            Partially settled installments
-          </p>
+          <p className="text-[10px] text-muted-foreground mt-2">Partially settled installments</p>
         </div>
 
         <div className="bg-gradient-to-br from-teal-500/5 to-cyan-500/5 border border-teal-500/10 rounded-2xl p-5 shadow-sm relative overflow-hidden">
@@ -296,14 +268,12 @@ export default function ReportsTab({
       </div>
 
       {/* Analytics Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-card border border-border rounded-xl p-5 shadow-sm">
+      <div className="grid grid-cols-1 gap-6">
+        <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
           <div className="flex justify-between items-center mb-4">
             <div>
               <h4 className="text-sm font-semibold">Monthly Collection Velocity</h4>
-              <p className="text-xs text-muted-foreground">
-                Historical fee collection comparison
-              </p>
+              <p className="text-xs text-muted-foreground">Historical fee collection comparison</p>
             </div>
           </div>
           <div className="h-72 w-full">
@@ -323,11 +293,7 @@ export default function ReportsTab({
                       <stop offset="95%" stopColor="rgb(59, 130, 246)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="rgba(0,0,0,0.05)"
-                  />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
                   <XAxis dataKey="name" tick={{ fontSize: 10 }} tickLine={false} />
                   <YAxis tick={{ fontSize: 10 }} tickLine={false} />
                   <Tooltip
@@ -365,13 +331,12 @@ export default function ReportsTab({
               <div className="text-xs text-muted-foreground">No distribution data</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={modeChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="rgba(0,0,0,0.05)"
-                  />
-                  <XAxis dataKey="name" tick={{ fontSize: 10 }} tickLine={false} />
+                <BarChart
+                  data={modeChartData}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} tickLine={false} tickFormatter={formatModeName} />
                   <YAxis tick={{ fontSize: 10 }} tickLine={false} />
                   <Tooltip
                     contentStyle={{
@@ -380,9 +345,10 @@ export default function ReportsTab({
                       borderRadius: "8px",
                       fontSize: "12px",
                     }}
+                    labelFormatter={formatModeName}
                     formatter={(value) => [formatCurrency(Number(value)), "Collected"]}
                   />
-                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={200}>
                     {modeChartData.map((entry, idx) => (
                       <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} />
                     ))}
@@ -402,8 +368,8 @@ export default function ReportsTab({
                       className="w-2.5 h-2.5 rounded-full"
                       style={{ backgroundColor: COLORS[idx % COLORS.length] }}
                     />
-                    <span className="capitalize font-medium text-muted-foreground">
-                      {item.name?.replace("_", " ")}
+                    <span className="font-medium text-muted-foreground">
+                      {formatModeName(item.name)}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">

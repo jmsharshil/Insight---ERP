@@ -1,4 +1,5 @@
 import DataTable from "@/components/common/DataTable";
+import { FeeTableSkeleton } from "@/components/common/Skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,6 +21,7 @@ interface StudentFeesTabProps {
   sfStatus: string;
   setSfStatus: (val: string) => void;
   handleViewOverview: (studentId: string) => void;
+  loading?: boolean;
 }
 
 export default function StudentFeesTab({
@@ -31,7 +33,12 @@ export default function StudentFeesTab({
   sfStatus,
   setSfStatus,
   handleViewOverview,
+  loading,
 }: StudentFeesTabProps) {
+  if (loading) {
+    return <FeeTableSkeleton columns={8} rows={6} />;
+  }
+
   return (
     <>
       <div className="bg-card border border-border rounded-xl p-4 mb-4">
@@ -86,7 +93,7 @@ export default function StudentFeesTab({
             key: "fee_structure",
             header: "Fee Structure",
             render: (item: StudentFee) => {
-              const fs = feeStructure.find((x) => x.id === item.fee_structure);
+              const fs = feeStructure.find((x) => x.name === item.fee_name);
               return fs?.name || "—";
             },
           },

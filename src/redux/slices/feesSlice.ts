@@ -18,7 +18,7 @@ export interface StudentFee {
   student: string;
   student_name?: string;
   fee_structure: string;
-  fee_structure_name?: string;
+  fee_name?: string;
   total_amount: string | number;
   discount: string | number;
   discount_reason?: string;

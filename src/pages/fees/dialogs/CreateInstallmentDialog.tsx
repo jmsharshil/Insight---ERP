@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -60,14 +60,14 @@ export function CreateInstallmentDialog({
   }, [open]);
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Create Installment Plan</DialogTitle>
-          <DialogDescription>
+    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>Create Installment Plan</SheetTitle>
+          <SheetDescription>
             Set up a multi-part payment schedule for a student's assigned fee.
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         <div className="space-y-4 my-2 text-sm">
           <div>
@@ -214,7 +214,7 @@ export function CreateInstallmentDialog({
           )}
         </div>
 
-        <DialogFooter>
+        <SheetFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
@@ -244,8 +244,8 @@ export function CreateInstallmentDialog({
           >
             {loading ? "Creating..." : "Create Plan"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }

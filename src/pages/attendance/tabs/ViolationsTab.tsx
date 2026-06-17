@@ -131,12 +131,12 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-600 text-xs font-semibold">
-                        {v.student.name.slice(0, 2).toUpperCase()}
+                        {v.student_name?.slice(0, 2).toUpperCase()}
                       </div>
-                      <span className="font-medium text-foreground">{v.student.name}</span>
+                      <span className="font-medium text-foreground">{v.student_name}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{v.student.roll_number}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{v.roll_number}</td>
                   <td className="px-4 py-3">
                     <Badge className={`text-xs capitalize ${VIOLATION_BADGE[v.violation_type] ?? "bg-gray-100 text-gray-700"}`}>
                       {v.violation_type}

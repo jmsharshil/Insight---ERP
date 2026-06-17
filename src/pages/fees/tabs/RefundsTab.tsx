@@ -1,5 +1,6 @@
 import { MoreVertical, CheckCircle, XCircle } from "lucide-react";
 import DataTable, { type DataTableColumn } from "@/components/common/DataTable";
+import { FeeTableSkeleton } from "@/components/common/Skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -77,10 +78,7 @@ export default function RefundsTab({
       </div>
 
       {refundsLoading ? (
-        <div className="flex flex-col items-center justify-center py-12 space-y-3">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <p className="text-sm text-muted-foreground">Loading refunds...</p>
-        </div>
+        <FeeTableSkeleton columns={7} rows={5} hasFilter={false} />
       ) : refunds.length === 0 ? (
         <div className="col-span-full py-12 text-center text-muted-foreground bg-muted/20 border border-dashed rounded-xl">
           No refunds recorded yet.

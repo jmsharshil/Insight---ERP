@@ -1,5 +1,6 @@
 import { MoreVertical } from "lucide-react";
 import DataTable from "@/components/common/DataTable";
+import { FeeTableSkeleton } from "@/components/common/Skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -79,8 +80,10 @@ export default function InstallmentsTab({
         </div>
       </div>
 
+      {installmentsLoading ? (
+        <FeeTableSkeleton columns={5} rows={5} hasFilter={false} />
+      ) : (
       <DataTable
-        loading={installmentsLoading}
         columns={[
           {
             key: "student",
@@ -221,6 +224,7 @@ export default function InstallmentsTab({
         data={installments}
         onRowClick={(row) => setViewingInstallment(row)}
       />
+      )}
     </>
   );
 }
