@@ -93,7 +93,7 @@ export default function StudentFeesTab({
             key: "fee_structure",
             header: "Fee Structure",
             render: (item: StudentFee) => {
-              const fs = feeStructure.find((x) => x.id === item.fee_structure);
+              const fs = feeStructure.find((x) => x.name === item.fee_name);
               return fs?.name || "—";
             },
           },

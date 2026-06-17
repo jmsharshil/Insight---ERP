@@ -600,7 +600,7 @@ export default function SettingsPage() {
                       Branch
                     </span>
                     <span className="text-sm font-medium text-text-primary block">
-                      {profile.branch || "N/A"}
+                      {profile.branch_name || "N/A"}
                     </span>
                   </div>
                 </div>

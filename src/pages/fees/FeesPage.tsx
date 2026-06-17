@@ -181,11 +181,12 @@ export default function FeesPage() {
   }, [instStudentName]);
 
   const role = user?.role;
+  console.log(role)
   const isStudentLike = role === "student" || role === "parent" || role === "parents";
   const isAccountant = role === "accountant";
   const isBM = role === "branch_manager";
   const isAdmin = role === "super_admin" || isBM;
-  const isAdminSr = role === "admin_senior_exec";
+  const isAdminSr = role === "admin_senior_executive";
 
   const feeStructure = useSelector((state: RootState) => state.fees.feeStructure);
   const studentFees = useSelector((state: RootState) => state.fees.studentFees);

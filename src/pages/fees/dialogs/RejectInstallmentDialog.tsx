@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -31,17 +31,17 @@ export function RejectInstallmentDialog({
   }, [installment?.id]);
 
   return (
-    <Dialog open={!!installment} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle className="font-heading">Reject Installment Plan</DialogTitle>
-          <DialogDescription>
+    <Sheet open={!!installment} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="font-heading">Reject Installment Plan</SheetTitle>
+          <SheetDescription>
             Provide a reason for rejecting the installment plan for{" "}
             <span className="font-semibold">
               {installment?.student_name || installment?.student?.full_name || "—"}
             </span>.
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
         <div className="space-y-3 my-2 text-sm">
           <Label htmlFor="rejection-reason" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Rejection Reason *
@@ -55,7 +55,7 @@ export function RejectInstallmentDialog({
             className="mt-1"
           />
         </div>
-        <DialogFooter>
+        <SheetFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
@@ -66,8 +66,8 @@ export function RejectInstallmentDialog({
           >
             Reject Plan
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }

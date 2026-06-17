@@ -46,10 +46,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from "@/components/ui/sheet";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
 import FacultyDetailSheet from "./components/FacultyDetailSheet";
+import SessionDetailSheet from "./components/SessionDetailSheet";
 import { useUI } from "@/hooks/useUI";
 
 const MONTHS = ["Mar 2024", "Apr 2024", "May 2024"];
@@ -80,6 +88,9 @@ export default function FacultyPage() {
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [selectedFacultyId, setSelectedFacultyId] = useState<string | null>(null);
+
+  const [isSessionSheetOpen, setIsSessionSheetOpen] = useState(false);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
   const [payrollMonth, setPayrollMonth] = useState<string>("All Months");
   const [payrolls, setPayrolls] = useState<any[]>([]);
@@ -782,6 +793,10 @@ export default function FacultyPage() {
             <DataTable
               data={filteredSessions}
               loading={sessionsLoading}
+              onRowClick={(row) => {
+                setSelectedSessionId(row.id || row.uuid);
+                setIsSessionSheetOpen(true);
+              }}
               columns={[
                 { 
                   key: "date", 
@@ -901,6 +916,7 @@ export default function FacultyPage() {
         <TabsContent value="directory" className="mt-4">
           <DataTable
             data={filteredFacultyList}
+            loading={isLoading}
             searchable
             exportable
             pageSize={20}
@@ -1018,6 +1034,10 @@ export default function FacultyPage() {
             exportable
             data={filteredSessions}
             loading={sessionsLoading}
+            onRowClick={(row) => {
+              setSelectedSessionId(row.id || row.uuid);
+              setIsSessionSheetOpen(true);
+            }}
             columns={[
               { 
                 key: "date", 
@@ -1044,11 +1064,31 @@ export default function FacultyPage() {
                 header: "Chapter",
                 render: (r: any) => r.chapter_covered || r.chapter || "—"
               },
-              { 
-                key: "topic", 
-                header: "Topic",
-                render: (r: any) => r.topics_covered || r.topic || "—"
-              },
+              // {
+              //   key: "topic",
+              //   header: "Topic",
+              //   render: (r: any) => {
+              //     const topics = (r.topics_covered || r.topic || "")
+              //       .split(",")
+              //       .map((t: string) => t.trim())
+              //       .filter(Boolean);
+              
+              //     return topics.length ? (
+              //       <div className="flex flex-wrap gap-1">
+              //         {topics.map((topic: string) => (
+              //           <span
+              //             key={topic}
+              //             className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-md"
+              //           >
+              //             {topic}
+              //           </span>
+              //         ))}
+              //       </div>
+              //     ) : (
+              //       "—"
+              //     );
+              //   },
+              // },
               { 
                 key: "time", 
                 header: "Time",
@@ -1218,6 +1258,7 @@ export default function FacultyPage() {
             </div>
             <DataTable
               data={filteredLatePolicies}
+              loading={latePolicyFetching}
               columns={[
                 { key: "branch_name", header: "Branch" },
                 { key: "grace_period_minutes", header: "Grace Period (m)" },
@@ -1426,6 +1467,7 @@ export default function FacultyPage() {
       </Dialog>
 
       <FacultyDetailSheet open={isSheetOpen} onOpenChange={setIsSheetOpen} facultyId={selectedFacultyId} />
+      <SessionDetailSheet open={isSessionSheetOpen} onOpenChange={setIsSessionSheetOpen} sessionId={selectedSessionId} />
 
       <Dialog open={assignModalOpen} onOpenChange={setAssignModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
@@ -1544,12 +1586,12 @@ export default function FacultyPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={sessionDialogOpen} onOpenChange={setSessionDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>New Session Report</DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto pr-2">
+      <Sheet open={sessionDialogOpen} onOpenChange={setSessionDialogOpen}>
+        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+          <SheetHeader className="mb-6 mt-2">
+            <SheetTitle>New Session Report</SheetTitle>
+          </SheetHeader>
+          <div className="grid grid-cols-2 gap-4">
             {!isFaculty && (
               <div className="col-span-2 sm:col-span-1 space-y-1">
                 <Label className="text-xs font-semibold uppercase text-muted-foreground">Faculty</Label>
@@ -1624,7 +1666,7 @@ export default function FacultyPage() {
               <Textarea placeholder="Any additional notes..." value={sessionReportForm.notes} onChange={(e) => setSessionReportForm({...sessionReportForm, notes: e.target.value})} />
             </div>
           </div>
-          <DialogFooter>
+          <SheetFooter className="mt-8">
             <Button variant="outline" onClick={() => setSessionDialogOpen(false)} disabled={submittingSession}>Cancel</Button>
             <Button
               onClick={handleSubmitSessionReport}
@@ -1633,9 +1675,9 @@ export default function FacultyPage() {
             >
               {submittingSession ? "Submitting..." : "Submit Report"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

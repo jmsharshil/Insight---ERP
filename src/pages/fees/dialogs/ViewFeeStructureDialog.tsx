@@ -1,11 +1,11 @@
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import { type FeesStructure } from "@/redux/slices/feesSlice";
@@ -24,14 +24,14 @@ export function ViewFeeStructureDialog({
   if (!structure) return null;
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-[450px]">
-        <DialogHeader>
-          <DialogTitle className="font-heading">Fee Structure Details</DialogTitle>
-          <DialogDescription>
+    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="font-heading">Fee Structure Details</SheetTitle>
+          <SheetDescription>
             Detailed information retrieved from the server for this structure.
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
         <div className="space-y-3.5 py-3 border-y border-border my-2 text-sm">
           <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
             <span className="text-muted-foreground font-medium">Status</span>
@@ -81,15 +81,15 @@ export function ViewFeeStructureDialog({
             </div>
           )}
         </div>
-        <DialogFooter>
+        <SheetFooter>
           <Button
             onClick={onClose}
             className="w-full bg-primary hover:bg-primary-dark text-primary-foreground"
           >
             Close
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
