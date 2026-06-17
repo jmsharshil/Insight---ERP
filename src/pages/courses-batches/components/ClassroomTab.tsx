@@ -12,6 +12,7 @@ interface ClassroomTabProps {
   classrooms: ClassRoom[];
   loading?: boolean;
   canEdit?: boolean;
+  canDelete?: boolean;
   onAddClassroomClick?: () => void;
   onEditClassroomClick?: (c: ClassRoom) => void;
   onDeleteClassroomClick?: (c: ClassRoom) => void;
@@ -21,6 +22,7 @@ export default function ClassroomTab({
   classrooms, 
   loading,
   canEdit, 
+  canDelete,
   onAddClassroomClick,
   onEditClassroomClick,
   onDeleteClassroomClick
@@ -152,17 +154,19 @@ export default function ClassroomTab({
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive cursor-pointer relative z-10"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteClassroomClick?.(c);
-                      }}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
+                    {canDelete && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive cursor-pointer relative z-10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteClassroomClick?.(c);
+                        }}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
                   </div>
                 )}
               </Card>

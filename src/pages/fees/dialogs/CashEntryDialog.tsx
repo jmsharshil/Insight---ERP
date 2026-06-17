@@ -1,11 +1,11 @@
 import { useState } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,11 +37,11 @@ export function CashEntryDialog({
   const [remarks, setRemarks] = useState("");
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle className="font-heading">Add Cash Entry</DialogTitle>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="font-heading">Add Cash Entry</SheetTitle>
+        </SheetHeader>
         <div className="space-y-3">
           <div>
             <Label>Student</Label>
@@ -77,7 +77,7 @@ export function CashEntryDialog({
             />
           </div>
         </div>
-        <DialogFooter>
+        <SheetFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
@@ -94,8 +94,8 @@ export function CashEntryDialog({
           >
             Submit
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }

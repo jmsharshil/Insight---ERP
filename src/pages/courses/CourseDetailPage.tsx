@@ -147,7 +147,10 @@ export default function CourseDetailPage() {
   const [subjectActionLoading, setSubjectActionLoading] = useState(false);
 
   const canEdit =
-    user && ["super_admin", "branch_manager", "admin_senior_exec"].includes(user.role);
+    user && ["super_admin", "branch_manager", "admin_senior_executive"].includes(user.role);
+
+  const canDelete =
+    user && ["super_admin", "branch_manager"].includes(user.role);
 
   // Fetch course details on mount
   useEffect(() => {
@@ -392,9 +395,11 @@ export default function CourseDetailPage() {
                 <Button variant="outline" onClick={startEditing}>
                   <Pencil className="w-4 h-4 mr-2" /> Edit
                 </Button>
-                <Button variant="destructive" onClick={() => setDeleteConfirmOpen(true)}>
-                  <Trash2 className="w-4 h-4 mr-2" /> Delete
-                </Button>
+                {canDelete && (
+                  <Button variant="destructive" onClick={() => setDeleteConfirmOpen(true)}>
+                    <Trash2 className="w-4 h-4 mr-2" /> Delete
+                  </Button>
+                )}
               </>
             )}
           </div>
@@ -594,14 +599,16 @@ export default function CourseDetailPage() {
                               >
                                 <Pencil className="w-3.5 h-3.5" />
                               </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-7 w-7 text-muted-foreground hover:text-destructive cursor-pointer"
-                                onClick={() => openDeleteSubjectConfirm(subject)}
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </Button>
+                              {canDelete && (
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-7 w-7 text-muted-foreground hover:text-destructive cursor-pointer"
+                                  onClick={() => openDeleteSubjectConfirm(subject)}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              )}
                             </div>
                           )}
                         </div>

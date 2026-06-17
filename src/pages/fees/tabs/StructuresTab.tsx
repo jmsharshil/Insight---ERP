@@ -1,11 +1,13 @@
 import { motion } from "framer-motion";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, BookOpen, Users, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import { type FeesStructure } from "@/redux/slices/feesSlice";
+import { StructuresSkeleton } from "@/components/common/Skeletons";
 
 interface StructuresTabProps {
   feeStructure: FeesStructure[];
+  loading?: boolean;
   viewLoadingId?: string | null;
   handleCardClick?: (id: string) => void;
   isAccountant: boolean;
@@ -16,6 +18,7 @@ interface StructuresTabProps {
 
 export default function StructuresTab({
   feeStructure,
+  loading,
   viewLoadingId,
   handleCardClick,
   isAccountant,
@@ -23,6 +26,10 @@ export default function StructuresTab({
   setEditingStructure,
   setDeleteOpen,
 }: StructuresTabProps) {
+  if (loading) {
+    return <StructuresSkeleton />;
+  }
+
   if (feeStructure?.length === 0) {
     return (
       <div className="col-span-full py-12 text-center text-muted-foreground bg-muted/20 border border-dashed rounded-xl">
@@ -41,7 +48,7 @@ export default function StructuresTab({
           onClick={() => handleCardClick?.(fs.id)}
           className={cn(
             "relative bg-card border border-border rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between",
-            handleCardClick && "cursor-pointer"
+            handleCardClick && "cursor-pointer",
           )}
         >
           {viewLoadingId === fs.id && (
@@ -50,54 +57,51 @@ export default function StructuresTab({
             </div>
           )}
           <div>
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="font-heading font-semibold text-lg text-card-foreground leading-snug">
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="font-heading font-semibold text-lg text-card-foreground leading-snug pr-2">
                 {fs.name}
               </h3>
-              <span className="px-2.5 py-0.5 bg-primary/10 text-primary border border-primary/20 rounded-full text-xs font-semibold uppercase tracking-wider">
-                {fs.academic_year || "2024-25"}
+              <span
+                className={cn(
+                  "px-2.5 py-0.5 rounded-full text-xs font-semibold border whitespace-nowrap",
+                  fs.is_active !== false
+                    ? "bg-green-500/10 text-green-600 border-green-500/20"
+                    : "bg-muted text-muted-foreground border-muted-foreground/20"
+                )}
+              >
+                {fs.is_active !== false ? "Active" : "Inactive"}
               </span>
             </div>
-            <p className="text-xs text-muted-foreground mb-4 line-clamp-2 min-h-[32px]">
-              {fs.description || "No description provided."}
-            </p>
 
-            <div className="space-y-2 border-t pt-3.5 mb-4">
-              <div className="flex justify-between text-xs font-medium">
-                <span className="text-muted-foreground">Tuition Fee</span>
-                <span className="font-mono text-card-foreground">
-                  {formatCurrency(Number(fs.tuition_fee))}
+            <div className="space-y-2.5 mb-4">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <BookOpen className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="font-medium">Course:</span>
+                <span className="text-card-foreground font-semibold truncate">
+                  {fs.course_name || "—"}
                 </span>
               </div>
-              <div className="flex justify-between text-xs font-medium">
-                <span className="text-muted-foreground">Registration Fee</span>
-                <span className="font-mono text-card-foreground">
-                  {formatCurrency(Number(fs.registration_fee))}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Users className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="font-medium">Batch:</span>
+                <span className="text-card-foreground font-semibold truncate">
+                  {fs.batch_name || "—"}
                 </span>
               </div>
-              <div className="flex justify-between text-xs font-medium">
-                <span className="text-muted-foreground">Exam Fee</span>
-                <span className="font-mono text-card-foreground">
-                  {formatCurrency(Number(fs.exam_fee))}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="font-medium">Created:</span>
+                <span className="text-card-foreground">
+                  {formatDate(fs.created_at)}
                 </span>
               </div>
-              {Number(fs.other_fee) > 0 && (
-                <div className="flex justify-between text-xs font-medium">
-                  <span className="text-muted-foreground">Other Charges</span>
-                  <span className="font-mono text-card-foreground">
-                    {formatCurrency(Number(fs.other_fee))}
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between text-xs font-bold border-t border-dashed pt-2.5 mt-2">
-                <span className="text-card-foreground">Total Fee</span>
-                <span className="font-mono text-primary text-sm">
-                  {formatCurrency(
-                    Number(fs.tuition_fee) +
-                      Number(fs.registration_fee) +
-                      Number(fs.exam_fee) +
-                      Number(fs.other_fee)
-                  )}
+            </div>
+
+            <div className="border-t pt-3.5 mb-4">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-card-foreground">Total Fee</span>
+                <span className="font-mono text-primary text-lg font-bold">
+                  {formatCurrency(Number(fs.total_amount))}
                 </span>
               </div>
             </div>

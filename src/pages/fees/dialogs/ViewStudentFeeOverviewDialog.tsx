@@ -1,11 +1,11 @@
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import { type FeesStructure } from "@/redux/slices/feesSlice";
@@ -57,14 +57,14 @@ export function ViewStudentFeeOverviewDialog({
   const fees = overviewData?.fees || [];
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="font-heading text-lg">Student Fee Overview</DialogTitle>
-          <DialogDescription>
+    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="font-heading text-lg">Student Fee Overview</SheetTitle>
+          <SheetDescription>
             Detailed billing history, outstanding amounts, and discounts for the student.
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 space-y-3">
@@ -73,7 +73,7 @@ export function ViewStudentFeeOverviewDialog({
           </div>
         ) : (
           <div className="space-y-6 py-3">
-            <div className="bg-muted/40 border rounded-xl p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="bg-muted/40 border rounded-xl p-4 grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-xs text-muted-foreground block">Student Name</span>
                 <span className="font-semibold text-foreground">{displayName}</span>
@@ -197,12 +197,12 @@ export function ViewStudentFeeOverviewDialog({
           </div>
         )}
 
-        <DialogFooter>
+        <SheetFooter>
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }

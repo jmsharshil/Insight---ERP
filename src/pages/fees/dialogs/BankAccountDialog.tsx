@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -62,18 +62,18 @@ export function BankAccountDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && !loading && onClose()}>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle className="font-heading">
+    <Sheet open={open} onOpenChange={(o) => !o && !loading && onClose()}>
+      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="font-heading">
             {account ? "Edit Bank Account" : "Add Bank Account"}
-          </DialogTitle>
-          <DialogDescription>
+          </SheetTitle>
+          <SheetDescription>
             {account
               ? "Update the configuration details for this bank account."
               : "Register a new valid bank account to map student fee payments."}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         <div className="space-y-4 py-3">
           <div className="space-y-1.5 text-sm">
@@ -130,7 +130,7 @@ export function BankAccountDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <SheetFooter>
           <Button variant="outline" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
@@ -141,8 +141,8 @@ export function BankAccountDialog({
           >
             {loading ? "Saving..." : "Save Account"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }

@@ -42,6 +42,7 @@ interface BatchesTabProps {
   error: string | null;
   courses: Course[];
   canEdit: boolean;
+  canDelete?: boolean;
   openEditBatchModal: (b: Batch) => void;
   openDeleteBatchConfirm: (b: Batch) => void;
   onViewTimetable: (batchName: string) => void;
@@ -55,6 +56,7 @@ export default function BatchesTab({
   error,
   courses,
   canEdit,
+  canDelete,
   openEditBatchModal,
   openDeleteBatchConfirm,
   onViewTimetable,
@@ -257,17 +259,19 @@ export default function BatchesTab({
                       >
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive cursor-pointer relative z-10"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openDeleteBatchConfirm(b);
-                        }}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                      {canDelete && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive cursor-pointer relative z-10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openDeleteBatchConfirm(b);
+                          }}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>

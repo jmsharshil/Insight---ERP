@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -47,14 +47,14 @@ export function VerifyPaymentDialog({
   if (!payment) return null;
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && !loading && onClose()}>
-      <DialogContent className="sm:max-w-[450px]">
-        <DialogHeader>
-          <DialogTitle className="font-heading">Verify Payment</DialogTitle>
-          <DialogDescription>
+    <Sheet open={open} onOpenChange={(o) => !o && !loading && onClose()}>
+      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="font-heading">Verify Payment</SheetTitle>
+          <SheetDescription>
             Review and update the verification status for this payment.
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         <div className="space-y-4 py-3 text-sm">
           <div className="grid grid-cols-2 gap-3 bg-muted/30 p-3 rounded-xl border border-border">
@@ -107,7 +107,7 @@ export function VerifyPaymentDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <SheetFooter>
           <Button variant="outline" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
@@ -123,8 +123,8 @@ export function VerifyPaymentDialog({
           >
             {loading ? "Processing..." : status === "verified" ? "Verify" : "Reject"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }

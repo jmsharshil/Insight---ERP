@@ -135,7 +135,7 @@ export default function BatchDetailPage() {
   const { user } = useSelector((state: RootState) => state.auth);
 
   const canEdit =
-    user && ["super_admin", "branch_manager", "admin_senior_exec"].includes(user.role);
+    user && ["super_admin", "branch_manager", "admin_senior_executive"].includes(user.role);
 
   const [batch, setBatch] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -750,7 +750,9 @@ export default function BatchDetailPage() {
           </div>
         ) : (
           <div className="space-y-8">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="flex flex-col md:flex-row gap-8 items-start">
+              <div className="flex-1 space-y-8 w-full">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="space-y-1">
                 <span className="text-sm text-muted-foreground flex items-center gap-2">
                   <BookOpen className="w-4 h-4 text-primary" />
@@ -823,8 +825,32 @@ export default function BatchDetailPage() {
                 </div>
               </div>
             </div>
+          </div>
 
-            <div className="pt-4 border-t border-border grid grid-cols-1 md:grid-cols-2 gap-6">
+          {(batch.qr_image_url || batch.qr_image) && (
+            <div className="shrink-0 flex flex-col items-center bg-white p-5 rounded-2xl border border-border shadow-sm w-full md:w-auto">
+              <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+                Attendance QR Code
+              </h4>
+              <img 
+                src={batch.qr_image_url || batch.qr_image} 
+                alt={`${batch.batch_code} QR Code`} 
+                className="w-48 h-48 object-contain"
+              />
+              <div className="mt-4 flex w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full text-xs" 
+                  onClick={() => window.open(batch.qr_image_url || batch.qr_image, '_blank')}
+                >
+                  View Full QR Code
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="pt-4 border-t border-border grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
                   Enrolled Students

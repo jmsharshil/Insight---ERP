@@ -138,7 +138,10 @@ export default function LevelDetailPage() {
   });
 
   const canEdit =
-    user && ["super_admin", "branch_manager", "admin_senior_exec"].includes(user.role);
+    user && ["super_admin", "branch_manager", "admin_senior_executive"].includes(user.role);
+
+  const canDelete =
+    user && ["super_admin", "branch_manager"].includes(user.role);
 
   // Fetch Level details
   const fetchLevelDetail = () => {
@@ -387,9 +390,11 @@ export default function LevelDetailPage() {
                 <Button variant="outline" onClick={() => setIsEditing(true)}>
                   <Pencil className="w-4 h-4 mr-2" /> Edit
                 </Button>
-                <Button variant="destructive" onClick={() => setDeleteConfirmOpen(true)}>
-                  <Trash2 className="w-4 h-4 mr-2" /> Delete
-                </Button>
+                {canDelete && (
+                  <Button variant="destructive" onClick={() => setDeleteConfirmOpen(true)}>
+                    <Trash2 className="w-4 h-4 mr-2" /> Delete
+                  </Button>
+                )}
               </>
             )}
           </div>
@@ -586,9 +591,11 @@ export default function LevelDetailPage() {
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10" onClick={() => openSubjectModal(subject)}>
                                 <Pencil className="w-4 h-4" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteSubjectId(subject.id)}>
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+                              {canDelete && (
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteSubjectId(subject.id)}>
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
                             </div>
                           )}
                         </div>
@@ -642,9 +649,11 @@ export default function LevelDetailPage() {
                                             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openChapterModal(subject.id, chapter)}>
                                               <Pencil className="w-4 h-4" />
                                             </Button>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => { setActiveSubjectId(subject.id); setDeleteChapterId(chapter.id); }}>
-                                              <Trash2 className="w-4 h-4" />
-                                            </Button>
+                                            {canDelete && (
+                                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => { setActiveSubjectId(subject.id); setDeleteChapterId(chapter.id); }}>
+                                                <Trash2 className="w-4 h-4" />
+                                              </Button>
+                                            )}
                                           </div>
                                         )}
                                       </div>
