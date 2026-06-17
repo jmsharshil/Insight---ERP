@@ -69,7 +69,8 @@ export default function SlotsTab({
   const [formPreFill, setFormPreFill] = useState<Partial<SlotFormValues> | null>(null);
   const [formLockedFields, setFormLockedFields] = useState<(keyof SlotFormValues)[]>([]);
 
-  const canEdit = !!user && ["super_admin", "branch_manager", "admin_senior_exec", "admin"].includes(user.role ?? "");
+  const canEdit = !!user && ["super_admin", "branch_manager", "admin_senior_executive", "admin"].includes(user.role ?? "");
+  const canDelete = !!user && ["super_admin", "branch_manager", "admin"].includes(user.role ?? "");
 
   const fetchSlots = () => {
     const p = new URLSearchParams();
@@ -163,6 +164,7 @@ export default function SlotsTab({
             slots={filteredSlots}
             batches={batches}
             canEdit={canEdit}
+            canDelete={canDelete}
             onAddClick={(day, slotCode, batchId) => {
               setEditingSlot(null);
               setFormPreFill({
@@ -329,9 +331,11 @@ export default function SlotsTab({
                           <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => { setEditingSlot(slot); setFormOpen(true); }}>
                             <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => setDeleteTarget({ id: slot.id, name: slot.session_name || slot.id })}>
-                            <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                          </Button>
+                          {canDelete && (
+                            <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => setDeleteTarget({ id: slot.id, name: slot.session_name || slot.id })}>
+                              <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                            </Button>
+                          )}
                         </div>
                       )}
                     </td>

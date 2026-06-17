@@ -445,7 +445,10 @@ export default function CoursesBatchesPage() {
   };
 
   const canEdit =
-    user && ["super_admin", "branch_manager", "admin_senior_exec"].includes(user.role);
+    user && ["super_admin", "branch_manager", "admin_senior_executive"].includes(user.role);
+  
+  const canDelete =
+    user && ["super_admin", "branch_manager"].includes(user.role);
 
   // Student-filtered data
   const displayCourses = useMemo(() => {
@@ -666,6 +669,7 @@ export default function CoursesBatchesPage() {
               classrooms={classrooms}
               loading={classroomsLoading}
               canEdit={!!canEdit}
+              canDelete={!!canDelete}
               onAddClassroomClick={() => {
                 setEditingClassroom(null);
                 setClassroomSheetOpen(true);
@@ -688,6 +692,7 @@ export default function CoursesBatchesPage() {
               error={batchesError}
               courses={courses}
               canEdit={!!canEdit}
+              canDelete={!!canDelete}
               openEditBatchModal={openEditBatchModal}
               openDeleteBatchConfirm={openDeleteBatchConfirm}
               onViewTimetable={(batchName) => {
@@ -748,6 +753,7 @@ export default function CoursesBatchesPage() {
           setClassroomToDelete(editingClassroom);
           setClassroomDeleteConfirmOpen(true);
         }}
+        canDelete={canDelete}
       />
 
       <ConfirmDialog

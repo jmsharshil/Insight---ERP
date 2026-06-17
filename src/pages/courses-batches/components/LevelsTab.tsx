@@ -88,7 +88,10 @@ export default function LevelsTab() {
 
   // Can Edit Permission Check
   const canEdit =
-    user && ["super_admin", "branch_manager", "admin_senior_exec"].includes(user.role);
+    user && ["super_admin", "branch_manager", "admin_senior_executive"].includes(user.role);
+  
+  const canDelete =
+    user && ["super_admin", "branch_manager"].includes(user.role);
 
   // Auto-select first course when courses load
   useEffect(() => {
@@ -416,14 +419,16 @@ export default function LevelsTab() {
                   >
                     <Edit2 className="w-3.5 h-3.5 mr-1" /> Edit
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                    onClick={() => handleOpenDelete(level)}
-                  >
-                    <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
-                  </Button>
+                  {canDelete && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                      onClick={() => handleOpenDelete(level)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
+                    </Button>
+                  )}
                 </div>
               )}
             </motion.div>
