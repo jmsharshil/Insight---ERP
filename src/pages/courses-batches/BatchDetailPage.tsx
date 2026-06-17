@@ -135,7 +135,7 @@ export default function BatchDetailPage() {
   const { user } = useSelector((state: RootState) => state.auth);
 
   const canEdit =
-    user && ["super_admin", "branch_manager", "admin_senior_exec"].includes(user.role);
+    user && ["super_admin", "branch_manager", "admin_senior_executive"].includes(user.role);
 
   const [batch, setBatch] = useState<any>(null);
   const [loading, setLoading] = useState(true);

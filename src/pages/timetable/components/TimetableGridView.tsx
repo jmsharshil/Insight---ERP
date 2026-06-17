@@ -39,6 +39,7 @@ interface TimetableGridViewProps {
   slots:        TimetableSlot[];
   batches:      { id: string; name: string }[];
   canEdit?:     boolean;
+  canDelete?:   boolean;
   onAddClick?:  (day: string, slotCode: string, batchId: string) => void;
   onSlotClick?: (slot: TimetableSlot) => void;
   onDeleteSlot?:(slot: TimetableSlot) => void;
@@ -86,7 +87,7 @@ function getSlotsForCell(
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function TimetableGridView({
-  slots, batches, canEdit, onAddClick, onSlotClick, onDeleteSlot,
+  slots, batches, canEdit, canDelete, onAddClick, onSlotClick, onDeleteSlot,
 }: TimetableGridViewProps) {
   const [selectedBatchId, setSelectedBatchId] = useState(batches[0]?.id ?? "");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -262,7 +263,7 @@ export default function TimetableGridView({
                               <Badge className={`text-[9px] px-1.5 py-0 h-[18px] capitalize font-semibold ${color?.bg} ${color?.text} border ${color?.border}`}>
                                 {firstSlot.session_type_display || firstSlot.session_type}
                               </Badge>
-                              {canEdit && onDeleteSlot && (
+                              {canDelete && onDeleteSlot && (
                                 <button
                                   onClick={e => { e.stopPropagation(); onDeleteSlot(firstSlot); }}
                                   className="w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition-colors text-xs font-bold"

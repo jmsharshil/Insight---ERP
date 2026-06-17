@@ -33,6 +33,7 @@ interface ClassroomSheetProps {
   classroom?: Classroom | null;
   onSave: (form: { name: string; capacity: number; is_active: boolean }) => void;
   onDelete?: (id: string) => void;
+  canDelete?: boolean;
 }
 
 export default function ClassroomSheet({
@@ -42,6 +43,7 @@ export default function ClassroomSheet({
   classroom,
   onSave,
   onDelete,
+  canDelete = true,
 }: ClassroomSheetProps) {
   const isEditMode = !!classroom;
 
@@ -245,7 +247,7 @@ export default function ClassroomSheet({
 
           {/* Footer Buttons */}
           <div className="flex items-center gap-3 pt-6 border-t border-border mt-8">
-            {isEditMode && (
+            {isEditMode && canDelete && (
               <Button
                 type="button"
                 variant="destructive"
