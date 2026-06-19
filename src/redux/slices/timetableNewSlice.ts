@@ -35,8 +35,7 @@ export interface TimetableSlot {
   examiners_names: string[];
   paper_checkers: string[];
   paper_checkers_names: string[];
-  timetable_exam_type: string | null;
-  exam_type_name: string | null;
+
   exam: string | null;
 }
 

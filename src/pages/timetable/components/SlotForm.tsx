@@ -28,10 +28,10 @@ const SESSION_TYPES: { value: SessionType; label: string; color: string }[] = [
 ];
 
 const SLOT_CODES = [
-  { value: "P1", label: "P1  08:00 – 10:00" },
-  { value: "P2", label: "P2  10:15 – 12:15" },
-  { value: "P3", label: "P3  12:45 – 14:45" },
-  { value: "P4", label: "P4  15:00 – 17:00" },
+  { value: "P1", label: "P1  08:00 – 10:00", start: "08:00", end: "10:00" },
+  { value: "P2", label: "P2  10:15 – 12:15", start: "10:15", end: "12:15" },
+  { value: "P3", label: "P3  12:45 – 14:45", start: "12:45", end: "14:45" },
+  { value: "P4", label: "P4  15:00 – 17:00", start: "15:00", end: "17:00" },
 ];
 
 const DAY_OPTIONS = [
@@ -70,7 +70,7 @@ const schema = z.object({
   chapters:           z.string().optional(), // comma-sep UUIDs
   examiners:          z.string().optional(), // comma-sep UUIDs
   paper_checkers:     z.string().optional(), // comma-sep UUIDs
-  timetable_exam_type: z.string().optional(),
+
 
   // exam_data sub-fields — shown when session needs exam
   exam_title:               z.string().optional(),
@@ -97,6 +97,7 @@ export function buildSlotPayload(values: SlotFormValues): Record<string, any> {
     subject:      values.subject || undefined,
     faculty:      values.faculty || undefined,
     classroom:    values.classroom || undefined,
+    chapters:     csvToArray(values.chapters),
   };
 
   if (values.session_type === "regular") {
@@ -114,10 +115,8 @@ export function buildSlotPayload(values: SlotFormValues): Record<string, any> {
   }
 
   if (["class_test", "prelim"].includes(values.session_type)) {
-    base.chapters       = csvToArray(values.chapters);
     base.examiners      = csvToArray(values.examiners);
     base.paper_checkers = csvToArray(values.paper_checkers);
-    base.timetable_exam_type = values.timetable_exam_type || undefined;
     base.exam_data = {
       title:               values.exam_title,
       exam_type:           values.exam_type,
@@ -156,7 +155,6 @@ interface SlotFormProps {
   subjects:       { id: string; name: string }[];
   facultyList:    { id: string; name: string; employee_id?: string }[];
   classrooms:     { id: string; name: string }[];
-  examTypes:      { id: string; name: string }[];
   chapters:       { id: string; name: string; order: number; subject?: string }[];
   examinersList?: { id: string; name: string; employee_id?: string }[];
   paperCheckersList?: { id: string; name: string; employee_id?: string }[];
@@ -170,7 +168,7 @@ interface SlotFormProps {
 
 export default function SlotForm({
   defaultValues, lockedFields = [], batches, subjects, facultyList, classrooms,
-  examTypes, chapters, examinersList = [], paperCheckersList = [], loading, onSubmit, onCancel, isEdit,
+  chapters, examinersList = [], paperCheckersList = [], loading, onSubmit, onCancel, isEdit,
 }: SlotFormProps) {
   const { control, register, handleSubmit, watch, setValue, formState: { errors } } = useForm<SlotFormValues>({
     resolver: zodResolver(schema),
@@ -194,7 +192,7 @@ export default function SlotForm({
   const isPractice   = sessionType === "practice";
   const isCustom     = sessionType === "custom";
   const needsExam    = isClassTest || isPrelim;
-  const needsChapters    = isClassTest || isPrelim;
+  const needsChapters    = true; // chapters available for all session types
   const needsExaminers   = isClassTest || isPrelim || isPractice;
   const needsPaperCheck  = isClassTest || isPrelim;
   const customExamOpt    = isCustom;
@@ -203,6 +201,18 @@ export default function SlotForm({
   const filteredChapters = selectedSubject
     ? chapters.filter(c => !c.subject || c.subject === selectedSubject)
     : chapters;
+
+  // Auto-fill start/end time when slot_code changes
+  const slotCode = watch("slot_code");
+  useEffect(() => {
+    if (slotCode) {
+      const slot = SLOT_CODES.find(s => s.value === slotCode);
+      if (slot) {
+        setValue("start_time", slot.start);
+        setValue("end_time", slot.end);
+      }
+    }
+  }, [slotCode, setValue]);
 
   const onFormSubmit = (values: SlotFormValues) => {
     onSubmit(buildSlotPayload(values), values);
@@ -586,19 +596,7 @@ export default function SlotForm({
         </Field>
       )}
 
-      {/* ── Exam Type ──────────────────────────────────────────────────────── */}
-      {needsExam && (
-        <Field label="Timetable Exam Type" required error={errors.timetable_exam_type?.message}>
-          <Controller name="timetable_exam_type" control={control} render={({ field }) => (
-            <Select value={field.value || ""} onValueChange={field.onChange}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select exam type" /></SelectTrigger>
-              <SelectContent>
-                {examTypes.map(et => <SelectItem key={et.id} value={et.id}>{et.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          )} />
-        </Field>
-      )}
+
 
       {/* ── Exam Data (class_test, prelim = required; custom = optional) ────── */}
       {(needsExam || customExamOpt) && (

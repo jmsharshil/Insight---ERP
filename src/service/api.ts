@@ -167,6 +167,7 @@ export const API = {
     EXAM_TYPE_DETAIL: (id: string) => `/api/v1/timetable/exam-types/${id}/`,
     FACULTY_VIEW: (facultyId: string) => `/api/v1/timetable/faculty/${facultyId}/`,
     STUDENT_VIEW: (studentId: string) => `/api/v1/timetable/student/${studentId}/`,
+    DUPLICATE: (id: string) => `/api/v1/timetable/${id}/duplicate/`,
   },
 
   /** Exams endpoints */
