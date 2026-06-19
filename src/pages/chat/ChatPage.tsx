@@ -643,8 +643,8 @@ export default function ChatPage() {
           <div className="p-3 border-b border-border space-y-2">
             <Input placeholder="Search conversations" value={search} onChange={e => setSearch(e.target.value)} />
             <Button size="sm" className="w-full"
-              disabled={isFaculty}
-              title={isFaculty ? "Faculty can only participate in group channels" : isStudentOrParent ? "Only admins available" : ""}
+              disabled={isStudentOrParent}
+              title={isStudentOrParent ? "Only admins available" : ""}
               onClick={() => setIsModalOpen(true)}>
               + New Chat
             </Button>

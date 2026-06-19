@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight, MoreHorizontal, UserCheck } from "lucide-react";
+import { ChevronRight, MoreHorizontal, UserCheck, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,6 +14,7 @@ import { LEAD_STATUS_META, COURSE_LABELS, type LeadStatus } from "@/constants/du
 import { APILead } from "@/types/crm";
 import { formatDate, cn } from "@/lib/utils";
 import AssignLeadDialog from "./AssignLeadDialog";
+import { useAuth } from "@/hooks/useAuth";
 
 interface LeadsTableProps {
   leads: APILead[];
@@ -24,6 +25,8 @@ interface LeadsTableProps {
 
 export default function LeadsTable({ leads, onView, onChangeStage, onAssignSuccess }: LeadsTableProps) {
   const STAGES = Object.keys(LEAD_STATUS_META) as LeadStatus[];
+  const { user } = useAuth();
+  const canReassign = ["sales_senior_executive", "branch_manager", "super_admin"].includes(user?.role || "");
 
   const [assignLead, setAssignLead] = useState<APILead | null>(null);
 
@@ -91,10 +94,23 @@ export default function LeadsTable({ leads, onView, onChangeStage, onAssignSucce
         if (r.assigned_to_name) {
           /* Already assigned — show the name */
           return (
-            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-primary">
-              <UserCheck className="w-3 h-3 flex-shrink-0" />
-              {r.assigned_to_name}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-primary">
+                <UserCheck className="w-3 h-3 flex-shrink-0" />
+                {r.assigned_to_name}
+              </span>
+              {canReassign && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={(e) => { e.stopPropagation(); setAssignLead(r); }}
+                  title="Reassign"
+                >
+                  <RefreshCw className="w-3 h-3 text-muted-foreground hover:text-foreground" />
+                </Button>
+              )}
+            </div>
           );
         }
         /* Unassigned — show the Assign action button inline */

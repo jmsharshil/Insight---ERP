@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
-import { Phone, Mail, MapPin, UserCheck } from "lucide-react";
+import { Phone, Mail, MapPin, UserCheck, RefreshCw } from "lucide-react";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 
@@ -10,6 +10,7 @@ import { STAGE_COLORS, LEAD_STATUS_META } from "@/constants/dummy/crm";
 import { formatDate, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import AssignLeadDialog from "./AssignLeadDialog";
+import { useAuth } from "@/hooks/useAuth";
 
 const COURSE_LABELS: Record<string, string> = {
   cs_executive: "CS Executive",
@@ -76,6 +77,8 @@ function KanbanColumnSkeleton({ meta, colors }: any) {
 
 export default function KanbanBoard({ leads, leadsLoading, stages, onDragEnd, onView, onAssignSuccess }: KanbanBoardProps) {
   const [assignLead, setAssignLead] = useState<APILead | null>(null);
+  const { user } = useAuth();
+  const canReassign = ["sales_senior_executive", "branch_manager", "super_admin"].includes(user?.role || "");
 
   if (leadsLoading && leads.length === 0) {
     return (
@@ -221,10 +224,23 @@ export default function KanbanBoard({ leads, leadsLoading, stages, onDragEnd, on
                               </div>
                               <div className="flex items-center justify-between mt-2">
                                 {lead.assigned_to_name ? (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                                    <UserCheck className="w-2.5 h-2.5 flex-shrink-0" />
-                                    <span className="truncate max-w-[120px]">{lead.assigned_to_name}</span>
-                                  </span>
+                                  <div className="flex items-center justify-between w-full">
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                                      <UserCheck className="w-2.5 h-2.5 flex-shrink-0" />
+                                      <span className="truncate max-w-[120px]">{lead.assigned_to_name}</span>
+                                    </span>
+                                    {canReassign && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-5 w-5 p-0"
+                                        onClick={(e) => { e.stopPropagation(); setAssignLead(lead); }}
+                                        title="Reassign"
+                                      >
+                                        <RefreshCw className="w-3 h-3 text-muted-foreground hover:text-foreground" />
+                                      </Button>
+                                    )}
+                                  </div>
                                 ) : (
                                   <Button
                                     variant="outline"

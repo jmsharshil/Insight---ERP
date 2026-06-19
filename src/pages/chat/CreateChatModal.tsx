@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/useToast";
 import { useAppDispatch } from "@/store/hooks";
 import { Checkbox } from "@/components/ui/checkbox";
 import { API } from "@/service/api";
+import { useAuth } from "@/hooks/useAuth";
 import { Search, Camera } from "lucide-react";
 
 interface CreateChatModalProps {
@@ -17,7 +18,9 @@ interface CreateChatModalProps {
 }
 
 export default function CreateChatModal({ open, onOpenChange, onSuccess }: CreateChatModalProps) {
-  const [tab, setTab] = useState("direct");
+  const { user } = useAuth();
+  const isFaculty = user?.role === "faculty";
+  const [tab, setTab] = useState(isFaculty ? "group" : "direct");
   const [users, setUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [search, setSearch] = useState("");
@@ -56,7 +59,7 @@ export default function CreateChatModal({ open, onOpenChange, onSuccess }: Creat
       setGroupName("");
       setSelectedUsers([]);
       setSearch("");
-      setTab("direct");
+      setTab(isFaculty ? "group" : "direct");
       setGroupAvatar(null);
       if (groupAvatarPreview) {
         URL.revokeObjectURL(groupAvatarPreview);
@@ -153,8 +156,8 @@ export default function CreateChatModal({ open, onOpenChange, onSuccess }: Creat
           </DialogHeader>
           
           <Tabs value={tab} onValueChange={setTab} className="w-full">
-            <TabsList className="grid w-full max-w-[400px] grid-cols-2 bg-muted/50 p-1 mb-[-1px] rounded-t-xl rounded-b-none border border-b-0 border-border/50">
-              <TabsTrigger value="direct" className="rounded-t-lg rounded-b-none data-[state=active]:bg-card">Direct Message</TabsTrigger>
+            <TabsList className={`grid w-full max-w-[400px] ${isFaculty ? 'grid-cols-1' : 'grid-cols-2'} bg-muted/50 p-1 mb-[-1px] rounded-t-xl rounded-b-none border border-b-0 border-border/50`}>
+              {!isFaculty && <TabsTrigger value="direct" className="rounded-t-lg rounded-b-none data-[state=active]:bg-card">Direct Message</TabsTrigger>}
               <TabsTrigger value="group" className="rounded-t-lg rounded-b-none data-[state=active]:bg-card">Group Chat</TabsTrigger>
             </TabsList>
           </Tabs>

@@ -36,6 +36,7 @@ export default function StudentsAttendanceTab({ dropdowns }: { dropdowns?: any }
   const toast = useToast();
   const { students, studentsLoading } = useSelector((s: RootState) => s.attendance);
   const { user } = useAuth();
+  const isParentOrStudent = user?.role === "parents" || user?.role === "student";
 
   const branches = dropdowns?.branches?.filter((b: any) => {
     if (user && user.role === "branch_manager" && user.branch) {
@@ -81,53 +82,61 @@ export default function StudentsAttendanceTab({ dropdowns }: { dropdowns?: any }
       {/* Filters */}
       <div className="bg-white rounded-xl border border-border p-4 space-y-3">
         <div className="flex flex-wrap gap-3">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search name, admission no, roll no..."
-              className="pl-9 h-9 text-sm"
-              value={filters.search}
-              onChange={e => setFilters(f => ({ ...f, search: e.target.value }))}
-            />
-          </div>
-          <Select value={filters.branch_id} onValueChange={v => setFilters(f => ({ ...f, branch_id: v === "all" ? "" : v }))}>
-            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Branch" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Branches</SelectItem>
-              {branches?.map((b: any) => (
-                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={filters.batch_id} onValueChange={v => setFilters(f => ({ ...f, batch_id: v === "all" ? "" : v }))}>
-            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Batch" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Batches</SelectItem>
-              {batches?.map((b: any) => (
-                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {!isParentOrStudent && (
+            <>
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search name, admission no, roll no..."
+                  className="pl-9 h-9 text-sm"
+                  value={filters.search}
+                  onChange={e => setFilters(f => ({ ...f, search: e.target.value }))}
+                />
+              </div>
+              <Select value={filters.branch_id} onValueChange={v => setFilters(f => ({ ...f, branch_id: v === "all" ? "" : v }))}>
+                <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Branch" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Branches</SelectItem>
+                  {branches?.map((b: any) => (
+                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filters.batch_id} onValueChange={v => setFilters(f => ({ ...f, batch_id: v === "all" ? "" : v }))}>
+                <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Batch" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Batches</SelectItem>
+                  {batches?.map((b: any) => (
+                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          )}
           <Input type="date" className="h-9 text-sm w-40" value={filters.date_from} onChange={e => setFilters(f => ({ ...f, date_from: e.target.value }))} />
           <Input type="date" className="h-9 text-sm w-40" value={filters.date_to} onChange={e => setFilters(f => ({ ...f, date_to: e.target.value }))} />
         </div>
         <div className="flex flex-wrap gap-3 items-end">
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs text-muted-foreground">Attendance % Min</Label>
-            <Input type="number" placeholder="0" className="h-9 text-sm w-28" value={filters.attendance_percentage_min} onChange={e => setFilters(f => ({ ...f, attendance_percentage_min: e.target.value }))} />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs text-muted-foreground">Attendance % Max</Label>
-            <Input type="number" placeholder="100" className="h-9 text-sm w-28" value={filters.attendance_percentage_max} onChange={e => setFilters(f => ({ ...f, attendance_percentage_max: e.target.value }))} />
-          </div>
-          <Select value={filters.late_entries} onValueChange={v => setFilters(f => ({ ...f, late_entries: v === "all" ? "" : v }))}>
-            <SelectTrigger className="h-9 text-sm w-36"><SelectValue placeholder="Late Entries" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="true">Has Late Entries</SelectItem>
-              <SelectItem value="false">No Late Entries</SelectItem>
-            </SelectContent>
-          </Select>
+          {!isParentOrStudent && (
+            <>
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs text-muted-foreground">Attendance % Min</Label>
+                <Input type="number" placeholder="0" className="h-9 text-sm w-28" value={filters.attendance_percentage_min} onChange={e => setFilters(f => ({ ...f, attendance_percentage_min: e.target.value }))} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs text-muted-foreground">Attendance % Max</Label>
+                <Input type="number" placeholder="100" className="h-9 text-sm w-28" value={filters.attendance_percentage_max} onChange={e => setFilters(f => ({ ...f, attendance_percentage_max: e.target.value }))} />
+              </div>
+              <Select value={filters.late_entries} onValueChange={v => setFilters(f => ({ ...f, late_entries: v === "all" ? "" : v }))}>
+                <SelectTrigger className="h-9 text-sm w-36"><SelectValue placeholder="Late Entries" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="true">Has Late Entries</SelectItem>
+                  <SelectItem value="false">No Late Entries</SelectItem>
+                </SelectContent>
+              </Select>
+            </>
+          )}
           <Select value={filters.active_violations} onValueChange={v => setFilters(f => ({ ...f, active_violations: v === "all" ? "" : v }))}>
             <SelectTrigger className="h-9 text-sm w-36"><SelectValue placeholder="Violations" /></SelectTrigger>
             <SelectContent>

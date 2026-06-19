@@ -26,6 +26,7 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
   const toast = useToast();
   const { violations, violationsLoading, violationsCount } = useSelector((s: RootState) => s.attendance);
   const { user } = useAuth();
+  const isParentOrStudent = user?.role === "parents" || user?.role === "student";
 
   const studentsList = dropdowns?.students?.filter((s: any) => {
     if (user && user.role === "branch_manager" && user.branch) {
@@ -62,18 +63,20 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-xl border border-border p-4 flex flex-wrap gap-3 items-end">
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs text-muted-foreground">Student</Label>
-          <Select value={f.student_id} onValueChange={v => setF(p => ({ ...p, student_id: v === "all" ? "" : v }))}>
-            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Select Student" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Students</SelectItem>
-              {studentsList.map((s: any) => (
-                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {!isParentOrStudent && (
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-muted-foreground">Student</Label>
+            <Select value={f.student_id} onValueChange={v => setF(p => ({ ...p, student_id: v === "all" ? "" : v }))}>
+              <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Select Student" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Students</SelectItem>
+                {studentsList.map((s: any) => (
+                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <Select value={f.violation_type} onValueChange={v => setF(p => ({ ...p, violation_type: v === "all" ? "" : v }))}>
           <SelectTrigger className="h-9 text-sm w-36"><SelectValue placeholder="Type" /></SelectTrigger>
           <SelectContent>
@@ -83,14 +86,16 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
             <SelectItem value="unauthorized">Unauthorized</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={f.is_resolved} onValueChange={v => setF(p => ({ ...p, is_resolved: v === "all" ? "" : v }))}>
-          <SelectTrigger className="h-9 text-sm w-36"><SelectValue placeholder="Status" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            <SelectItem value="true">Resolved</SelectItem>
-            <SelectItem value="false">Unresolved</SelectItem>
-          </SelectContent>
-        </Select>
+        {!isParentOrStudent && (
+          <Select value={f.is_resolved} onValueChange={v => setF(p => ({ ...p, is_resolved: v === "all" ? "" : v }))}>
+            <SelectTrigger className="h-9 text-sm w-36"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="true">Resolved</SelectItem>
+              <SelectItem value="false">Unresolved</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">From</Label>
           <Input type="date" className="h-9 text-sm w-40" value={f.date_from} onChange={e => setF(p => ({ ...p, date_from: e.target.value }))} />
