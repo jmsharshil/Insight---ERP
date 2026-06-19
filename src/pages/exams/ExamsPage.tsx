@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, BookOpen, AlertCircle } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import type { AppDispatch, RootState } from "@/store";
 import { setSelectedExam, setQuestions, setSeating, setMalpractice } from "@/redux/slices/examSlice";
 import type { Exam } from "@/redux/slices/examSlice";
+import { dropdownActions } from "@/redux/actions";
 
 // ── Tab Components ────────────────────────────────────────────────────────────
 import ExamsListTab    from "./tabs/ExamsListTab";
@@ -35,18 +36,65 @@ const getVisibleTabs = (role: string) => {
 export default function ExamsPage() {
   const { setPageTitle } = useUI();
   const { user } = useAuth();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
 
   const { selectedExam, error } = useSelector((s: RootState) => s.exams);
 
   const [activeTab, setActiveTab] = useState("list");
+  const [facultyList, setFacultyList] = useState<{ id: string; name: string; user_id?: string }[]>([]);
 
   const role = user?.role ?? "student";
   const visibleTabs = getVisibleTabs(role);
 
+  // Resolve the real Faculty Profile UUID (same logic as PersonalTimetableTab)
+  const resolvedFacultyId = useMemo(() => {
+    if (user?.role !== "faculty" || !user) return "";
+    const profile = facultyList.find(
+      f => f.user_id === user.id || f.name?.toLowerCase() === user.name?.toLowerCase()
+    );
+    return profile?.id ?? "";
+  }, [facultyList, user]);
+
   useEffect(() => {
     setPageTitle("Exams");
   }, [setPageTitle]);
+
+  // Fetch faculty list to resolve the logged-in faculty's profile UUID
+  useEffect(() => {
+    if (user?.role !== "faculty") return;
+    // When a faculty user calls /api/v1/faculty/, the backend returns their OWN profile
+    // as a single object: { success: true, data: { id: "...", ... } }
+    dispatch({
+      type: dropdownActions.GET_DROPDOWN,
+      method: "GET",
+      endPoint: "/api/v1/faculty/",
+      auth: true,
+      getResponse: (res: any) => {
+        // Case 1: Single faculty object (faculty calling their own profile)
+        if (res?.data && !Array.isArray(res.data) && res.data.id) {
+          setFacultyList([{
+            id: res.data.id,
+            name: res.data.full_name || res.data.name || "",
+            user_id: res.data.user || res.data.user_id,
+          }]);
+          return;
+        }
+        // Case 2: Array / paginated list (admin calling all faculty)
+        const raw = res?.data?.results ?? res?.results ?? res?.data ?? res;
+        const list = Array.isArray(raw) ? raw : [];
+        if (list.length > 0) {
+          setFacultyList(list.map((f: any) => ({
+            id: f.id,
+            name: f.full_name || f.name || `${f.first_name || ""} ${f.last_name || ""}`.trim(),
+            user_id: f.user || f.user_id,
+          })));
+        }
+      },
+      getError: () => {},
+    } as any);
+  }, [user?.role, dispatch]);
+
+
 
   const handleSelectExam = (exam: Exam) => {
     dispatch(setSelectedExam(exam));
@@ -131,7 +179,11 @@ export default function ExamsPage() {
 
           {/* ── Exams List ──────────────────────────────────────────────── */}
           <TabsContent value="list" className="mt-0 outline-none">
-            <ExamsListTab onSelectExam={handleSelectExam} selectedExamId={selectedExam?.id ?? null} />
+            <ExamsListTab
+              onSelectExam={handleSelectExam}
+              selectedExamId={selectedExam?.id ?? null}
+              resolvedFacultyId={resolvedFacultyId}
+            />
           </TabsContent>
 
           {/* ── Questions ────────────────────────────────────────────────── */}

@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
 import { Eye, Trash2, Pencil, Search, X, RefreshCw, Info } from "lucide-react";
-import { examActions, studentActions } from "@/redux/actions";
+import { examActions, studentActions, dropdownActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import {
   setExams, setExamsLoading,
@@ -35,9 +35,10 @@ const RELEASE_BADGE: Record<string, string> = {
 interface ExamsListTabProps {
   onSelectExam: (exam: Exam) => void;
   selectedExamId: string | null;
+  resolvedFacultyId?: string;
 }
 
-export default function ExamsListTab({ onSelectExam, selectedExamId }: ExamsListTabProps) {
+export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFacultyId = "" }: ExamsListTabProps) {
   const dispatch = useDispatch();
   const toast = useToast();
   const { user } = useAuth();
@@ -99,9 +100,17 @@ export default function ExamsListTab({ onSelectExam, selectedExamId }: ExamsList
   }, [studentDetail]);
 
   const fetchExams = () => {
-    const endPoint = user && user.role === "branch_manager" && user.branch 
-      ? `${API.EXAMS.LIST}?branch_id=${user.branch}` 
-      : API.EXAMS.LIST;
+    let endPoint = API.EXAMS.LIST;
+
+    if (user?.role === "faculty") {
+      // Use the resolved Faculty Profile UUID passed from ExamsPage
+      if (resolvedFacultyId) {
+        endPoint = `${API.EXAMS.LIST}?faculty=${resolvedFacultyId}&faculty_id=${resolvedFacultyId}`;
+      }
+      // else: no facultyId yet (still loading), fetch will retry via useEffect below
+    } else if (user?.role === "branch_manager" && user?.branch) {
+      endPoint = `${API.EXAMS.LIST}?branch_id=${user.branch}`;
+    }
 
     dispatch({
       type: examActions.GET_EXAMS,
@@ -119,7 +128,11 @@ export default function ExamsListTab({ onSelectExam, selectedExamId }: ExamsList
     });
   };
 
-  useEffect(() => { fetchExams(); }, []);
+  // Re-fetch when resolvedFacultyId arrives (async after faculty list loads)
+  useEffect(() => {
+    fetchExams();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolvedFacultyId]);
 
   const openEdit = (exam: Exam) => {
     setEditTarget(exam);
@@ -175,7 +188,8 @@ export default function ExamsListTab({ onSelectExam, selectedExamId }: ExamsList
   };
 
   const filtered = exams.filter(e => {
-    if (user && user.role !== "super_admin" && user.branch) {
+    // Branch filter — skip for faculty since their assigned exams may be in a different branch
+    if (user && user.role !== "super_admin" && user.role !== "faculty" && user.branch) {
       const branchId = typeof e.branch === "object" && e.branch !== null ? (e.branch as any).id : e.branch;
       if (branchId !== user.branch) return false;
     }
@@ -184,10 +198,46 @@ export default function ExamsListTab({ onSelectExam, selectedExamId }: ExamsList
         return false;
       }
     }
+    if (user?.role === "faculty") {
+      let isAssigned = false;
+      try {
+        const strExam = JSON.stringify(e).toLowerCase();
+        
+        // Match by Name (most reliable — faculty_name is always stored in the exam)
+        if (user.name) {
+          const uNameStr = String(user.name).trim().toLowerCase();
+          if (uNameStr && strExam.includes(uNameStr)) {
+            isAssigned = true;
+          }
+        }
+        
+        // Match by resolved Faculty Profile UUID (passed from ExamsPage)
+        if (!isAssigned && resolvedFacultyId) {
+          if (strExam.includes(resolvedFacultyId.toLowerCase())) {
+            isAssigned = true;
+          }
+        }
+        
+        // Match by Auth user ID just in case
+        if (!isAssigned && user.id) {
+          const uIdStr = String(user.id).trim().toLowerCase();
+          if (uIdStr && strExam.includes(uIdStr)) {
+            isAssigned = true;
+          }
+        }
+      } catch (err) {
+        // Fallback
+      }
+      
+      if (!isAssigned) {
+        return false;
+      }
+    }
     const matchSearch = !search || e.title?.toLowerCase().includes(search.toLowerCase());
     const matchType   = !examTypeFilter || e.exam_type === examTypeFilter;
     return matchSearch && matchType;
   });
+
 
   return (
     <div className="space-y-4">
@@ -223,13 +273,16 @@ export default function ExamsListTab({ onSelectExam, selectedExamId }: ExamsList
         </Button>
       </div>
 
-      {/* Info banner for students/parents */}
-      {(isStudent || isParent) && (
+      {/* Info banner for students/parents/faculty */}
+      {(isStudent || isParent || user?.role === "faculty") && (
         <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 flex items-center gap-2">
           <Info className="w-4 h-4 text-blue-600 shrink-0" />
           <span className="text-xs text-blue-700">
-            {isStudent ? "Showing your enrolled exams." : "Showing exams for your child."}
-            {" "}Exam-taking is available on the mobile app.
+            {isStudent 
+              ? "Showing your enrolled exams. Exam-taking is available on the mobile app." 
+              : isParent 
+                ? "Showing exams for your child. Exam-taking is available on the mobile app."
+                : "Showing exams assigned to you."}
           </span>
         </div>
       )}
