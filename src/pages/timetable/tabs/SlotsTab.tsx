@@ -39,12 +39,18 @@ const DAY_MAP: Record<string, string> = {
   "0": "Mon", "1": "Tue", "2": "Wed", "3": "Thu", "4": "Fri", "5": "Sat", "6": "Sun",
 };
 
+const SLOT_TIMES: Record<string, { start: string; end: string }> = {
+  P1: { start: "08:00", end: "10:00" },
+  P2: { start: "10:15", end: "12:15" },
+  P3: { start: "12:45", end: "14:45" },
+  P4: { start: "15:00", end: "17:00" },
+};
+
 interface SlotsTabProps {
   batches:     { id: string; name: string }[];
   subjects:    { id: string; name: string }[];
   facultyList: { id: string; name: string; employee_id?: string }[];
   classrooms:     { id: string; name: string }[];
-  examTypes:      { id: string; name: string }[];
   chapters:       { id: string; name: string; order: number; subject?: string }[];
   examinersList:  { id: string; name: string; employee_id?: string }[];
   paperCheckersList: { id: string; name: string; employee_id?: string }[];
@@ -52,7 +58,7 @@ interface SlotsTabProps {
 }
 
 export default function SlotsTab({
-  batches, subjects, facultyList, classrooms, examTypes, chapters,
+  batches, subjects, facultyList, classrooms, chapters,
   examinersList, paperCheckersList, defaultView = "list"
 }: SlotsTabProps) {
   const dispatch = useDispatch<AppDispatch>();
@@ -68,6 +74,12 @@ export default function SlotsTab({
   const [formLoading, setFormLoading] = useState(false);
   const [formPreFill, setFormPreFill] = useState<Partial<SlotFormValues> | null>(null);
   const [formLockedFields, setFormLockedFields] = useState<(keyof SlotFormValues)[]>([]);
+
+  // Drag-and-copy state
+  const [duplicateTarget, setDuplicateTarget] = useState<{
+    slotId: string; slotCode: string; dayOfWeek: number; dayLabel: string; date: string; sourceSlot: any;
+  } | null>(null);
+  const [duplicateLoading, setDuplicateLoading] = useState(false);
 
   const canEdit = !!user && ["super_admin", "branch_manager", "admin_senior_executive", "admin"].includes(user.role ?? "");
   const canDelete = !!user && ["super_admin", "branch_manager", "admin"].includes(user.role ?? "");
@@ -165,13 +177,17 @@ export default function SlotsTab({
             batches={batches}
             canEdit={canEdit}
             canDelete={canDelete}
-            onAddClick={(day, slotCode, batchId) => {
+            onAddClick={(day, slotCode, batchId, date) => {
+              const times = SLOT_TIMES[slotCode];
               setEditingSlot(null);
               setFormPreFill({
                 session_type: "regular",
                 day_of_week: DAY_TO_NUM[day],
                 slot_code: slotCode,
                 batch: batchId,
+                session_date: date,
+                start_time: times?.start ?? "",
+                end_time: times?.end ?? "",
               });
               setFormLockedFields(["batch", "day_of_week", "slot_code"]);
               setFormOpen(true);
@@ -182,6 +198,9 @@ export default function SlotsTab({
               setFormOpen(true);
             }}
             onDeleteSlot={(slot) => setDeleteTarget({ id: slot.id, name: slot.session_name || slot.id })}
+            onDuplicateSlot={(slotId, slotCode, dayOfWeek, dayLabel, date, sourceSlot) => {
+              setDuplicateTarget({ slotId, slotCode, dayOfWeek, dayLabel, date, sourceSlot });
+            }}
           />
         )}
         
@@ -195,7 +214,6 @@ export default function SlotsTab({
               subjects={subjects}
               facultyList={facultyList}
               classrooms={classrooms}
-              examTypes={examTypes}
               chapters={chapters}
               examinersList={examinersList}
               paperCheckersList={paperCheckersList}
@@ -219,7 +237,6 @@ export default function SlotsTab({
                 chapters:       (editingSlot.chapters ?? []).join(", "),
                 examiners:      (editingSlot.examiners ?? []).join(", "),
                 paper_checkers: (editingSlot.paper_checkers ?? []).join(", "),
-                timetable_exam_type: editingSlot.timetable_exam_type ?? "",
               } : formPreFill ?? undefined}
               lockedFields={editingSlot ? [] : formLockedFields}
               onSubmit={(payload) => handleCreateOrUpdate(payload)}
@@ -237,6 +254,68 @@ export default function SlotsTab({
           variant="danger"
           onConfirm={handleDelete}
         />
+
+        {/* Duplicate confirmation dialog */}
+        <ConfirmDialog
+          open={!!duplicateTarget}
+          onOpenChange={o => { if (!o) setDuplicateTarget(null); }}
+          title="Copy Session to Another Slot"
+          description="Are you sure you want to copy this regular session?"
+          confirmLabel={duplicateLoading ? "Copying..." : "Copy Session"}
+          variant="info"
+          onConfirm={() => {
+            if (!duplicateTarget) return;
+            setDuplicateLoading(true);
+            dispatch({
+              type: timetableActions.DUPLICATE_SLOT,
+              method: "POST",
+              endPoint: API.TIMETABLE.DUPLICATE(duplicateTarget.slotId),
+              auth: true,
+              body: {
+                slot_code: duplicateTarget.slotCode,
+                day_of_week: duplicateTarget.dayOfWeek,
+              },
+              getResponse: (res: any) => {
+                setDuplicateLoading(false);
+                if (res.data) dispatch(addSlot(res.data));
+                toast.success(
+                  `Session copied to ${duplicateTarget.dayLabel} · ${duplicateTarget.slotCode}`
+                );
+                setDuplicateTarget(null);
+              },
+              getError: (err: any) => {
+                setDuplicateLoading(false);
+                toast.error(err?.response?.data?.message || err?.response?.data?.detail || "Failed to copy session");
+              },
+            } as any);
+          }}
+        >
+          {duplicateTarget && (
+            <div className="space-y-3 pt-1">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-1.5">
+                <p className="text-sm font-semibold text-blue-800">Source Session</p>
+                <p className="text-sm text-blue-700">
+                  <span className="font-medium">Subject:</span> {duplicateTarget.sourceSlot?.subject_name || "—"}
+                </p>
+                <p className="text-sm text-blue-700">
+                  <span className="font-medium">Faculty:</span> {duplicateTarget.sourceSlot?.faculty_name || "—"}
+                </p>
+                <p className="text-sm text-blue-700">
+                  <span className="font-medium">Room:</span> {duplicateTarget.sourceSlot?.classroom_name || "—"}
+                </p>
+              </div>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-1.5">
+                <p className="text-sm font-semibold text-green-800">Copy To</p>
+                <p className="text-sm text-green-700">
+                  <span className="font-medium">Day:</span> {duplicateTarget.dayLabel}{duplicateTarget.date ? ` (${duplicateTarget.date})` : ""}
+                </p>
+                <p className="text-sm text-green-700">
+                  <span className="font-medium">Slot:</span> {duplicateTarget.slotCode}
+                </p>
+              </div>
+            </div>
+          )}
+        </ConfirmDialog>
       </div>
     );
   }
@@ -358,7 +437,6 @@ export default function SlotsTab({
             subjects={subjects}
             facultyList={facultyList}
             classrooms={classrooms}
-            examTypes={examTypes}
             chapters={chapters}
             examinersList={examinersList}
             paperCheckersList={paperCheckersList}
@@ -382,7 +460,6 @@ export default function SlotsTab({
               chapters:       (editingSlot.chapters ?? []).join(", "),
               examiners:      (editingSlot.examiners ?? []).join(", "),
               paper_checkers: (editingSlot.paper_checkers ?? []).join(", "),
-              timetable_exam_type: editingSlot.timetable_exam_type ?? "",
             } : formPreFill ?? undefined}
             onSubmit={(payload) => handleCreateOrUpdate(payload)}
             onCancel={() => { setFormOpen(false); setEditingSlot(null); setFormPreFill(null); }}

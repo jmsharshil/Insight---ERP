@@ -12,7 +12,6 @@ import { API } from "@/service/api";
 import type { AppDispatch } from "@/store";
 
 // ── Tab Components ────────────────────────────────────────────────────────────
-import TimetableGridView  from "./components/TimetableGridView";
 import SlotsTab           from "./tabs/SlotsTab";
 import ExamTypesTab       from "./tabs/ExamTypesTab";
 import PersonalTimetableTab from "./tabs/PersonalTimetableTab";
@@ -50,7 +49,7 @@ export default function TimetablePage() {
   });
   const [classrooms,  setClassrooms]  = useState<{ id: string; name: string }[]>([]);
   const [chapters,    setChapters]    = useState<{ id: string; name: string; order: number; subject?: string }[]>([]);
-  const [examTypes,   setExamTypes]   = useState<{ id: string; name: string }[]>([]);
+
   const [examinersList, setExaminersList] = useState<{ id: string; name: string; employee_id?: string }[]>([]);
   const [paperCheckersList, setPaperCheckersList] = useState<{ id: string; name: string; employee_id?: string }[]>([]);
 
@@ -129,20 +128,7 @@ export default function TimetablePage() {
       getError: () => {},
     });
 
-    // 3. Exam Types (for slot form dropdown)
-    dispatch({
-      type: dropdownActions.GET_DROPDOWN,
-      method: "GET",
-      endPoint: "/api/v1/timetable/exam-types/",
-      auth: true,
-      getResponse: (res: any) => {
-        if (res?.success) {
-          const data = Array.isArray(res.data) ? res.data : [];
-          setExamTypes(data.map((et: any) => ({ id: et.id, name: et.name })));
-        }
-      },
-      getError: () => {},
-    });
+
 
     // 4. Exam Staff (Examiners & Paper Checkers)
     dispatch({
@@ -204,7 +190,6 @@ export default function TimetablePage() {
                subjects={subjects}
                facultyList={facultyList}
                classrooms={classrooms}
-               examTypes={examTypes}
                chapters={chapters}
                examinersList={examinersList}
                paperCheckersList={paperCheckersList}
@@ -218,7 +203,6 @@ export default function TimetablePage() {
               subjects={subjects}
               facultyList={facultyList}
               classrooms={classrooms}
-              examTypes={examTypes}
               chapters={chapters}
               examinersList={examinersList}
               paperCheckersList={paperCheckersList}

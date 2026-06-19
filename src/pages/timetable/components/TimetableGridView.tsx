@@ -1,7 +1,5 @@
-import { useState, useEffect, Fragment } from "react";
-import { Plus, List, LayoutGrid, Clock, User, MapPin, BookOpen, Coffee, Utensils } from "lucide-react";
-import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { Plus, List, LayoutGrid, User, MapPin, BookOpen, CalendarDays, ChevronLeft, ChevronRight, Clock, Layers, GripVertical, Copy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { TimetableSlot } from "@/redux/slices/timetableNewSlice";
@@ -40,12 +38,17 @@ interface TimetableGridViewProps {
   batches:      { id: string; name: string }[];
   canEdit?:     boolean;
   canDelete?:   boolean;
-  onAddClick?:  (day: string, slotCode: string, batchId: string) => void;
+  onAddClick?:  (day: string, slotCode: string, batchId: string, date: string) => void;
   onSlotClick?: (slot: TimetableSlot) => void;
   onDeleteSlot?:(slot: TimetableSlot) => void;
+  onDuplicateSlot?: (slotId: string, targetSlotCode: string, targetDayOfWeek: number, targetDayLabel: string, targetDate: string, sourceSlot: TimetableSlot) => void;
 }
 
-// ─── Helper ───────────────────────────────────────────────────────────────────
+const DAY_TO_NUM: Record<string, number> = {
+  Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6,
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getSlotsForCell(
   slots: TimetableSlot[],
@@ -82,15 +85,88 @@ function getSlotsForCell(
   });
 }
 
-// Removed SlotCard. Rendering is now inline within the cell.
+/** Get Monday of the week containing the given date */
+function getMondayOfWeek(date: Date): Date {
+  const d = new Date(date);
+  const dayOfWeek = d.getDay(); // 0=Sun, 1=Mon, ...
+  const offset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  d.setDate(d.getDate() + offset);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+/** Build a map of day name → "YYYY-MM-DD" for the week of the given Monday */
+function buildWeekDates(monday: Date): Map<string, string> {
+  const result = new Map<string, string>();
+  const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  dayNames.forEach((name, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    result.set(name, `${yyyy}-${mm}-${dd}`);
+  });
+  return result;
+}
+
+function formatDateShort(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+}
+
+function getTodayStr(): string {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function TimetableGridView({
-  slots, batches, canEdit, canDelete, onAddClick, onSlotClick, onDeleteSlot,
+  slots, batches, canEdit, canDelete, onAddClick, onSlotClick, onDeleteSlot, onDuplicateSlot,
 }: TimetableGridViewProps) {
   const [selectedBatchId, setSelectedBatchId] = useState(batches[0]?.id ?? "");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [weekOffset, setWeekOffset] = useState(0);
+
+  // ── Drag & Drop state ──────────────────────────────────────────────────────
+  const [draggingSlot, setDraggingSlot] = useState<TimetableSlot | null>(null);
+  const [dragOverCell, setDragOverCell] = useState<string | null>(null); // "dayKey:slotCode"
+
+  const handleDragStart = useCallback((e: React.DragEvent, slot: TimetableSlot) => {
+    if (slot.session_type !== "regular") { e.preventDefault(); return; }
+    setDraggingSlot(slot);
+    e.dataTransfer.effectAllowed = "copy";
+    e.dataTransfer.setData("text/plain", slot.id);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggingSlot(null);
+    setDragOverCell(null);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, cellKey: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    setDragOverCell(cellKey);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverCell(null);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, dayKey: string, slotCode: string, dateStr: string) => {
+    e.preventDefault();
+    setDragOverCell(null);
+    if (!draggingSlot || draggingSlot.session_type !== "regular") return;
+    const dayNum = DAY_TO_NUM[dayKey];
+    if (dayNum === undefined) return;
+    onDuplicateSlot?.(draggingSlot.id, slotCode, dayNum, dayKey, dateStr, draggingSlot);
+    setDraggingSlot(null);
+  }, [draggingSlot, onDuplicateSlot]);
 
   useEffect(() => {
     if (batches.length > 0 && !batches.some(b => b.id === selectedBatchId)) {
@@ -99,6 +175,22 @@ export default function TimetableGridView({
   }, [batches, selectedBatchId]);
 
   const selectedBatch = batches.find(b => b.id === selectedBatchId);
+
+  // Compute week dates based on offset from current week
+  const { weekDates, todayStr, weekLabel } = useMemo(() => {
+    const today = new Date();
+    const todayStr = getTodayStr();
+    const currentMonday = getMondayOfWeek(today);
+    const targetMonday = new Date(currentMonday);
+    targetMonday.setDate(currentMonday.getDate() + weekOffset * 7);
+    const weekDates = buildWeekDates(targetMonday);
+
+    const satDate = new Date(targetMonday);
+    satDate.setDate(targetMonday.getDate() + 5);
+    const weekLabel = `${formatDateShort(Array.from(weekDates.values())[0])} – ${formatDateShort(Array.from(weekDates.values())[5])}`;
+
+    return { weekDates, todayStr, weekLabel };
+  }, [weekOffset]);
 
   // ── List view ──────────────────────────────────────────────────────────────
   if (viewMode === "list") {
@@ -114,6 +206,11 @@ export default function TimetableGridView({
           onBatchChange={setSelectedBatchId}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
+          weekLabel={weekLabel}
+          onPrevWeek={() => setWeekOffset(w => w - 1)}
+          onNextWeek={() => setWeekOffset(w => w + 1)}
+          onToday={() => setWeekOffset(0)}
+          showWeekNav={false}
         />
         <div className="bg-white rounded-xl border border-border overflow-hidden shadow-sm">
           <table className="w-full text-sm">
@@ -158,7 +255,7 @@ export default function TimetableGridView({
     );
   }
 
-  // ── Grid view ──────────────────────────────────────────────────────────────
+  // ── Grid view (new layout: days=rows, slots=columns) ──────────────────────
   return (
     <div className="space-y-3">
       <GridHeader
@@ -167,191 +264,221 @@ export default function TimetableGridView({
         onBatchChange={setSelectedBatchId}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
+        weekLabel={weekLabel}
+        onPrevWeek={() => setWeekOffset(w => w - 1)}
+        onNextWeek={() => setWeekOffset(w => w + 1)}
+        onToday={() => setWeekOffset(0)}
+        showWeekNav={true}
       />
 
-      {/* Grid Table */}
-      <div className="bg-white rounded-xl border border-border overflow-hidden shadow-sm">
+      {/* Grid Table — Days as Rows, Slots as Columns */}
+      <div className="bg-white rounded-2xl border border-border overflow-hidden shadow-md">
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse table-fixed" style={{ minWidth: "820px" }}>
-            {/* Header row — days */}
+          <table className="w-full border-collapse table-fixed" style={{ minWidth: "1100px" }}>
+            {/* Header row — slot codes as columns */}
             <thead>
               <tr>
-                <th className="w-[90px] px-3 py-3.5 text-center text-[10px] font-bold text-muted-foreground uppercase tracking-widest border-b border-r border-border bg-muted/30">
-                  <Clock className="w-3.5 h-3.5 mx-auto mb-0.5 text-muted-foreground/60" />
-                  Time
+                <th className="w-[160px] min-w-[160px] px-4 py-4 text-center border-b-2 border-r border-border bg-gradient-to-b from-muted/40 to-muted/20">
+                  <CalendarDays className="w-4 h-4 mx-auto mb-1 text-muted-foreground/50" />
+                  <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Day</div>
                 </th>
-                {DAYS.map(day => (
-                  <th key={day.key}
-                    className="px-3 py-3.5 text-center border-b border-r border-border bg-muted/30 last:border-r-0 w-[calc((100%-90px)/6)]">
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{day.short}</div>
-                    <div className="text-[10px] text-muted-foreground/60 mt-0.5">{day.label}</div>
+                {SLOT_CODES.map(slot => (
+                  <th key={slot.code}
+                    className="px-4 py-4 text-center border-b-2 border-r border-border bg-gradient-to-b from-muted/40 to-muted/20 last:border-r-0"
+                    style={{ width: `calc((100% - 160px) / ${SLOT_CODES.length})` }}>
+                    <div className="text-base font-extrabold text-foreground tracking-wide">{slot.code}</div>
+                    <div className="text-xs text-muted-foreground mt-1 font-mono font-medium">
+                      {slot.start} – {slot.end}
+                    </div>
                   </th>
                 ))}
               </tr>
             </thead>
 
             <tbody>
-              {SLOT_CODES.map((slot, rowIdx) => (
-                <Fragment key={slot.code}>
-                <tr className={rowIdx % 2 === 0 ? "bg-white" : "bg-muted/5"}>
-                  {/* Time column */}
-                  <td className="w-[90px] px-3 py-4 border-b border-r border-border text-center">
-                    <div className="text-sm font-bold text-foreground">{slot.code}</div>
-                    <div className="text-[10px] text-muted-foreground mt-0.5 font-mono">
-                      {slot.start}
-                    </div>
-                    <div className="text-[10px] text-muted-foreground font-mono">
-                      {slot.end}
-                    </div>
-                  </td>
+              {DAYS.map((day, rowIdx) => {
+                const dateStr = weekDates.get(day.key) ?? "";
+                const isToday = dateStr === todayStr;
 
-                  {/* Day cells — entire cell is clickable */}
-                  {DAYS.map(day => {
-                    const cellSlots = getSlotsForCell(slots, day.key, slot.code, selectedBatchId);
-                    const isEmpty = cellSlots.length === 0;
-                    
-                    const firstSlot = cellSlots[0];
-                    const color = firstSlot ? (SESSION_COLORS[firstSlot.session_type] ?? SESSION_COLORS.custom) : null;
+                return (
+                  <tr key={day.key} className={isToday ? "bg-blue-50/50" : rowIdx % 2 === 0 ? "bg-white" : "bg-slate-50/40"}>
+                    {/* Day label + date column */}
+                    <td className={`w-[160px] min-w-[160px] px-4 py-5 border-b border-r border-border text-center ${isToday ? "bg-blue-50/70" : ""}`}>
+                      <div className={`text-base font-extrabold tracking-wide ${isToday ? "text-[#1E88E5]" : "text-foreground"}`}>
+                        {day.short}
+                      </div>
+                      <div className={`text-sm mt-1 font-mono font-medium ${isToday ? "text-[#1E88E5]/70" : "text-muted-foreground"}`}>
+                        {dateStr ? formatDateShort(dateStr) : ""}
+                      </div>
+                      {isToday && (
+                        <div className="text-[10px] font-bold text-white bg-[#1E88E5] rounded-full px-3 py-0.5 mt-2 inline-block shadow-sm">
+                          TODAY
+                        </div>
+                      )}
+                    </td>
 
-                    return (
-                      <td key={day.key}
-                        className={`p-0 border-b border-r border-border align-top last:border-r-0 transition-colors relative group
-                          ${isEmpty && canEdit ? "hover:bg-[#1E88E5]/[0.04] cursor-pointer" : ""}
-                          ${!isEmpty ? `cursor-pointer ${color?.bg}` : ""}`}
-                        style={{ height: "100px" }}
-                        onClick={() => {
-                          if (isEmpty && canEdit) {
-                            onAddClick?.(day.key, slot.code, selectedBatchId);
-                          } else if (!isEmpty) {
-                            onSlotClick?.(firstSlot);
-                          }
-                        }}
-                      >
-                        {!isEmpty ? (
-                          <div className={`w-full h-full border-l-[4px] p-2 flex flex-col`} style={{ borderLeftColor: color?.accent }}>
-                            {/* Primary info */}
-                            <div className={`text-[13px] font-bold leading-tight line-clamp-2 break-all ${color?.text} mb-1.5`} title={`${firstSlot.subject_name || "No Subject"}${firstSlot.session_name ? ` — ${firstSlot.session_name}` : ""}`}>
-                              {firstSlot.subject_name || "No Subject"}
-                              {firstSlot.session_name && <span className="font-normal opacity-80 break-all"> — {firstSlot.session_name}</span>}
-                            </div>
-                            
-                            <div className="flex-1"></div>
+                    {/* Slot cells (one per slot code) */}
+                    {SLOT_CODES.map(slot => {
+                      const cellSlots = getSlotsForCell(slots, day.key, slot.code, selectedBatchId);
+                      const isEmpty = cellSlots.length === 0;
+                      const firstSlot = cellSlots[0];
+                      const color = firstSlot ? (SESSION_COLORS[firstSlot.session_type] ?? SESSION_COLORS.custom) : null;
 
-                            <div className="grid grid-cols-1 gap-1">
-                              {firstSlot.faculty_name && (
-                                <div className="flex items-center gap-1.5 text-muted-foreground/80">
-                                  <User className="w-[11px] h-[11px]" />
-                                  <span className="text-[11px] leading-none truncate">{firstSlot.faculty_name}</span>
+                      const isRegular = firstSlot?.session_type === "regular";
+                      const cellKey = `${day.key}:${slot.code}`;
+                      const isDragOver = dragOverCell === cellKey && isEmpty;
+
+                      return (
+                        <td key={slot.code}
+                          className={`p-0 border-b border-r border-border align-top last:border-r-0 transition-all relative group
+                            ${isEmpty && canEdit ? "hover:bg-blue-50/40 cursor-pointer" : ""}
+                            ${!isEmpty ? "cursor-pointer" : ""}
+                            ${isDragOver ? "!bg-blue-100/60 ring-2 ring-inset ring-blue-400/50" : ""}
+                            ${draggingSlot && !isEmpty ? "opacity-60" : ""}`}
+                          style={{ height: "230px" }}
+                          onClick={() => {
+                            if (isEmpty && canEdit) {
+                              onAddClick?.(day.key, slot.code, selectedBatchId, dateStr);
+                            } else if (!isEmpty) {
+                              onSlotClick?.(firstSlot);
+                            }
+                          }}
+                          // Drop target (empty cells only)
+                          {...(isEmpty && draggingSlot ? {
+                            onDragOver: (e: React.DragEvent) => handleDragOver(e, cellKey),
+                            onDragLeave: handleDragLeave,
+                            onDrop: (e: React.DragEvent) => handleDrop(e, day.key, slot.code, dateStr),
+                          } : {})}
+                        >
+                          {!isEmpty ? (
+                            <div
+                              className={`w-full h-full border-l-[6px] flex flex-col ${color?.bg} hover:brightness-[0.95] hover:shadow-inner transition-all relative overflow-hidden
+                                ${draggingSlot?.id === firstSlot.id ? "opacity-40 scale-[0.97]" : ""}`}
+                              style={{ borderLeftColor: color?.accent }}
+                              // Drag source (regular sessions only)
+                              draggable={isRegular && !!onDuplicateSlot}
+                              onDragStart={isRegular ? (e) => handleDragStart(e, firstSlot) : undefined}
+                              onDragEnd={isRegular ? handleDragEnd : undefined}
+                            >
+                              {/* Drag handle for regular sessions */}
+                              {isRegular && onDuplicateSlot && (
+                                <div className="absolute top-2 left-1 opacity-0 group-hover:opacity-60 transition-opacity cursor-grab active:cursor-grabbing z-10">
+                                  <GripVertical className="w-4 h-4 text-muted-foreground/60" />
                                 </div>
                               )}
-                              {firstSlot.classroom_name && (
-                                <div className="flex items-center gap-1.5 text-muted-foreground/80">
-                                  <MapPin className="w-[11px] h-[11px]" />
-                                  <span className="text-[11px] leading-none truncate">{firstSlot.classroom_name}</span>
-                                </div>
-                              )}
-                              {firstSlot.exam && (
-                                <div className="flex items-center gap-1.5 text-purple-600/90 mt-0.5">
-                                  <BookOpen className="w-[11px] h-[11px]" />
-                                  <span className="text-[10px] font-medium leading-none">Exam linked</span>
-                                </div>
-                              )}
-                            </div>
 
-                            {/* Session type badge + delete — shown on hover */}
-                            <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                              <Badge className={`text-[9px] px-1.5 py-0 h-[18px] capitalize font-semibold ${color?.bg} ${color?.text} border ${color?.border}`}>
-                                {firstSlot.session_type_display || firstSlot.session_type}
-                              </Badge>
-                              {canDelete && onDeleteSlot && (
-                                <button
-                                  onClick={e => { e.stopPropagation(); onDeleteSlot(firstSlot); }}
-                                  className="w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition-colors text-xs font-bold"
-                                >
-                                  ×
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="w-full h-full min-h-[90px] p-2 flex flex-col relative">
-                            {/* Empty cell hint */}
-                            {canEdit && (
-                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <div className="flex items-center gap-1 text-[11px] text-muted-foreground/60 border border-dashed border-muted-foreground/20 rounded-lg px-3 py-1.5 bg-white/50">
-                                  <Plus className="w-3 h-3" /> Add session
+                              {/* ─── Top zone: badge + time ─── */}
+                              <div className="flex items-start justify-between px-3.5 pt-3.5 pb-2">
+                                <Badge className={`text-[11px] px-2.5 py-0.5 h-auto capitalize font-extrabold tracking-wide ${color?.bg} ${color?.text} border-2 ${color?.border}`}>
+                                  {firstSlot.session_type_display || firstSlot.session_type}
+                                </Badge>
+                                <div className="flex items-center gap-1.5 bg-white/70 rounded-md px-2.5 py-1 border border-black/5 shadow-sm">
+                                  <Clock className="w-3.5 h-3.5 text-muted-foreground/70" />
+                                  <span className="text-xs font-mono font-bold text-foreground/80">
+                                    {firstSlot.start_time?.slice(0,5)} – {firstSlot.end_time?.slice(0,5)}
+                                  </span>
                                 </div>
                               </div>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-                {/* Break Indicators */}
-                {slot.code === "P1" && (
-                  <tr>
-                    <td className="border-b border-r border-border text-center bg-muted/20 py-2.5">
-                      <div className="text-[10px] text-muted-foreground font-mono">10:00</div>
-                      <div className="text-[10px] text-muted-foreground font-mono">10:15</div>
-                    </td>
-                    <td colSpan={DAYS.length} className="border-b border-border bg-muted/20 py-2.5">
-                      <div className="flex items-center justify-center gap-2 text-muted-foreground/80">
-                        <Coffee className="w-4 h-4" />
-                        <span className="text-xs font-semibold uppercase tracking-widest">Short Break (15m)</span>
-                      </div>
-                    </td>
+
+                              {/* ─── Subject name ─── */}
+                              <div className="px-3.5 pb-2">
+                                <div className={`text-base font-extrabold leading-tight line-clamp-2 ${color?.text}`}
+                                  title={firstSlot.subject_name || "No Subject"}>
+                                  {firstSlot.subject_name || "No Subject"}
+                                </div>
+                                {firstSlot.session_name && (
+                                  <div className="text-[13px] text-muted-foreground/70 truncate mt-1 italic font-medium" title={firstSlot.session_name}>
+                                    {firstSlot.session_name}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* ─── Divider ─── */}
+                              <div className="mx-3.5 border-t border-black/[0.08]"></div>
+
+                              {/* ─── Detail rows ─── */}
+                              <div className="px-3.5 pt-2.5 pb-3 space-y-1.5 flex-1 overflow-y-auto custom-scrollbar">
+                                {firstSlot.faculty_name && (
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <User className="w-4 h-4 text-muted-foreground/60 shrink-0" />
+                                    <span className="text-sm font-medium text-foreground/80 truncate">{firstSlot.faculty_name}</span>
+                                  </div>
+                                )}
+                                {firstSlot.classroom_name && (
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <MapPin className="w-4 h-4 text-muted-foreground/60 shrink-0" />
+                                    <span className="text-sm font-medium text-foreground/80 truncate">{firstSlot.classroom_name}</span>
+                                  </div>
+                                )}
+                                {firstSlot.chapters_names && firstSlot.chapters_names.length > 0 && (
+                                  <div className="flex items-start gap-2.5 min-w-0">
+                                    <Layers className="w-4 h-4 text-muted-foreground/60 shrink-0 mt-0.5" />
+                                    <span className="text-[13px] font-medium text-foreground/70 leading-snug line-clamp-3">
+                                      {firstSlot.chapters_names.join(" • ")}
+                                    </span>
+                                  </div>
+                                )}
+                                {firstSlot.exam && (
+                                  <div className="flex items-center gap-2.5 mt-1">
+                                    <BookOpen className="w-4 h-4 text-purple-600 shrink-0" />
+                                    <span className="text-[13px] font-extrabold text-purple-700 uppercase tracking-wide">Exam Linked</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Delete — hover only */}
+                              {canDelete && onDeleteSlot && (
+                                <div className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button
+                                    onClick={e => { e.stopPropagation(); onDeleteSlot(firstSlot); }}
+                                    className="w-7 h-7 flex items-center justify-center rounded-full bg-white/90 border border-red-200 text-red-500 hover:bg-red-100 hover:text-red-700 hover:border-red-300 transition-colors text-base font-bold shadow-sm backdrop-blur-md"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className={`w-full h-full min-h-[230px] flex items-center justify-center relative transition-all
+                              ${isDragOver ? "bg-blue-100/40" : ""}`}>
+                              {isDragOver ? (
+                                <div className="flex flex-col items-center gap-2 animate-pulse">
+                                  <Copy className="w-8 h-8 text-blue-500/70" />
+                                  <span className="text-sm font-semibold text-blue-600/80">Drop to copy here</span>
+                                </div>
+                              ) : canEdit && (
+                                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <div className="flex items-center gap-2 text-[15px] font-medium text-muted-foreground/60 border-2 border-dashed border-muted-foreground/20 rounded-xl px-5 py-2.5 bg-white/60 hover:bg-white hover:text-blue-600 hover:border-blue-300 transition-colors">
+                                    <Plus className="w-5 h-5" /> Add session
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })}
                   </tr>
-                )}
-                {slot.code === "P2" && (
-                  <tr>
-                    <td className="border-b border-r border-border text-center bg-orange-50/50 py-2.5">
-                      <div className="text-[10px] text-orange-600/70 font-mono">12:15</div>
-                      <div className="text-[10px] text-orange-600/70 font-mono">12:45</div>
-                    </td>
-                    <td colSpan={DAYS.length} className="border-b border-border bg-orange-50/50 py-2.5">
-                      <div className="flex items-center justify-center gap-2 text-orange-600/80">
-                        <Utensils className="w-4 h-4" />
-                        <span className="text-xs font-semibold uppercase tracking-widest">Lunch Break (30m)</span>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-                {slot.code === "P3" && (
-                  <tr>
-                    <td className="border-b border-r border-border text-center bg-muted/20 py-2.5">
-                      <div className="text-[10px] text-muted-foreground font-mono">14:45</div>
-                      <div className="text-[10px] text-muted-foreground font-mono">15:00</div>
-                    </td>
-                    <td colSpan={DAYS.length} className="border-b border-border bg-muted/20 py-2.5">
-                      <div className="flex items-center justify-center gap-2 text-muted-foreground/80">
-                        <Coffee className="w-4 h-4" />
-                        <span className="text-xs font-semibold uppercase tracking-widest">Short Break (15m)</span>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-                </Fragment>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
 
       {/* Color legend */}
-      <div className="flex items-center flex-wrap gap-4 px-1 pt-1">
-        <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Legend:</span>
+      <div className="flex items-center flex-wrap gap-5 px-2 pt-2">
+        <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Legend:</span>
         {[
           { label: "Regular",    color: "#1E88E5" },
           { label: "Class Test", color: "#FB8C00" },
           { label: "Prelims",    color: "#E53935" },
           { label: "Practice",   color: "#43A047" },
-          { label: "Special Session", color: "#8E24AA" },
+          { label: "Special",    color: "#8E24AA" },
         ].map(item => (
-          <div key={item.label} className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: item.color }} />
-            <span className="text-[10px] text-muted-foreground">{item.label}</span>
+          <div key={item.label} className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded" style={{ backgroundColor: item.color }} />
+            <span className="text-xs font-medium text-muted-foreground">{item.label}</span>
           </div>
         ))}
       </div>
@@ -359,16 +486,22 @@ export default function TimetableGridView({
   );
 }
 
-// ─── Grid Header (batch tabs + view toggle) ───────────────────────────────────
+// ─── Grid Header (batch tabs + view toggle + week navigation) ─────────────────
 
 function GridHeader({
   batches, selectedBatchId, onBatchChange, viewMode, onViewModeChange,
+  weekLabel, onPrevWeek, onNextWeek, onToday, showWeekNav,
 }: {
   batches:           { id: string; name: string }[];
   selectedBatchId:   string;
   onBatchChange:     (id: string) => void;
   viewMode:          "grid" | "list";
   onViewModeChange:  (v: "grid" | "list") => void;
+  weekLabel:         string;
+  onPrevWeek:        () => void;
+  onNextWeek:        () => void;
+  onToday:           () => void;
+  showWeekNav:       boolean;
 }) {
   return (
     <div className="space-y-3">
@@ -382,7 +515,7 @@ function GridHeader({
         </span>
       </div>
 
-      {/* Batch selector + view toggle */}
+      {/* Batch selector + week nav + view toggle */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         {/* Batch pills using Tabs */}
         <div className="flex flex-wrap gap-2">
@@ -400,22 +533,39 @@ function GridHeader({
           </Tabs>
         </div>
 
-        {/* Grid / List toggle */}
-        <div className="flex items-center border border-border rounded-lg overflow-hidden bg-white shrink-0 shadow-sm">
-          <button
-            onClick={() => onViewModeChange("grid")}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer
-              ${viewMode === "grid" ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted/40"}`}
-          >
-            <LayoutGrid className="w-3.5 h-3.5" /> Grid
-          </button>
-          <button
-            onClick={() => onViewModeChange("list")}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer
-              ${viewMode === "list" ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted/40"}`}
-          >
-            <List className="w-3.5 h-3.5" /> List
-          </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Week navigation */}
+          {showWeekNav && (
+            <div className="flex items-center gap-1 border border-border rounded-lg bg-white px-1 py-0.5 shadow-sm">
+              <button onClick={onPrevWeek} className="p-1.5 rounded-md hover:bg-muted/60 transition-colors text-muted-foreground hover:text-foreground cursor-pointer">
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <button onClick={onToday} className="px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-muted/60 rounded-md transition-colors cursor-pointer whitespace-nowrap">
+                {weekLabel}
+              </button>
+              <button onClick={onNextWeek} className="p-1.5 rounded-md hover:bg-muted/60 transition-colors text-muted-foreground hover:text-foreground cursor-pointer">
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Grid / List toggle */}
+          <div className="flex items-center border border-border rounded-lg overflow-hidden bg-white shrink-0 shadow-sm">
+            <button
+              onClick={() => onViewModeChange("grid")}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer
+                ${viewMode === "grid" ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted/40"}`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" /> Grid
+            </button>
+            <button
+              onClick={() => onViewModeChange("list")}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer
+                ${viewMode === "list" ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted/40"}`}
+            >
+              <List className="w-3.5 h-3.5" /> List
+            </button>
+          </div>
         </div>
       </div>
     </div>
