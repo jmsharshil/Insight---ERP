@@ -95,6 +95,9 @@ export default function AttendancePage() {
     });
   }, [dispatch, user]);
 
+  const isParentOrStudent = user?.role === "parents" || user?.role === "student";
+  const defaultTab = isParentOrStudent ? "students" : "dashboard";
+
   return (
     <div>
       {/* <PageHeader
@@ -102,45 +105,55 @@ export default function AttendancePage() {
         subtitle="Track and manage student & faculty attendance."
       /> */}
 
-      <Tabs defaultValue="dashboard" className="mt-2">
+      <Tabs defaultValue={defaultTab} className="mt-2">
         <TabsList className="">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          {!isParentOrStudent && <TabsTrigger value="dashboard">Dashboard</TabsTrigger>}
           <TabsTrigger value="students">Students</TabsTrigger>
-          <TabsTrigger value="register">Register</TabsTrigger>
+          {!isParentOrStudent && <TabsTrigger value="register">Register</TabsTrigger>}
           <TabsTrigger value="history">History</TabsTrigger>
-          <TabsTrigger value="faculty">Faculty</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="defaulters">Defaulters</TabsTrigger>
+          {!isParentOrStudent && <TabsTrigger value="faculty">Faculty</TabsTrigger>}
+          {!isParentOrStudent && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
+          {!isParentOrStudent && <TabsTrigger value="defaulters">Defaulters</TabsTrigger>}
           <TabsTrigger value="violations">Violations</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="dashboard" className="mt-4">
-          <DashboardTab dropdowns={dropdowns} />
-        </TabsContent>
+        {!isParentOrStudent && (
+          <TabsContent value="dashboard" className="mt-4">
+            <DashboardTab dropdowns={dropdowns} />
+          </TabsContent>
+        )}
 
         <TabsContent value="students" className="mt-4">
           <StudentsAttendanceTab dropdowns={dropdowns} />
         </TabsContent>
 
-        <TabsContent value="register" className="mt-4">
-          <RegisterTab dropdowns={dropdowns} />
-        </TabsContent>
+        {!isParentOrStudent && (
+          <TabsContent value="register" className="mt-4">
+            <RegisterTab dropdowns={dropdowns} />
+          </TabsContent>
+        )}
 
         <TabsContent value="history" className="mt-4">
           <HistoryTab dropdowns={dropdowns} />
         </TabsContent>
 
-        <TabsContent value="faculty" className="mt-4">
-          <FacultyTab dropdowns={dropdowns} />
-        </TabsContent>
+        {!isParentOrStudent && (
+          <TabsContent value="faculty" className="mt-4">
+            <FacultyTab dropdowns={dropdowns} />
+          </TabsContent>
+        )}
 
-        <TabsContent value="analytics" className="mt-4">
-          <AnalyticsTab dropdowns={dropdowns} />
-        </TabsContent>
+        {!isParentOrStudent && (
+          <TabsContent value="analytics" className="mt-4">
+            <AnalyticsTab dropdowns={dropdowns} />
+          </TabsContent>
+        )}
 
-        <TabsContent value="defaulters" className="mt-4">
-          <DefaultersTab dropdowns={dropdowns} />
-        </TabsContent>
+        {!isParentOrStudent && (
+          <TabsContent value="defaulters" className="mt-4">
+            <DefaultersTab dropdowns={dropdowns} />
+          </TabsContent>
+        )}
 
         <TabsContent value="violations" className="mt-4">
           <ViolationsTab dropdowns={dropdowns} />

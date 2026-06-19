@@ -28,6 +28,7 @@ export default function HistoryTab({ dropdowns }: { dropdowns?: any }) {
   const toast = useToast();
   const { user } = useAuth();
   const isBranchManager = user && user.role === "branch_manager";
+  const isParentOrStudent = user?.role === "parents" || user?.role === "student";
 
   const { history, historyLoading, historyCount } = useSelector((s: RootState) => s.attendance);
 
@@ -74,7 +75,7 @@ export default function HistoryTab({ dropdowns }: { dropdowns?: any }) {
     dispatch({
       type: attendanceActions.GET_HISTORY,
       method: "GET",
-      endPoint: `/api/v1/attendance/${p.toString() ? `?${p}` : ""}`,
+      endPoint: `${API.ATTENDANCE.HISTORY}${p.toString() ? `?${p}` : ""}`,
       auth: true,
       setLoading: (v: boolean) => dispatch(setHistoryLoading(v)),
       getResponse: (res: any) => {
@@ -107,74 +108,80 @@ export default function HistoryTab({ dropdowns }: { dropdowns?: any }) {
       {/* Filters */}
       <div className="bg-white rounded-xl border border-border p-4 space-y-3">
         <div className="flex flex-wrap gap-3">
-          <Select
-            value={f.student_id}
-            onValueChange={(v) => setF((p) => ({ ...p, student_id: v === "all" ? "" : v }))}
-          >
-            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10">
-              <SelectValue placeholder="Select Student" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Students</SelectItem>
-              {studentsList.map((s: any) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={f.branch_id}
-            onValueChange={(v) => setF((p) => ({ ...p, branch_id: v === "all" ? "" : v }))}
-          >
-            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10">
-              <SelectValue placeholder="Branch" />
-            </SelectTrigger>
-            <SelectContent>
-              {!isBranchManager && <SelectItem value="all">All Branches</SelectItem>}
-              {filteredBranches.map((b: any) => (
-                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={f.batch_id}
-            onValueChange={(v) => setF((p) => ({ ...p, batch_id: v === "all" ? "" : v }))}
-          >
-            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10">
-              <SelectValue placeholder="Batch" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Batches</SelectItem>
-              {batches?.map((b: any) => (
-                <SelectItem key={b.id} value={b.id}>
-                  {b.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {!isParentOrStudent && (
+            <>
+              <Select
+                value={f.student_id}
+                onValueChange={(v) => setF((p) => ({ ...p, student_id: v === "all" ? "" : v }))}
+              >
+                <SelectTrigger className="h-9 text-sm w-44 bg-muted/10">
+                  <SelectValue placeholder="Select Student" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Students</SelectItem>
+                  {studentsList.map((s: any) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={f.branch_id}
+                onValueChange={(v) => setF((p) => ({ ...p, branch_id: v === "all" ? "" : v }))}
+              >
+                <SelectTrigger className="h-9 text-sm w-44 bg-muted/10">
+                  <SelectValue placeholder="Branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  {!isBranchManager && <SelectItem value="all">All Branches</SelectItem>}
+                  {filteredBranches.map((b: any) => (
+                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={f.batch_id}
+                onValueChange={(v) => setF((p) => ({ ...p, batch_id: v === "all" ? "" : v }))}
+              >
+                <SelectTrigger className="h-9 text-sm w-44 bg-muted/10">
+                  <SelectValue placeholder="Batch" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Batches</SelectItem>
+                  {batches?.map((b: any) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          )}
           <Input
             type="date"
             className="h-9 text-sm w-40"
             value={f.date}
             onChange={(e) => setF((p) => ({ ...p, date: e.target.value }))}
           />
-          <Select
-            value={f.status}
-            onValueChange={(v) => setF((p) => ({ ...p, status: v === "all" ? "" : v }))}
-          >
-            <SelectTrigger className="h-9 text-sm w-36">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="present">Present</SelectItem>
-              <SelectItem value="absent">Absent</SelectItem>
-              <SelectItem value="late">Late</SelectItem>
-              <SelectItem value="half_day">Half Day</SelectItem>
-              <SelectItem value="on_leave">On Leave</SelectItem>
-            </SelectContent>
-          </Select>
+          {!isParentOrStudent && (
+            <Select
+              value={f.status}
+              onValueChange={(v) => setF((p) => ({ ...p, status: v === "all" ? "" : v }))}
+            >
+              <SelectTrigger className="h-9 text-sm w-36">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="present">Present</SelectItem>
+                <SelectItem value="absent">Absent</SelectItem>
+                <SelectItem value="late">Late</SelectItem>
+                <SelectItem value="half_day">Half Day</SelectItem>
+                <SelectItem value="on_leave">On Leave</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
           <Button
             onClick={fetch}
             className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm"

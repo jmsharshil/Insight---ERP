@@ -101,7 +101,7 @@ import {
 } from "@/constants/dummy/fees";
 import { DUMMY_STUDENTS } from "@/constants/dummy/students";
 import { useDispatch, useSelector } from "react-redux";
-import { feesActions, courseAction, batchAction, studentActions } from "@/redux/actions";
+import { feesActions, courseAction, studentActions } from "@/redux/actions";
 import {
   setFeeStructure,
   addFeeStructure,
@@ -192,7 +192,7 @@ export default function FeesPage() {
   const studentFees = useSelector((state: RootState) => state.fees.studentFees);
   const { students } = useSelector((state: RootState) => state.students);
   const courses = useSelector((state: RootState) => state.courses.courses);
-  const [batches, setBatches] = useState<any[]>([]);
+
 
   useEffect(() => {
     setPageTitle("Fees");
@@ -216,21 +216,7 @@ export default function FeesPage() {
     }
   }, [dispatch, courses.length]);
 
-  useEffect(() => {
-    dispatch({
-      type: batchAction.GET_BATCHES,
-      method: "GET",
-      endPoint: API.BATCHES.LIST,
-      auth: true,
-      getResponse: (res: any) => {
-        if (res?.data) {
-          setBatches(res.data);
-        } else if (Array.isArray(res)) {
-          setBatches(res);
-        }
-      },
-    });
-  }, [dispatch]);
+
 
   const fetchStudentFees = useCallback(
     (studentName?: string, status?: string) => {
@@ -930,6 +916,7 @@ export default function FeesPage() {
       getResponse: (res: any) => {
         toast.success(res?.message || "Payment recorded successfully.");
         setUploadOpen(false);
+        setAdminRecordPaymentOpen(false);
         fetchPayments();
         dispatch({
           type: feesActions.GET_STUDENT_FEES,
@@ -1149,15 +1136,15 @@ export default function FeesPage() {
           )}
           <TabsTrigger value="structures">Fee Structures</TabsTrigger>
           <TabsTrigger value="student-fees">
-            Student Fees ({filteredStudentFees.length})
+            Student Fees
           </TabsTrigger>
-          <TabsTrigger value="installments">Installment Plans ({installments.length})</TabsTrigger>
-          <TabsTrigger value="payments">Payments ({payments.length})</TabsTrigger>
+          <TabsTrigger value="installments">Installment Plans</TabsTrigger>
+          <TabsTrigger value="payments">Payments </TabsTrigger>
           {(isAccountant || isAdmin) && (
-            <TabsTrigger value="bank-accounts">Bank Accounts ({bankAccounts.length})</TabsTrigger>
+            <TabsTrigger value="bank-accounts">Bank Accounts</TabsTrigger>
           )}
           {(isAccountant || isAdmin) && (
-            <TabsTrigger value="refunds">Refunds ({refunds.length})</TabsTrigger>
+            <TabsTrigger value="refunds">Refunds</TabsTrigger>
           )}
         </TabsList>
         {(isAccountant || isAdmin) && (
@@ -1347,7 +1334,6 @@ export default function FeesPage() {
         onSubmit={handleSaveFeeStructure}
         structure={editingStructure}
         courses={courses}
-        batches={batches}
         loading={fsLoading}
       />
 

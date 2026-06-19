@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
 import { Search, Clock } from "lucide-react";
@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useAuth } from "@/hooks/useAuth";
 
 const DAYS_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -71,13 +72,30 @@ function WeekGrid({ data }: { data: Record<string, any[]> }) {
   );
 }
 
-export default function PersonalTimetableTab() {
+interface PersonalTimetableTabProps {
+  facultyList?: { id: string; name: string; employee_id?: string; user_id?: string }[];
+}
+
+export default function PersonalTimetableTab({ facultyList = [] }: PersonalTimetableTabProps) {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
+  const { user } = useAuth();
   const { facultyTimetable, facultyTimetableLoading, studentTimetable, studentTimetableLoading } = useSelector((s: RootState) => s.timetableNew);
+  const isFaculty = user && user.role === "faculty";
 
-  const [facultyId, setFacultyId] = useState("");
+  const currentFacultyProfile = useMemo(() => {
+    if (!isFaculty || !user) return null;
+    return facultyList.find(f => f.user_id === user.id || f.name.toLowerCase() === user.name?.toLowerCase());
+  }, [facultyList, isFaculty, user]);
+
+  const [facultyId, setFacultyId] = useState(isFaculty && currentFacultyProfile ? currentFacultyProfile.id : "");
   const [studentId, setStudentId] = useState("");
+
+  useEffect(() => {
+    if (isFaculty && currentFacultyProfile) {
+      setFacultyId(currentFacultyProfile.id);
+    }
+  }, [isFaculty, currentFacultyProfile]);
 
   const fetchFaculty = () => {
     if (!facultyId.trim()) { toast.error("Please enter a Faculty UUID."); return; }
@@ -94,6 +112,20 @@ export default function PersonalTimetableTab() {
       getError: (err: any) => toast.error(err?.response?.data?.message || "Error"),
     });
   };
+
+  useEffect(() => {
+    if (isFaculty) {
+      if (currentFacultyProfile && facultyId) {
+        fetchFaculty();
+      } else if (!currentFacultyProfile && user?.name) {
+        // Fallback: If faculty profile is missing (e.g. no permission), try searching by name or employee_id
+        // However, API.TIMETABLE.FACULTY_VIEW requires UUID.
+        // If we don't have the UUID, we can't fetch the personal grid!
+        // We will just wait.
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFaculty, currentFacultyProfile, facultyId]);
 
   const fetchStudent = () => {
     if (!studentId.trim()) { toast.error("Please enter a Student UUID."); return; }
@@ -121,24 +153,41 @@ export default function PersonalTimetableTab() {
 
         {/* Faculty */}
         <TabsContent value="faculty" className="mt-0 space-y-4">
-          <div className="bg-white rounded-xl border border-border p-4 flex gap-3 items-end">
-            <div className="flex flex-col gap-1 flex-1 max-w-sm">
-              <Label className="text-xs text-muted-foreground">Faculty UUID</Label>
-              <Input
-                placeholder="Enter faculty UUID..."
-                className="h-9 text-sm font-mono"
-                value={facultyId}
-                onChange={e => setFacultyId(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && fetchFaculty()}
-              />
+          {!isFaculty && (
+            <div className="bg-white rounded-xl border border-border p-4 flex gap-3 items-end">
+              <div className="flex flex-col gap-1 flex-1 max-w-sm">
+                <Label className="text-xs text-muted-foreground">Faculty UUID</Label>
+                <Input
+                  placeholder="Enter faculty UUID..."
+                  className="h-9 text-sm font-mono"
+                  value={facultyId}
+                  onChange={e => setFacultyId(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && fetchFaculty()}
+                />
+              </div>
+              <Button onClick={fetchFaculty} className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm gap-1.5">
+                <Search className="w-4 h-4" /> Load Timetable
+              </Button>
             </div>
-            <Button onClick={fetchFaculty} className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm gap-1.5">
-              <Search className="w-4 h-4" /> Load Timetable
-            </Button>
-          </div>
+          )}
+          {isFaculty && (
+            <div className="bg-white rounded-xl border border-border p-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Your Personal Timetable</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Showing all scheduled sessions across your assigned batches.</p>
+              </div>
+              <Button onClick={fetchFaculty} variant="outline" className="h-9 text-sm gap-1.5">
+                <Clock className="w-4 h-4" /> Refresh
+              </Button>
+            </div>
+          )}
           {facultyTimetableLoading
             ? <TableSkeleton columns={3} rows={4} className="mt-0" />
-            : Object.keys(facultyTimetable).length > 0 && <WeekGrid data={facultyTimetable} />}
+            : Object.keys(facultyTimetable).length > 0 ? <WeekGrid data={facultyTimetable} /> : (
+                <div className="text-center py-16 text-muted-foreground text-sm bg-white rounded-xl border border-border">
+                  {isFaculty ? "You have no scheduled sessions." : "No slots found or faculty not loaded."}
+                </div>
+            )}
         </TabsContent>
 
         {/* Student */}

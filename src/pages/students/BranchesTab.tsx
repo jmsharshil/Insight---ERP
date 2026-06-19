@@ -464,12 +464,14 @@ export default function BranchesTab() {
         title="Branches Management"
         subtitle="View and manage all branches across the organization."
         actions={
-          <Button
-            onClick={handleAddBranchClick}
-            className="bg-primary hover:bg-primary-dark text-primary-foreground font-semibold flex items-center gap-2 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" /> Add Branch
-          </Button>
+          user?.role === "super_admin" ? (
+            <Button
+              onClick={handleAddBranchClick}
+              className="bg-primary hover:bg-primary-dark text-primary-foreground font-semibold flex items-center gap-2 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" /> Add Branch
+            </Button>
+          ) : null
         }
       />
 
@@ -995,23 +997,25 @@ export default function BranchesTab() {
                   </div>
                 </div>
               )}
-              <div className="space-y-2 mt-6 pt-4 border-t border-border">
-                <button
-                  type="button"
-                  onClick={startEditing}
-                  className="w-full bg-green-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-green-600 transition-colors cursor-pointer"
-                >
-                  Update Details
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsDeleteDialogOpen(true)}
-                  disabled={deleteLoading}
-                  className="w-full bg-red-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition-colors cursor-pointer"
-                >
-                  {deleteLoading ? "Deleting..." : "Delete Branch"}
-                </button>
-              </div>
+              {user?.role === "super_admin" && (
+                <div className="space-y-2 mt-6 pt-4 border-t border-border">
+                  <button
+                    type="button"
+                    onClick={startEditing}
+                    className="w-full bg-green-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-green-600 transition-colors cursor-pointer"
+                  >
+                    Update Details
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsDeleteDialogOpen(true)}
+                    disabled={deleteLoading}
+                    className="w-full bg-red-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition-colors cursor-pointer"
+                  >
+                    {deleteLoading ? "Deleting..." : "Delete Branch"}
+                  </button>
+                </div>
+              )}
             </>
           )}
         </SheetContent>

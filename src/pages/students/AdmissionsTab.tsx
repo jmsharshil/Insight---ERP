@@ -30,11 +30,27 @@ export default function AdmissionsTab() {
   const isSuperAdmin = user?.role === "super_admin";
 
   const filteredAdmissions = useMemo(() => {
-    if (!user || user.role === "super_admin" || !user.branch) return admissions;
-    return admissions.filter((a: any) => {
-      const branchId = typeof a.branch === "object" && a.branch !== null ? a.branch.id : a.branch;
-      return branchId === user.branch;
-    });
+    if (!user || user.role === "super_admin") return admissions;
+
+    let filtered = admissions;
+
+    if (user.branch) {
+      filtered = filtered.filter((a: any) => {
+        const branchId = typeof a.branch === "object" && a.branch !== null ? a.branch.id : a.branch;
+        return branchId === user.branch;
+      });
+    }
+
+    if (user.role === "counsellor") {
+      filtered = filtered.filter((a: any) => {
+        const counsellorId = typeof a.assigned_counsellor === "object" && a.assigned_counsellor !== null
+          ? a.assigned_counsellor.id || a.assigned_counsellor._id
+          : a.assigned_counsellor;
+        return counsellorId === user.id;
+      });
+    }
+
+    return filtered;
   }, [admissions, user]);
 
   useEffect(() => {

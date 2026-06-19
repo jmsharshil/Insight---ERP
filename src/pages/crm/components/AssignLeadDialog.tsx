@@ -110,14 +110,16 @@ export default function AssignLeadDialog({
   });
 
   /* ─── Assign handler ──────────────────────────────────────── */
+  const isReassign = !!lead?.assigned_to_name || !!lead?.assigned_to;
+
   const handleAssign = useCallback(() => {
     if (!lead || !selectedUser) return;
     setAssigning(true);
 
     dispatch({
-      type: leadActions.ASSIGN_LEAD,
+      type: isReassign ? leadActions.REASSIGN_LEAD : leadActions.ASSIGN_LEAD,
       method: "PATCH",
-      endPoint: API.LEADS.ASSIGN(lead.id),
+      endPoint: isReassign ? API.LEADS.REASSIGN(lead.id) : API.LEADS.ASSIGN(lead.id),
       auth: true,
       body: {
         assigned_to: selectedUser.id,
@@ -125,7 +127,7 @@ export default function AssignLeadDialog({
       },
       getResponse: (res: any) => {
         setAssigning(false);
-        toast.success(`Lead assigned to ${res?.data?.assigned_to_name ?? (selectedUser.name || selectedUser.full_name || selectedUser.first_name || "User")}`);
+        toast.success(`Lead ${isReassign ? "reassigned" : "assigned"} to ${res?.data?.assigned_to_name ?? (selectedUser.name || selectedUser.full_name || selectedUser.first_name || "User")}`);
         onOpenChange(false);
         if (onSuccess) onSuccess(lead, res?.data?.assigned_to_name ?? (selectedUser.name || selectedUser.full_name || selectedUser.first_name || "User"));
       },
@@ -134,11 +136,11 @@ export default function AssignLeadDialog({
         const msg =
           err?.response?.data?.message ||
           err?.response?.data?.detail ||
-          "Failed to assign lead";
+          `Failed to ${isReassign ? "reassign" : "assign"} lead`;
         toast.error(msg);
       },
     } as any);
-  }, [lead, selectedUser, note, dispatch, toast, onOpenChange, onSuccess]);
+  }, [lead, selectedUser, note, dispatch, toast, onOpenChange, onSuccess, isReassign]);
 
   /* ─── Render ──────────────────────────────────────────────── */
   return (
@@ -147,11 +149,11 @@ export default function AssignLeadDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserCheck className="w-5 h-5 text-primary" />
-            Assign Lead
+            {isReassign ? "Reassign Lead" : "Assign Lead"}
           </DialogTitle>
           {lead && (
             <DialogDescription>
-              Assign{" "}
+              {isReassign ? "Reassign" : "Assign"}{" "}
               <span className="font-semibold text-foreground">
                 {lead.first_name} {lead.surname}
               </span>{" "}
@@ -272,7 +274,7 @@ export default function AssignLeadDialog({
               ) : (
                 <UserCheck className="w-3.5 h-3.5" />
               )}
-              Assign
+              {isReassign ? "Reassign" : "Assign"}
             </Button>
           </div>
         </div>

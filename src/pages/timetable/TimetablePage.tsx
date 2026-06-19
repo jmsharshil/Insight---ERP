@@ -121,6 +121,7 @@ export default function TimetablePage() {
               id: item.id,
               name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim(),
               employee_id: item.employee_id,
+              user_id: item.user || item.user_id,
             })),
           }));
         }
@@ -212,7 +213,7 @@ export default function TimetablePage() {
 
 
           <TabsContent value="personal" className="mt-0">
-            <PersonalTimetableTab />
+            <PersonalTimetableTab facultyList={facultyList} />
           </TabsContent>
           <TabsContent value="exam_types" className="mt-0">
             <ExamTypesTab />

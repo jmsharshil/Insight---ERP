@@ -23,6 +23,7 @@ export const leadActions = {
   UPDATE_LEAD_STATUS: "UPDATE_LEAD_STATUS",
   UPDATE_LEAD: "UPDATE_LEAD",
   ASSIGN_LEAD: "ASSIGN_LEAD",
+  REASSIGN_LEAD: "REASSIGN_LEAD",
 } as const;
 
 export const crmActions = {

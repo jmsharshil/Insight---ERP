@@ -5,8 +5,8 @@ export interface FeesStructure {
   name: string;
   course: string;
   course_name: string;
-  batch: string;
-  batch_name: string;
+  level: string | null;
+  level_name: string | null;
   total_amount: string | number;
   is_active: boolean;
   created_at: string;

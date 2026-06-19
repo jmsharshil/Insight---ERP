@@ -77,21 +77,29 @@ export default function StudentsPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-4">
           <TabsTrigger value="admissions">Admissions</TabsTrigger>
-          <TabsTrigger value="students">Students</TabsTrigger>
-          <TabsTrigger value="branches">Branch</TabsTrigger>
+          {user?.role !== "counsellor" && (
+            <>
+              <TabsTrigger value="students">Students</TabsTrigger>
+              <TabsTrigger value="branches">Branch</TabsTrigger>
+            </>
+          )}
         </TabsList>
 
-        <TabsContent value="branches" className="mt-0">
-          <BranchesTab />
-        </TabsContent>
+        {user?.role !== "counsellor" && (
+          <TabsContent value="branches" className="mt-0">
+            <BranchesTab />
+          </TabsContent>
+        )}
 
         <TabsContent value="admissions" className="mt-0">
           <AdmissionsTab />
         </TabsContent>
 
-        <TabsContent value="students" className="mt-0">
-          <StudentsTab />
-        </TabsContent>
+        {user?.role !== "counsellor" && (
+          <TabsContent value="students" className="mt-0">
+            <StudentsTab />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

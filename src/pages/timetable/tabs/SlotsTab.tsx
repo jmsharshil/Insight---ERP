@@ -49,7 +49,7 @@ const SLOT_TIMES: Record<string, { start: string; end: string }> = {
 interface SlotsTabProps {
   batches:     { id: string; name: string }[];
   subjects:    { id: string; name: string }[];
-  facultyList: { id: string; name: string; employee_id?: string }[];
+  facultyList: { id: string; name: string; employee_id?: string; user_id?: string }[];
   classrooms:     { id: string; name: string }[];
   chapters:       { id: string; name: string; order: number; subject?: string }[];
   examinersList:  { id: string; name: string; employee_id?: string }[];
@@ -66,6 +66,12 @@ export default function SlotsTab({
   const { user } = useAuth();
   const { slots, slotsLoading, slotsCount } = useSelector((s: RootState) => s.timetableNew);
   const isBranchManager = user && user.role === "branch_manager";
+  const isFaculty = user && user.role === "faculty";
+
+  const currentFacultyProfile = useMemo(() => {
+    if (!isFaculty || !user) return null;
+    return facultyList.find(f => f.user_id === user.id || f.name.toLowerCase() === user.name?.toLowerCase());
+  }, [facultyList, isFaculty, user]);
 
   const [filters, setFilters] = useState({ batch_id: "", day_of_week: "", faculty_id: "", subject_id: "", session_type: "" });
   const [formOpen, setFormOpen] = useState(false);
@@ -91,6 +97,10 @@ export default function SlotsTab({
     if (isBranchManager && user?.branch) {
       p.set("branch_id", user.branch);
     }
+    
+    if (isFaculty && currentFacultyProfile) {
+      p.set("faculty_id", currentFacultyProfile.id);
+    }
 
     dispatch({
       type: timetableActions.GET_SLOTS,
@@ -108,13 +118,32 @@ export default function SlotsTab({
     });
   };
 
-  useEffect(() => { fetchSlots(); }, []);
+  useEffect(() => {
+    // If faculty, wait until faculty list is loaded (if possible) or just fetch anyway
+    fetchSlots(); 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentFacultyProfile?.id]);
 
   const filteredSlots = useMemo(() => {
-    if (!isBranchManager) return slots;
-    const permittedBatchIds = new Set(batches.map(b => b.id));
-    return slots.filter((slot: any) => permittedBatchIds.has(slot.batch));
-  }, [slots, isBranchManager, batches]);
+    let result = slots;
+    if (isBranchManager) {
+      const permittedBatchIds = new Set(batches.map(b => b.id));
+      result = result.filter((slot: any) => permittedBatchIds.has(slot.batch));
+    }
+    if (isFaculty) {
+      result = result.filter((slot: any) => {
+        if (currentFacultyProfile) {
+          return slot.faculty === currentFacultyProfile.id;
+        }
+        if (user?.name && slot.faculty_name) {
+          return slot.faculty_name.toLowerCase().includes(user.name.toLowerCase()) || 
+                 user.name.toLowerCase().includes(slot.faculty_name.toLowerCase());
+        }
+        return false;
+      });
+    }
+    return result;
+  }, [slots, isBranchManager, isFaculty, batches, currentFacultyProfile, user?.name]);
 
   const handleCreateOrUpdate = (payload: Record<string, any>) => {
     const isEdit = !!editingSlot;

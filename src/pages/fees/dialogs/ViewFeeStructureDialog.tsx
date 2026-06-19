@@ -57,8 +57,8 @@ export function ViewFeeStructureDialog({
             <span className="font-semibold">{structure.course_name}</span>
           </div>
           <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
-            <span className="text-muted-foreground font-medium">Batch</span>
-            <span className="font-semibold">{structure.batch_name}</span>
+            <span className="text-muted-foreground font-medium">Level</span>
+            <span className="font-semibold">{structure.level_name || "—"}</span>
           </div>
           <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
             <span className="text-muted-foreground font-medium">Total Amount</span>

@@ -1,4 +1,4 @@
-import { MoreVertical } from "lucide-react";
+import { MoreVertical, Eye, ImageIcon } from "lucide-react";
 import DataTable, { type DataTableColumn } from "@/components/common/DataTable";
 import { FeeTableSkeleton } from "@/components/common/Skeletons";
 import { Button } from "@/components/ui/button";
@@ -149,6 +149,27 @@ function PaymentsTable({
       key: "payment_date",
       header: "Payment Date",
       render: (r) => formatDate(r.payment_date),
+    },
+    {
+      key: "payment_proof",
+      header: "Proof",
+      render: (r) => {
+        if (r.payment_proof) {
+          return (
+            <a
+              href={r.payment_proof}
+              target="_blank"
+              rel="noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              View
+            </a>
+          );
+        }
+        return <span className="text-xs text-muted-foreground">—</span>;
+      },
     },
     {
       key: "status",

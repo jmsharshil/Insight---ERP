@@ -34,7 +34,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   counsellor: {
     id: "counsellor", label: "Counsellor", description: "Manages assigned leads through pipeline",
     color: "bg-cyan-100", textColor: "text-cyan-800",
-    modules: ["dashboard","crm"],
+    modules: ["dashboard","crm","students"],
     canDelete: false, canExport: false,
   },
   tele_caller: {
@@ -52,7 +52,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   sales_executive: {
     id: "sales_executive", label: "Sales Executive", description: "Lead assignment only",
     color: "bg-fuchsia-100", textColor: "text-fuchsia-800",
-    modules: ["dashboard","crm","chat"],
+    modules: ["dashboard","crm"],
     canDelete: false, canExport: false,
   },
   student: {
@@ -70,7 +70,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   faculty: {
     id: "faculty", label: "Faculty", description: "Teaching staff member",
     color: "bg-amber-100", textColor: "text-amber-800",
-    modules: ["dashboard","courses_batches","exams","attendance","leave","chat","notifications","payroll"],
+    modules: ["dashboard","timetable","exams","attendance","leave","chat","notifications","payroll"],
     canDelete: false, canExport: false,
   },
   exam_supervisor: {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Sheet,
   SheetContent,
@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/useToast";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { type StudentFee } from "@/redux/slices/feesSlice";
+import { X, CheckCircle2, FileImage } from "lucide-react";
 
 interface RecordPaymentDialogProps {
   open: boolean;
@@ -55,6 +56,8 @@ export function RecordPaymentDialog({
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [note, setNote] = useState("");
   const [bankAccountId, setBankAccountId] = useState("");
+  const [paymentProof, setPaymentProof] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Determine active student ID
   const studentId = initialStudentId || selectedStudentId;
@@ -89,6 +92,8 @@ export function RecordPaymentDialog({
       setDate(new Date().toISOString().split("T")[0]);
       setNote("");
       setBankAccountId("");
+      setPaymentProof(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }, [open]);
 
@@ -117,22 +122,24 @@ export function RecordPaymentDialog({
       toast.error("Please fill in all required fields.");
       return;
     }
-    const payload: any = {
-      student: studentId,
-      student_fee: studentFeeId,
-      amount: parseFloat(amount),
-      payment_mode: mode,
-      transaction_ref: txnRef,
-      payment_date: date,
-      note: note || undefined,
-    };
+    const formData = new FormData();
+    formData.append("student", studentId);
+    formData.append("student_fee", studentFeeId);
+    formData.append("amount", String(parseFloat(amount)));
+    formData.append("payment_mode", mode);
+    formData.append("transaction_ref", txnRef);
+    formData.append("payment_date", date);
+    if (note) formData.append("note", note);
     if (installmentItemId && installmentItemId !== "none") {
-      payload.installment_item = installmentItemId;
+      formData.append("installment_item", installmentItemId);
     }
     if (bankAccountId && bankAccountId !== "none") {
-      payload.bank_account = bankAccountId;
+      formData.append("bank_account", bankAccountId);
     }
-    onSubmit(payload);
+    if (paymentProof) {
+      formData.append("payment_proof", paymentProof);
+    }
+    onSubmit(formData);
   };
 
   return (
@@ -146,6 +153,60 @@ export function RecordPaymentDialog({
         </SheetHeader>
 
         <div className="space-y-4 py-3">
+          <div className="space-y-1.5">
+            <Label>Payment Proof <span className="text-muted-foreground text-xs font-normal">(Optional)</span></Label>
+            <div
+              className="relative rounded-xl border-2 border-dashed p-4 text-center transition-all duration-200 cursor-pointer hover:border-primary/50 hover:bg-primary/5"
+              style={{ borderColor: paymentProof ? 'hsl(var(--primary))' : undefined }}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept="image/*,.pdf"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setPaymentProof(e.target.files[0]);
+                  }
+                }}
+              />
+              {paymentProof ? (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center bg-green-100">
+                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  </div>
+                  <span className="text-sm font-medium text-green-700 truncate max-w-xs">
+                    {paymentProof.name}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPaymentProof(null);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                  >
+                    <X className="w-3 h-3 mr-1" /> Remove
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2 py-1">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center bg-muted">
+                    <FileImage className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    <span className="font-semibold text-primary">Click to upload</span> screenshot or receipt
+                  </div>
+                  <p className="text-xs text-muted-foreground/70">JPG, PNG or PDF (max. 5MB)</p>
+                </div>
+              )}
+            </div>
+          </div>
+
           {students && (
             <div className="space-y-1.5">
               <Label htmlFor="student-select">Select Student *</Label>
@@ -285,6 +346,8 @@ export function RecordPaymentDialog({
               rows={2.5}
             />
           </div>
+
+
         </div>
 
         <SheetFooter>
