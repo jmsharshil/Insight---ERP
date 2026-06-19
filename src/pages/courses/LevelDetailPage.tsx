@@ -133,7 +133,7 @@ export default function LevelDetailPage() {
     name: "",
     description: "",
     order: 1,
-    hours_allocated: 0,
+    duration_hours: 0,
     is_active: true,
   });
 
@@ -307,12 +307,12 @@ export default function LevelDetailPage() {
         name: chapter.name || "",
         description: chapter.description || "",
         order: chapter.order || 1,
-        hours_allocated: chapter.hours_allocated || 0,
+        duration_hours: chapter.duration_hours || 0,
         is_active: chapter.is_active !== false,
       });
     } else {
       setEditingChapter(null);
-      setChapterForm({ name: "", description: "", order: 1, hours_allocated: 0, is_active: true });
+      setChapterForm({ name: "", description: "", order: 1, duration_hours: 0, is_active: true });
     }
     setChapterModalOpen(true);
   };
@@ -323,7 +323,7 @@ export default function LevelDetailPage() {
       name: chapterForm.name.trim(),
       description: chapterForm.description.trim(),
       order: Number(chapterForm.order),
-      hours_allocated: Number(chapterForm.hours_allocated),
+      duration_hours: Number(chapterForm.duration_hours),
       is_active: chapterForm.is_active,
     };
     const isEdit = !!editingChapter;
@@ -638,9 +638,9 @@ export default function LevelDetailPage() {
                                               {chapter.description}
                                             </p>
                                           )}
-                                          {chapter.hours_allocated > 0 && (
+                                          {chapter.duration_hours > 0 && (
                                             <p className="text-xs font-medium text-muted-foreground/80 pl-8 flex items-center gap-1">
-                                              <Clock className="w-3 h-3" /> {chapter.hours_allocated} hours allocated
+                                              <Clock className="w-3 h-3" /> {chapter.duration_hours} duration hours
                                             </p>
                                           )}
                                         </div>
@@ -804,8 +804,8 @@ export default function LevelDetailPage() {
               <Textarea id="chap-desc" rows={3} value={chapterForm.description} onChange={(e) => setChapterForm({ ...chapterForm, description: e.target.value })} />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="chap-hours">Allocated Hours</Label>
-              <Input id="chap-hours" type="number" min="0" value={chapterForm.hours_allocated} onChange={(e) => setChapterForm({ ...chapterForm, hours_allocated: Number(e.target.value) })} />
+              <Label htmlFor="chap-hours">Duration Hours</Label>
+              <Input id="chap-hours" type="number" min="0" value={chapterForm.duration_hours} onChange={(e) => setChapterForm({ ...chapterForm, duration_hours: Number(e.target.value) })} />
             </div>
             <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 bg-muted/30 mt-2">
               <Label htmlFor="chap-active" className="text-sm font-medium cursor-pointer">Active Status</Label>
