@@ -97,8 +97,20 @@ export default function StructuresTab({
               </div>
             </div>
 
-            <div className="border-t pt-3.5 mb-4">
-              <div className="flex justify-between items-center">
+            <div className="border-t pt-3.5 mb-4 space-y-2">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-muted-foreground">ICSI Reg. Fees</span>
+                <span className="font-medium text-card-foreground">{formatCurrency(Number(fs.icsi_registration_fees || 0))}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-muted-foreground">ICSI Exam Fees</span>
+                <span className="font-medium text-card-foreground">{formatCurrency(Number(fs.icsi_exam_fees || 0))}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs pb-1">
+                <span className="text-muted-foreground">Token Amount</span>
+                <span className="font-medium text-card-foreground">{formatCurrency(Number(fs.token_amount || 0))}</span>
+              </div>
+              <div className="flex justify-between items-center border-t border-dashed pt-2">
                 <span className="text-xs font-bold text-card-foreground">Total Fee</span>
                 <span className="font-mono text-primary text-lg font-bold">
                   {formatCurrency(Number(fs.total_amount))}
