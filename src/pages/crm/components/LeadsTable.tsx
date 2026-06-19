@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight, MoreHorizontal, UserCheck, RefreshCw } from "lucide-react";
+import { ChevronRight, Eye, MoreHorizontal, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -129,11 +129,11 @@ export default function LeadsTable({ leads, onView, onChangeStage, onAssignSucce
     },
     {
       key: "actions",
-      header: "",
+      header: "Actions",
       render: (r) => (
-        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
           <Button variant="ghost" size="sm" onClick={() => onView(r)} className="gap-1 h-8">
-            View <ChevronRight className="w-3.5 h-3.5" />
+            <Eye className="w-3.5 h-3.5" />
           </Button>
 
 

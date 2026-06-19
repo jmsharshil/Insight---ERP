@@ -70,7 +70,7 @@ import LeadDetailSheet from "./components/LeadDetailSheet";
 
 /* ─── Stage config ───────────────────────────────────────────── */
 
-const STAGES: LeadStatus[] = ["new", "contacted", "interested", "follow_up", "visit", "converted", "lost"];
+const STAGES: LeadStatus[] = ["new", "contacted", "interested", "visit", "visited", "follow_up", "converted", "lost"];
 const COURSE_LABELS: Record<string, string> = {
   cs_executive: "CS Executive",
   cs_professional: "CS Professional",
@@ -193,6 +193,7 @@ export default function CRMPage() {
         contacted: analytics.contacted,
         interested: analytics.interested,
         visit: (analytics as any).visit || 0,
+        visited: (analytics as any).visited || 0,
         follow_up: analytics.follow_up,
         converted: analytics.converted,
         lost: analytics.lost,
@@ -205,6 +206,7 @@ export default function CRMPage() {
       contacted: count("contacted"),
       interested: count("interested"),
       visit: count("visit"),
+      visited: count("visited"),
       follow_up: count("follow_up"),
       converted: count("converted"),
       lost: count("lost"),
@@ -322,12 +324,13 @@ export default function CRMPage() {
       />
 
       {/* ─── Stat cards ─────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-8 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-9 gap-3 mb-6">
         <StatCard title="Total Leads" value={stats.total} icon={Users} />
         <StatCard title="New" value={stats.new} icon={UserPlus} />
         <StatCard title="Contacted" value={stats.contacted} icon={Phone} />
         <StatCard title="Interested" value={stats.interested} icon={TrendingUp} />
         <StatCard title="Visit" value={stats.visit} icon={MapPin} />
+        <StatCard title="Visited" value={stats.visited} icon={CheckCircle2} />
         <StatCard title="Follow Up" value={stats.follow_up} icon={Clock} />
         <StatCard title="Converted" value={stats.converted} icon={CheckCircle2} trendType="up" />
         <StatCard title="Lost" value={stats.lost} icon={XCircle} trendType="down" />
