@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight, MoreHorizontal, UserCheck, RefreshCw, Eye } from "lucide-react";
+import { ChevronRight, Eye, MoreHorizontal, RefreshCw, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,

@@ -188,10 +188,16 @@ function PaymentsTable({
         );
       },
     },
-    {
+  ];
+
+  const hasPending = data.some((r) => r.status === "pending_verification");
+  if (hasPending) {
+    cols.push({
       key: "actions",
       header: "Actions",
       render: (r) => {
+        if (r.status === "verified" || r.status === "rejected") return null;
+
         return (
           <div className="flex" onClick={(e) => e.stopPropagation()}>
             <DropdownMenu>
@@ -212,8 +218,8 @@ function PaymentsTable({
           </div>
         );
       },
-    },
-  ];
+    });
+  }
 
   return <DataTable columns={cols} data={data} />;
 }

@@ -180,12 +180,16 @@ function RefundsTable({
         );
       },
     },
-    {
+  ];
+
+  const hasPending = data.some((r) => r.status === "pending");
+  if (hasPending) {
+    cols.push({
       key: "actions",
       header: "Actions",
       render: (r) => {
-        // const canApprove = r.status === "pending" && (isAccountant || isAdmin);
-        // if (!canApprove) return null;
+        const canApprove = r.status === "pending" && (isAccountant || isAdmin);
+        if (!canApprove) return null;
 
         return (
           <div className="flex" onClick={(e) => e.stopPropagation()}>
@@ -213,8 +217,8 @@ function RefundsTable({
           </div>
         );
       },
-    },
-  ];
+    });
+  }
 
   return <DataTable columns={cols} data={data} />;
 }
