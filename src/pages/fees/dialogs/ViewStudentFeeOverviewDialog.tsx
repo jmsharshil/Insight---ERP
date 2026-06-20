@@ -58,7 +58,7 @@ export function ViewStudentFeeOverviewDialog({
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-4xl overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="font-heading text-lg">Student Fee Overview</SheetTitle>
           <SheetDescription>

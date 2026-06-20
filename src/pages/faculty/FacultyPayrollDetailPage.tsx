@@ -17,6 +17,7 @@ import { dropdownActions, facultyAction } from "@/redux/actions";
 import { useToast } from "@/hooks/useToast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import DataTable from "@/components/common/DataTable";
 import PageHeader from "@/components/layout/PageHeader";
 
@@ -86,6 +87,23 @@ export default function FacultyPayrollDetailPage() {
       },
       getError: (err: any) => {
         toast.error(err?.response?.data?.message || "Failed to disburse payroll");
+      },
+    } as any);
+  };
+
+  const handleSaveNote = (payslipId: string, note: string) => {
+    dispatch({
+      type: dropdownActions.GET_DROPDOWN,
+      method: "PATCH",
+      endPoint: `/api/v1/payslips/${payslipId}/`,
+      body: { deduction_note: note },
+      auth: true,
+      getResponse: () => {
+        toast.success("Deduction note updated.");
+        fetchPayrollDetail(id!);
+      },
+      getError: (err: any) => {
+        toast.error(err?.response?.data?.message || "Failed to update note");
       },
     } as any);
   };
@@ -312,7 +330,7 @@ export default function FacultyPayrollDetailPage() {
             },
             {
               key: "deductions",
-              header: "Deductions",
+              header: "Deductions & Reason",
               render: (r: any) => {
                 const late = parseFloat(r.late_penalty || 0);
                 const abs = parseFloat(r.absence_deductions || 0);
@@ -321,20 +339,36 @@ export default function FacultyPayrollDetailPage() {
                 const totalDeduction = late + abs + leave + other;
 
                 return (
-                  <div className="space-y-0.5">
+                  <div className="space-y-1">
                     <span
                       className={`font-semibold ${totalDeduction > 0 ? "text-red-600" : "text-muted-foreground"}`}
                     >
                       {formatAmount(totalDeduction)}
                     </span>
                     {totalDeduction > 0 && (
-                      <div className="text-[9px] text-red-500/80 font-mono flex flex-wrap gap-1 leading-none mt-0.5">
-                        {late > 0 && <span>Late: {formatAmount(late)}</span>}
-                        {abs > 0 && <span>Abs: {formatAmount(abs)}</span>}
-                        {leave > 0 && <span>Leave: {formatAmount(leave)}</span>}
-                        {other > 0 && <span>Other: {formatAmount(other)}</span>}
+                      <div className="text-[10px] text-red-600/90 flex flex-col gap-0.5 mt-0.5">
+                        {late > 0 && <span>• Late Penalty: {formatAmount(late)}</span>}
+                        {abs > 0 && <span>• Absence: {formatAmount(abs)}</span>}
+                        {leave > 0 && <span>• Leave: {formatAmount(leave)}</span>}
+                        {other > 0 && <span>• Other: {formatAmount(other)}</span>}
                       </div>
                     )}
+                    {["draft", "pending", "pending_approval"].includes(payrollData.status?.toLowerCase()) ? (
+                      <Input
+                        placeholder="Add deduction note..."
+                        defaultValue={r.deduction_note || ""}
+                        className="h-7 text-[10px] mt-1.5 bg-muted/20 text-muted-foreground placeholder:text-muted-foreground/60"
+                        onBlur={(e) => {
+                          if (e.target.value !== (r.deduction_note || "")) {
+                            handleSaveNote(r.id, e.target.value);
+                          }
+                        }}
+                      />
+                    ) : r.deduction_note ? (
+                      <div className="text-[10px] text-muted-foreground italic mt-1.5 p-1.5 bg-muted/30 rounded border border-border/50">
+                        <span className="font-semibold not-italic">Deduction Note:</span> {r.deduction_note}
+                      </div>
+                    ) : null}
                   </div>
                 );
               },
