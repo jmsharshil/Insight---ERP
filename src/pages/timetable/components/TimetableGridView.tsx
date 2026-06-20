@@ -13,6 +13,7 @@ const DAYS: { key: string; label: string; short: string }[] = [
   { key: "Thursday",  label: "Thursday",  short: "THU" },
   { key: "Friday",    label: "Friday",    short: "FRI" },
   { key: "Saturday",  label: "Saturday",  short: "SAT" },
+  { key: "Sunday",    label: "Sunday",    short: "SUN" },
 ];
 
 const SLOT_CODES = [
@@ -98,7 +99,7 @@ function getMondayOfWeek(date: Date): Date {
 /** Build a map of day name → "YYYY-MM-DD" for the week of the given Monday */
 function buildWeekDates(monday: Date): Map<string, string> {
   const result = new Map<string, string>();
-  const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   dayNames.forEach((name, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
@@ -185,9 +186,7 @@ export default function TimetableGridView({
     targetMonday.setDate(currentMonday.getDate() + weekOffset * 7);
     const weekDates = buildWeekDates(targetMonday);
 
-    const satDate = new Date(targetMonday);
-    satDate.setDate(targetMonday.getDate() + 5);
-    const weekLabel = `${formatDateShort(Array.from(weekDates.values())[0])} – ${formatDateShort(Array.from(weekDates.values())[5])}`;
+    const weekLabel = `${formatDateShort(Array.from(weekDates.values())[0])} – ${formatDateShort(Array.from(weekDates.values())[6])}`;
 
     return { weekDates, todayStr, weekLabel };
   }, [weekOffset]);
