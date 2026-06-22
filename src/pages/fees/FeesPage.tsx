@@ -117,23 +117,6 @@ import { setCourses } from "@/redux/slices/coursesSlice";
 import { RootState, AppDispatch } from "@/store";
 import { API } from "@/service/api";
 
-const defaultReportData = {
-  total_billed: 551000.0,
-  total_collected: 469000.0,
-  total_pending: 0,
-  total_discount: 104500.0,
-  total_overdue: 0,
-  total_partial: 0,
-  total_approval_pending: 0,
-  collection_by_mode: {
-    cash: 200000.0,
-    cheque: 200000.0,
-    dd: 22500.0,
-    online: 24000.0,
-  },
-  monthly_trend: [{ month: "2026-06", collected: 446500.0 }],
-};
-
 const toNumber = (value: any) => {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
@@ -1038,18 +1021,18 @@ export default function FeesPage() {
     setRefundOpen(null);
   }
 
-  const billed = Number(reportData?.total_billed ?? defaultReportData.total_billed);
-  const collected = Number(reportData?.total_collected ?? defaultReportData.total_collected);
-  const pendingVal = Number(reportData?.total_pending ?? defaultReportData.total_pending);
-  const discountVal = Number(reportData?.total_discount ?? defaultReportData.total_discount);
-  const overdueVal = Number(reportData?.total_overdue ?? defaultReportData.total_overdue);
-  const partialVal = Number(reportData?.total_partial ?? defaultReportData.total_partial);
+  const billed = Number(reportData?.total_billed ?? 0);
+  const collected = Number(reportData?.total_collected ?? 0);
+  const pendingVal = Number(reportData?.total_pending ?? 0);
+  const discountVal = Number(reportData?.total_discount ?? 0);
+  const overdueVal = Number(reportData?.total_overdue ?? 0);
+  const partialVal = Number(reportData?.total_partial ?? 0);
   const approvalPendingVal = Number(
-    reportData?.total_approval_pending ?? defaultReportData.total_approval_pending,
+    reportData?.total_approval_pending ?? 0,
   );
 
   const trendChartData = useMemo(() => {
-    const rawTrend = reportData?.monthly_trend ?? defaultReportData.monthly_trend;
+    const rawTrend = reportData?.monthly_trend ?? [];
     return rawTrend.map((t: any) => ({
       name: t.month || "—",
       amount: Number(t.collected || 0),
@@ -1057,7 +1040,7 @@ export default function FeesPage() {
   }, [reportData]);
 
   const modeChartData = useMemo(() => {
-    const rawModes = reportData?.collection_by_mode ?? defaultReportData.collection_by_mode;
+    const rawModes = reportData?.collection_by_mode ?? {};
     return Object.entries(rawModes)
       .map(([mode, val]) => ({
         name: mode,

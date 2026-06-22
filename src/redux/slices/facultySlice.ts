@@ -28,6 +28,7 @@ export interface FacultyRecord {
   pan_number?: string;
   qr_code?: string | null;
   qr_code_url?: string | null;
+  subject_name?: string | null;
 }
 
 interface FacultyState {

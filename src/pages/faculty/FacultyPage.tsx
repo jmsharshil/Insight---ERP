@@ -1130,7 +1130,7 @@ export default function FacultyPage() {
                   </SelectContent>
                 </Select>
               )}
-              <Button variant="outline" onClick={computePayroll}>
+              {/* <Button variant="outline" onClick={computePayroll}>
                 Compute Payroll
               </Button>
               <Button variant="outline" onClick={submitApproval}>
@@ -1138,7 +1138,7 @@ export default function FacultyPage() {
               </Button>
               <Button onClick={() => setConfirmApprove(true)} className="ml-auto bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
                 <CheckCircle2 className="w-4 h-4 mr-1.5" /> Approve & Disburse
-              </Button>
+              </Button> */}
             </div>
             <DataTable
               exportable
@@ -1194,7 +1194,7 @@ export default function FacultyPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {r.status === "draft" && (
+                        {r.status === "draft" || r.status === "pending_approval" && (
                           <DropdownMenuItem
                             onClick={(e) => {
                               e.stopPropagation();

@@ -140,14 +140,27 @@ export function CreateInstallmentDialog({
                   variant="outline"
                   className="h-7 px-2 text-xs"
                   onClick={() => {
-                    setInstItems((prev) => [...prev, { amount: "0", due_date: "" }]);
+                    setInstItems((prev) => {
+                      const newCount = prev.length + 1;
+                      const baseAmount = Math.floor(instTotalAmount / newCount);
+                      const remainder = instTotalAmount - baseAmount * newCount;
+                      const newItems = prev.map((item) => ({
+                        ...item,
+                        amount: String(baseAmount),
+                      }));
+                      newItems.push({
+                        amount: String(baseAmount + remainder),
+                        due_date: "",
+                      });
+                      return newItems;
+                    });
                   }}
                 >
                   <Plus className="w-3 h-3 mr-1" /> Add Installment
                 </Button>
               </div>
 
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              <div className="space-y-2 overflow-y-auto pr-1">
                 {instItems.map((item, idx) => (
                   <div key={idx} className="flex gap-2 items-center">
                     <div className="flex-1">
@@ -183,7 +196,19 @@ export function CreateInstallmentDialog({
                         variant="ghost"
                         className="h-8 w-8 text-destructive mt-4"
                         onClick={() => {
-                          setInstItems(instItems.filter((_, i) => i !== idx));
+                          setInstItems((prev) => {
+                            const newItems = prev.filter((_, i) => i !== idx);
+                            const newCount = newItems.length;
+                            if (newCount === 0) return newItems;
+                            const baseAmount = Math.floor(instTotalAmount / newCount);
+                            const remainder = instTotalAmount - baseAmount * newCount;
+                            return newItems.map((item, i) => ({
+                              ...item,
+                              amount: String(
+                                baseAmount + (i === newCount - 1 ? remainder : 0)
+                              ),
+                            }));
+                          });
                         }}
                       >
                         <Trash2 className="w-4 h-4" />
