@@ -1194,7 +1194,7 @@ export default function FacultyPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {r.status === "draft" && (
+                        {r.status === "draft" || r.status === "pending_approval" && (
                           <DropdownMenuItem
                             onClick={(e) => {
                               e.stopPropagation();
