@@ -207,26 +207,26 @@ export const API = {
   /** Leave Management endpoints */
   LEAVE: {
     // Policies
-    POLICIES:             "/api/v1/leave/policy/",
-    POLICY_DETAIL:        (id: string) => `/api/v1/leave/policy/${id}/`,
+    POLICIES: "/api/v1/leave/policy/",
+    POLICY_DETAIL: (id: string) => `/api/v1/leave/policy/${id}/`,
 
     // Holidays
-    HOLIDAYS:             "/api/v1/leave/public-holidays/",
-    HOLIDAY_DETAIL:       (id: string) => `/api/v1/leave/public-holidays/${id}/`,
+    HOLIDAYS: "/api/v1/leave/public-holidays/",
+    HOLIDAY_DETAIL: (id: string) => `/api/v1/leave/public-holidays/${id}/`,
 
     // Balances
-    MY_BALANCE:           "/api/v1/leave/balance/",
-    USER_BALANCE:         (userId: string) => `/api/v1/leave/balance/${userId}/`,
+    MY_BALANCE: "/api/v1/leave/balance/",
+    USER_BALANCE: (userId: string) => `/api/v1/leave/balance/${userId}/`,
 
     // Applications
-    LIST:                 "/api/v1/leave/",
-    DETAIL:               (id: string) => `/api/v1/leave/${id}/`,
-    APPROVE:              (id: string) => `/api/v1/leave/${id}/approve/`,
-    REJECT:               (id: string) => `/api/v1/leave/${id}/reject/`,
+    LIST: "/api/v1/leave/",
+    DETAIL: (id: string) => `/api/v1/leave/${id}/`,
+    APPROVE: (id: string) => `/api/v1/leave/${id}/approve/`,
+    REJECT: (id: string) => `/api/v1/leave/${id}/reject/`,
 
     // Late Entries
-    LATE_ENTRIES:         "/api/v1/leave/late-entries/",
-    LATE_ENTRY_DETAIL:    (id: string) => `/api/v1/leave/late-entries/${id}/`,
+    LATE_ENTRIES: "/api/v1/leave/late-entries/",
+    LATE_ENTRY_DETAIL: (id: string) => `/api/v1/leave/late-entries/${id}/`,
   },
   PAYMENTS: {
     LIST: "/api/v1/payments/",
@@ -243,7 +243,22 @@ export const API = {
     CREATE: "/api/v1/refunds/create/",
     UPDATE: (id: string | number) => `/api/v1/refunds/${id}/`,
   },
+
+  /** Inventory Management endpoints */
+  INVENTORY: {
+    CATEGORIES:          "/api/v1/inventory/categories/",
+    CATEGORY_DETAIL:     (id: string) => `/api/v1/inventory/categories/${id}/`,
+
+    ITEMS:               "/api/v1/inventory/items/",
+    ITEM_DETAIL:         (id: string) => `/api/v1/inventory/items/${id}/`,
+
+    TRANSACTIONS:        "/api/v1/inventory/transactions/",
+
+    ALLOCATIONS:         "/api/v1/inventory/allocations/",
+    ALLOCATION_DETAIL:   (id: string) => `/api/v1/inventory/allocations/${id}/`,
+    ALLOCATION_RETURN:   (id: string) => `/api/v1/inventory/allocations/${id}/return_item/`,
+    ALLOCATION_BULK:     "/api/v1/inventory/allocations/bulk_issue/",
+
+    FORECAST:            "/api/v1/inventory/forecast/",
+  },
 } as const;
-
-
-

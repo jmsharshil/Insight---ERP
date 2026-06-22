@@ -16,11 +16,16 @@ const DAYS: { key: string; label: string; short: string }[] = [
   { key: "Sunday",    label: "Sunday",    short: "SUN" },
 ];
 
-const SLOT_CODES = [
+const BASE_SLOT_CODES = [
   { code: "P1", start: "08:00", end: "10:00" },
   { code: "P2", start: "10:15", end: "12:15" },
   { code: "P3", start: "12:45", end: "14:45" },
   { code: "P4", start: "15:00", end: "17:00" },
+];
+
+const EXTRA_SLOT_CODES = [
+  { code: "P5", start: "Custom", end: "Time" },
+  { code: "P6", start: "Custom", end: "Time" },
 ];
 
 // User-specified hex colors
@@ -78,7 +83,9 @@ function getSlotsForCell(
       if (t < "10:15") derivedSlot = "P1";
       else if (t < "12:45") derivedSlot = "P2";
       else if (t < "15:00") derivedSlot = "P3";
-      else derivedSlot = "P4";
+      else if (t < "17:15") derivedSlot = "P4";
+      else if (t < "19:15") derivedSlot = "P5";
+      else derivedSlot = "P6";
 
       const codeMatch = derivedSlot === slotCode;
       return dayMatch && codeMatch;
@@ -132,6 +139,7 @@ export default function TimetableGridView({
   const [selectedBatchId, setSelectedBatchId] = useState(batches[0]?.id ?? "");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [weekOffset, setWeekOffset] = useState(0);
+  const [showExtraSlots, setShowExtraSlots] = useState(false);
 
   // ── Drag & Drop state ──────────────────────────────────────────────────────
   const [draggingSlot, setDraggingSlot] = useState<TimetableSlot | null>(null);
@@ -210,6 +218,8 @@ export default function TimetableGridView({
           onNextWeek={() => setWeekOffset(w => w + 1)}
           onToday={() => setWeekOffset(0)}
           showWeekNav={false}
+          showExtraSlots={showExtraSlots}
+          onToggleExtraSlots={setShowExtraSlots}
         />
         <div className="bg-white rounded-xl border border-border overflow-hidden shadow-sm">
           <table className="w-full text-sm">
@@ -268,6 +278,8 @@ export default function TimetableGridView({
         onNextWeek={() => setWeekOffset(w => w + 1)}
         onToday={() => setWeekOffset(0)}
         showWeekNav={true}
+        showExtraSlots={showExtraSlots}
+        onToggleExtraSlots={setShowExtraSlots}
       />
 
       {/* Grid Table — Days as Rows, Slots as Columns */}
@@ -281,10 +293,10 @@ export default function TimetableGridView({
                   <CalendarDays className="w-4 h-4 mx-auto mb-1 text-muted-foreground/50" />
                   <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Day</div>
                 </th>
-                {SLOT_CODES.map(slot => (
+                {(showExtraSlots ? [...BASE_SLOT_CODES, ...EXTRA_SLOT_CODES] : BASE_SLOT_CODES).map((slot, _, arr) => (
                   <th key={slot.code}
                     className="px-4 py-4 text-center border-b-2 border-r border-border bg-gradient-to-b from-muted/40 to-muted/20 last:border-r-0"
-                    style={{ width: `calc((100% - 160px) / ${SLOT_CODES.length})` }}>
+                    style={{ width: `calc((100% - 160px) / ${arr.length})` }}>
                     <div className="text-base font-extrabold text-foreground tracking-wide">{slot.code}</div>
                     <div className="text-xs text-muted-foreground mt-1 font-mono font-medium">
                       {slot.start} – {slot.end}
@@ -317,7 +329,7 @@ export default function TimetableGridView({
                     </td>
 
                     {/* Slot cells (one per slot code) */}
-                    {SLOT_CODES.map(slot => {
+                    {(showExtraSlots ? [...BASE_SLOT_CODES, ...EXTRA_SLOT_CODES] : BASE_SLOT_CODES).map(slot => {
                       const cellSlots = getSlotsForCell(slots, day.key, slot.code, selectedBatchId);
                       const isEmpty = cellSlots.length === 0;
                       const firstSlot = cellSlots[0];
@@ -490,6 +502,7 @@ export default function TimetableGridView({
 function GridHeader({
   batches, selectedBatchId, onBatchChange, viewMode, onViewModeChange,
   weekLabel, onPrevWeek, onNextWeek, onToday, showWeekNav,
+  showExtraSlots, onToggleExtraSlots,
 }: {
   batches:           { id: string; name: string }[];
   selectedBatchId:   string;
@@ -501,6 +514,8 @@ function GridHeader({
   onNextWeek:        () => void;
   onToday:           () => void;
   showWeekNav:       boolean;
+  showExtraSlots:    boolean;
+  onToggleExtraSlots: (v: boolean) => void;
 }) {
   return (
     <div className="space-y-3">
@@ -547,6 +562,15 @@ function GridHeader({
               </button>
             </div>
           )}
+
+          {/* Extra Slots Toggle */}
+          <button
+            onClick={() => onToggleExtraSlots(!showExtraSlots)}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors border shadow-sm shrink-0
+              ${showExtraSlots ? "bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-200" : "bg-white text-muted-foreground border-border hover:bg-muted/40"}`}
+          >
+            Show P5/P6
+          </button>
 
           {/* Grid / List toggle */}
           <div className="flex items-center border border-border rounded-lg overflow-hidden bg-white shrink-0 shadow-sm">

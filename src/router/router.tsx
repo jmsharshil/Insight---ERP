@@ -35,6 +35,7 @@ const FeesPage = lazy(() => import("@/pages/fees/FeesPage"));
 const ExamsPage = lazy(() => import("@/pages/exams/ExamsPage"));
 const FacultyPage = lazy(() => import("@/pages/faculty/FacultyPage"));
 import FacultyPayrollDetailPage from "@/pages/faculty/FacultyPayrollDetailPage";
+const InventoryPage = lazy(() => import("@/pages/inventory/InventoryPage"));
 const LeavePage = lazy(() => import("@/pages/leave/LeavePage"));
 const ExamSupervisionPage = lazy(() => import("@/pages/exam-supervision/ExamSupervisionPage"));
 const ChatPage = lazy(() => import("@/pages/chat/ChatPage"));
@@ -140,6 +141,7 @@ const router = createBrowserRouter([
     { module: "faculty", path: "/faculty/payroll/:id", element: <FacultyPayrollDetailPage /> },
     { module: "leave", path: "/leave", element: withSuspense(<LeavePage />) },
     { module: "chat", path: "/chat", element: withSuspense(<ChatPage />) },
+    { module: "inventory", path: "/inventory", element: withSuspense(<InventoryPage />) },
     {
       module: "notifications",
       path: "/notifications",
