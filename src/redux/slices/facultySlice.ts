@@ -29,6 +29,9 @@ export interface FacultyRecord {
   qr_code?: string | null;
   qr_code_url?: string | null;
   subject_name?: string | null;
+  session_hours?: string | null;
+  work_start_time?: string | null;
+  work_end_time?: string | null;
 }
 
 interface FacultyState {

@@ -13,7 +13,21 @@ import {
   Plus,
   CheckCircle2,
   MoreHorizontal,
+  Loader2,
 } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend
+} from "recharts";
 import { API } from "@/service/api";
 import {
   DropdownMenu,
@@ -59,6 +73,7 @@ import { useToast } from "@/hooks/useToast";
 import FacultyDetailSheet from "./components/FacultyDetailSheet";
 import SessionDetailSheet from "./components/SessionDetailSheet";
 import { useUI } from "@/hooks/useUI";
+import { FacultySummarySkeleton } from "@/components/common/Skeletons";
 
 const MONTHS = ["Mar 2024", "Apr 2024", "May 2024"];
 
@@ -72,7 +87,7 @@ export default function FacultyPage() {
     user?.role === "accountant" || user?.role === "branch_manager" || user?.role === "super_admin";
 
   const [params, setParams] = useSearchParams();
-  const activeTab = params.get("tab") || (isFaculty ? "attendance" : "directory");
+  const activeTab = params.get("tab") || "summary";
 
   const setActiveTab = (tab: string) => {
     setParams((prev) => {
@@ -135,6 +150,43 @@ export default function FacultyPage() {
     late_entry_threshold: 3,
     auto_halfday_deduction: true,
   });
+
+  const [summaryMonth, setSummaryMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const [summaryFacultyId, setSummaryFacultyId] = useState<string>("");
+  const [summaryData, setSummaryData] = useState<any>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === "summary") {
+      if (!isFaculty && !summaryFacultyId) return;
+
+      setSummaryLoading(true);
+      let endPoint = `/api/v1/faculty/sessions/summary/?month=${summaryMonth}`;
+      if (isFaculty) {
+        endPoint += `&faculty_id=${user?.id}`;
+      } else {
+        endPoint += `&faculty_id=${summaryFacultyId}`;
+      }
+      
+      dispatch({
+        type: dropdownActions.GET_DROPDOWN,
+        method: "GET",
+        endPoint: endPoint,
+        auth: true,
+        getResponse: (res: any) => {
+          setSummaryData(res?.data || res);
+          setSummaryLoading(false);
+        },
+        getError: () => {
+          setSummaryLoading(false);
+          toast.error("Failed to load summary");
+        }
+      } as any);
+    }
+  }, [activeTab, summaryMonth, isFaculty, user?.id, summaryFacultyId, dispatch, toast]);
 
   const fetchLatePolicy = () => {
     setLatePolicyFetching(true);
@@ -564,12 +616,18 @@ export default function FacultyPage() {
     let list = facultyList;
     if (user && user.role !== "super_admin" && user.branch) {
       list = list.filter(f => {
-        const branchId = typeof f.branch === "object" && f.branch !== null ? f.branch.id : f.branch;
+        const branchId = typeof f.branch === "object" && f.branch !== null ? (f.branch as any).id : f.branch;
         return branchId === user.branch;
       });
     }
     return list;
   }, [facultyList, user]);
+
+  useEffect(() => {
+    if (!isFaculty && !summaryFacultyId && filteredFacultyList.length > 0) {
+      setSummaryFacultyId(filteredFacultyList[0].id);
+    }
+  }, [filteredFacultyList, isFaculty, summaryFacultyId]);
 
   const filteredSessions = useMemo(() => {
     let list = sessions;
@@ -709,6 +767,125 @@ export default function FacultyPage() {
     setConfirmApprove(false);
   };
 
+  const renderSummaryTab = () => {
+    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+
+    const subjectData = summaryData?.by_subject?.map((s: any) => ({
+      name: s.subject_name || s.name || s.subject || "Unknown",
+      sessions: s.sessions || s.count || 0,
+      hours: s.hours || 0,
+    })) || [];
+
+    const batchData = summaryData?.by_batch?.map((b: any) => ({
+      name: b.batch_name || b.name || b.batch || "Unknown",
+      sessions: b.sessions || b.count || 0,
+      hours: b.hours || 0,
+    })) || [];
+
+    return (
+      <TabsContent value="summary" className="mt-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+        <h3 className="text-lg font-semibold">Monthly Summary</h3>
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          {!isFaculty && (
+            <Select value={summaryFacultyId} onValueChange={setSummaryFacultyId}>
+              <SelectTrigger className="w-full sm:w-64 bg-muted/10 border-border">
+                <SelectValue placeholder="Select Faculty" />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredFacultyList.map((f: any) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.full_name} {f.employee_id ? `(${f.employee_id})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <Input 
+            type="month" 
+            value={summaryMonth} 
+            onChange={(e) => setSummaryMonth(e.target.value)} 
+            className="w-48"
+          />
+        </div>
+      </div>
+      {summaryLoading ? (
+        <FacultySummarySkeleton />
+      ) : summaryData ? (
+        <div className="space-y-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="rounded-xl border border-border bg-card p-5">
+              <div className="text-sm text-muted-foreground mb-1">Total Sessions</div>
+              <div className="text-3xl font-bold">{summaryData.total_sessions || 0}</div>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-5">
+              <div className="text-sm text-muted-foreground mb-1">Completed / In Progress</div>
+              <div className="text-3xl font-bold text-success">{summaryData.completed_sessions || 0} <span className="text-xl text-muted-foreground">/ {summaryData.in_progress_sessions || 0}</span></div>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-5">
+              <div className="text-sm text-muted-foreground mb-1">Total Hours</div>
+              <div className="text-3xl font-bold text-primary">{summaryData.total_hours || 0}h</div>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-5">
+              <div className="text-sm text-muted-foreground mb-1">Avg Completion</div>
+              <div className="text-3xl font-bold">{summaryData.avg_completion_percentage || 0}%</div>
+            </div>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="rounded-xl border border-border bg-card p-5 h-[350px] flex flex-col">
+              <h4 className="font-semibold mb-4">Sessions by Subject</h4>
+              {subjectData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={subjectData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="sessions"
+                    >
+                      {subjectData.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                 <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">No data available</div>
+              )}
+            </div>
+            <div className="rounded-xl border border-border bg-card p-5 h-[350px] flex flex-col">
+              <h4 className="font-semibold mb-4">Sessions by Batch</h4>
+              {batchData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={batchData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                    <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
+                    <Bar dataKey="sessions" fill="#8884d8" name="Sessions" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">No data available</div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="py-12 text-center text-muted-foreground">
+           No summary data available for this month.
+        </div>
+      )}
+    </TabsContent>
+  );
+  };
+
   if (isFaculty) {
     const myAttendance: any[] = [];
     const myReports: any[] = [];
@@ -764,10 +941,12 @@ export default function FacultyPage() {
         </div>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
+            <TabsTrigger value="summary">Summary</TabsTrigger>
             <TabsTrigger value="attendance">Attendance</TabsTrigger>
             <TabsTrigger value="sessions">Session Reports</TabsTrigger>
             <TabsTrigger value="payslips">My Payslips</TabsTrigger>
           </TabsList>
+          {renderSummaryTab()}
           <TabsContent value="attendance" className="mt-4">
             <DataTable
               data={myAttendance}
@@ -886,32 +1065,16 @@ export default function FacultyPage() {
 
   return (
     <div>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard title="Total Faculty" value={filteredFacultyList.length} icon={Briefcase} index={0} />
-        <StatCard
-          title="Active"
-          value={filteredFacultyList.filter((f) => f.is_active).length}
-          icon={Users}
-          trendType="up"
-          index={1}
-        />
-        <StatCard title="Sessions This Week" value={34} icon={ClipboardList} index={2} />
-        <StatCard
-          title="Payroll Due"
-          value={`₹${totalPayrollDue.toLocaleString()}`}
-          icon={Wallet}
-          trendType="warning"
-          index={3}
-        />
-      </div>
-
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
+          <TabsTrigger value="summary">Summary</TabsTrigger>
           <TabsTrigger value="directory">Faculty Directory</TabsTrigger>
           <TabsTrigger value="sessions">Session Reports</TabsTrigger>
           {canPayroll && <TabsTrigger value="payroll">Payroll</TabsTrigger>}
           {canPayroll && <TabsTrigger value="late-policies">Late Policies</TabsTrigger>}
         </TabsList>
+
+        {renderSummaryTab()}
 
         <TabsContent value="directory" className="mt-4">
           <DataTable

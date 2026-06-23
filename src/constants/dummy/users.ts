@@ -70,7 +70,7 @@ export const DUMMY_USERS: DummyUser[] = [
   {
     id: "3ff0a43b-1209-411b-a80d-39661bf1e700",
     username: "Anand student",
-    email: "shahanand107@gmail.com",
+    email: "support.mandar@gmail.com",
     phone: "9664838362",
     name: "Anand student",
     role: "student",

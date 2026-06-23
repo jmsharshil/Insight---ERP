@@ -32,7 +32,7 @@ const FACULTY_LEVELS = [
 const EMPLOYMENT_TYPES = [
   { value: "full_time", label: "Full Time" },
   { value: "part_time", label: "Part Time" },
-  // { value: "contract", label: "Contract" },
+  { value: "visiting", label: "Visiting" },
 ];
 
 interface FacultyDetailSheetProps {
@@ -73,6 +73,8 @@ export default function FacultyDetailSheet({
     pan_number: "",
     is_active: true,
     branch_id: "",
+    work_start_time: "",
+    work_end_time: "",
   });
 
   // Fetch faculty details when sheet opens with a facultyId
@@ -126,6 +128,8 @@ export default function FacultyDetailSheet({
         pan_number: selectedFaculty.pan_number || "",
         is_active: selectedFaculty.is_active ?? true,
         branch_id: selectedFaculty.branch || "",
+        work_start_time: selectedFaculty.work_start_time || "",
+        work_end_time: selectedFaculty.work_end_time || "",
       });
     }
   }, [selectedFaculty]);
@@ -206,27 +210,21 @@ export default function FacultyDetailSheet({
                     <Label>Full Name</Label>
                     <Input
                       value={editForm.full_name}
-                      onChange={(e) =>
-                        setEditForm((f) => ({ ...f, full_name: e.target.value }))
-                      }
+                      onChange={(e) => setEditForm((f) => ({ ...f, full_name: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-1">
                     <Label>Email</Label>
                     <Input
                       value={editForm.email}
-                      onChange={(e) =>
-                        setEditForm((f) => ({ ...f, email: e.target.value }))
-                      }
+                      onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-1">
                     <Label>Phone</Label>
                     <Input
                       value={editForm.phone}
-                      onChange={(e) =>
-                        setEditForm((f) => ({ ...f, phone: e.target.value }))
-                      }
+                      onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-1">
@@ -234,9 +232,7 @@ export default function FacultyDetailSheet({
                     <div className="flex items-center space-x-2 pt-2">
                       <Switch
                         checked={editForm.is_active}
-                        onCheckedChange={(c) =>
-                          setEditForm((f) => ({ ...f, is_active: c }))
-                        }
+                        onCheckedChange={(c) => setEditForm((f) => ({ ...f, is_active: c }))}
                       />
                       <Label>{editForm.is_active ? "Active" : "Inactive"}</Label>
                     </div>
@@ -263,9 +259,7 @@ export default function FacultyDetailSheet({
                     <Label>Employment Type</Label>
                     <Select
                       value={editForm.employment_type}
-                      onValueChange={(v) =>
-                        setEditForm((f) => ({ ...f, employment_type: v }))
-                      }
+                      onValueChange={(v) => setEditForm((f) => ({ ...f, employment_type: v }))}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select type" />
@@ -294,7 +288,8 @@ export default function FacultyDetailSheet({
                       />
                     </div>
                   )}
-                  {editForm.employment_type === "part_time" && (
+                  {(editForm.employment_type === "part_time" ||
+                    editForm.employment_type === "visiting") && (
                     <>
                       <div className="space-y-1">
                         <Label>Hourly Rate</Label>
@@ -319,6 +314,32 @@ export default function FacultyDetailSheet({
                               ...f,
                               session_hours: parseFloat(e.target.value) || 0,
                             }))
+                          }
+                        />
+                      </div>
+                    </>
+                  )}
+                  {["full_time", "part_time"].includes(editForm.employment_type) && (
+                    <>
+                      <div className="space-y-1">
+                        <Label>Work Start Time</Label>
+                        <Input
+                          type="time"
+                          step="1"
+                          value={editForm.work_start_time}
+                          onChange={(e) =>
+                            setEditForm((f) => ({ ...f, work_start_time: e.target.value }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Work End Time</Label>
+                        <Input
+                          type="time"
+                          step="1"
+                          value={editForm.work_end_time}
+                          onChange={(e) =>
+                            setEditForm((f) => ({ ...f, work_end_time: e.target.value }))
                           }
                         />
                       </div>
@@ -358,27 +379,21 @@ export default function FacultyDetailSheet({
                     <Label>Bank Account</Label>
                     <Input
                       value={editForm.bank_account}
-                      onChange={(e) =>
-                        setEditForm((f) => ({ ...f, bank_account: e.target.value }))
-                      }
+                      onChange={(e) => setEditForm((f) => ({ ...f, bank_account: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-1">
                     <Label>IFSC Code</Label>
                     <Input
                       value={editForm.ifsc_code}
-                      onChange={(e) =>
-                        setEditForm((f) => ({ ...f, ifsc_code: e.target.value }))
-                      }
+                      onChange={(e) => setEditForm((f) => ({ ...f, ifsc_code: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-1">
                     <Label>PAN Number</Label>
                     <Input
                       value={editForm.pan_number}
-                      onChange={(e) =>
-                        setEditForm((f) => ({ ...f, pan_number: e.target.value }))
-                      }
+                      onChange={(e) => setEditForm((f) => ({ ...f, pan_number: e.target.value }))}
                     />
                   </div>
                 </div>
@@ -416,7 +431,9 @@ export default function FacultyDetailSheet({
                     )}
                     <div>
                       <div className="text-base font-semibold">{selectedFaculty.full_name}</div>
-                      <div className="text-xs text-muted-foreground">{selectedFaculty.employee_id}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {selectedFaculty.employee_id}
+                      </div>
                       <div className="flex gap-2 mt-1">
                         <Badge
                           className={
@@ -440,15 +457,18 @@ export default function FacultyDetailSheet({
                   <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border border-primary/25 p-5 flex flex-col items-center justify-center text-center space-y-3">
                     <div className="bg-white rounded-lg p-3 border border-border shadow-md">
                       <img
-                        src={selectedFaculty.qr_code_url || selectedFaculty.qr_code}
+                        src={selectedFaculty.qr_code_url || selectedFaculty.qr_code || ""}
                         alt="QR Code"
                         className="w-48 h-48 object-contain"
                       />
                     </div>
                     <div className="space-y-1">
-                      <h4 className="text-sm font-bold text-foreground">Digital QR Identity Card</h4>
+                      <h4 className="text-sm font-bold text-foreground">
+                        Digital QR Identity Card
+                      </h4>
                       <p className="text-xs text-muted-foreground max-w-[280px]">
-                        Scan this QR code with the attendance reader terminal or mobile app to log sessions.
+                        Scan this QR code with the attendance reader terminal or mobile app to log
+                        sessions.
                       </p>
                     </div>
                   </div>
@@ -474,18 +494,31 @@ export default function FacultyDetailSheet({
                   </h4>
                   <div className="rounded-lg border border-border bg-card p-3">
                     <DetailRow label="Level" value={selectedFaculty.level_display} />
-                    <DetailRow label="Employment Type" value={selectedFaculty.employment_type_display} />
+                    <DetailRow
+                      label="Employment Type"
+                      value={selectedFaculty.employment_type_display}
+                    />
+                    {["full_time", "part_time"].includes(selectedFaculty.employment_type) && (
+                      <>
+                        <DetailRow label="Work Start Time" value={selectedFaculty.work_start_time || "—"} />
+                        <DetailRow label="Work End Time" value={selectedFaculty.work_end_time || "—"} />
+                      </>
+                    )}
                     <DetailRow label="Qualification" value={selectedFaculty.qualification} />
                     {/* <DetailRow label="Specialization" value={selectedFaculty.specialization} /> */}
                     <div className="flex justify-between items-start py-2.5 border-b border-border/50 last:border-0 gap-4">
-                      <span className="text-muted-foreground text-sm whitespace-nowrap mt-0.5">Subject Expertise</span>
+                      <span className="text-muted-foreground text-sm whitespace-nowrap mt-0.5">
+                        Subject Expertise
+                      </span>
                       <div className="flex flex-wrap gap-1.5 justify-end">
                         {selectedFaculty.subject_name ? (
-                          selectedFaculty.subject_name.split(",").map((subject: string, idx: number) => (
-                            <Badge key={idx} variant="secondary" className="font-medium text-xs">
-                              {subject.trim()}
-                            </Badge>
-                          ))
+                          selectedFaculty.subject_name
+                            .split(",")
+                            .map((subject: string, idx: number) => (
+                              <Badge key={idx} variant="secondary" className="font-medium text-xs">
+                                {subject.trim()}
+                              </Badge>
+                            ))
                         ) : (
                           <span className="text-sm font-medium">—</span>
                         )}
@@ -501,12 +534,30 @@ export default function FacultyDetailSheet({
                   </h4>
                   <div className="rounded-lg border border-border bg-card p-3">
                     {selectedFaculty.employment_type === "full_time" && (
-                      <DetailRow label="Salary" value={selectedFaculty.salary ? `₹${parseFloat(selectedFaculty.salary).toLocaleString()}` : "—"} />
+                      <DetailRow
+                        label="Salary"
+                        value={
+                          selectedFaculty.salary
+                            ? `₹${parseFloat(selectedFaculty.salary).toLocaleString()}`
+                            : "—"
+                        }
+                      />
                     )}
-                    {selectedFaculty.employment_type === "part_time" && (
+                    {(selectedFaculty.employment_type === "part_time" ||
+                      selectedFaculty.employment_type === "visiting") && (
                       <>
-                        <DetailRow label="Hourly Rate" value={selectedFaculty.hourly_rate ? `₹${parseFloat(selectedFaculty.hourly_rate).toLocaleString()}` : "—"} />
-                        <DetailRow label="Session Hours" value={selectedFaculty.session_hours || "0"} />
+                        <DetailRow
+                          label="Hourly Rate"
+                          value={
+                            selectedFaculty.hourly_rate
+                              ? `₹${parseFloat(selectedFaculty.hourly_rate).toLocaleString()}`
+                              : "—"
+                          }
+                        />
+                        <DetailRow
+                          label="Session Hours"
+                          value={selectedFaculty.session_hours || "0"}
+                        />
                       </>
                     )}
                     <DetailRow label="Bank Account" value={selectedFaculty.bank_account} />
@@ -518,9 +569,7 @@ export default function FacultyDetailSheet({
             )}
           </div>
         ) : (
-          <div className="py-16 text-center text-muted-foreground">
-            No faculty selected
-          </div>
+          <div className="py-16 text-center text-muted-foreground">No faculty selected</div>
         )}
       </SheetContent>
     </Sheet>

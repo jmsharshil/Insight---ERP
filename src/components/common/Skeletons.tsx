@@ -422,3 +422,35 @@ export function RoomDetailsSkeleton() {
     </div>
   );
 }
+
+export function FacultySummarySkeleton() {
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="rounded-xl border border-border bg-card p-5">
+            <Skeleton width={120} height={14} className="mb-2" />
+            <Skeleton width={80} height={32} />
+          </div>
+        ))}
+      </div>
+      
+      <div className="grid md:grid-cols-2 gap-4">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <div key={i} className="rounded-xl border border-border bg-card p-5 h-[350px] flex flex-col">
+            <Skeleton width={180} height={20} className="mb-4" />
+            <div className="flex-1 w-full h-full">
+              {i === 0 ? (
+                <div className="h-full flex items-center justify-center">
+                  <Skeleton circle width={220} height={220} />
+                </div>
+              ) : (
+                <Skeleton height="100%" className="h-full" containerClassName="h-full block" />
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

@@ -40,7 +40,7 @@ const LEAVE_TYPE_OPTS = [
 ];
 
 const ADMIN_ROLES   = ["super_admin", "branch_manager", "admin_senior_executive"];
-const APPLY_ROLES   = ["faculty", "front_desk", "counsellor"];
+const APPLY_ROLES   = ["faculty", "front_desk", "counsellor", "student", "parents"];
 const APPROVE_ROLES = ["super_admin", "branch_manager", "admin_senior_executive"];
 
 // Shared detail helpers
@@ -218,7 +218,9 @@ export default function ApplicationsTab() {
   // ── Submit leave — FIXED branch_id ───────────────────────────────────────
   const handleApply = () => {
     const formData = new FormData();
-    formData.append("leave_type", applyForm.leave_type);
+    if (role !== "student" && role !== "parents") {
+      formData.append("leave_type", applyForm.leave_type);
+    }
     formData.append("from_date", applyForm.from_date);
     formData.append("to_date", applyForm.to_date);
     formData.append("is_half_day", String(applyForm.is_half_day));
@@ -351,13 +353,15 @@ export default function ApplicationsTab() {
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={typeFilter} onValueChange={v => setTypeFilter(v === "all" ? "" : v)}>
-            <SelectTrigger className="h-9 text-sm w-40"><SelectValue placeholder="All Types" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              {LEAVE_TYPE_OPTS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          {role !== "student" && role !== "parents" && (
+            <Select value={typeFilter} onValueChange={v => setTypeFilter(v === "all" ? "" : v)}>
+              <SelectTrigger className="h-9 text-sm w-40"><SelectValue placeholder="All Types" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                {LEAVE_TYPE_OPTS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
           <Button variant="outline" className="h-9 text-sm"
             onClick={() => { setSearch(""); setStatusFilter(""); setTypeFilter(""); fetchApplications(); }}>
             Clear
@@ -475,13 +479,15 @@ export default function ApplicationsTab() {
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Apply for Leave</DialogTitle></DialogHeader>
           <div className="space-y-3 py-2">
-            <div>
-              <Label className="text-xs mb-1 block">Leave Type *</Label>
-              <Select value={applyForm.leave_type} onValueChange={v => setApplyForm(f => ({ ...f, leave_type: v }))}>
-                <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>{LEAVE_TYPE_OPTS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
+            {role !== "student" && role !== "parents" && (
+              <div>
+                <Label className="text-xs mb-1 block">Leave Type *</Label>
+                <Select value={applyForm.leave_type} onValueChange={v => setApplyForm(f => ({ ...f, leave_type: v }))}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>{LEAVE_TYPE_OPTS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs mb-1 block">From Date *</Label>
@@ -515,7 +521,7 @@ export default function ApplicationsTab() {
               <Textarea value={applyForm.reason} onChange={e => setApplyForm(f => ({ ...f, reason: e.target.value }))}
                 rows={3} placeholder="Describe the reason for your leave..." className="text-sm resize-none" />
             </div>
-            {applyForm.leave_type === "sick" && (
+            {(applyForm.leave_type === "sick" || role === "student" || role === "parents") && (
               <div>
                 <Label className="text-xs mb-1 block">Supporting Document (required if &gt; 2 days)</Label>
                 <Input type="file" accept=".pdf,.jpg,.jpeg,.png"

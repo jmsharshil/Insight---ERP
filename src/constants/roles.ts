@@ -58,13 +58,13 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   student: {
     id: "student", label: "Student", description: "Enrolled student — mobile app user",
     color: "bg-green-100", textColor: "text-green-800",
-    modules: ["dashboard","attendance","courses_batches","exams","fees","chat","notifications"],
+    modules: ["dashboard","attendance","courses_batches","exams","fees","leave","chat","notifications","settings"],
     canDelete: false, canExport: false,
   },
   parents: {
     id: "parents", label: "Parents", description: "Guardian linked to enrolled student(s)",
     color: "bg-emerald-100", textColor: "text-emerald-800",
-    modules: ["dashboard","attendance","fees","exams","chat","notifications"],
+    modules: ["dashboard","attendance","fees","exams","leave","chat","notifications"],
     canDelete: false, canExport: false,
   },
   faculty: {
