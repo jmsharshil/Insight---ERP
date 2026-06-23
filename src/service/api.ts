@@ -224,6 +224,12 @@ export const API = {
     APPROVE: (id: string) => `/api/v1/leave/${id}/approve/`,
     REJECT: (id: string) => `/api/v1/leave/${id}/reject/`,
 
+    // Student Applications
+    STUDENT_LIST: "/api/v1/leave/student/",
+    STUDENT_DETAIL: (id: string) => `/api/v1/leave/student/${id}/`,
+    STUDENT_APPROVE: (id: string) => `/api/v1/leave/student/${id}/approve/`,
+    STUDENT_REJECT: (id: string) => `/api/v1/leave/student/${id}/reject/`,
+
     // Late Entries
     LATE_ENTRIES: "/api/v1/leave/late-entries/",
     LATE_ENTRY_DETAIL: (id: string) => `/api/v1/leave/late-entries/${id}/`,

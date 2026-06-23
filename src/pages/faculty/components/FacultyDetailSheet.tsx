@@ -75,6 +75,7 @@ export default function FacultyDetailSheet({
     branch_id: "",
     work_start_time: "",
     work_end_time: "",
+    salary_retention_percentage: "0",
   });
 
   // Fetch faculty details when sheet opens with a facultyId
@@ -130,6 +131,7 @@ export default function FacultyDetailSheet({
         branch_id: selectedFaculty.branch || "",
         work_start_time: selectedFaculty.work_start_time || "",
         work_end_time: selectedFaculty.work_end_time || "",
+        salary_retention_percentage: selectedFaculty.salary_retention_percentage !== undefined ? String(Number(selectedFaculty.salary_retention_percentage)) : "0",
       });
     }
   }, [selectedFaculty]);
@@ -345,7 +347,24 @@ export default function FacultyDetailSheet({
                       </div>
                     </>
                   )}
-                  <div className="space-y-1 col-span-2">
+                  <div className="space-y-1">
+                    <Label>Salary Retention Percentage</Label>
+                    <Select
+                      value={editForm.salary_retention_percentage}
+                      onValueChange={(v) => setEditForm((f) => ({ ...f, salary_retention_percentage: v }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select percentage" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">0%</SelectItem>
+                        <SelectItem value="10">10%</SelectItem>
+                        <SelectItem value="15">15%</SelectItem>
+                        <SelectItem value="20">20%</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1 col-span-2 md:col-span-1">
                     <Label>Qualification</Label>
                     <Input
                       value={editForm.qualification}
@@ -560,6 +579,7 @@ export default function FacultyDetailSheet({
                         />
                       </>
                     )}
+                    <DetailRow label="Salary Retention Percentage" value={selectedFaculty.salary_retention_percentage !== undefined ? `${Number(selectedFaculty.salary_retention_percentage)}%` : "0%"} />
                     <DetailRow label="Bank Account" value={selectedFaculty.bank_account} />
                     <DetailRow label="IFSC Code" value={selectedFaculty.ifsc_code} />
                     <DetailRow label="PAN Number" value={selectedFaculty.pan_number} />
