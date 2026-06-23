@@ -15,7 +15,7 @@ const TAB_CONFIG = [
   {
     value: "applications",
     label: "Applications",
-    roles: ["super_admin", "branch_manager", "admin_senior_executive", "faculty", "front_desk", "counsellor"],
+    roles: ["super_admin", "branch_manager", "admin_senior_executive", "faculty", "front_desk", "counsellor", "student", "parents"],
   },
   {
     value: "policies",
