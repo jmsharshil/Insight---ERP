@@ -59,6 +59,7 @@ export interface AdmissionDetail extends AdmissionRecord {
   assigned_bank_id: number;
   payment_screenshot: string | null;
   transaction_id: string;
+  payment_amount: string;
   payment_note: string;
   payment_submitted_at: string | null;
   lead: number;

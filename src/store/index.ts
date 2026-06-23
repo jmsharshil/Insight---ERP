@@ -1,5 +1,14 @@
 import { configureStore, combineReducers } from "@reduxjs/toolkit";
-import { persistStore, persistReducer, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from "redux-persist";
+import {
+  persistStore,
+  persistReducer,
+  FLUSH,
+  REHYDRATE,
+  PAUSE,
+  PERSIST,
+  PURGE,
+  REGISTER,
+} from "redux-persist";
 import storage from "redux-persist/lib/storage";
 import createSagaMiddleware from "redux-saga";
 import authReducer from "./slices/authSlice";
@@ -25,6 +34,7 @@ import attendanceReducer from "@/redux/slices/attendanceSlice";
 import timetableNewReducer from "@/redux/slices/timetableNewSlice";
 import examReducer from "@/redux/slices/examSlice";
 import leaveReducer from "@/redux/slices/leaveSlice";
+import inventoryReducer from "@/redux/slices/inventorySlice";
 
 const sagaMiddleware = createSagaMiddleware();
 
@@ -57,6 +67,7 @@ const rootReducer = combineReducers({
   timetableNew: timetableNewReducer,
   exams: examReducer,
   leave: leaveReducer,
+  inventory: inventoryReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

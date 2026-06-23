@@ -1,4 +1,8 @@
 import { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
+import { levelActions } from "@/redux/actions";
+import { API } from "@/service/api";
+import { AppDispatch } from "@/store";
 import {
   Sheet,
   SheetContent,
@@ -26,7 +30,6 @@ interface FeeStructureDialogProps {
   onSubmit: (data: any) => void;
   structure: FeesStructure | null;
   courses: any[];
-  batches: any[];
   loading: boolean;
 }
 
@@ -36,28 +39,66 @@ export function FeeStructureDialog({
   onSubmit,
   structure,
   courses,
-  batches,
   loading,
 }: FeeStructureDialogProps) {
+  const dispatch = useDispatch<AppDispatch>();
   const [name, setName] = useState("");
   const [course, setCourse] = useState("");
-  const [batch, setBatch] = useState("");
+  const [level, setLevel] = useState("");
+  const [levels, setLevels] = useState<any[]>([]);
+  const [levelsLoading, setLevelsLoading] = useState(false);
   const [totalAmount, setTotalAmount] = useState("");
   const [description, setDescription] = useState("");
   const [isActive, setIsActive] = useState(true);
+
+  // Fetch levels when course changes
+  useEffect(() => {
+    if (course) {
+      setLevelsLoading(true);
+      dispatch({
+        type: levelActions.GET_LEVELS,
+        method: "GET",
+        endPoint: API.COURSES.LEVELS.LIST(course),
+        auth: true,
+        getResponse: (res: any) => {
+          setLevels(res?.data || res || []);
+          setLevelsLoading(false);
+        },
+        getError: () => {
+          setLevels([]);
+          setLevelsLoading(false);
+        },
+      });
+    } else {
+      setLevels([]);
+      setLevel("");
+    }
+  }, [course, dispatch]);
+
+  // Auto-fill totalAmount from selected level's fee_amount
+  useEffect(() => {
+    if (level && levels.length > 0) {
+      const selectedLevel = levels.find((l: any) => l.id === level);
+      if (selectedLevel?.fee_amount) {
+        setTotalAmount(String(selectedLevel.fee_amount));
+      }
+    } else if (!level) {
+      setTotalAmount("");
+    }
+  }, [level, levels]);
 
   useEffect(() => {
     if (structure) {
       setName(structure.name || "");
       setCourse(structure.course || "");
-      setBatch(structure.batch || "");
+      setLevel(structure.level || "");
       setTotalAmount(String(structure.total_amount) || "");
       setDescription(structure.description || "");
       setIsActive(structure.is_active !== false);
     } else {
       setName("");
       setCourse("");
-      setBatch("");
+      setLevel("");
       setTotalAmount("");
       setDescription("");
       setIsActive(true);
@@ -67,14 +108,14 @@ export function FeeStructureDialog({
   const isEdit = !!structure;
 
   const handleSave = () => {
-    if (!name.trim() || !course || !batch || !totalAmount) {
+    if (!name.trim() || !course || !totalAmount) {
       return;
     }
 
     const payload: any = {
       name,
       course,
-      batch,
+      level: level || null,
       total_amount: parseFloat(totalAmount),
       description,
       is_active: isActive,
@@ -93,7 +134,7 @@ export function FeeStructureDialog({
           <SheetDescription>
             {isEdit
               ? "Modify the details for this fee structure."
-              : "Set up a new fee structure for a course and batch combination."}
+              : "Set up a new fee structure for a course and level combination."}
           </SheetDescription>
         </SheetHeader>
         <div className="space-y-4 py-2">
@@ -124,15 +165,15 @@ export function FeeStructureDialog({
               </Select>
             </div>
             <div>
-              <Label>Batch *</Label>
-              <Select value={batch} onValueChange={setBatch}>
+              <Label>Level</Label>
+              <Select value={level} onValueChange={setLevel} disabled={!course || levelsLoading}>
                 <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select Batch" />
+                  <SelectValue placeholder={levelsLoading ? "Loading..." : "Select Level"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {batches?.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>
-                      {b.name}
+                  {levels?.map((l) => (
+                    <SelectItem key={l.id} value={l.id}>
+                      {l.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -157,9 +198,9 @@ export function FeeStructureDialog({
               id="fs-amount"
               type="number"
               value={totalAmount}
-              onChange={(e) => setTotalAmount(e.target.value)}
-              placeholder="e.g., 50000.00"
-              className="mt-1"
+              readOnly
+              placeholder="Select a level to auto-fill"
+              className="mt-1 bg-muted/50 cursor-not-allowed"
             />
           </div>
 
@@ -182,7 +223,7 @@ export function FeeStructureDialog({
           </Button>
           <Button
             onClick={handleSave}
-            disabled={loading || !name.trim() || !course || !batch || !totalAmount}
+            disabled={loading || !name.trim() || !course || !totalAmount}
             className="bg-primary hover:bg-primary-dark text-primary-foreground"
           >
             {loading ? "Saving..." : "Save"}

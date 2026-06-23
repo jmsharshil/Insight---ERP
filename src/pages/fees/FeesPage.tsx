@@ -101,7 +101,7 @@ import {
 } from "@/constants/dummy/fees";
 import { DUMMY_STUDENTS } from "@/constants/dummy/students";
 import { useDispatch, useSelector } from "react-redux";
-import { feesActions, courseAction, batchAction, studentActions } from "@/redux/actions";
+import { feesActions, courseAction, studentActions } from "@/redux/actions";
 import {
   setFeeStructure,
   addFeeStructure,
@@ -116,23 +116,6 @@ import { setStudents, setStudentsLoading, setStudentsError } from "@/redux/slice
 import { setCourses } from "@/redux/slices/coursesSlice";
 import { RootState, AppDispatch } from "@/store";
 import { API } from "@/service/api";
-
-const defaultReportData = {
-  total_billed: 551000.0,
-  total_collected: 469000.0,
-  total_pending: 0,
-  total_discount: 104500.0,
-  total_overdue: 0,
-  total_partial: 0,
-  total_approval_pending: 0,
-  collection_by_mode: {
-    cash: 200000.0,
-    cheque: 200000.0,
-    dd: 22500.0,
-    online: 24000.0,
-  },
-  monthly_trend: [{ month: "2026-06", collected: 446500.0 }],
-};
 
 const toNumber = (value: any) => {
   const n = Number(value);
@@ -192,7 +175,7 @@ export default function FeesPage() {
   const studentFees = useSelector((state: RootState) => state.fees.studentFees);
   const { students } = useSelector((state: RootState) => state.students);
   const courses = useSelector((state: RootState) => state.courses.courses);
-  const [batches, setBatches] = useState<any[]>([]);
+
 
   useEffect(() => {
     setPageTitle("Fees");
@@ -216,21 +199,7 @@ export default function FeesPage() {
     }
   }, [dispatch, courses.length]);
 
-  useEffect(() => {
-    dispatch({
-      type: batchAction.GET_BATCHES,
-      method: "GET",
-      endPoint: API.BATCHES.LIST,
-      auth: true,
-      getResponse: (res: any) => {
-        if (res?.data) {
-          setBatches(res.data);
-        } else if (Array.isArray(res)) {
-          setBatches(res);
-        }
-      },
-    });
-  }, [dispatch]);
+
 
   const fetchStudentFees = useCallback(
     (studentName?: string, status?: string) => {
@@ -930,6 +899,7 @@ export default function FeesPage() {
       getResponse: (res: any) => {
         toast.success(res?.message || "Payment recorded successfully.");
         setUploadOpen(false);
+        setAdminRecordPaymentOpen(false);
         fetchPayments();
         dispatch({
           type: feesActions.GET_STUDENT_FEES,
@@ -1051,18 +1021,18 @@ export default function FeesPage() {
     setRefundOpen(null);
   }
 
-  const billed = Number(reportData?.total_billed ?? defaultReportData.total_billed);
-  const collected = Number(reportData?.total_collected ?? defaultReportData.total_collected);
-  const pendingVal = Number(reportData?.total_pending ?? defaultReportData.total_pending);
-  const discountVal = Number(reportData?.total_discount ?? defaultReportData.total_discount);
-  const overdueVal = Number(reportData?.total_overdue ?? defaultReportData.total_overdue);
-  const partialVal = Number(reportData?.total_partial ?? defaultReportData.total_partial);
+  const billed = Number(reportData?.total_billed ?? 0);
+  const collected = Number(reportData?.total_collected ?? 0);
+  const pendingVal = Number(reportData?.total_pending ?? 0);
+  const discountVal = Number(reportData?.total_discount ?? 0);
+  const overdueVal = Number(reportData?.total_overdue ?? 0);
+  const partialVal = Number(reportData?.total_partial ?? 0);
   const approvalPendingVal = Number(
-    reportData?.total_approval_pending ?? defaultReportData.total_approval_pending,
+    reportData?.total_approval_pending ?? 0,
   );
 
   const trendChartData = useMemo(() => {
-    const rawTrend = reportData?.monthly_trend ?? defaultReportData.monthly_trend;
+    const rawTrend = reportData?.monthly_trend ?? [];
     return rawTrend.map((t: any) => ({
       name: t.month || "—",
       amount: Number(t.collected || 0),
@@ -1070,7 +1040,7 @@ export default function FeesPage() {
   }, [reportData]);
 
   const modeChartData = useMemo(() => {
-    const rawModes = reportData?.collection_by_mode ?? defaultReportData.collection_by_mode;
+    const rawModes = reportData?.collection_by_mode ?? {};
     return Object.entries(rawModes)
       .map(([mode, val]) => ({
         name: mode,
@@ -1149,15 +1119,15 @@ export default function FeesPage() {
           )}
           <TabsTrigger value="structures">Fee Structures</TabsTrigger>
           <TabsTrigger value="student-fees">
-            Student Fees ({filteredStudentFees.length})
+            Student Fees
           </TabsTrigger>
-          <TabsTrigger value="installments">Installment Plans ({installments.length})</TabsTrigger>
-          <TabsTrigger value="payments">Payments ({payments.length})</TabsTrigger>
+          <TabsTrigger value="installments">Installment Plans</TabsTrigger>
+          <TabsTrigger value="payments">Payments </TabsTrigger>
           {(isAccountant || isAdmin) && (
-            <TabsTrigger value="bank-accounts">Bank Accounts ({bankAccounts.length})</TabsTrigger>
+            <TabsTrigger value="bank-accounts">Bank Accounts</TabsTrigger>
           )}
           {(isAccountant || isAdmin) && (
-            <TabsTrigger value="refunds">Refunds ({refunds.length})</TabsTrigger>
+            <TabsTrigger value="refunds">Refunds</TabsTrigger>
           )}
         </TabsList>
         {(isAccountant || isAdmin) && (
@@ -1347,7 +1317,6 @@ export default function FeesPage() {
         onSubmit={handleSaveFeeStructure}
         structure={editingStructure}
         courses={courses}
-        batches={batches}
         loading={fsLoading}
       />
 

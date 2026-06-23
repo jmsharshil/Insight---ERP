@@ -44,6 +44,8 @@ const SLOT_TIMES: Record<string, { start: string; end: string }> = {
   P2: { start: "10:15", end: "12:15" },
   P3: { start: "12:45", end: "14:45" },
   P4: { start: "15:00", end: "17:00" },
+  P5: { start: "17:15", end: "19:15" },
+  P6: { start: "19:30", end: "21:30" },
 };
 
 interface SlotsTabProps {
@@ -208,9 +210,10 @@ export default function SlotsTab({
             canDelete={canDelete}
             onAddClick={(day, slotCode, batchId, date) => {
               const times = SLOT_TIMES[slotCode];
+              const isExtraSlot = slotCode === "P5" || slotCode === "P6";
               setEditingSlot(null);
               setFormPreFill({
-                session_type: "regular",
+                session_type: isExtraSlot ? "custom" : "regular",
                 day_of_week: DAY_TO_NUM[day],
                 slot_code: slotCode,
                 batch: batchId,
@@ -218,7 +221,7 @@ export default function SlotsTab({
                 start_time: times?.start ?? "",
                 end_time: times?.end ?? "",
               });
-              setFormLockedFields(["batch", "day_of_week", "slot_code"]);
+              setFormLockedFields(isExtraSlot ? ["batch", "session_type"] : ["batch", "day_of_week", "slot_code"]);
               setFormOpen(true);
             }}
             onSlotClick={(slot) => {

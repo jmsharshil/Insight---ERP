@@ -32,7 +32,7 @@ const FACULTY_LEVELS = [
 const EMPLOYMENT_TYPES = [
   { value: "full_time", label: "Full Time" },
   { value: "part_time", label: "Part Time" },
-  { value: "contract", label: "Contract" },
+  // { value: "contract", label: "Contract" },
 ];
 
 interface FacultyDetailSheetProps {
@@ -61,12 +61,13 @@ export default function FacultyDetailSheet({
     email: "",
     phone: "",
     qualification: "",
-    specialization: "",
-    subject_expertise: "",
+    // specialization: "",
+    // subject_expertise: "",
     level: "",
     employment_type: "",
     salary: 0,
     hourly_rate: 0,
+    session_hours: 0,
     bank_account: "",
     ifsc_code: "",
     pan_number: "",
@@ -109,13 +110,16 @@ export default function FacultyDetailSheet({
         email: selectedFaculty.email || "",
         phone: selectedFaculty.phone || "",
         qualification: selectedFaculty.qualification || "",
-        specialization: selectedFaculty.specialization || "",
-        subject_expertise: selectedFaculty.subject_expertise || "",
+        // specialization: selectedFaculty.specialization || "",
+        // subject_expertise: selectedFaculty.subject_expertise || "",
         level: selectedFaculty.level || "",
         employment_type: selectedFaculty.employment_type || "",
         salary: selectedFaculty.salary ? parseFloat(selectedFaculty.salary.toString()) : 0,
         hourly_rate: selectedFaculty.hourly_rate
           ? parseFloat(selectedFaculty.hourly_rate.toString())
+          : 0,
+        session_hours: selectedFaculty.session_hours
+          ? parseFloat(selectedFaculty.session_hours.toString())
           : 0,
         bank_account: selectedFaculty.bank_account || "",
         ifsc_code: selectedFaculty.ifsc_code || "",
@@ -275,32 +279,51 @@ export default function FacultyDetailSheet({
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-1">
-                    <Label>Salary</Label>
-                    <Input
-                      type="number"
-                      value={editForm.salary}
-                      onChange={(e) =>
-                        setEditForm((f) => ({
-                          ...f,
-                          salary: parseFloat(e.target.value) || 0,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Hourly Rate</Label>
-                    <Input
-                      type="number"
-                      value={editForm.hourly_rate}
-                      onChange={(e) =>
-                        setEditForm((f) => ({
-                          ...f,
-                          hourly_rate: parseFloat(e.target.value) || 0,
-                        }))
-                      }
-                    />
-                  </div>
+                  {editForm.employment_type === "full_time" && (
+                    <div className="space-y-1 col-span-2">
+                      <Label>Salary</Label>
+                      <Input
+                        type="number"
+                        value={editForm.salary}
+                        onChange={(e) =>
+                          setEditForm((f) => ({
+                            ...f,
+                            salary: parseFloat(e.target.value) || 0,
+                          }))
+                        }
+                      />
+                    </div>
+                  )}
+                  {editForm.employment_type === "part_time" && (
+                    <>
+                      <div className="space-y-1">
+                        <Label>Hourly Rate</Label>
+                        <Input
+                          type="number"
+                          value={editForm.hourly_rate}
+                          onChange={(e) =>
+                            setEditForm((f) => ({
+                              ...f,
+                              hourly_rate: parseFloat(e.target.value) || 0,
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Session Hours</Label>
+                        <Input
+                          type="number"
+                          value={editForm.session_hours}
+                          onChange={(e) =>
+                            setEditForm((f) => ({
+                              ...f,
+                              session_hours: parseFloat(e.target.value) || 0,
+                            }))
+                          }
+                        />
+                      </div>
+                    </>
+                  )}
                   <div className="space-y-1 col-span-2">
                     <Label>Qualification</Label>
                     <Input
@@ -310,7 +333,7 @@ export default function FacultyDetailSheet({
                       }
                     />
                   </div>
-                  <div className="space-y-1 col-span-2">
+                  {/* <div className="space-y-1 col-span-2">
                     <Label>Specialization</Label>
                     <Input
                       value={editForm.specialization}
@@ -327,7 +350,7 @@ export default function FacultyDetailSheet({
                         setEditForm((f) => ({ ...f, subject_expertise: e.target.value }))
                       }
                     />
-                  </div>
+                  </div> */}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-border">
@@ -453,8 +476,21 @@ export default function FacultyDetailSheet({
                     <DetailRow label="Level" value={selectedFaculty.level_display} />
                     <DetailRow label="Employment Type" value={selectedFaculty.employment_type_display} />
                     <DetailRow label="Qualification" value={selectedFaculty.qualification} />
-                    <DetailRow label="Specialization" value={selectedFaculty.specialization} />
-                    <DetailRow label="Subject Expertise" value={selectedFaculty.subject_expertise} />
+                    {/* <DetailRow label="Specialization" value={selectedFaculty.specialization} /> */}
+                    <div className="flex justify-between items-start py-2.5 border-b border-border/50 last:border-0 gap-4">
+                      <span className="text-muted-foreground text-sm whitespace-nowrap mt-0.5">Subject Expertise</span>
+                      <div className="flex flex-wrap gap-1.5 justify-end">
+                        {selectedFaculty.subject_name ? (
+                          selectedFaculty.subject_name.split(",").map((subject: string, idx: number) => (
+                            <Badge key={idx} variant="secondary" className="font-medium text-xs">
+                              {subject.trim()}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-sm font-medium">—</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -464,8 +500,15 @@ export default function FacultyDetailSheet({
                     Financial Details
                   </h4>
                   <div className="rounded-lg border border-border bg-card p-3">
-                    <DetailRow label="Salary" value={selectedFaculty.salary ? `₹${parseFloat(selectedFaculty.salary).toLocaleString()}` : "—"} />
-                    <DetailRow label="Hourly Rate" value={selectedFaculty.hourly_rate ? `₹${parseFloat(selectedFaculty.hourly_rate).toLocaleString()}` : "—"} />
+                    {selectedFaculty.employment_type === "full_time" && (
+                      <DetailRow label="Salary" value={selectedFaculty.salary ? `₹${parseFloat(selectedFaculty.salary).toLocaleString()}` : "—"} />
+                    )}
+                    {selectedFaculty.employment_type === "part_time" && (
+                      <>
+                        <DetailRow label="Hourly Rate" value={selectedFaculty.hourly_rate ? `₹${parseFloat(selectedFaculty.hourly_rate).toLocaleString()}` : "—"} />
+                        <DetailRow label="Session Hours" value={selectedFaculty.session_hours || "0"} />
+                      </>
+                    )}
                     <DetailRow label="Bank Account" value={selectedFaculty.bank_account} />
                     <DetailRow label="IFSC Code" value={selectedFaculty.ifsc_code} />
                     <DetailRow label="PAN Number" value={selectedFaculty.pan_number} />

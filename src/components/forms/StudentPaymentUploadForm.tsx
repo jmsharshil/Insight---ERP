@@ -61,11 +61,18 @@ function FileUploadField({
             <div className="w-10 h-10 rounded-full flex items-center justify-center bg-green-100">
               <CheckCircle2 className="w-5 h-5 text-green-600" />
             </div>
-            <span className="text-sm font-medium text-green-700 truncate max-w-xs">{file.name}</span>
+            <span className="text-sm font-medium text-green-700 truncate max-w-xs">
+              {file.name}
+            </span>
             <Button
-              variant="ghost" size="sm"
+              variant="ghost"
+              size="sm"
               className="h-6 px-2 text-xs text-red-500 hover:text-red-600 hover:bg-red-50 mt-1"
-              onClick={(e) => { e.stopPropagation(); onFileChange(null); if(inputRef.current) inputRef.current.value=''; }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onFileChange(null);
+                if (inputRef.current) inputRef.current.value = "";
+              }}
             >
               <X className="w-3 h-3 mr-1" /> Remove
             </Button>
@@ -76,7 +83,8 @@ function FileUploadField({
               <Icon className="w-5 h-5 text-muted-foreground" />
             </div>
             <div className="text-sm text-muted-foreground">
-              <span className="font-semibold text-primary-dark">Click to upload</span> or drag and drop
+              <span className="font-semibold text-primary-dark">Click to upload</span> or drag and
+              drop
             </div>
             <p className="text-xs text-muted-foreground/70">JPG, PNG or PDF (max. 5MB)</p>
           </div>
@@ -97,12 +105,13 @@ export default function StudentPaymentUploadForm() {
 
   // Form State
   const [transactionId, setTransactionId] = useState("");
+  const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentNote, setPaymentNote] = useState("");
   const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
 
   // Validation
   const isFormValid = () => {
-    return transactionId.trim() !== "" && paymentScreenshot !== null;
+    return transactionId.trim() !== "" && paymentAmount.trim() !== "" && paymentScreenshot !== null;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -118,6 +127,7 @@ export default function StudentPaymentUploadForm() {
 
     const formData = new FormData();
     formData.append("transaction_id", transactionId);
+    formData.append("payment_amount", paymentAmount);
     if (paymentNote.trim()) formData.append("payment_note", paymentNote);
     if (paymentScreenshot) formData.append("payment_screenshot", paymentScreenshot);
 
@@ -132,21 +142,35 @@ export default function StudentPaymentUploadForm() {
         setSubmitted(true);
       },
       getError: (err: any) => {
-        toast.error(err?.response?.data?.message || err?.message || "Failed to upload payment details");
+        toast.error(
+          err?.response?.data?.message || err?.message || "Failed to upload payment details",
+        );
       },
     });
   };
 
   if (submitted) {
     return (
-      <div className="min-h-screen grid place-items-center p-4 sm:p-8" style={{ background: T.surface, fontFamily: T.bodyFont }}>
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden border text-center p-8 sm:p-12" style={{ borderColor: T.border }}>
+      <div
+        className="min-h-screen grid place-items-center p-4 sm:p-8"
+        style={{ background: T.surface, fontFamily: T.bodyFont }}
+      >
+        <div
+          className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden border text-center p-8 sm:p-12"
+          style={{ borderColor: T.border }}
+        >
           <div className="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
             <CheckCircle2 className="w-10 h-10 text-green-600" />
           </div>
-          <h1 className="text-2xl font-bold mb-4" style={{ fontFamily: T.headingFont, color: T.black }}>Payment Uploaded Successfully!</h1>
+          <h1
+            className="text-2xl font-bold mb-4"
+            style={{ fontFamily: T.headingFont, color: T.black }}
+          >
+            Payment Uploaded Successfully!
+          </h1>
           <p className="text-muted-foreground leading-relaxed">
-            Thank you! Your payment details have been submitted. Our team will verify the transaction and process your admission shortly. We will be in touch with you.
+            Thank you! Your payment details have been submitted. Our team will verify the
+            transaction and process your admission shortly. We will be in touch with you.
           </p>
         </div>
       </div>
@@ -154,32 +178,52 @@ export default function StudentPaymentUploadForm() {
   }
 
   return (
-    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 flex justify-center" style={{ background: T.surface, fontFamily: T.bodyFont }}>
+    <div
+      className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 flex justify-center"
+      style={{ background: T.surface, fontFamily: T.bodyFont }}
+    >
       <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="text-center mb-8">
           <img src={logo} alt="Insight Institute" className="h-16 mx-auto mb-6 drop-shadow-sm" />
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2" style={{ fontFamily: T.headingFont, color: T.black }}>
+          <h1
+            className="text-2xl sm:text-3xl font-bold tracking-tight mb-2"
+            style={{ fontFamily: T.headingFont, color: T.black }}
+          >
             Payment Verification
           </h1>
-          <p className="text-muted-foreground">Please upload your payment screenshot to proceed with the admission.</p>
+          <p className="text-muted-foreground">
+            Please upload your payment screenshot to proceed with the admission.
+          </p>
         </div>
 
         {!admissionId ? (
-          <div className="bg-white rounded-2xl p-8 border text-center text-red-500 shadow-sm" style={{ borderColor: T.border }}>
+          <div
+            className="bg-white rounded-2xl p-8 border text-center text-red-500 shadow-sm"
+            style={{ borderColor: T.border }}
+          >
             <X className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p className="font-semibold text-lg">Invalid Payment Link</p>
-            <p className="text-sm mt-1">Please ensure you clicked the exact link provided in your email.</p>
+            <p className="text-sm mt-1">
+              Please ensure you clicked the exact link provided in your email.
+            </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="bg-white rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: T.border }}>
+            <div
+              className="bg-white rounded-2xl border shadow-sm overflow-hidden"
+              style={{ borderColor: T.border }}
+            >
               <div className="px-6 py-4 flex items-center gap-2" style={{ background: T.grayDark }}>
                 <CreditCard className="w-5 h-5 text-amber-400" />
-                <h2 className="text-lg font-semibold text-white" style={{ fontFamily: T.headingFont }}>Payment Details</h2>
+                <h2
+                  className="text-lg font-semibold text-white"
+                  style={{ fontFamily: T.headingFont }}
+                >
+                  Payment Details
+                </h2>
               </div>
               <div className="p-6 space-y-6">
-                
                 <FileUploadField
                   label="Payment Screenshot"
                   icon={FileImage}
@@ -203,7 +247,22 @@ export default function StudentPaymentUploadForm() {
 
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium" style={{ color: T.text }}>
-                    Payment Note <span className="text-muted-foreground font-normal">(Optional)</span>
+                    Payment Amount <span style={{ color: T.error }}>*</span>
+                  </Label>
+                  <Input
+                    type="number"
+                    placeholder="e.g. 50000"
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    className="bg-muted/10 h-11"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium" style={{ color: T.text }}>
+                    Payment Note{" "}
+                    <span className="text-muted-foreground font-normal">(Optional)</span>
                   </Label>
                   <Input
                     placeholder="Any additional details..."
@@ -212,7 +271,6 @@ export default function StudentPaymentUploadForm() {
                     className="bg-muted/10 h-11"
                   />
                 </div>
-
               </div>
             </div>
 
@@ -223,13 +281,17 @@ export default function StudentPaymentUploadForm() {
               style={{
                 background: `linear-gradient(135deg, ${T.primary} 0%, ${T.primaryDark} 100%)`,
                 color: T.textInverse,
-                opacity: (loading || !isFormValid()) ? 0.7 : 1
+                opacity: loading || !isFormValid() ? 0.7 : 1,
               }}
             >
               {loading ? (
-                <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Submitting Details...</>
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Submitting Details...
+                </>
               ) : (
-                <><Upload className="mr-2 h-5 w-5" /> Submit Payment Verification</>
+                <>
+                  <Upload className="mr-2 h-5 w-5" /> Submit Payment Verification
+                </>
               )}
             </Button>
           </form>

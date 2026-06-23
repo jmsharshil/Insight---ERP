@@ -362,7 +362,7 @@ export default function LevelsTab() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="inline-flex items-center justify-center bg-primary/10 text-primary rounded-full w-6 h-6 text-xs font-bold shrink-0">
-                        {level.order}
+                        {level.order}0.
                       </span>
                       <h4
                         className="font-semibold text-base text-text-primary hover:text-primary hover:underline cursor-pointer transition-colors"

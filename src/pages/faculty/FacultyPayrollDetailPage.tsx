@@ -12,13 +12,108 @@ import {
   Wallet,
   MapPin,
   Clock,
+  MessageSquarePlus,
+  Edit3,
+  Check,
+  X,
 } from "lucide-react";
 import { dropdownActions, facultyAction } from "@/redux/actions";
 import { useToast } from "@/hooks/useToast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import DataTable from "@/components/common/DataTable";
 import PageHeader from "@/components/layout/PageHeader";
+
+const DeductionNoteCell = ({ row, status, handleSave }: { row: any; status: string; handleSave: (id: string, note: string) => void }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [note, setNote] = useState(row.deduction_note || "");
+
+  const onSave = () => {
+    if (note !== (row.deduction_note || "")) {
+      handleSave(row.id, note);
+    }
+    setIsOpen(false);
+  };
+
+  const onCancel = () => {
+    setNote(row.deduction_note || "");
+    setIsOpen(false);
+  };
+
+  if (!["draft", "pending", "pending_approval"].includes(status?.toLowerCase())) {
+     return row.deduction_note ? (
+        <div className="text-muted-foreground italic mt-1.5 p-1.5 bg-muted/30 rounded border border-border/50">
+          <span className="font-semibold not-italic">Note:</span> {row.deduction_note}
+        </div>
+     ) : "—";
+  }
+
+  return (
+    <>
+      {!row.deduction_note ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 px-2 text-muted-foreground hover:text-primary mt-1"
+          onClick={() => setIsOpen(true)}
+        >
+          <MessageSquarePlus className="w-3 h-3 mr-1" /> Add Note
+        </Button>
+      ) : (
+        <div className="group relative mt-1.5 p-1.5 bg-muted/30 transition-colors rounded border border-border/50">
+          <div className="text-muted-foreground italic pr-5">
+            {row.deduction_note || "—"}
+          </div>
+          <button
+            onClick={() => setIsOpen(true)}
+            className="absolute right-1.5 top-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary"
+          >
+            <Edit3 className="w-3 h-3" />
+          </button>
+        </div>
+      )}
+
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open) => {
+          if (!open) onCancel();
+          setIsOpen(open);
+        }}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              {row.deduction_note ? "Edit Deduction Note" : "Add Deduction Note"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <Textarea
+              placeholder="Enter deduction note..."
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="min-h-[100px]"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button onClick={onSave}>Save Note</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
 
 export default function FacultyPayrollDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -90,6 +185,23 @@ export default function FacultyPayrollDetailPage() {
     } as any);
   };
 
+  const handleSaveNote = (payslipId: string, note: string) => {
+    dispatch({
+      type: dropdownActions.GET_DROPDOWN,
+      method: "PATCH",
+      endPoint: `/api/v1/payroll/${id}/payslips/${payslipId}/`,
+      body: { deduction_note: note },
+      auth: true,
+      getResponse: () => {
+        toast.success("Deduction note updated.");
+        fetchPayrollDetail(id!);
+      },
+      getError: (err: any) => {
+        toast.error(err?.response?.data?.message || "Failed to update note");
+      },
+    } as any);
+  };
+
   const monthNames = useMemo(
     () => [
       "January",
@@ -127,7 +239,7 @@ export default function FacultyPayrollDetailPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6 space-y-4">
+      <div className="mx-auto space-y-4">
         <Button variant="outline" onClick={() => navigate(-1)} className="h-9 text-sm">
           <ArrowLeft className="w-4 h-4 mr-2" /> Back
         </Button>
@@ -291,24 +403,26 @@ export default function FacultyPayrollDetailPage() {
             {
               key: "basic_salary",
               header: "Basic Salary",
-              render: (r: any) => formatAmount(r.basic_salary),
+              render: (r: any) => parseFloat(r.basic_salary) > 0 ? formatAmount(r.basic_salary) : "—",
             },
             {
               key: "sessions_conducted",
               header: "Sessions / Hours",
-              render: (r: any) => (
+              render: (r: any) => parseFloat(r.basic_salary) === 0 ? (
                 <div className="space-y-0.5">
-                  <div className="font-medium text-foreground">{r.sessions_conducted} Sessions</div>
-                  <div className="text-[10px] text-muted-foreground">
+                  {/* <div className="font-medium text-foreground">{r.sessions_conducted} Sessions</div> */}
+                  <div className="text-muted-foreground">
                     {r.total_session_hours} hrs
                   </div>
                 </div>
+              ) : (
+                <span className="text-muted-foreground">—</span>
               ),
             },
             {
               key: "hour_based_amount",
               header: "Hour-based Pay",
-              render: (r: any) => formatAmount(r.hour_based_amount),
+              render: (r: any) => parseFloat(r.basic_salary) === 0 ? formatAmount(r.hour_based_amount) : "—",
             },
             {
               key: "deductions",
@@ -321,23 +435,34 @@ export default function FacultyPayrollDetailPage() {
                 const totalDeduction = late + abs + leave + other;
 
                 return (
-                  <div className="space-y-0.5">
+                  <div className="space-y-1">
                     <span
                       className={`font-semibold ${totalDeduction > 0 ? "text-red-600" : "text-muted-foreground"}`}
                     >
                       {formatAmount(totalDeduction)}
                     </span>
-                    {totalDeduction > 0 && (
-                      <div className="text-[9px] text-red-500/80 font-mono flex flex-wrap gap-1 leading-none mt-0.5">
-                        {late > 0 && <span>Late: {formatAmount(late)}</span>}
-                        {abs > 0 && <span>Abs: {formatAmount(abs)}</span>}
-                        {leave > 0 && <span>Leave: {formatAmount(leave)}</span>}
-                        {other > 0 && <span>Other: {formatAmount(other)}</span>}
+                    {/* {totalDeduction > 0 && (
+                      <div className="text-[10px] text-red-600/90 flex flex-col gap-0.5 mt-0.5">
+                        {late > 0 && <span>• Late Penalty: {formatAmount(late)}</span>}
+                        {abs > 0 && <span>• Absence: {formatAmount(abs)}</span>}
+                        {leave > 0 && <span>• Leave: {formatAmount(leave)}</span>}
+                        {other > 0 && <span>• Other: {formatAmount(other)}</span>}
                       </div>
-                    )}
+                    )} */}
                   </div>
                 );
               },
+            },
+            {
+              key: "deduction_note",
+              header: "Deduction Note",
+              render: (r: any) => (
+                <DeductionNoteCell 
+                  row={r} 
+                  status={payrollData.status} 
+                  handleSave={handleSaveNote} 
+                />
+              ),
             },
             {
               key: "bonus",

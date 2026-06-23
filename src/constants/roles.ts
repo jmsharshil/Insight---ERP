@@ -4,7 +4,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   super_admin: {
     id: "super_admin", label: "Super Admin", description: "Unrestricted access across all branches",
     color: "bg-red-100", textColor: "text-red-800",
-    modules: ["dashboard","crm","students","courses_batches","timetable","attendance","fees","exams","exam_supervision","faculty","leave","chat","notifications","audit_logs","reports","payroll","settings","users"],
+    modules: ["dashboard","crm","students","courses_batches","timetable","attendance","fees","exams","exam_supervision","faculty","leave","chat","inventory","notifications","audit_logs","reports","payroll","settings","users"],
     canDelete: true, canExport: true,
   },
   branch_manager: {
