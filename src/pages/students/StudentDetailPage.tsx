@@ -1,19 +1,37 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { studentActions } from "@/redux/actions";
+import { studentActions, inventoryActions } from "@/redux/actions";
 import { setStudentDetail, setStudentDetailLoading, setStudentDetailError } from "@/redux/slices/studentSlice";
 import { RootState, AppDispatch } from "@/store";
 import { API } from "@/service/api";
 import { useUI } from "@/hooks/useUI";
 import { useToast } from "@/hooks/useToast";
 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+
 import { motion } from "framer-motion";
 import {
   ChevronLeft, Calendar, MapPin, Phone, Mail, FileText, User,
   CreditCard, GraduationCap, Shield, Clock, Building2, Heart,
   Globe, Droplets, BookOpen, QrCode, Download, ExternalLink,
-  Users, History, AlertCircle, CheckCircle2, Image
+  Users, History, AlertCircle, CheckCircle2, Image, Package, Plus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -200,6 +218,9 @@ function getStatusColor(status: string) {
 
 /* ─── Main Page ──────────────────────────────────────── */
 
+type BulkAllocLine = { item: string; quantity: string; notes: string };
+const blankBulkLine = (): BulkAllocLine => ({ item: "", quantity: "1", notes: "" });
+
 export default function StudentDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -208,6 +229,168 @@ export default function StudentDetailPage() {
   const { setPageTitle } = useUI();
 
   const { currentStudent: student, loadingDetail, detailError } = useSelector((state: RootState) => state.students);
+
+  const [issueOpen, setIssueOpen] = useState(false);
+  const [issueMode, setIssueMode] = useState<"single" | "bulk">("single");
+  const [issueLoading, setIssueLoading] = useState(false);
+  
+  const [issueForm, setIssueForm] = useState({ item: "", quantity: "1", notes: "" });
+  const [bulkLines, setBulkLines] = useState<BulkAllocLine[]>([blankBulkLine()]);
+
+  const [inventoryItems, setInventoryItems] = useState<any[]>([]);
+
+  const [returnOpen, setReturnOpen] = useState(false);
+  const [returnLoading, setReturnLoading] = useState(false);
+  const [returnTarget, setReturnTarget] = useState<any>(null);
+  const [returnNotes, setReturnNotes] = useState("");
+
+  const fetchInventoryItems = () => {
+    dispatch({
+      type: inventoryActions.GET_ITEMS,
+      method: "GET",
+      endPoint: API.INVENTORY.ITEMS,
+      auth: true,
+      getResponse: (res: any) => {
+        const data = Array.isArray(res?.results)
+          ? res.results
+          : Array.isArray(res?.data)
+            ? res.data
+            : Array.isArray(res?.data?.results)
+              ? res.data.results
+              : [];
+        setInventoryItems(data);
+      },
+      getError: () => toast.error("Failed to fetch inventory items"),
+    });
+  };
+
+  const handleOpenIssue = () => {
+    setIssueOpen(true);
+    fetchInventoryItems();
+  };
+
+  const handleIssueItem = () => {
+    dispatch({
+      type: inventoryActions.CREATE_ALLOCATION,
+      method: "POST",
+      endPoint: API.INVENTORY.ALLOCATIONS,
+      body: {
+        item: issueForm.item,
+        quantity: Number(issueForm.quantity),
+        status: "issued",
+        student: student?.id,
+        ...(issueForm.notes ? { notes: issueForm.notes } : {}),
+      },
+      auth: true,
+      setLoading: (v: boolean) => setIssueLoading(v),
+      getResponse: () => {
+        toast.success("Item issued successfully.");
+        setIssueOpen(false);
+        setIssueForm({ item: "", quantity: "1", notes: "" });
+        if (id) {
+          dispatch({
+            type: studentActions.GET_STUDENT_DETAIL,
+            method: "GET",
+            endPoint: API.STUDENTS.GET(id),
+            auth: true,
+            getResponse: (r: any) => {
+              if (r?.success && r?.data) {
+                dispatch(setStudentDetail(r.data));
+              }
+            }
+          });
+        }
+      },
+      getError: (err: any) => toast.error(err?.response?.data?.message || "Failed to issue item"),
+    });
+  };
+
+  const addBulkLine = () => setBulkLines(p => [...p, blankBulkLine()]);
+  const removeBulkLine = (idx: number) => setBulkLines(p => p.filter((_, i) => i !== idx));
+  const updateBulkLine = (idx: number, field: keyof BulkAllocLine, val: string) => {
+    setBulkLines(p => p.map((l, i) => i === idx ? { ...l, [field]: val } : l));
+  };
+
+  const handleBulkIssue = () => {
+    const body: any = {
+      student: student?.id,
+      allocations: bulkLines.map((line) => ({
+        item: line.item,
+        quantity: Number(line.quantity),
+        ...(line.notes ? { notes: line.notes } : {}),
+      })),
+    };
+
+    dispatch({
+      type: inventoryActions.BULK_ALLOCATION,
+      method: "POST",
+      endPoint: API.INVENTORY.ALLOCATION_BULK,
+      body,
+      auth: true,
+      setLoading: (v: boolean) => setIssueLoading(v),
+      getResponse: (res: any) => {
+        const created = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+        if (created.length > 0) {
+          toast.success(`${created.length} item(s) issued successfully.`);
+          setIssueOpen(false);
+          setBulkLines([blankBulkLine()]);
+          if (id) {
+            dispatch({
+              type: studentActions.GET_STUDENT_DETAIL,
+              method: "GET",
+              endPoint: API.STUDENTS.GET(id),
+              auth: true,
+              getResponse: (r: any) => {
+                if (r?.success && r?.data) {
+                  dispatch(setStudentDetail(r.data));
+                }
+              }
+            });
+          }
+        } else toast.error("Failed to issue items.");
+      },
+      getError: (err: any) => toast.error(err?.response?.data?.message || "Failed to issue items"),
+    });
+  };
+
+  const handleOpenReturn = (item: any) => {
+    setReturnTarget(item);
+    setReturnNotes("");
+    setReturnOpen(true);
+  };
+
+  const handleReturnItem = () => {
+    if (!returnTarget) return;
+    dispatch({
+      type: inventoryActions.RETURN_ALLOCATION,
+      method: "POST",
+      endPoint: API.INVENTORY.ALLOCATION_RETURN(returnTarget.allocation_id),
+      body: { return_notes: returnNotes },
+      auth: true,
+      setLoading: (v: boolean) => setReturnLoading(v),
+      getResponse: () => {
+        toast.success("Item returned successfully. Stock restored.");
+        setReturnOpen(false);
+        setReturnTarget(null);
+        setReturnNotes("");
+        // Reload student details to refresh returned item status
+        if (id) {
+          dispatch({
+            type: studentActions.GET_STUDENT_DETAIL,
+            method: "GET",
+            endPoint: API.STUDENTS.GET(id),
+            auth: true,
+            getResponse: (r: any) => {
+              if (r?.success && r?.data) {
+                dispatch(setStudentDetail(r.data));
+              }
+            }
+          });
+        }
+      },
+      getError: (err: any) => toast.error(err?.response?.data?.message || "Failed to return item"),
+    });
+  };
 
   useEffect(() => {
     setPageTitle("Student Profile");
@@ -355,13 +538,14 @@ export default function StudentDetailPage() {
 
       {/* ── Tabbed Content ── */}
       <Tabs defaultValue="profile">
-        <TabsList className="mb-5">
+        <TabsList className="mb-5 flex-wrap h-auto p-1">
           <TabsTrigger value="profile" className="gap-1.5"><User className="w-3.5 h-3.5" /> Profile</TabsTrigger>
           <TabsTrigger value="family" className="gap-1.5"><Users className="w-3.5 h-3.5" /> Family</TabsTrigger>
           <TabsTrigger value="academic" className="gap-1.5"><GraduationCap className="w-3.5 h-3.5" /> Academic</TabsTrigger>
           <TabsTrigger value="idcard" className="gap-1.5"><CreditCard className="w-3.5 h-3.5" /> ID Card</TabsTrigger>
           <TabsTrigger value="documents" className="gap-1.5"><FileText className="w-3.5 h-3.5" /> Documents</TabsTrigger>
           <TabsTrigger value="history" className="gap-1.5"><History className="w-3.5 h-3.5" /> History</TabsTrigger>
+          <TabsTrigger value="inventory" className="gap-1.5"><Package className="w-3.5 h-3.5" /> Inventory</TabsTrigger>
         </TabsList>
 
         {/* ── Tab: Profile ── */}
@@ -617,6 +801,66 @@ export default function StudentDetailPage() {
           </div>
         </TabsContent>
 
+        {/* ── Tab: Inventory ── */}
+        <TabsContent value="inventory" className="space-y-6">
+          <SectionCard title="Issued Inventory Items" icon={<Package className="w-4 h-4" />} index={0}>
+            <div className="flex justify-end mb-4">
+              <Button onClick={handleOpenIssue} className="gap-2" size="sm">
+                <Plus className="w-4 h-4" />
+                Allocate Item
+              </Button>
+            </div>
+            {student.issued_items?.length > 0 ? (
+              <div className="overflow-x-auto rounded-lg border border-border/50">
+                <table className="w-full text-sm text-left whitespace-nowrap">
+                  <thead className="bg-muted/50 text-muted-foreground border-b border-border/50">
+                    <tr>
+                      <th className="px-4 py-3 font-medium">Item Name</th>
+                      <th className="px-4 py-3 font-medium">Size</th>
+                      <th className="px-4 py-3 font-medium">Quantity</th>
+                      <th className="px-4 py-3 font-medium">Status</th>
+                      <th className="px-4 py-3 font-medium">Issued At</th>
+                      <th className="px-4 py-3 font-medium">Returned At</th>
+                      <th className="px-4 py-3 font-medium text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/30">
+                    {student.issued_items.map((item: any, i: number) => (
+                      <tr key={item.allocation_id || i} className="hover:bg-muted/10 transition-colors">
+                        <td className="px-4 py-3 font-medium text-text-primary">
+                          {item.item_name}
+                          {item.notes && <span className="block text-xs text-muted-foreground mt-0.5 font-normal">{item.notes}</span>}
+                        </td>
+                        <td className="px-4 py-3">{item.item_size || "—"}</td>
+                        <td className="px-4 py-3">{item.quantity}</td>
+                        <td className="px-4 py-3">
+                          <Badge className={`font-normal border ${item.status === 'issued' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                            {item.status_display || item.status}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">{formatDateTime(item.issued_at)}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{formatDateTime(item.returned_at)}</td>
+                        <td className="px-4 py-3 text-right">
+                          {item.status === 'issued' && (
+                            <Button variant="outline" size="sm" onClick={() => handleOpenReturn(item)} className="h-7 text-xs">
+                              Return
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-10 text-muted-foreground bg-muted/10 rounded-lg border border-dashed border-border/50">
+                <Package className="w-10 h-10 mb-3 opacity-20" />
+                <p className="text-sm">No items issued to this student.</p>
+              </div>
+            )}
+          </SectionCard>
+        </TabsContent>
+
         {/* ── Tab: History ── */}
         <TabsContent value="history" className="space-y-6">
           <SectionCard title="Status History" icon={<History className="w-4 h-4" />} index={0}>
@@ -677,6 +921,203 @@ export default function StudentDetailPage() {
           </SectionCard>
         </TabsContent>
       </Tabs>
+
+      {/* ── Issue Item Dialog ── */}
+      <Dialog open={issueOpen} onOpenChange={setIssueOpen}>
+        <DialogContent className="max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Issue Item(s) to {student.full_name}</DialogTitle>
+          </DialogHeader>
+
+          <div className="flex items-center gap-2 mb-2">
+            <Button
+              variant={issueMode === "single" ? "default" : "outline"}
+              className="gap-2 h-9 flex-1"
+              onClick={() => setIssueMode("single")}
+            >
+              <User className="w-4 h-4" /> Single Issue
+            </Button>
+            <Button
+              variant={issueMode === "bulk" ? "default" : "outline"}
+              className={`gap-2 h-9 flex-1 ${issueMode === "bulk" ? "bg-amber-500 hover:bg-amber-600 text-white border-none" : ""}`}
+              onClick={() => setIssueMode("bulk")}
+            >
+              <Package className="w-4 h-4" /> Bulk Issue
+            </Button>
+          </div>
+
+          {issueMode === "single" && (
+            <div className="space-y-4 py-2">
+              <div>
+                <Label className="text-sm mb-1 block">Item *</Label>
+                <Select
+                  value={issueForm.item}
+                  onValueChange={(v) => setIssueForm((prev) => ({ ...prev, item: v }))}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Select item" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {inventoryItems.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.name} {item.size ? `(${item.size})` : ""} — Stock: {item.total_stock}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-sm mb-1 block">Quantity *</Label>
+                <Input
+                  type="number"
+                  value={issueForm.quantity}
+                  onChange={(e) => setIssueForm((prev) => ({ ...prev, quantity: e.target.value }))}
+                  min="1"
+                  className="h-10"
+                />
+              </div>
+              <div>
+                <Label className="text-sm mb-1 block">Notes</Label>
+                <Textarea
+                  value={issueForm.notes}
+                  onChange={(e) => setIssueForm((prev) => ({ ...prev, notes: e.target.value }))}
+                  rows={3}
+                  placeholder="Optional notes..."
+                  className="resize-none"
+                />
+              </div>
+            </div>
+          )}
+
+          {issueMode === "bulk" && (
+            <div className="space-y-4 py-2">
+              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-medium">Items to Issue *</Label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs gap-1"
+                    onClick={addBulkLine}
+                  >
+                    <Plus className="w-3 h-3" /> Add Item
+                  </Button>
+                </div>
+
+                {bulkLines.map((line, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-2 items-end p-2 border border-border rounded-lg">
+                    <div className="col-span-6">
+                      {idx === 0 && <Label className="text-xs mb-1 block">Item</Label>}
+                      <Select
+                        value={line.item}
+                        onValueChange={(v) => updateBulkLine(idx, "item", v)}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Select item" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {inventoryItems.map((item) => (
+                            <SelectItem key={item.id} value={item.id}>
+                              {item.name} {item.size ? `(${item.size})` : ""} — {item.total_stock}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-2">
+                      {idx === 0 && <Label className="text-xs mb-1 block">Qty</Label>}
+                      <Input
+                        type="number"
+                        value={line.quantity}
+                        onChange={(e) => updateBulkLine(idx, "quantity", e.target.value)}
+                        min="1"
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      {idx === 0 && <Label className="text-xs mb-1 block">Notes</Label>}
+                      <Input
+                        value={line.notes}
+                        onChange={(e) => updateBulkLine(idx, "notes", e.target.value)}
+                        placeholder="Optional"
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div className="col-span-1">
+                      {bulkLines.length > 1 && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-500"
+                          onClick={() => removeBulkLine(idx)}
+                        >
+                          ×
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground bg-blue-50 border border-blue-200 rounded p-2">
+                ℹ All items will be issued atomically — if any item fails, none will be issued.
+              </p>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIssueOpen(false)} disabled={issueLoading}>
+              Cancel
+            </Button>
+            <Button
+              onClick={issueMode === "single" ? handleIssueItem : handleBulkIssue}
+              disabled={
+                issueLoading ||
+                (issueMode === "single" && (!issueForm.item || !issueForm.quantity)) ||
+                (issueMode === "bulk" && bulkLines.some((l) => !l.item || !l.quantity))
+              }
+              className={`${issueMode === "bulk" ? "bg-amber-500 hover:bg-amber-600 text-white" : "bg-primary hover:bg-primary/90 text-primary-foreground"}`}
+            >
+              {issueLoading
+                ? "Issuing..."
+                : issueMode === "bulk"
+                  ? `Issue ${bulkLines.length} Item(s)`
+                  : "Issue Item"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Return Confirm Dialog ── */}
+      <Dialog open={returnOpen} onOpenChange={o => { setReturnOpen(o); if (!o) setReturnTarget(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Return Item</DialogTitle>
+            {returnTarget && (
+              <p className="text-sm text-muted-foreground mt-1">
+                Returning <span className="font-semibold text-foreground">{returnTarget.item_name}</span> (Qty: {returnTarget.quantity})
+              </p>
+            )}
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label className="text-sm mb-1 block">Return Notes</Label>
+              <Textarea
+                value={returnNotes}
+                onChange={e => setReturnNotes(e.target.value)}
+                placeholder="Condition on return, notes, etc."
+                rows={3}
+                className="resize-none"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReturnOpen(false)} disabled={returnLoading}>Cancel</Button>
+            <Button onClick={handleReturnItem} disabled={returnLoading} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+              {returnLoading ? "Returning…" : "Confirm Return"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

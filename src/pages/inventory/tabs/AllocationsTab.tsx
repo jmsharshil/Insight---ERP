@@ -145,9 +145,10 @@ export default function AllocationsTab() {
       },
       getError: () => {},
     });
-    // Fetch faculty
+
+    // Fetch faculty concurrently, using a different action type to avoid takeLatest cancellation
     dispatch({
-      type: userActions.GET_USERS,
+      type: userActions.GET_USERS_FOR_ASSIGN,
       method: "GET",
       endPoint: "/api/auth/users/?role=faculty",
       auth: true,
