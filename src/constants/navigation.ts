@@ -29,7 +29,7 @@ export const NAV_ITEMS: Record<ModuleId, NavItem> = {
   notifications:    { label: "Notifications",    icon: Bell,            path: "/notifications" },
   audit_logs:       { label: "Audit Logs",       icon: FileText,        path: "/audit-logs" },
   reports:          { label: "Reports",          icon: BarChart3,       path: "/reports" },
-  payroll:          { label: "My Payroll",       icon: Wallet,          path: "/payroll" },
+  payroll:          { label: "Payroll",          icon: Wallet,          path: "/payroll" },
   settings:         { label: "Settings",         icon: Settings,        path: "/settings" },
   users:            { label: "Users",            icon: Users,           path: "/users" },
   inventory:        { label: "Inventory",        icon: Package,         path: "/inventory" },

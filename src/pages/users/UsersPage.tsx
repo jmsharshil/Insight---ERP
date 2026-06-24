@@ -91,6 +91,8 @@ const ROLE_CHOICES = [
   { value: "student", label: "Student" },
   { value: "parents", label: "Parents" },
   { value: "faculty", label: "Faculty" },
+  { value: "house_keeping", label: "House Keping" },
+  { value: "security", label: "Security" },
 ] as const;
 
 /* ─── Column definitions ────────────────────────────────────── */
@@ -215,6 +217,7 @@ export default function UsersPage() {
     phone: "",
     branch: "",
     role: "",
+    salary_retention_percentage: "0",
     is_active: true,
   });
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
@@ -281,10 +284,13 @@ export default function UsersPage() {
   useEffect(() => {
     if (selectedUser) {
       setEditForm({
+        username: selectedUser.username || "",
+        role: selectedUser.role || "",
         name: selectedUser.name || "",
         email: selectedUser.email || "",
         phone: selectedUser.phone || "",
         branch: selectedUser.branch || "",
+        salary_retention_percentage: selectedUser.salary_retention_percentage !== undefined ? String(selectedUser.salary_retention_percentage) : "0",
         is_active: selectedUser.is_active ?? true,
       });
     }
@@ -361,6 +367,7 @@ export default function UsersPage() {
       phone: "",
       branch: "",
       role: "",
+      salary_retention_percentage: "0",
       is_active: true,
     });
     setProfilePicFile(null);
@@ -381,6 +388,7 @@ export default function UsersPage() {
       name: editForm.name,
       role: editForm.role,
       branch: editForm.branch,
+      salary_retention_percentage: editForm.salary_retention_percentage,
       is_active: editForm.is_active,
     };
 
@@ -421,6 +429,7 @@ export default function UsersPage() {
       phone: selectedUser.phone || "",
       branch: selectedUser.branch || "",
       role: selectedUser.role || "",
+      salary_retention_percentage: selectedUser.salary_retention_percentage !== undefined ? String(selectedUser.salary_retention_percentage) : "0",
       is_active: selectedUser.is_active,
     });
     setProfilePicFile(null);
@@ -458,6 +467,7 @@ export default function UsersPage() {
     formData.append("email", editForm.email);
     formData.append("phone", editForm.phone);
     formData.append("is_active", String(editForm.is_active));
+    formData.append("salary_retention_percentage", editForm.salary_retention_percentage);
     if (editForm.branch) formData.append("branch", editForm.branch);
     if (profilePicFile) formData.append("profile_pic", profilePicFile);
 
@@ -932,6 +942,33 @@ export default function UsersPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* Salary Retention Percentage */}
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                      Salary Retention Percentage
+                    </Label>
+                    {isEditing ? (
+                      <Select
+                        value={editForm.salary_retention_percentage}
+                        onValueChange={(val) => setEditForm((f) => ({ ...f, salary_retention_percentage: val }))}
+                      >
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Select percentage" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">0%</SelectItem>
+                          <SelectItem value="10">10%</SelectItem>
+                          <SelectItem value="15">15%</SelectItem>
+                          <SelectItem value="20">20%</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="text-sm font-medium text-text-primary pt-0.5">
+                        {selectedUser?.salary_retention_percentage !== undefined ? `${selectedUser.salary_retention_percentage}%` : "0%"}
+                      </div>
+                    )}
+                  </div>
 
                   {/* Status (Switch if editing, Badge if viewing) */}
                   <div className="space-y-1">

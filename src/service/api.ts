@@ -224,6 +224,12 @@ export const API = {
     APPROVE: (id: string) => `/api/v1/leave/${id}/approve/`,
     REJECT: (id: string) => `/api/v1/leave/${id}/reject/`,
 
+    // Student Applications
+    STUDENT_LIST: "/api/v1/leave/student/",
+    STUDENT_DETAIL: (id: string) => `/api/v1/leave/student/${id}/`,
+    STUDENT_APPROVE: (id: string) => `/api/v1/leave/student/${id}/approve/`,
+    STUDENT_REJECT: (id: string) => `/api/v1/leave/student/${id}/reject/`,
+
     // Late Entries
     LATE_ENTRIES: "/api/v1/leave/late-entries/",
     LATE_ENTRY_DETAIL: (id: string) => `/api/v1/leave/late-entries/${id}/`,
@@ -260,5 +266,21 @@ export const API = {
     ALLOCATION_BULK:     "/api/v1/inventory/allocations/bulk_issue/",
 
     FORECAST:            "/api/v1/inventory/forecast/",
+  },
+
+  PAYROLL: {
+    RUNS:               "/api/v1/payroll/",
+    RUN_DETAIL:         (id: string) => `/api/v1/payroll/${id}/`,
+    APPROVE:            (id: string) => `/api/v1/payroll/${id}/approve/`,
+    DISBURSE:           (id: string) => `/api/v1/payroll/${id}/disburse/`,
+    PAYSLIPS:           (runId: string) => `/api/v1/payroll/${runId}/payslips/`,
+    PAYSLIP_DETAIL:     (runId: string, slipId: string) => `/api/v1/payroll/${runId}/payslips/${slipId}/`,
+    MY:                 "/api/v1/payroll/my/",
+    LATE_POLICY:        "/api/v1/payroll/late-policy/",
+    LATE_POLICY_DETAIL: (id: string) => `/api/v1/payroll/late-policy/${id}/`,
+    EXTRA_HOURS:        "/api/v1/payroll/extra-hours/",
+    EXTRA_HOUR_DETAIL:  (id: string) => `/api/v1/payroll/extra-hours/${id}/`,
+    FACULTY_PAYSLIPS:   (fId: string) => `/api/v1/faculty/${fId}/payslips/`,
+    FACULTY_PREVIEW:    (fId: string) => `/api/v1/faculty/${fId}/salary-preview/`,
   },
 } as const;

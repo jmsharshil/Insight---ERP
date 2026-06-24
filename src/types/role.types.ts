@@ -2,7 +2,8 @@ export type RoleId =
   | "super_admin" | "branch_manager" | "admin_senior_executive" | "admin_executive"
   | "front_desk" | "counsellor" | "tele_caller" | "sales_senior_executive"
   | "sales_executive" | "student" | "parents" | "faculty"
-  | "exam_supervisor" | "paper_checker" | "accountant" | "settings" | "users";
+  | "exam_supervisor" | "paper_checker" | "accountant" | "settings" | "users"
+  | "security" | "house_keeping";
 
 export type ModuleId =
   | "crm" | "students" | "courses_batches" | "timetable" | "attendance" | "fees"
