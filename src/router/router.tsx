@@ -44,6 +44,7 @@ const AuditLogsPage = lazy(() => import("@/pages/audit-logs/AuditLogsPage"));
 const ReportsPage = lazy(() => import("@/pages/reports/ReportsPage"));
 const SettingsPage = lazy(() => import("@/pages/settings/SettingsPage"));
 const UsersPage = lazy(() => import("@/pages/users/UsersPage"));
+const PayrollPage = lazy(() => import("@/pages/payroll/PayrollPage"));
 
 /* ─── Helpers ───────────────────────────────────────────────── */
 
@@ -149,7 +150,7 @@ const router = createBrowserRouter([
     },
     { module: "audit_logs", path: "/audit-logs", element: withSuspense(<AuditLogsPage />) },
     { module: "reports", path: "/reports", element: withSuspense(<ReportsPage />) },
-    { module: "payroll", path: "/payroll", element: <ModulePlaceholder title="My Payroll" /> },
+    { module: "payroll", path: "/payroll", element: withSuspense(<PayrollPage />) },
     { module: "users", path: "/users", element: withSuspense(<UsersPage />) },
   ].map(({ module, path, element }) => ({
     element: <ProtectedRoute module={module as any} />,

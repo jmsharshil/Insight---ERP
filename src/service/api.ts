@@ -267,4 +267,20 @@ export const API = {
 
     FORECAST:            "/api/v1/inventory/forecast/",
   },
+
+  PAYROLL: {
+    RUNS:               "/api/v1/payroll/",
+    RUN_DETAIL:         (id: string) => `/api/v1/payroll/${id}/`,
+    APPROVE:            (id: string) => `/api/v1/payroll/${id}/approve/`,
+    DISBURSE:           (id: string) => `/api/v1/payroll/${id}/disburse/`,
+    PAYSLIPS:           (runId: string) => `/api/v1/payroll/${runId}/payslips/`,
+    PAYSLIP_DETAIL:     (runId: string, slipId: string) => `/api/v1/payroll/${runId}/payslips/${slipId}/`,
+    MY:                 "/api/v1/payroll/my/",
+    LATE_POLICY:        "/api/v1/payroll/late-policy/",
+    LATE_POLICY_DETAIL: (id: string) => `/api/v1/payroll/late-policy/${id}/`,
+    EXTRA_HOURS:        "/api/v1/payroll/extra-hours/",
+    EXTRA_HOUR_DETAIL:  (id: string) => `/api/v1/payroll/extra-hours/${id}/`,
+    FACULTY_PAYSLIPS:   (fId: string) => `/api/v1/faculty/${fId}/payslips/`,
+    FACULTY_PREVIEW:    (fId: string) => `/api/v1/faculty/${fId}/salary-preview/`,
+  },
 } as const;

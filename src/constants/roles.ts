@@ -16,43 +16,43 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   admin_senior_executive: {
     id: "admin_senior_executive", label: "Admin Senior Executive", description: "Operational head for a branch",
     color: "bg-blue-100", textColor: "text-blue-800",
-    modules: ["dashboard","crm","students","courses_batches","timetable","attendance","fees","exams","leave","chat","notifications","reports"],
+    modules: ["dashboard","crm","students","courses_batches","timetable","attendance","fees","exams","leave","chat","notifications","reports","payroll"],
     canDelete: false, canExport: true,
   },
   admin_executive: {
     id: "admin_executive", label: "Admin Executive", description: "Day-to-day data entry operator",
     color: "bg-sky-100", textColor: "text-sky-800",
-    modules: ["dashboard","students","attendance","courses_batches","timetable"],
+    modules: ["dashboard","students","attendance","courses_batches","timetable","payroll"],
     canDelete: false, canExport: false,
   },
   front_desk: {
     id: "front_desk", label: "Front Desk", description: "Reception and inquiry intake",
     color: "bg-teal-100", textColor: "text-teal-800",
-    modules: ["dashboard","crm"],
+    modules: ["dashboard","crm","payroll"],
     canDelete: false, canExport: false,
   },
   counsellor: {
     id: "counsellor", label: "Counsellor", description: "Manages assigned leads through pipeline",
     color: "bg-cyan-100", textColor: "text-cyan-800",
-    modules: ["dashboard","crm","students"],
+    modules: ["dashboard","crm","students","payroll"],
     canDelete: false, canExport: false,
   },
   tele_caller: {
     id: "tele_caller", label: "Tele Caller", description: "Outreach and lead contact role",
     color: "bg-indigo-100", textColor: "text-indigo-800",
-    modules: ["dashboard","crm"],
+    modules: ["dashboard","crm","payroll"],
     canDelete: false, canExport: false,
   },
   sales_senior_executive: {
     id: "sales_senior_executive", label: "Sales Senior Executive", description: "Full CRM pipeline authority",
     color: "bg-violet-100", textColor: "text-violet-800",
-    modules: ["dashboard","crm","reports"],
+    modules: ["dashboard","crm","reports","payroll"],
     canDelete: false, canExport: true,
   },
   sales_executive: {
     id: "sales_executive", label: "Sales Executive", description: "Lead assignment only",
     color: "bg-fuchsia-100", textColor: "text-fuchsia-800",
-    modules: ["dashboard","crm"],
+    modules: ["dashboard","crm","payroll"],
     canDelete: false, canExport: false,
   },
   student: {
@@ -90,5 +90,17 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
     color: "bg-lime-100", textColor: "text-lime-800",
     modules: ["dashboard","fees","payroll","reports","notifications"],
     canDelete: false, canExport: true,
+  },
+  security: {
+    id: "security", label: "Security", description: "Campus security personnel",
+    color: "bg-slate-100", textColor: "text-slate-800",
+    modules: ["dashboard","attendance","payroll","leave","chat","notifications","settings"],
+    canDelete: false, canExport: false,
+  },
+  house_keeping: {
+    id: "house_keeping", label: "House Keeping", description: "Maintenance and house keeping staff",
+    color: "bg-pink-100", textColor: "text-pink-800",
+    modules: ["dashboard","attendance","payroll","leave","chat","notifications","settings"],
+    canDelete: false, canExport: false,
   },
 };
