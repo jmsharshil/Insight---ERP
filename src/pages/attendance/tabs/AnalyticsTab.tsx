@@ -2,11 +2,23 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
 import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
 } from "recharts";
 import { attendanceActions } from "@/redux/actions";
 import { API } from "@/service/api";
-import { setAnalytics, setAnalyticsLoading, setAttendanceError } from "@/redux/slices/attendanceSlice";
+import {
+  setAnalytics,
+  setAnalyticsLoading,
+  setAttendanceError,
+} from "@/redux/slices/attendanceSlice";
 import type { RootState, AppDispatch } from "@/store";
 import { useToast } from "@/hooks/useToast";
 import { TableSkeleton } from "@/components/common/Skeletons";
@@ -14,10 +26,25 @@ import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { TrendingUp, X } from "lucide-react";
 
-const CHART_COLORS = ["#F7A900", "#3B82F6", "#10B981", "#EF4444", "#8B5CF6", "#EC4899", "#14B8A6", "#F59E0B"];
+const CHART_COLORS = [
+  "#F7A900",
+  "#3B82F6",
+  "#10B981",
+  "#EF4444",
+  "#8B5CF6",
+  "#EC4899",
+  "#14B8A6",
+  "#F59E0B",
+];
 
 export default function AnalyticsTab({ dropdowns }: { dropdowns?: any }) {
   const dispatch = useDispatch<AppDispatch>();
@@ -25,19 +52,29 @@ export default function AnalyticsTab({ dropdowns }: { dropdowns?: any }) {
   const { analytics, analyticsLoading } = useSelector((s: RootState) => s.attendance);
   const { user } = useAuth();
 
-  const branches = dropdowns?.branches?.filter((b: any) => {
-    if (user && user.role === "branch_manager" && user.branch) {
-      return b.id === user.branch;
-    }
-    return true;
-  }) || [];
+  const branches =
+    dropdowns?.branches?.filter((b: any) => {
+      if (user && user.role === "branch_manager" && user.branch) {
+        return b.id === user.branch;
+      }
+      return true;
+    }) || [];
   const batches = dropdowns?.batches || [];
 
-  const [filters, setFilters] = useState({ branch_id: (user && user.role === "branch_manager" && user.branch) ? user.branch : "", batch_id: "", date_from: "", date_to: "", trend_type: "daily" });
+  const [filters, setFilters] = useState({
+    branch_id: user && user.role === "branch_manager" && user.branch ? user.branch : "",
+    batch_id: "",
+    date_from: "",
+    date_to: "",
+    trend_type: "daily",
+  });
+  const [batchWiseData, setBatchWiseData] = useState<any[]>([]);
 
   const fetchAnalytics = () => {
     const p = new URLSearchParams();
-    Object.entries(filters).forEach(([k, v]) => { if (v) p.set(k, v); });
+    Object.entries(filters).forEach(([k, v]) => {
+      if (v) p.set(k, v);
+    });
     dispatch({
       type: attendanceActions.GET_ANALYTICS,
       method: "GET",
@@ -46,25 +83,57 @@ export default function AnalyticsTab({ dropdowns }: { dropdowns?: any }) {
       setLoading: (v: boolean) => dispatch(setAnalyticsLoading(v)),
       getResponse: (res: any) => {
         if (res?.success && res?.data) dispatch(setAnalytics(res.data));
-        else { dispatch(setAttendanceError("Failed to load analytics")); toast.error("Failed to load analytics."); }
+        else {
+          dispatch(setAttendanceError("Failed to load analytics"));
+          toast.error("Failed to load analytics.");
+        }
       },
       getError: (err: any) => {
         const msg = err?.response?.data?.message || err?.message || "Failed to fetch analytics";
-        dispatch(setAttendanceError(msg)); toast.error(msg);
+        dispatch(setAttendanceError(msg));
+        toast.error(msg);
       },
     });
   };
 
-  useEffect(() => { fetchAnalytics(); }, []);
+  const fetchBatchWise = () => {
+    const p = new URLSearchParams();
+    if (filters.date_from) p.set("date_from", filters.date_from);
+    if (filters.date_to) p.set("date_to", filters.date_to);
+    if (filters.branch_id) p.set("branch", filters.branch_id);
 
-  if (analyticsLoading && !analytics) return <TableSkeleton columns={3} rows={4} className="mt-0" />;
+    dispatch({
+      type: "GET_DROPDOWN", // Use a generic dispatch to just fetch and callback
+      method: "GET",
+      endPoint: `/api/v1/attendance/batch-wise/${p.toString() ? `?${p}` : ""}`,
+      auth: true,
+      getResponse: (res: any) => {
+        if (res?.success && res?.data) setBatchWiseData(res.data);
+        else setBatchWiseData([]);
+      },
+    } as any);
+  };
+
+  useEffect(() => {
+    fetchAnalytics();
+    fetchBatchWise();
+  }, []);
+
+  if (analyticsLoading && !analytics)
+    return <TableSkeleton columns={3} rows={4} className="mt-0" />;
 
   const trendData = analytics?.attendance_trends
-    ? (filters.trend_type === "daily"
-        ? analytics.attendance_trends.daily_trend
-        : filters.trend_type === "weekly"
-        ? analytics.attendance_trends.weekly_trend?.map(w => ({ date: w.week_start_date, percentage: w.percentage }))
-        : analytics.attendance_trends.monthly_trend?.map(m => ({ date: m.month, percentage: m.percentage })))
+    ? filters.trend_type === "daily"
+      ? analytics.attendance_trends.daily_trend
+      : filters.trend_type === "weekly"
+        ? analytics.attendance_trends.weekly_trend?.map((w) => ({
+            date: w.week_start_date,
+            percentage: w.percentage,
+          }))
+        : analytics.attendance_trends.monthly_trend?.map((m) => ({
+            date: m.month,
+            percentage: m.percentage,
+          }))
     : [];
 
   return (
@@ -73,50 +142,103 @@ export default function AnalyticsTab({ dropdowns }: { dropdowns?: any }) {
       <div className="bg-white rounded-xl border border-border p-4 flex flex-wrap gap-3 items-end">
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">Branch</Label>
-          <Select value={filters.branch_id} onValueChange={v => setFilters(f => ({ ...f, branch_id: v === "all" ? "" : v }))}>
-            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Branch" /></SelectTrigger>
+          <Select
+            value={filters.branch_id}
+            onValueChange={(v) => setFilters((f) => ({ ...f, branch_id: v === "all" ? "" : v }))}
+          >
+            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10">
+              <SelectValue placeholder="Branch" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Branches</SelectItem>
               {branches.map((b: any) => (
-                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                <SelectItem key={b.id} value={b.id}>
+                  {b.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">Batch</Label>
-          <Select value={filters.batch_id} onValueChange={v => setFilters(f => ({ ...f, batch_id: v === "all" ? "" : v }))}>
-            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Batch" /></SelectTrigger>
+          <Select
+            value={filters.batch_id}
+            onValueChange={(v) => setFilters((f) => ({ ...f, batch_id: v === "all" ? "" : v }))}
+          >
+            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10">
+              <SelectValue placeholder="Batch" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Batches</SelectItem>
               {batches?.map((b: any) => (
-                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                <SelectItem key={b.id} value={b.id}>
+                  {b.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">From</Label>
-          <Input type="date" className="h-9 text-sm w-40" value={filters.date_from} onChange={e => setFilters(f => ({ ...f, date_from: e.target.value }))} />
+          <Input
+            type="date"
+            className="h-9 text-sm w-40"
+            value={filters.date_from}
+            onChange={(e) => setFilters((f) => ({ ...f, date_from: e.target.value }))}
+          />
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">To</Label>
-          <Input type="date" className="h-9 text-sm w-40" value={filters.date_to} onChange={e => setFilters(f => ({ ...f, date_to: e.target.value }))} />
+          <Input
+            type="date"
+            className="h-9 text-sm w-40"
+            value={filters.date_to}
+            onChange={(e) => setFilters((f) => ({ ...f, date_to: e.target.value }))}
+          />
         </div>
-        <Button onClick={fetchAnalytics} className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm">Apply</Button>
-        <Button variant="outline" className="h-9 text-sm" onClick={() => setFilters({ branch_id: (user && user.role === "branch_manager" && user.branch) ? user.branch : "", batch_id: "", date_from: "", date_to: "", trend_type: "daily" })}><X className="w-3 h-3 mr-1" />Clear</Button>
+        <Button
+          onClick={() => {
+            fetchAnalytics();
+            fetchBatchWise();
+          }}
+          className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm"
+        >
+          Apply
+        </Button>
+        <Button
+          variant="outline"
+          className="h-9 text-sm"
+          onClick={() =>
+            setFilters({
+              branch_id: user && user.role === "branch_manager" && user.branch ? user.branch : "",
+              batch_id: "",
+              date_from: "",
+              date_to: "",
+              trend_type: "daily",
+            })
+          }
+        >
+          <X className="w-3 h-3 mr-1" />
+          Clear
+        </Button>
       </div>
 
       {analytics && (
         <>
           {/* Average Attendance */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-xl border border-border p-5">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-xl border border-border p-5"
+          >
             <div className="flex items-center gap-3 mb-1">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                 <TrendingUp className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <div className="text-3xl font-bold text-foreground">{analytics.average_attendance.toFixed(1)}%</div>
+                <div className="text-3xl font-bold text-foreground">
+                  {analytics.average_attendance.toFixed(1)}%
+                </div>
                 <div className="text-xs text-muted-foreground">Overall Average Attendance</div>
               </div>
             </div>
@@ -126,8 +248,13 @@ export default function AnalyticsTab({ dropdowns }: { dropdowns?: any }) {
           <div className="bg-white rounded-xl border border-border p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-sm text-foreground">Attendance Trend</h3>
-              <Select value={filters.trend_type} onValueChange={v => setFilters(f => ({ ...f, trend_type: v }))}>
-                <SelectTrigger className="h-8 text-xs w-28"><SelectValue /></SelectTrigger>
+              <Select
+                value={filters.trend_type}
+                onValueChange={(v) => setFilters((f) => ({ ...f, trend_type: v }))}
+              >
+                <SelectTrigger className="h-8 text-xs w-28">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="daily">Daily</SelectItem>
                   <SelectItem value="weekly">Weekly</SelectItem>
@@ -139,13 +266,21 @@ export default function AnalyticsTab({ dropdowns }: { dropdowns?: any }) {
               <ResponsiveContainer width="100%" height={240}>
                 <LineChart data={trendData}>
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                  <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} tick={{ fontSize: 11 }} />
+                  <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11 }} />
                   <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
-                  <Line type="monotone" dataKey="percentage" stroke="#F7A900" strokeWidth={2} dot={{ fill: "#F7A900", r: 3 }} />
+                  <Line
+                    type="monotone"
+                    dataKey="percentage"
+                    stroke="#F7A900"
+                    strokeWidth={2}
+                    dot={{ fill: "#F7A900", r: 3 }}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="text-center py-8 text-muted-foreground text-sm">No trend data available.</div>
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                No trend data available.
+              </div>
             )}
           </div>
 
@@ -154,9 +289,12 @@ export default function AnalyticsTab({ dropdowns }: { dropdowns?: any }) {
             <div className="bg-white rounded-xl border border-border p-5">
               <h3 className="font-semibold text-sm mb-4 text-foreground">Branch Comparison</h3>
               <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={analytics.branch_comparison} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
+                <BarChart
+                  data={analytics.branch_comparison}
+                  margin={{ top: 4, right: 16, left: 0, bottom: 4 }}
+                >
                   <XAxis dataKey="branch_name" tick={{ fontSize: 11 }} />
-                  <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} tick={{ fontSize: 11 }} />
+                  <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11 }} />
                   <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
                   <Bar dataKey="percentage" radius={[6, 6, 0, 0]}>
                     {analytics.branch_comparison.map((_, idx) => (
@@ -168,18 +306,64 @@ export default function AnalyticsTab({ dropdowns }: { dropdowns?: any }) {
             </div>
           )}
 
-          {/* Batch Comparison */}
-          {analytics.batch_comparison?.length > 0 && (
+          {/* Batch Comparison from new API */}
+          {batchWiseData?.length > 0 && (
             <div className="bg-white rounded-xl border border-border p-5">
               <h3 className="font-semibold text-sm mb-4 text-foreground">Batch Comparison</h3>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={analytics.batch_comparison} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
-                  <XAxis dataKey="batch_name" tick={{ fontSize: 11 }} />
-                  <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
-                  <Bar dataKey="percentage" radius={[6, 6, 0, 0]} fill="#3B82F6" />
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={batchWiseData} margin={{ top: 4, right: 16, left: 0, bottom: 40 }}>
+                  <XAxis
+                    dataKey="batch_name"
+                    tick={{ fontSize: 11 }}
+                    angle={-30}
+                    textAnchor="end"
+                  />
+                  <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11 }} />
+                  <Tooltip
+                    formatter={(v: number, name: string) => [
+                      name === "attendance_percentage" ? `${v.toFixed(1)}%` : v,
+                      name === "attendance_percentage"
+                        ? "Attendance"
+                        : name === "present_count"
+                          ? "Present"
+                          : "Absent",
+                    ]}
+                  />
+                  <Bar dataKey="attendance_percentage" radius={[6, 6, 0, 0]} fill="#3B82F6">
+                    {batchWiseData.map((_, idx) => (
+                      <Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
+
+              {/* Optional: Batch Data Table below the chart */}
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="text-muted-foreground border-b border-border">
+                    <tr>
+                      <th className="py-2 font-medium">Batch</th>
+                      <th className="py-2 font-medium">Students</th>
+                      <th className="py-2 font-medium text-emerald-600">Present</th>
+                      <th className="py-2 font-medium text-red-600">Absent</th>
+                      <th className="py-2 font-medium">Attendance %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {batchWiseData.map((b) => (
+                      <tr key={b.batch_id} className="border-b border-border/40">
+                        <td className="py-2 font-medium text-foreground">
+                          {b.batch_name} ({b.batch_code})
+                        </td>
+                        <td className="py-2">{b.total_students}</td>
+                        <td className="py-2 text-emerald-600 font-medium">{b.present_count}</td>
+                        <td className="py-2 text-red-600 font-medium">{b.absent_count}</td>
+                        <td className="py-2 font-medium">{b.attendance_percentage}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </>

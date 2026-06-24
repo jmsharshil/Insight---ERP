@@ -14,6 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 const VIOLATION_BADGE: Record<string, string> = {
   absent:       "bg-red-100 text-red-700",
@@ -39,6 +41,8 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
     student_id: "", branch_id: (user && user.role === "branch_manager" && user.branch) ? user.branch : "", violation_type: "", is_resolved: "", date_from: "", date_to: "",
   });
 
+  const [resolveModal, setResolveModal] = useState({ isOpen: false, violationId: "", note: "", submitting: false });
+
   const fetchViolations = () => {
     const p = new URLSearchParams();
     Object.entries(f).forEach(([k, v]) => { if (v) p.set(k, v); });
@@ -59,6 +63,34 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
   useEffect(() => { fetchViolations(); }, []);
 
   const clear = () => setF({ student_id: "", branch_id: (user && user.role === "branch_manager" && user.branch) ? user.branch : "", violation_type: "", is_resolved: "", date_from: "", date_to: "" });
+
+  const handleResolveSubmit = () => {
+    if (!resolveModal.note.trim()) {
+      toast.error("Please provide a resolution note.");
+      return;
+    }
+
+    setResolveModal(p => ({ ...p, submitting: true }));
+    dispatch({
+      type: "GET_DROPDOWN", // generic dispatch for simple API call
+      method: "PATCH",
+      endPoint: `/api/v1/attendance/violations/${resolveModal.violationId}/`,
+      body: {
+        is_resolved: true,
+        resolution_note: resolveModal.note,
+      },
+      auth: true,
+      getResponse: (res: any) => {
+        toast.success("Violation resolved successfully.");
+        setResolveModal({ isOpen: false, violationId: "", note: "", submitting: false });
+        fetchViolations();
+      },
+      getError: (err: any) => {
+        toast.error(err?.response?.data?.message || "Failed to resolve violation.");
+        setResolveModal(p => ({ ...p, submitting: false }));
+      },
+    } as any);
+  };
 
   return (
     <div className="space-y-4">
@@ -120,9 +152,12 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
           <table className="w-full text-sm">
             <thead className="bg-muted/40">
               <tr>
-                {["Student", "Roll No.", "Violation Type", "Date", "Description", "Status", "Created At"].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">{h}</th>
-                ))}
+                {["Student", "Roll No.", "Violation Type", "Date", "Description", "Status", "Created At", "Actions"].map(h => {
+                  const hasUnresolved = violations.some((v: any) => !v.is_resolved);
+                  const showActions = !isParentOrStudent && hasUnresolved;
+                  if (h === "Actions" && !showActions) return null;
+                  return <th key={h} className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">{h}</th>
+                })}
               </tr>
             </thead>
             <tbody>
@@ -148,19 +183,71 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
                     </Badge>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs">{v.date}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground max-w-[200px] truncate">{v.description}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground max-w-[200px] truncate" title={v.description}>{v.description}</td>
                   <td className="px-4 py-3">
-                    <Badge className={`text-xs ${v.is_resolved ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                      {v.is_resolved ? "Resolved" : "Unresolved"}
-                    </Badge>
+                    <div className="flex flex-col gap-1">
+                      <Badge className={`text-xs w-max ${v.is_resolved ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                        {v.is_resolved ? "Resolved" : "Unresolved"}
+                      </Badge>
+                      {v.is_resolved && v.resolution_note && (
+                        <span className="text-[10px] text-muted-foreground truncate max-w-[150px]" title={v.resolution_note}>
+                          Note: {v.resolution_note}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(v.created_at).toLocaleDateString()}</td>
+                  {(!isParentOrStudent && violations.some((val: any) => !val.is_resolved)) && (
+                    <td className="px-4 py-3 text-xs">
+                      {!v.is_resolved && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs px-2"
+                          onClick={() => setResolveModal({ isOpen: true, violationId: v.id, note: "", submitting: false })}
+                        >
+                          Resolve
+                        </Button>
+                      )}
+                    </td>
+                  )}
                 </motion.tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+
+      <Dialog open={resolveModal.isOpen} onOpenChange={(open) => !resolveModal.submitting && setResolveModal(p => ({ ...p, isOpen: open }))}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Resolve Violation</DialogTitle>
+            <DialogDescription>
+              Mark this violation as resolved. Provide a note detailing the action taken (e.g., warning letter issued, meeting with parents).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="note">Resolution Note</Label>
+              <Textarea
+                id="note"
+                placeholder="Type resolution details here..."
+                value={resolveModal.note}
+                onChange={(e) => setResolveModal(p => ({ ...p, note: e.target.value }))}
+                className="min-h-[100px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResolveModal(p => ({ ...p, isOpen: false }))} disabled={resolveModal.submitting}>
+              Cancel
+            </Button>
+            <Button onClick={handleResolveSubmit} disabled={resolveModal.submitting}>
+              {resolveModal.submitting ? "Resolving..." : "Mark as Resolved"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

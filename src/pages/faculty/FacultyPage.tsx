@@ -26,7 +26,7 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend
+  Legend,
 } from "recharts";
 import { API } from "@/service/api";
 import {
@@ -60,13 +60,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetFooter,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
@@ -90,16 +84,17 @@ export default function FacultyPage() {
   const activeTab = params.get("tab") || "summary";
 
   const setActiveTab = (tab: string) => {
-    setParams((prev) => {
-      prev.set("tab", tab);
-      return prev;
-    }, { replace: true });
+    setParams(
+      (prev) => {
+        prev.set("tab", tab);
+        return prev;
+      },
+      { replace: true },
+    );
   };
 
   const dispatch = useDispatch<AppDispatch>();
-  const { facultyList, loading: isLoading } = useSelector(
-    (state: RootState) => state.faculty,
-  );
+  const { facultyList, loading: isLoading } = useSelector((state: RootState) => state.faculty);
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [selectedFacultyId, setSelectedFacultyId] = useState<string | null>(null);
@@ -128,14 +123,14 @@ export default function FacultyPage() {
     faculty_id: "",
     batch_id: "",
     subject_id: "",
-    session_date: new Date().toISOString().split('T')[0],
+    session_date: new Date().toISOString().split("T")[0],
     chapter_covered: "",
     topics_covered: "",
     completion_percentage: 100,
     status: "completed",
     start_time: "10:00",
     end_time: "12:00",
-    notes: ""
+    notes: "",
   });
   const [submittingSession, setSubmittingSession] = useState(false);
   const [chapters, setChapters] = useState<any[]>([]);
@@ -158,6 +153,8 @@ export default function FacultyPage() {
   const [summaryFacultyId, setSummaryFacultyId] = useState<string>("");
   const [summaryData, setSummaryData] = useState<any>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [hasFetchedFaculties, setHasFetchedFaculties] = useState(false);
+  const [summaryFetchAttempted, setSummaryFetchAttempted] = useState(false);
 
   useEffect(() => {
     if (activeTab === "summary") {
@@ -170,7 +167,7 @@ export default function FacultyPage() {
       } else {
         endPoint += `&faculty_id=${summaryFacultyId}`;
       }
-      
+
       dispatch({
         type: dropdownActions.GET_DROPDOWN,
         method: "GET",
@@ -179,20 +176,23 @@ export default function FacultyPage() {
         getResponse: (res: any) => {
           setSummaryData(res?.data || res);
           setSummaryLoading(false);
+          setSummaryFetchAttempted(true);
         },
         getError: () => {
           setSummaryLoading(false);
+          setSummaryFetchAttempted(true);
           toast.error("Failed to load summary");
-        }
+        },
       } as any);
     }
   }, [activeTab, summaryMonth, isFaculty, user?.id, summaryFacultyId, dispatch, toast]);
 
   const fetchLatePolicy = () => {
     setLatePolicyFetching(true);
-    const endPoint = user && user.role === "branch_manager" && user.branch
-      ? `/api/v1/payroll/late-policy/?branch_id=${user.branch}`
-      : "/api/v1/payroll/late-policy/";
+    const endPoint =
+      user && user.role === "branch_manager" && user.branch
+        ? `/api/v1/payroll/late-policy/?branch_id=${user.branch}`
+        : "/api/v1/payroll/late-policy/";
 
     dispatch({
       type: facultyAction.GET_PAYROLL_LATE_POLICY,
@@ -201,7 +201,7 @@ export default function FacultyPage() {
       auth: true,
       getResponse: (res: any) => {
         const policyData = res?.data || res;
-        const policies = Array.isArray(policyData) ? policyData : (policyData ? [policyData] : []);
+        const policies = Array.isArray(policyData) ? policyData : policyData ? [policyData] : [];
         setAllLatePolicies(policies);
         if (policies.length > 0) {
           const policy = policies[0];
@@ -219,7 +219,7 @@ export default function FacultyPage() {
       },
       getError: () => {
         setLatePolicyFetching(false);
-      }
+      },
     });
   };
 
@@ -230,9 +230,10 @@ export default function FacultyPage() {
   useEffect(() => {
     if (activeTab === "sessions") {
       setSessionsLoading(true);
-      const endPoint = user && user.role === "branch_manager" && user.branch
-        ? `/api/v1/faculty/sessions/?branch_id=${user.branch}`
-        : "/api/v1/faculty/sessions/";
+      const endPoint =
+        user && user.role === "branch_manager" && user.branch
+          ? `/api/v1/faculty/sessions/?branch_id=${user.branch}`
+          : "/api/v1/faculty/sessions/";
 
       dispatch({
         type: facultyAction.GET_SESSIONS,
@@ -249,7 +250,7 @@ export default function FacultyPage() {
         getError: () => {
           toast.error("Failed to load sessions");
           setSessionsLoading(false);
-        }
+        },
       } as any);
     }
   }, [activeTab, dispatch, toast]);
@@ -276,7 +277,7 @@ export default function FacultyPage() {
         getError: () => {
           toast.error("Failed to load branches");
           setBranchesLoading(false);
-        }
+        },
       });
     }
   }, [user?.role, dispatch, toast]);
@@ -293,7 +294,7 @@ export default function FacultyPage() {
       },
       getError: (err: any) => {
         toast.error(err?.response?.data?.message || "Failed to delete policy");
-      }
+      },
     });
   };
 
@@ -327,10 +328,23 @@ export default function FacultyPage() {
     });
   };
 
-  const monthNames = useMemo(() => [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  ], []);
+  const monthNames = useMemo(
+    () => [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ],
+    [],
+  );
 
   const payrollMonths = useMemo(() => {
     const months = payrolls.map((p) => `${monthNames[p.month - 1]} ${p.year}`);
@@ -345,9 +359,10 @@ export default function FacultyPage() {
 
   const fetchPayroll = () => {
     setPayrollLoading(true);
-    const endPoint = user && user.role === "branch_manager" && user.branch
-      ? `/api/v1/payroll/?branch_id=${user.branch}`
-      : "/api/v1/payroll/";
+    const endPoint =
+      user && user.role === "branch_manager" && user.branch
+        ? `/api/v1/payroll/?branch_id=${user.branch}`
+        : "/api/v1/payroll/";
 
     dispatch({
       type: facultyAction.GET_PAYROLL,
@@ -364,7 +379,7 @@ export default function FacultyPage() {
       getError: (err: any) => {
         toast.error(err?.response?.data?.message || "Failed to fetch payroll data");
         setPayrollLoading(false);
-      }
+      },
     });
   };
 
@@ -404,7 +419,7 @@ export default function FacultyPage() {
       getError: () => {
         toast.error("Failed to load dropdown values");
         setDropdownsLoading(false);
-      }
+      },
     });
   };
 
@@ -416,7 +431,7 @@ export default function FacultyPage() {
 
   useEffect(() => {
     if (sessionReportForm.subject_id && subjects.length > 0) {
-      const selectedSubj = subjects.find(s => s.id === sessionReportForm.subject_id);
+      const selectedSubj = subjects.find((s) => s.id === sessionReportForm.subject_id);
       if (selectedSubj && Array.isArray(selectedSubj.chapters)) {
         setChapters(selectedSubj.chapters);
       } else {
@@ -437,8 +452,14 @@ export default function FacultyPage() {
       return;
     }
     setSubmittingSession(true);
-    const start_time = sessionReportForm.start_time.length === 5 ? `${sessionReportForm.start_time}:00` : sessionReportForm.start_time;
-    const end_time = sessionReportForm.end_time.length === 5 ? `${sessionReportForm.end_time}:00` : sessionReportForm.end_time;
+    const start_time =
+      sessionReportForm.start_time.length === 5
+        ? `${sessionReportForm.start_time}:00`
+        : sessionReportForm.start_time;
+    const end_time =
+      sessionReportForm.end_time.length === 5
+        ? `${sessionReportForm.end_time}:00`
+        : sessionReportForm.end_time;
 
     dispatch({
       type: facultyAction.CREATE_SESSIONS,
@@ -447,7 +468,7 @@ export default function FacultyPage() {
       body: {
         ...sessionReportForm,
         start_time,
-        end_time
+        end_time,
       },
       auth: true,
       getResponse: () => {
@@ -455,9 +476,10 @@ export default function FacultyPage() {
         setSessionDialogOpen(false);
         setSubmittingSession(false);
         if (activeTab === "sessions") {
-          const endPoint = user && user.role === "branch_manager" && user.branch
-            ? `/api/v1/faculty/sessions/?branch_id=${user.branch}`
-            : "/api/v1/faculty/sessions/";
+          const endPoint =
+            user && user.role === "branch_manager" && user.branch
+              ? `/api/v1/faculty/sessions/?branch_id=${user.branch}`
+              : "/api/v1/faculty/sessions/";
 
           dispatch({
             type: dropdownActions.GET_DROPDOWN,
@@ -467,14 +489,14 @@ export default function FacultyPage() {
             getResponse: (res: any) => {
               const list = res?.data || res?.results || res;
               if (Array.isArray(list)) setSessions(list);
-            }
+            },
           } as any);
         }
       },
       getError: (err: any) => {
         toast.error(err?.response?.data?.message || "Failed to submit session report");
         setSubmittingSession(false);
-      }
+      },
     } as any);
   };
 
@@ -492,7 +514,7 @@ export default function FacultyPage() {
       },
       getError: () => {
         console.error("Failed to load latest faculty details");
-      }
+      },
     });
   };
 
@@ -508,7 +530,8 @@ export default function FacultyPage() {
     if (!selectedFacultyForAssign || !selectedBatchId) return;
 
     setAssignLoading(true);
-    const apiSubjectId = selectedSubjectId === "none" || !selectedSubjectId ? null : selectedSubjectId;
+    const apiSubjectId =
+      selectedSubjectId === "none" || !selectedSubjectId ? null : selectedSubjectId;
 
     dispatch({
       type: batchAction.ASSIGN_FACULTY,
@@ -530,7 +553,7 @@ export default function FacultyPage() {
       getError: (err: any) => {
         toast.error(err?.response?.data?.message || "Failed to assign faculty");
         setAssignLoading(false);
-      }
+      },
     });
   };
 
@@ -552,7 +575,7 @@ export default function FacultyPage() {
       getError: (err: any) => {
         toast.error(err?.response?.data?.message || "Failed to remove faculty");
         setAssignLoading(false);
-      }
+      },
     });
   };
 
@@ -575,15 +598,15 @@ export default function FacultyPage() {
 
     return batches.filter((b) => {
       const nameMatch = facultyBatchNames.includes(b.name?.trim().toLowerCase());
-      const facultyMatch = b.assigned_faculty?.some((f: any) => f.faculty_id === selectedFacultyForAssign.id);
+      const facultyMatch = b.assigned_faculty?.some(
+        (f: any) => f.faculty_id === selectedFacultyForAssign.id,
+      );
       return nameMatch || facultyMatch;
     });
   }, [batches, selectedFacultyForAssign]);
 
   const assignableBatches = useMemo(() => {
-    return batches.filter(
-      (b) => !assignedBatches.some((ab) => ab.id === b.id)
-    );
+    return batches.filter((b) => !assignedBatches.some((ab) => ab.id === b.id));
   }, [batches, assignedBatches]);
 
   const handleRowClick = (faculty: any) => {
@@ -592,9 +615,10 @@ export default function FacultyPage() {
   };
 
   useEffect(() => {
-    const endPoint = user && user.role === "branch_manager" && user.branch
-      ? `/api/v1/faculty/?branch_id=${user.branch}`
-      : "/api/v1/faculty/";
+    const endPoint =
+      user && user.role === "branch_manager" && user.branch
+        ? `/api/v1/faculty/?branch_id=${user.branch}`
+        : "/api/v1/faculty/";
 
     dispatch({
       type: facultyAction.GET_FACULTY,
@@ -604,19 +628,22 @@ export default function FacultyPage() {
       setLoading: (val: boolean) => dispatch(setFacultyLoading(val)),
       getResponse: (res: any) => {
         if (res.data) dispatch(setFaculty(res.data));
+        setHasFetchedFaculties(true);
       },
       getError: (err: any) => {
         dispatch(setFacultyError(err.message));
         toast.error("Failed to load faculty members");
+        setHasFetchedFaculties(true);
       },
     } as any);
-  }, [dispatch, toast]);
+  }, [dispatch, toast, user]);
 
   const filteredFacultyList = useMemo(() => {
     let list = facultyList;
     if (user && user.role !== "super_admin" && user.branch) {
-      list = list.filter(f => {
-        const branchId = typeof f.branch === "object" && f.branch !== null ? (f.branch as any).id : f.branch;
+      list = list.filter((f) => {
+        const branchId =
+          typeof f.branch === "object" && f.branch !== null ? (f.branch as any).id : f.branch;
         return branchId === user.branch;
       });
     }
@@ -632,7 +659,7 @@ export default function FacultyPage() {
   const filteredSessions = useMemo(() => {
     let list = sessions;
     if (user && user.role !== "super_admin" && user.branch) {
-      list = list.filter(s => {
+      list = list.filter((s) => {
         const branchId = typeof s.branch === "object" && s.branch !== null ? s.branch.id : s.branch;
         return branchId === user.branch;
       });
@@ -643,8 +670,8 @@ export default function FacultyPage() {
   const filteredLatePolicies = useMemo(() => {
     let list = allLatePolicies;
     if (user && user.role !== "super_admin" && user.branch) {
-      list = list.filter(p => {
-        const branchId = typeof p.branch_id === "string" ? p.branch_id : (p.branch?.id || p.branch);
+      list = list.filter((p) => {
+        const branchId = typeof p.branch_id === "string" ? p.branch_id : p.branch?.id || p.branch;
         return branchId === user.branch;
       });
     }
@@ -654,8 +681,9 @@ export default function FacultyPage() {
   const payrollRows = useMemo(() => {
     let list = payrolls;
     if (user && user.role !== "super_admin" && user.branch) {
-      list = list.filter(p => {
-        const branchId = typeof p.branch === "object" && p.branch !== null ? p.branch.id : (p.branch_id || p.branch);
+      list = list.filter((p) => {
+        const branchId =
+          typeof p.branch === "object" && p.branch !== null ? p.branch.id : p.branch_id || p.branch;
         return branchId === user.branch;
       });
     }
@@ -689,7 +717,7 @@ export default function FacultyPage() {
       },
       getError: (err: any) => {
         toast.error(err?.response?.data?.message || "Failed to approve payroll");
-      }
+      },
     });
   };
 
@@ -705,19 +733,19 @@ export default function FacultyPage() {
       },
       getError: (err: any) => {
         toast.error(err?.response?.data?.message || "Failed to disburse payroll");
-      }
+      },
     });
   };
 
   const submitApproval = () => {
-    const draftRows = payrollRows.filter(r => r.status === "draft");
+    const draftRows = payrollRows.filter((r) => r.status === "draft");
     if (draftRows.length === 0) {
       toast.info("No draft payrolls to approve for this period.");
       return;
     }
 
     let completed = 0;
-    draftRows.forEach(r => {
+    draftRows.forEach((r) => {
       dispatch({
         type: dropdownActions.GET_DROPDOWN,
         method: "POST",
@@ -731,14 +759,16 @@ export default function FacultyPage() {
           }
         },
         getError: (err: any) => {
-          toast.error(`Failed to approve payroll for ${r.branch_name}: ${err?.response?.data?.message || ""}`);
-        }
+          toast.error(
+            `Failed to approve payroll for ${r.branch_name}: ${err?.response?.data?.message || ""}`,
+          );
+        },
       });
     });
   };
 
   const approveAll = () => {
-    const approvedRows = payrollRows.filter(r => r.status === "approved" || r.status === "draft");
+    const approvedRows = payrollRows.filter((r) => r.status === "approved" || r.status === "draft");
     if (approvedRows.length === 0) {
       toast.info("No actionable payrolls to disburse for this period.");
       setConfirmApprove(false);
@@ -746,7 +776,7 @@ export default function FacultyPage() {
     }
 
     let completed = 0;
-    approvedRows.forEach(r => {
+    approvedRows.forEach((r) => {
       dispatch({
         type: dropdownActions.GET_DROPDOWN,
         method: "POST",
@@ -760,130 +790,154 @@ export default function FacultyPage() {
           }
         },
         getError: (err: any) => {
-          toast.error(`Failed to disburse payroll for ${r.branch_name}: ${err?.response?.data?.message || ""}`);
-        }
+          toast.error(
+            `Failed to disburse payroll for ${r.branch_name}: ${err?.response?.data?.message || ""}`,
+          );
+        },
       });
     });
     setConfirmApprove(false);
   };
 
   const renderSummaryTab = () => {
-    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+    const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8", "#82CA9D"];
 
-    const subjectData = summaryData?.by_subject?.map((s: any) => ({
-      name: s.subject_name || s.name || s.subject || "Unknown",
-      sessions: s.sessions || s.count || 0,
-      hours: s.hours || 0,
-    })) || [];
+    const subjectData =
+      summaryData?.by_subject?.map((s: any) => ({
+        name: s.subject_name || s.name || s.subject || "Unknown",
+        sessions: s.sessions || s.count || 0,
+        hours: s.hours || 0,
+      })) || [];
 
-    const batchData = summaryData?.by_batch?.map((b: any) => ({
-      name: b.batch_name || b.name || b.batch || "Unknown",
-      sessions: b.sessions || b.count || 0,
-      hours: b.hours || 0,
-    })) || [];
+    const batchData =
+      summaryData?.by_batch?.map((b: any) => ({
+        name: b.batch_name || b.name || b.batch || "Unknown",
+        sessions: b.sessions || b.count || 0,
+        hours: b.hours || 0,
+      })) || [];
 
     return (
       <TabsContent value="summary" className="mt-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-        <h3 className="text-lg font-semibold">Monthly Summary</h3>
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          {!isFaculty && (
-            <Select value={summaryFacultyId} onValueChange={setSummaryFacultyId}>
-              <SelectTrigger className="w-full sm:w-64 bg-muted/10 border-border">
-                <SelectValue placeholder="Select Faculty" />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredFacultyList.map((f: any) => (
-                  <SelectItem key={f.id} value={f.id}>
-                    {f.full_name} {f.employee_id ? `(${f.employee_id})` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <Input 
-            type="month" 
-            value={summaryMonth} 
-            onChange={(e) => setSummaryMonth(e.target.value)} 
-            className="w-48"
-          />
-        </div>
-      </div>
-      {summaryLoading ? (
-        <FacultySummarySkeleton />
-      ) : summaryData ? (
-        <div className="space-y-6">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="rounded-xl border border-border bg-card p-5">
-              <div className="text-sm text-muted-foreground mb-1">Total Sessions</div>
-              <div className="text-3xl font-bold">{summaryData.total_sessions || 0}</div>
-            </div>
-            <div className="rounded-xl border border-border bg-card p-5">
-              <div className="text-sm text-muted-foreground mb-1">Completed / In Progress</div>
-              <div className="text-3xl font-bold text-success">{summaryData.completed_sessions || 0} <span className="text-xl text-muted-foreground">/ {summaryData.in_progress_sessions || 0}</span></div>
-            </div>
-            <div className="rounded-xl border border-border bg-card p-5">
-              <div className="text-sm text-muted-foreground mb-1">Total Hours</div>
-              <div className="text-3xl font-bold text-primary">{summaryData.total_hours || 0}h</div>
-            </div>
-            <div className="rounded-xl border border-border bg-card p-5">
-              <div className="text-sm text-muted-foreground mb-1">Avg Completion</div>
-              <div className="text-3xl font-bold">{summaryData.avg_completion_percentage || 0}%</div>
-            </div>
-          </div>
-          
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="rounded-xl border border-border bg-card p-5 h-[350px] flex flex-col">
-              <h4 className="font-semibold mb-4">Sessions by Subject</h4>
-              {subjectData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={subjectData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="sessions"
-                    >
-                      {subjectData.map((entry: any, index: number) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                 <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">No data available</div>
-              )}
-            </div>
-            <div className="rounded-xl border border-border bg-card p-5 h-[350px] flex flex-col">
-              <h4 className="font-semibold mb-4">Sessions by Batch</h4>
-              {batchData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={batchData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                    <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
-                    <Bar dataKey="sessions" fill="#8884d8" name="Sessions" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">No data available</div>
-              )}
-            </div>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+          <h3 className="text-lg font-semibold">Monthly Summary</h3>
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            {!isFaculty && (
+              <Select value={summaryFacultyId} onValueChange={setSummaryFacultyId}>
+                <SelectTrigger className="w-full sm:w-64 bg-muted/10 border-border">
+                  <SelectValue placeholder="Select Faculty" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredFacultyList.map((f: any) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.full_name} {f.employee_id ? `(${f.employee_id})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Input
+              type="month"
+              value={summaryMonth}
+              onChange={(e) => setSummaryMonth(e.target.value)}
+              className="w-48"
+            />
           </div>
         </div>
-      ) : (
-        <div className="py-12 text-center text-muted-foreground">
-           No summary data available for this month.
-        </div>
-      )}
-    </TabsContent>
-  );
+        {summaryLoading ||
+        (!summaryFetchAttempted &&
+          (isFaculty || !hasFetchedFaculties || filteredFacultyList.length > 0)) ? (
+          <FacultySummarySkeleton />
+        ) : summaryData ? (
+          <div className="space-y-6">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="rounded-xl border border-border bg-card p-5">
+                <div className="text-sm text-muted-foreground mb-1">Total Sessions</div>
+                <div className="text-3xl font-bold">{summaryData.total_sessions || 0}</div>
+              </div>
+              <div className="rounded-xl border border-border bg-card p-5">
+                <div className="text-sm text-muted-foreground mb-1">Completed / In Progress</div>
+                <div className="text-3xl font-bold text-success">
+                  {summaryData.completed_sessions || 0}{" "}
+                  <span className="text-xl text-muted-foreground">
+                    / {summaryData.in_progress_sessions || 0}
+                  </span>
+                </div>
+              </div>
+              <div className="rounded-xl border border-border bg-card p-5">
+                <div className="text-sm text-muted-foreground mb-1">Total Hours</div>
+                <div className="text-3xl font-bold text-primary">
+                  {summaryData.total_hours || 0}h
+                </div>
+              </div>
+              <div className="rounded-xl border border-border bg-card p-5">
+                <div className="text-sm text-muted-foreground mb-1">Avg Completion</div>
+                <div className="text-3xl font-bold">
+                  {summaryData.avg_completion_percentage || 0}%
+                </div>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="rounded-xl border border-border bg-card p-5 h-[350px] flex flex-col">
+                <h4 className="font-semibold mb-4">Sessions by Subject</h4>
+                {subjectData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={subjectData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="sessions"
+                      >
+                        {subjectData.map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
+                    No data available
+                  </div>
+                )}
+              </div>
+              <div className="rounded-xl border border-border bg-card p-5 h-[350px] flex flex-col">
+                <h4 className="font-semibold mb-4">Sessions by Batch</h4>
+                {batchData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={batchData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                      <Tooltip cursor={{ fill: "rgba(0,0,0,0.05)" }} />
+                      <Bar
+                        dataKey="sessions"
+                        fill="#8884d8"
+                        name="Sessions"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
+                    No data available
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="py-12 text-center text-muted-foreground">
+            No summary data available for this month.
+          </div>
+        )}
+      </TabsContent>
+    );
   };
 
   if (isFaculty) {
@@ -896,22 +950,24 @@ export default function FacultyPage() {
           title="My Faculty Hub"
           subtitle="Attendance, sessions, leave and payroll in one place"
           actions={
-            <Button onClick={() => {
-              setSessionReportForm({
-                faculty_id: isFaculty ? (user?.id || "") : "",
-                batch_id: "",
-                subject_id: "",
-                session_date: new Date().toISOString().split('T')[0],
-                chapter_covered: "",
-                topics_covered: "",
-                completion_percentage: 100,
-                status: "completed",
-                start_time: "10:00",
-                end_time: "12:00",
-                notes: ""
-              });
-              setSessionDialogOpen(true);
-            }}>
+            <Button
+              onClick={() => {
+                setSessionReportForm({
+                  faculty_id: isFaculty ? user?.id || "" : "",
+                  batch_id: "",
+                  subject_id: "",
+                  session_date: new Date().toISOString().split("T")[0],
+                  chapter_covered: "",
+                  topics_covered: "",
+                  completion_percentage: 100,
+                  status: "completed",
+                  start_time: "10:00",
+                  end_time: "12:00",
+                  notes: "",
+                });
+                setSessionDialogOpen(true);
+              }}
+            >
               <Plus className="w-4 h-4 mr-1.5" /> Submit Session Report
             </Button>
           }
@@ -977,45 +1033,60 @@ export default function FacultyPage() {
                 setIsSessionSheetOpen(true);
               }}
               columns={[
-                { 
-                  key: "date", 
+                {
+                  key: "date",
                   header: "Date",
-                  render: (r: any) => r.session_date ? new Date(r.session_date).toLocaleDateString() : (r.date ? new Date(r.date).toLocaleDateString() : "—")
+                  render: (r: any) =>
+                    r.session_date
+                      ? new Date(r.session_date).toLocaleDateString()
+                      : r.date
+                        ? new Date(r.date).toLocaleDateString()
+                        : "—",
                 },
-                { 
-                  key: "batch", 
+                {
+                  key: "batch",
                   header: "Batch",
-                  render: (r: any) => r.batch_name || r.batch?.name || r.batch || "—"
+                  render: (r: any) => r.batch_name || r.batch?.name || r.batch || "—",
                 },
-                { 
-                  key: "subject", 
+                {
+                  key: "subject",
                   header: "Subject",
-                  render: (r: any) => r.subject_name || r.subject?.name || r.subject || "—"
+                  render: (r: any) => r.subject_name || r.subject?.name || r.subject || "—",
                 },
-                { 
-                  key: "chapter", 
+                {
+                  key: "chapter",
                   header: "Chapter",
-                  render: (r: any) => r.chapter_covered || r.chapter || "—"
+                  render: (r: any) => r.chapter_covered || r.chapter || "—",
                 },
-                { 
-                  key: "topic", 
+                {
+                  key: "topic",
                   header: "Topic",
-                  render: (r: any) => r.topics_covered || r.topic || "—"
+                  render: (r: any) => r.topics_covered || r.topic || "—",
                 },
-                { 
-                  key: "time", 
+                {
+                  key: "time",
                   header: "Time",
-                  render: (r: any) => r.start_time && r.end_time ? `${r.start_time.substring(0, 5)} - ${r.end_time.substring(0, 5)}` : "—"
+                  render: (r: any) =>
+                    r.start_time && r.end_time
+                      ? `${r.start_time.substring(0, 5)} - ${r.end_time.substring(0, 5)}`
+                      : "—",
                 },
                 {
                   key: "completion",
                   header: "%",
                   render: (r: any) => `${r.completion_percentage || r.completionPercent || 0}%`,
                 },
-                { 
-                  key: "status", 
+                {
+                  key: "status",
                   header: "Status",
-                  render: (r: any) => <Badge variant={r.status === "completed" ? "default" : "secondary"} className="capitalize">{r.status_display || r.status?.replace("_", " ") || "—"}</Badge> 
+                  render: (r: any) => (
+                    <Badge
+                      variant={r.status === "completed" ? "default" : "secondary"}
+                      className="capitalize"
+                    >
+                      {r.status_display || r.status?.replace("_", " ") || "—"}
+                    </Badge>
+                  ),
                 },
               ]}
             />
@@ -1174,22 +1245,24 @@ export default function FacultyPage() {
 
         <TabsContent value="sessions" className="mt-4">
           <div className="flex justify-end mb-4">
-            <Button onClick={() => {
-              setSessionReportForm({
-                faculty_id: isFaculty ? (user?.id || "") : "",
-                batch_id: "",
-                subject_id: "",
-                session_date: new Date().toISOString().split('T')[0],
-                chapter_covered: "",
-                topics_covered: "",
-                completion_percentage: 100,
-                status: "completed",
-                start_time: "10:00",
-                end_time: "12:00",
-                notes: ""
-              });
-              setSessionDialogOpen(true);
-            }}>
+            <Button
+              onClick={() => {
+                setSessionReportForm({
+                  faculty_id: isFaculty ? user?.id || "" : "",
+                  batch_id: "",
+                  subject_id: "",
+                  session_date: new Date().toISOString().split("T")[0],
+                  chapter_covered: "",
+                  topics_covered: "",
+                  completion_percentage: 100,
+                  status: "completed",
+                  start_time: "10:00",
+                  end_time: "12:00",
+                  notes: "",
+                });
+                setSessionDialogOpen(true);
+              }}
+            >
               <Plus className="w-4 h-4 mr-1.5" /> Submit Session Report
             </Button>
           </div>
@@ -1202,30 +1275,35 @@ export default function FacultyPage() {
               setIsSessionSheetOpen(true);
             }}
             columns={[
-              { 
-                key: "date", 
+              {
+                key: "date",
                 header: "Date",
-                render: (r: any) => r.session_date ? new Date(r.session_date).toLocaleDateString() : (r.date ? new Date(r.date).toLocaleDateString() : "—")
+                render: (r: any) =>
+                  r.session_date
+                    ? new Date(r.session_date).toLocaleDateString()
+                    : r.date
+                      ? new Date(r.date).toLocaleDateString()
+                      : "—",
               },
-              { 
-                key: "faculty", 
+              {
+                key: "faculty",
                 header: "Faculty",
-                render: (r: any) => r.faculty_name || r.faculty?.full_name || r.facultyId || "—"
+                render: (r: any) => r.faculty_name || r.faculty?.full_name || r.facultyId || "—",
               },
-              { 
-                key: "batch", 
+              {
+                key: "batch",
                 header: "Batch",
-                render: (r: any) => r.batch_name || r.batch?.name || r.batch || "—"
+                render: (r: any) => r.batch_name || r.batch?.name || r.batch || "—",
               },
-              { 
-                key: "subject", 
+              {
+                key: "subject",
                 header: "Subject",
-                render: (r: any) => r.subject_name || r.subject?.name || r.subject || "—"
+                render: (r: any) => r.subject_name || r.subject?.name || r.subject || "—",
               },
-              { 
-                key: "chapter", 
+              {
+                key: "chapter",
                 header: "Chapter",
-                render: (r: any) => r.chapter_covered || r.chapter || "—"
+                render: (r: any) => r.chapter_covered || r.chapter || "—",
               },
               // {
               //   key: "topic",
@@ -1235,7 +1313,7 @@ export default function FacultyPage() {
               //       .split(",")
               //       .map((t: string) => t.trim())
               //       .filter(Boolean);
-              
+
               //     return topics.length ? (
               //       <div className="flex flex-wrap gap-1">
               //         {topics.map((topic: string) => (
@@ -1252,25 +1330,35 @@ export default function FacultyPage() {
               //     );
               //   },
               // },
-              { 
-                key: "time", 
+              {
+                key: "time",
                 header: "Time",
-                render: (r: any) => r.start_time && r.end_time ? `${r.start_time.substring(0, 5)} - ${r.end_time.substring(0, 5)}` : "—"
+                render: (r: any) =>
+                  r.start_time && r.end_time
+                    ? `${r.start_time.substring(0, 5)} - ${r.end_time.substring(0, 5)}`
+                    : "—",
               },
               {
                 key: "completion",
                 header: "%",
                 render: (r: any) => `${r.completion_percentage || r.completionPercent || 0}%`,
               },
-              { 
-                key: "status", 
+              {
+                key: "status",
                 header: "Status",
-                render: (r: any) => <Badge variant={r.status === "completed" ? "default" : "secondary"} className="capitalize">{r.status_display || r.status?.replace("_", " ") || "—"}</Badge> 
+                render: (r: any) => (
+                  <Badge
+                    variant={r.status === "completed" ? "default" : "secondary"}
+                    className="capitalize"
+                  >
+                    {r.status_display || r.status?.replace("_", " ") || "—"}
+                  </Badge>
+                ),
               },
-              { 
-                key: "notes", 
+              {
+                key: "notes",
                 header: "Notes",
-                render: (r: any) => r.notes || r.remarks || "—" 
+                render: (r: any) => r.notes || r.remarks || "—",
               },
             ]}
           />
@@ -1313,7 +1401,7 @@ export default function FacultyPage() {
                 {
                   key: "month",
                   header: "Period",
-                  render: (r: any) => `${monthNames[r.month - 1] || r.month} ${r.year}`
+                  render: (r: any) => `${monthNames[r.month - 1] || r.month} ${r.year}`,
                 },
                 { key: "faculty_count", header: "Faculties" },
                 {
@@ -1321,8 +1409,10 @@ export default function FacultyPage() {
                   header: "Total Amount",
                   render: (r: any) => {
                     const amt = parseFloat(r.total_amount);
-                    return isNaN(amt) ? `₹${r.total_amount}` : `₹${amt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
-                  }
+                    return isNaN(amt)
+                      ? `₹${r.total_amount}`
+                      : `₹${amt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
+                  },
                 },
                 {
                   key: "status",
@@ -1339,12 +1429,13 @@ export default function FacultyPage() {
                         {r.status_display || r.status}
                       </Badge>
                     );
-                  }
+                  },
                 },
                 {
                   key: "generated_at",
                   header: "Generated At",
-                  render: (r: any) => r.generated_at ? new Date(r.generated_at).toLocaleString() : "—"
+                  render: (r: any) =>
+                    r.generated_at ? new Date(r.generated_at).toLocaleString() : "—",
                 },
                 {
                   key: "actions",
@@ -1357,16 +1448,17 @@ export default function FacultyPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {r.status === "draft" || r.status === "pending_approval" && (
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleApprovePayroll(r.id);
-                            }}
-                          >
-                            Approve
-                          </DropdownMenuItem>
-                        )}
+                        {r.status === "draft" ||
+                          (r.status === "pending_approval" && (
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleApprovePayroll(r.id);
+                              }}
+                            >
+                              Approve
+                            </DropdownMenuItem>
+                          ))}
                         {r.status === "approved" && (
                           <DropdownMenuItem
                             onClick={(e) => {
@@ -1387,8 +1479,8 @@ export default function FacultyPage() {
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  )
-                }
+                  ),
+                },
               ]}
             />
             <ConfirmDialog
@@ -1404,18 +1496,21 @@ export default function FacultyPage() {
         {canPayroll && (
           <TabsContent value="late-policies" className="mt-4">
             <div className="flex justify-end mb-4">
-              <Button onClick={() => {
-                setLatePolicyForm({
-                  branch_id: (user && user.role === "branch_manager" && user.branch) ? user.branch : "",
-                  grace_period_minutes: 5,
-                  deduction_per_minute: "0.00",
-                  max_deduction_per_session: "0.00",
-                  absence_deduction_per_day: "0.00",
-                  late_entry_threshold: 3,
-                  auto_halfday_deduction: true,
-                });
-                setLatePolicyDialogOpen(true);
-              }}>
+              <Button
+                onClick={() => {
+                  setLatePolicyForm({
+                    branch_id:
+                      user && user.role === "branch_manager" && user.branch ? user.branch : "",
+                    grace_period_minutes: 5,
+                    deduction_per_minute: "0.00",
+                    max_deduction_per_session: "0.00",
+                    absence_deduction_per_day: "0.00",
+                    late_entry_threshold: 3,
+                    auto_halfday_deduction: true,
+                  });
+                  setLatePolicyDialogOpen(true);
+                }}
+              >
                 <Plus className="w-4 h-4 mr-1.5" /> Add Policy
               </Button>
             </div>
@@ -1432,33 +1527,42 @@ export default function FacultyPage() {
                 {
                   key: "auto_halfday_deduction",
                   header: "Auto Half-Day",
-                  render: (r: any) => r.auto_halfday_deduction ? "Yes" : "No"
+                  render: (r: any) => (r.auto_halfday_deduction ? "Yes" : "No"),
                 },
                 {
                   key: "actions",
                   header: "",
                   render: (r: any) => (
                     <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => {
-                        setLatePolicyForm({
-                          branch_id: r.branch_id || r.branch?.id || r.branch || "",
-                          grace_period_minutes: r.grace_period_minutes ?? 5,
-                          deduction_per_minute: r.deduction_per_minute ?? "0.00",
-                          max_deduction_per_session: r.max_deduction_per_session ?? "0.00",
-                          absence_deduction_per_day: r.absence_deduction_per_day ?? "0.00",
-                          late_entry_threshold: r.late_entry_threshold ?? 3,
-                          auto_halfday_deduction: r.auto_halfday_deduction ?? true,
-                        });
-                        setLatePolicyDialogOpen(true);
-                      }}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setLatePolicyForm({
+                            branch_id: r.branch_id || r.branch?.id || r.branch || "",
+                            grace_period_minutes: r.grace_period_minutes ?? 5,
+                            deduction_per_minute: r.deduction_per_minute ?? "0.00",
+                            max_deduction_per_session: r.max_deduction_per_session ?? "0.00",
+                            absence_deduction_per_day: r.absence_deduction_per_day ?? "0.00",
+                            late_entry_threshold: r.late_entry_threshold ?? 3,
+                            auto_halfday_deduction: r.auto_halfday_deduction ?? true,
+                          });
+                          setLatePolicyDialogOpen(true);
+                        }}
+                      >
                         Edit
                       </Button>
-                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setDeletePolicyId(r.id || r.policy_id || r.uuid)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setDeletePolicyId(r.id || r.policy_id || r.uuid)}
+                      >
                         Delete
                       </Button>
                     </div>
-                  )
-                }
+                  ),
+                },
               ]}
             />
           </TabsContent>
@@ -1497,7 +1601,9 @@ export default function FacultyPage() {
                   }
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder={branchesLoading ? "Loading branches..." : "Select Branch"} />
+                    <SelectValue
+                      placeholder={branchesLoading ? "Loading branches..." : "Select Branch"}
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {branches.map((b: any) => (
@@ -1629,8 +1735,16 @@ export default function FacultyPage() {
         </DialogContent>
       </Dialog>
 
-      <FacultyDetailSheet open={isSheetOpen} onOpenChange={setIsSheetOpen} facultyId={selectedFacultyId} />
-      <SessionDetailSheet open={isSessionSheetOpen} onOpenChange={setIsSessionSheetOpen} sessionId={selectedSessionId} />
+      <FacultyDetailSheet
+        open={isSheetOpen}
+        onOpenChange={setIsSheetOpen}
+        facultyId={selectedFacultyId}
+      />
+      <SessionDetailSheet
+        open={isSessionSheetOpen}
+        onOpenChange={setIsSessionSheetOpen}
+        sessionId={selectedSessionId}
+      />
 
       <Dialog open={assignModalOpen} onOpenChange={setAssignModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
@@ -1647,9 +1761,23 @@ export default function FacultyPage() {
                   {selectedFacultyForAssign.full_name}
                 </p>
                 <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                  <span>Level: <strong className="capitalize">{selectedFacultyForAssign.level_display || selectedFacultyForAssign.level || "N/A"}</strong></span>
+                  <span>
+                    Level:{" "}
+                    <strong className="capitalize">
+                      {selectedFacultyForAssign.level_display ||
+                        selectedFacultyForAssign.level ||
+                        "N/A"}
+                    </strong>
+                  </span>
                   <span>•</span>
-                  <span>Type: <strong className="capitalize">{selectedFacultyForAssign.employment_type_display || selectedFacultyForAssign.employment_type || "N/A"}</strong></span>
+                  <span>
+                    Type:{" "}
+                    <strong className="capitalize">
+                      {selectedFacultyForAssign.employment_type_display ||
+                        selectedFacultyForAssign.employment_type ||
+                        "N/A"}
+                    </strong>
+                  </span>
                 </div>
               </div>
 
@@ -1663,10 +1791,11 @@ export default function FacultyPage() {
                 ) : (
                   <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
                     {assignedBatches.map((b) => (
-                      <div key={b.id} className="flex items-center justify-between py-1 border-b border-border/40 last:border-0">
-                        <p className="text-sm font-medium text-foreground">
-                          {b.name}
-                        </p>
+                      <div
+                        key={b.id}
+                        className="flex items-center justify-between py-1 border-b border-border/40 last:border-0"
+                      >
+                        <p className="text-sm font-medium text-foreground">{b.name}</p>
                         <Button
                           variant="destructive"
                           size="sm"
@@ -1689,7 +1818,9 @@ export default function FacultyPage() {
                 </label>
                 <Select value={selectedBatchId} onValueChange={setSelectedBatchId}>
                   <SelectTrigger className="w-full bg-muted/10">
-                    <SelectValue placeholder={batchesLoading ? "Loading batches..." : "Select a batch"} />
+                    <SelectValue
+                      placeholder={batchesLoading ? "Loading batches..." : "Select a batch"}
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {assignableBatches.length === 0 ? (
@@ -1714,7 +1845,9 @@ export default function FacultyPage() {
                 </label>
                 <Select value={selectedSubjectId} onValueChange={setSelectedSubjectId}>
                   <SelectTrigger className="w-full bg-muted/10">
-                    <SelectValue placeholder={subjectsLoading ? "Loading subjects..." : "Select a subject"} />
+                    <SelectValue
+                      placeholder={subjectsLoading ? "Loading subjects..." : "Select a subject"}
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None (No subject)</SelectItem>
@@ -1757,41 +1890,91 @@ export default function FacultyPage() {
           <div className="grid grid-cols-2 gap-4">
             {!isFaculty && (
               <div className="col-span-2 sm:col-span-1 space-y-1">
-                <Label className="text-xs font-semibold uppercase text-muted-foreground">Faculty</Label>
-                <Select value={sessionReportForm.faculty_id} onValueChange={(val) => setSessionReportForm({...sessionReportForm, faculty_id: val})}>
-                  <SelectTrigger><SelectValue placeholder="Select faculty" /></SelectTrigger>
+                <Label className="text-xs font-semibold uppercase text-muted-foreground">
+                  Faculty
+                </Label>
+                <Select
+                  value={sessionReportForm.faculty_id}
+                  onValueChange={(val) =>
+                    setSessionReportForm({ ...sessionReportForm, faculty_id: val })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select faculty" />
+                  </SelectTrigger>
                   <SelectContent>
-                    {facultyList.map((f: any) => <SelectItem key={f.id} value={f.id}>{f.full_name}</SelectItem>)}
+                    {facultyList.map((f: any) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.full_name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             )}
             <div className="col-span-2 sm:col-span-1 space-y-1">
               <Label className="text-xs font-semibold uppercase text-muted-foreground">Batch</Label>
-              <Select value={sessionReportForm.batch_id} onValueChange={(val) => setSessionReportForm({...sessionReportForm, batch_id: val})}>
-                <SelectTrigger><SelectValue placeholder="Select batch" /></SelectTrigger>
+              <Select
+                value={sessionReportForm.batch_id}
+                onValueChange={(val) =>
+                  setSessionReportForm({ ...sessionReportForm, batch_id: val })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select batch" />
+                </SelectTrigger>
                 <SelectContent>
-                  {batches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                  {batches.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="col-span-2 sm:col-span-1 space-y-1">
-              <Label className="text-xs font-semibold uppercase text-muted-foreground">Subject</Label>
-              <Select value={sessionReportForm.subject_id} onValueChange={(val) => setSessionReportForm({...sessionReportForm, subject_id: val})}>
-                <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
+              <Label className="text-xs font-semibold uppercase text-muted-foreground">
+                Subject
+              </Label>
+              <Select
+                value={sessionReportForm.subject_id}
+                onValueChange={(val) =>
+                  setSessionReportForm({ ...sessionReportForm, subject_id: val })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select subject" />
+                </SelectTrigger>
                 <SelectContent>
-                  {subjects.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  {subjects.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="col-span-2 sm:col-span-1 space-y-1">
               <Label className="text-xs font-semibold uppercase text-muted-foreground">Date</Label>
-              <Input type="date" value={sessionReportForm.session_date} onChange={(e) => setSessionReportForm({...sessionReportForm, session_date: e.target.value})} />
+              <Input
+                type="date"
+                value={sessionReportForm.session_date}
+                onChange={(e) =>
+                  setSessionReportForm({ ...sessionReportForm, session_date: e.target.value })
+                }
+              />
             </div>
             <div className="col-span-2 sm:col-span-1 space-y-1">
-              <Label className="text-xs font-semibold uppercase text-muted-foreground">Status</Label>
-              <Select value={sessionReportForm.status} onValueChange={(val) => setSessionReportForm({...sessionReportForm, status: val})}>
-                <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+              <Label className="text-xs font-semibold uppercase text-muted-foreground">
+                Status
+              </Label>
+              <Select
+                value={sessionReportForm.status}
+                onValueChange={(val) => setSessionReportForm({ ...sessionReportForm, status: val })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
@@ -1799,38 +1982,106 @@ export default function FacultyPage() {
               </Select>
             </div>
             <div className="col-span-2 sm:col-span-1 space-y-1">
-              <Label className="text-xs font-semibold uppercase text-muted-foreground">Start Time</Label>
-              <Input type="time" value={sessionReportForm.start_time} onChange={(e) => setSessionReportForm({...sessionReportForm, start_time: e.target.value})} />
+              <Label className="text-xs font-semibold uppercase text-muted-foreground">
+                Start Time
+              </Label>
+              <Input
+                type="time"
+                value={sessionReportForm.start_time}
+                onChange={(e) =>
+                  setSessionReportForm({ ...sessionReportForm, start_time: e.target.value })
+                }
+              />
             </div>
             <div className="col-span-2 sm:col-span-1 space-y-1">
-              <Label className="text-xs font-semibold uppercase text-muted-foreground">End Time</Label>
-              <Input type="time" value={sessionReportForm.end_time} onChange={(e) => setSessionReportForm({...sessionReportForm, end_time: e.target.value})} />
+              <Label className="text-xs font-semibold uppercase text-muted-foreground">
+                End Time
+              </Label>
+              <Input
+                type="time"
+                value={sessionReportForm.end_time}
+                onChange={(e) =>
+                  setSessionReportForm({ ...sessionReportForm, end_time: e.target.value })
+                }
+              />
             </div>
             <div className="col-span-2 space-y-1">
-              <Label className="text-xs font-semibold uppercase text-muted-foreground">Chapter Covered</Label>
-              <Select value={sessionReportForm.chapter_covered} onValueChange={(val) => setSessionReportForm({...sessionReportForm, chapter_covered: val})}>
-                <SelectTrigger><SelectValue placeholder="Select chapter" /></SelectTrigger>
+              <Label className="text-xs font-semibold uppercase text-muted-foreground">
+                Chapter Covered
+              </Label>
+              <Select
+                value={sessionReportForm.chapter_covered}
+                onValueChange={(val) =>
+                  setSessionReportForm({ ...sessionReportForm, chapter_covered: val })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select chapter" />
+                </SelectTrigger>
                 <SelectContent>
-                  {chapters.length === 0 && <SelectItem value="none" disabled>No chapters available</SelectItem>}
-                  {chapters.map((c: any) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                  {chapters.length === 0 && (
+                    <SelectItem value="none" disabled>
+                      No chapters available
+                    </SelectItem>
+                  )}
+                  {chapters.map((c: any) => (
+                    <SelectItem key={c.id} value={c.name}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="col-span-2 space-y-1">
-              <Label className="text-xs font-semibold uppercase text-muted-foreground">Topics Covered</Label>
-              <Input placeholder="e.g. QuerySet, Filters" value={sessionReportForm.topics_covered} onChange={(e) => setSessionReportForm({...sessionReportForm, topics_covered: e.target.value})} />
+              <Label className="text-xs font-semibold uppercase text-muted-foreground">
+                Topics Covered
+              </Label>
+              <Input
+                placeholder="e.g. QuerySet, Filters"
+                value={sessionReportForm.topics_covered}
+                onChange={(e) =>
+                  setSessionReportForm({ ...sessionReportForm, topics_covered: e.target.value })
+                }
+              />
             </div>
             <div className="col-span-2 space-y-1">
-              <Label className="text-xs font-semibold uppercase text-muted-foreground">Completion %</Label>
-              <Input type="number" min="0" max="100" value={sessionReportForm.completion_percentage} onChange={(e) => setSessionReportForm({...sessionReportForm, completion_percentage: parseInt(e.target.value) || 0})} />
+              <Label className="text-xs font-semibold uppercase text-muted-foreground">
+                Completion %
+              </Label>
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                value={sessionReportForm.completion_percentage}
+                onChange={(e) =>
+                  setSessionReportForm({
+                    ...sessionReportForm,
+                    completion_percentage: parseInt(e.target.value) || 0,
+                  })
+                }
+              />
             </div>
             <div className="col-span-2 space-y-1">
-              <Label className="text-xs font-semibold uppercase text-muted-foreground">Notes/Remarks</Label>
-              <Textarea placeholder="Any additional notes..." value={sessionReportForm.notes} onChange={(e) => setSessionReportForm({...sessionReportForm, notes: e.target.value})} />
+              <Label className="text-xs font-semibold uppercase text-muted-foreground">
+                Notes/Remarks
+              </Label>
+              <Textarea
+                placeholder="Any additional notes..."
+                value={sessionReportForm.notes}
+                onChange={(e) =>
+                  setSessionReportForm({ ...sessionReportForm, notes: e.target.value })
+                }
+              />
             </div>
           </div>
           <SheetFooter className="mt-8">
-            <Button variant="outline" onClick={() => setSessionDialogOpen(false)} disabled={submittingSession}>Cancel</Button>
+            <Button
+              variant="outline"
+              onClick={() => setSessionDialogOpen(false)}
+              disabled={submittingSession}
+            >
+              Cancel
+            </Button>
             <Button
               onClick={handleSubmitSessionReport}
               disabled={submittingSession}
