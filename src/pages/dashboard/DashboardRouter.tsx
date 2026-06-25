@@ -16,7 +16,7 @@ import ExamSupervisorDashboard from "@/pages/dashboard/ExamSupervisorDashboard";
 import PaperCheckerDashboard from "@/pages/dashboard/PaperCheckerDashboard";
 import AccountantDashboard from "@/pages/dashboard/AccountantDashboard";
 
-const DASHBOARDS: Record<RoleId, React.ComponentType> = {
+const DASHBOARDS: Partial<Record<RoleId, React.ComponentType>> = {
   super_admin: SuperAdminDashboard,
   branch_manager: BranchManagerDashboard,
   admin_senior_executive: AdminSeniorExecDashboard,
@@ -36,7 +36,23 @@ const DASHBOARDS: Record<RoleId, React.ComponentType> = {
 
 export default function DashboardRouter() {
   const { user } = useAuth();
+  
   if (!user) return null;
-  const Dashboard = DASHBOARDS[user.role];
+  
+  const Dashboard = DASHBOARDS[user.role as RoleId];
+  
+  if (!Dashboard) {
+    return (
+      <div className="flex h-full items-center justify-center p-6">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2">Dashboard Not Found</h2>
+          <p className="text-muted-foreground">
+            No dashboard component is configured for your role ({user.role || "unknown"}).
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return <Dashboard />;
 }
