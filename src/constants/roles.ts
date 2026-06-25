@@ -70,7 +70,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   faculty: {
     id: "faculty", label: "Faculty", description: "Teaching staff member",
     color: "bg-amber-100", textColor: "text-amber-800",
-    modules: ["dashboard","timetable","exams","attendance","leave","chat","notifications","payroll"],
+    modules: ["dashboard","timetable","exams","leave","chat","notifications","payroll"],
     canDelete: false, canExport: false,
   },
   exam_supervisor: {

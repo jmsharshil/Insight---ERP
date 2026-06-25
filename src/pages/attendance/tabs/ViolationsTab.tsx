@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
 import { X, ShieldAlert } from "lucide-react";
@@ -27,16 +27,31 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
   const { violations, violationsLoading, violationsCount } = useSelector((s: RootState) => s.attendance);
   const { user } = useAuth();
   const isParentOrStudent = user?.role === "parents" || user?.role === "student";
+  const isBranchManager = user?.role === "branch_manager";
 
   const studentsList = dropdowns?.students?.filter((s: any) => {
-    if (user && user.role === "branch_manager" && user.branch) {
+    if (isBranchManager && user?.branch) {
       return !s.branch_id || s.branch_id === user.branch;
     }
     return true;
   }) || [];
 
+  const filteredViolations = useMemo(() => {
+    if (!isBranchManager) return violations;
+    const validStudentIds = new Set(studentsList.map((s: any) => s.id));
+    return violations.filter((v: any) => {
+      const bId = typeof v.branch === "object" && v.branch !== null ? v.branch.id : (v.branch_id || v.branch);
+      if (bId) return bId === user?.branch;
+      
+      const sId = typeof v.student === 'string' ? v.student : (v.student_id || v.student?.id);
+      if (sId) return validStudentIds.has(sId);
+      
+      return false;
+    });
+  }, [violations, isBranchManager, user, studentsList]);
+
   const [f, setF] = useState({
-    student_id: "", branch_id: (user && user.role === "branch_manager" && user.branch) ? user.branch : "", violation_type: "", is_resolved: "", date_from: "", date_to: "",
+    student_id: "", branch_id: (isBranchManager && user?.branch) ? user.branch : "", violation_type: "", is_resolved: "", date_from: "", date_to: "",
   });
 
   const fetchViolations = () => {
@@ -58,7 +73,7 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
 
   useEffect(() => { fetchViolations(); }, []);
 
-  const clear = () => setF({ student_id: "", branch_id: (user && user.role === "branch_manager" && user.branch) ? user.branch : "", violation_type: "", is_resolved: "", date_from: "", date_to: "" });
+  const clear = () => setF({ student_id: "", branch_id: (isBranchManager && user?.branch) ? user.branch : "", violation_type: "", is_resolved: "", date_from: "", date_to: "" });
 
   return (
     <div className="space-y-4">
@@ -115,7 +130,7 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
               <ShieldAlert className="w-4 h-4 text-red-500" />
               <span className="text-sm font-medium text-foreground">Violations</span>
             </div>
-            <span className="text-xs text-muted-foreground">{violationsCount} records</span>
+            <span className="text-xs text-muted-foreground">{isBranchManager ? filteredViolations.length : violationsCount} records</span>
           </div>
           <table className="w-full text-sm">
             <thead className="bg-muted/40">
@@ -126,9 +141,9 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
               </tr>
             </thead>
             <tbody>
-              {violations.length === 0 ? (
+              {filteredViolations.length === 0 ? (
                 <tr><td colSpan={7} className="text-center py-12 text-muted-foreground text-sm">No violations found.</td></tr>
-              ) : violations.map((v, i) => (
+              ) : filteredViolations.map((v: any, i: number) => (
                 <motion.tr key={v.id}
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
                   className="border-b border-border/50 hover:bg-muted/20 transition-colors"

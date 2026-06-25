@@ -24,16 +24,27 @@ export default function AnalyticsTab({ dropdowns }: { dropdowns?: any }) {
   const toast = useToast();
   const { analytics, analyticsLoading } = useSelector((s: RootState) => s.attendance);
   const { user } = useAuth();
+  const isBranchManager = user?.role === "branch_manager";
 
   const branches = dropdowns?.branches?.filter((b: any) => {
-    if (user && user.role === "branch_manager" && user.branch) {
+    if (isBranchManager && user?.branch) {
       return b.id === user.branch;
     }
     return true;
   }) || [];
-  const batches = dropdowns?.batches || [];
+  
+  const allBatches = dropdowns?.batches || [];
 
-  const [filters, setFilters] = useState({ branch_id: (user && user.role === "branch_manager" && user.branch) ? user.branch : "", batch_id: "", date_from: "", date_to: "", trend_type: "daily" });
+  const [filters, setFilters] = useState({ branch_id: (isBranchManager && user?.branch) ? user.branch : "", batch_id: "", date_from: "", date_to: "", trend_type: "daily" });
+
+  const filteredBatches = isBranchManager 
+    ? allBatches 
+    : (filters.branch_id && filters.branch_id !== "all")
+      ? allBatches.filter((b: any) => {
+          const branchId = typeof b.branch === "object" && b.branch !== null ? b.branch.id : (b.branch_id || b.branch);
+          return String(branchId) === String(filters.branch_id);
+        })
+      : allBatches;
 
   const fetchAnalytics = () => {
     const p = new URLSearchParams();
@@ -67,6 +78,10 @@ export default function AnalyticsTab({ dropdowns }: { dropdowns?: any }) {
         : analytics.attendance_trends.monthly_trend?.map(m => ({ date: m.month, percentage: m.percentage })))
     : [];
 
+  const filteredBatchComparison = analytics?.batch_comparison?.filter((bc: any) => {
+    return filteredBatches.some((b: any) => b.name === bc.batch_name);
+  }) || [];
+
   return (
     <div className="space-y-6">
       {/* Filters */}
@@ -89,7 +104,7 @@ export default function AnalyticsTab({ dropdowns }: { dropdowns?: any }) {
             <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Batch" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Batches</SelectItem>
-              {batches?.map((b: any) => (
+              {filteredBatches.map((b: any) => (
                 <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
               ))}
             </SelectContent>
@@ -104,7 +119,7 @@ export default function AnalyticsTab({ dropdowns }: { dropdowns?: any }) {
           <Input type="date" className="h-9 text-sm w-40" value={filters.date_to} onChange={e => setFilters(f => ({ ...f, date_to: e.target.value }))} />
         </div>
         <Button onClick={fetchAnalytics} className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm">Apply</Button>
-        <Button variant="outline" className="h-9 text-sm" onClick={() => setFilters({ branch_id: (user && user.role === "branch_manager" && user.branch) ? user.branch : "", batch_id: "", date_from: "", date_to: "", trend_type: "daily" })}><X className="w-3 h-3 mr-1" />Clear</Button>
+        <Button variant="outline" className="h-9 text-sm" onClick={() => setFilters({ branch_id: (isBranchManager && user?.branch) ? user.branch : "", batch_id: "", date_from: "", date_to: "", trend_type: "daily" })}><X className="w-3 h-3 mr-1" />Clear</Button>
       </div>
 
       {analytics && (
@@ -150,7 +165,7 @@ export default function AnalyticsTab({ dropdowns }: { dropdowns?: any }) {
           </div>
 
           {/* Branch Comparison */}
-          {analytics.branch_comparison?.length > 0 && (
+          {!isBranchManager && analytics.branch_comparison?.length > 0 && (
             <div className="bg-white rounded-xl border border-border p-5">
               <h3 className="font-semibold text-sm mb-4 text-foreground">Branch Comparison</h3>
               <ResponsiveContainer width="100%" height={220}>
@@ -169,11 +184,11 @@ export default function AnalyticsTab({ dropdowns }: { dropdowns?: any }) {
           )}
 
           {/* Batch Comparison */}
-          {analytics.batch_comparison?.length > 0 && (
+          {filteredBatchComparison.length > 0 && (
             <div className="bg-white rounded-xl border border-border p-5">
               <h3 className="font-semibold text-sm mb-4 text-foreground">Batch Comparison</h3>
               <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={analytics.batch_comparison} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
+                <BarChart data={filteredBatchComparison} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
                   <XAxis dataKey="batch_name" tick={{ fontSize: 11 }} />
                   <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} tick={{ fontSize: 11 }} />
                   <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
