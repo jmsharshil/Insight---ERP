@@ -51,24 +51,28 @@ export default function AnalyticsTab({ dropdowns }: { dropdowns?: any }) {
   const toast = useToast();
   const { analytics, analyticsLoading } = useSelector((s: RootState) => s.attendance);
   const { user } = useAuth();
+  const isBranchManager = user?.role === "branch_manager";
 
-  const branches =
-    dropdowns?.branches?.filter((b: any) => {
-      if (user && user.role === "branch_manager" && user.branch) {
-        return b.id === user.branch;
-      }
-      return true;
-    }) || [];
-  const batches = dropdowns?.batches || [];
+  const branches = dropdowns?.branches?.filter((b: any) => {
+    if (isBranchManager && user?.branch) {
+      return b.id === user.branch;
+    }
+    return true;
+  }) || [];
+  
+  const allBatches = dropdowns?.batches || [];
 
-  const [filters, setFilters] = useState({
-    branch_id: user && user.role === "branch_manager" && user.branch ? user.branch : "",
-    batch_id: "",
-    date_from: "",
-    date_to: "",
-    trend_type: "daily",
-  });
+  const [filters, setFilters] = useState({ branch_id: (isBranchManager && user?.branch) ? user.branch : "", batch_id: "", date_from: "", date_to: "", trend_type: "daily" });
   const [batchWiseData, setBatchWiseData] = useState<any[]>([]);
+
+  const filteredBatches = isBranchManager 
+    ? allBatches 
+    : (filters.branch_id && filters.branch_id !== "all")
+      ? allBatches.filter((b: any) => {
+          const branchId = typeof b.branch === "object" && b.branch !== null ? b.branch.id : (b.branch_id || b.branch);
+          return String(branchId) === String(filters.branch_id);
+        })
+      : allBatches;
 
   const fetchAnalytics = () => {
     const p = new URLSearchParams();
@@ -136,6 +140,10 @@ export default function AnalyticsTab({ dropdowns }: { dropdowns?: any }) {
           }))
     : [];
 
+  const filteredBatchComparison = analytics?.batch_comparison?.filter((bc: any) => {
+    return filteredBatches.some((b: any) => b.name === bc.batch_name);
+  }) || [];
+
   return (
     <div className="space-y-6">
       {/* Filters */}
@@ -170,10 +178,8 @@ export default function AnalyticsTab({ dropdowns }: { dropdowns?: any }) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Batches</SelectItem>
-              {batches?.map((b: any) => (
-                <SelectItem key={b.id} value={b.id}>
-                  {b.name}
-                </SelectItem>
+              {filteredBatches.map((b: any) => (
+                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -196,35 +202,15 @@ export default function AnalyticsTab({ dropdowns }: { dropdowns?: any }) {
             onChange={(e) => setFilters((f) => ({ ...f, date_to: e.target.value }))}
           />
         </div>
-        <Button
-          onClick={() => {
+        <Button onClick={() => {
             fetchAnalytics();
             fetchBatchWise();
-          }}
-          className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm"
-        >
-          Apply
-        </Button>
-        <Button
-          variant="outline"
-          className="h-9 text-sm"
-          onClick={() =>
-            setFilters({
-              branch_id: user && user.role === "branch_manager" && user.branch ? user.branch : "",
-              batch_id: "",
-              date_from: "",
-              date_to: "",
-              trend_type: "daily",
-            })
-          }
-        >
-          <X className="w-3 h-3 mr-1" />
-          Clear
-        </Button>
+          }} className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm">Apply</Button>
+        <Button variant="outline" className="h-9 text-sm" onClick={() => setFilters({ branch_id: (isBranchManager && user?.branch) ? user.branch : "", batch_id: "", date_from: "", date_to: "", trend_type: "daily" })}><X className="w-3 h-3 mr-1" />Clear</Button>
       </div>
 
       {analytics && (
-        <>
+        <div>
           {/* Average Attendance */}
           <motion.div
             initial={{ opacity: 0, y: 12 }}
@@ -285,7 +271,7 @@ export default function AnalyticsTab({ dropdowns }: { dropdowns?: any }) {
           </div>
 
           {/* Branch Comparison */}
-          {analytics.branch_comparison?.length > 0 && (
+          {!isBranchManager && analytics.branch_comparison?.length > 0 && (
             <div className="bg-white rounded-xl border border-border p-5">
               <h3 className="font-semibold text-sm mb-4 text-foreground">Branch Comparison</h3>
               <ResponsiveContainer width="100%" height={220}>
@@ -366,7 +352,7 @@ export default function AnalyticsTab({ dropdowns }: { dropdowns?: any }) {
               </div>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );
