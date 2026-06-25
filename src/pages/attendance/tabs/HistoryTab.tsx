@@ -10,8 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { X, Edit2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { useMemo } from "react";
 
@@ -51,6 +53,8 @@ export default function HistoryTab({ dropdowns }: { dropdowns?: any }) {
     student_id: "", branch_id: isBranchManager && user.branch ? user.branch : "", batch_id: "", date: "", status: "",
   });
 
+  const [correctionModal, setCorrectionModal] = useState({ isOpen: false, recordId: "", status: "", note: "", submitting: false });
+
   useEffect(() => {
     if (isBranchManager && user.branch && f.branch_id !== user.branch) {
       setF(prev => ({ ...prev, branch_id: user.branch }));
@@ -87,6 +91,30 @@ export default function HistoryTab({ dropdowns }: { dropdowns?: any }) {
   };
 
   useEffect(() => { fetch(); }, []);
+
+  const handleCorrectionSubmit = () => {
+    setCorrectionModal((p) => ({ ...p, submitting: true }));
+    dispatch({
+      type: "GET_DROPDOWN", // Using a generic action type to fire PATCH
+      method: "PATCH",
+      endPoint: `/api/v1/attendance/${correctionModal.recordId}/`,
+      body: { 
+        status: correctionModal.status, 
+        correction_note: correctionModal.note,
+        is_corrected: true 
+      },
+      auth: true,
+      getResponse: () => {
+        toast.success("Attendance record corrected successfully.");
+        setCorrectionModal({ isOpen: false, recordId: "", status: "", note: "", submitting: false });
+        fetch(); // Re-fetch the history list
+      },
+      getError: (err: any) => {
+        toast.error(err?.response?.data?.message || "Failed to correct attendance record.");
+        setCorrectionModal((p) => ({ ...p, submitting: false }));
+      },
+    } as any);
+  };
 
   const clear = () => setF({ student_id: "", branch_id: isBranchManager && user.branch ? user.branch : "", batch_id: "", date: "", status: "" });
 
@@ -216,14 +244,18 @@ export default function HistoryTab({ dropdowns }: { dropdowns?: any }) {
                   "Check-out",
                   "Status",
                   "Marked By",
-                ].map((h) => (
-                  <th
-                    key={h}
-                    className="px-4 py-3 text-left text-xs font-medium text-muted-foreground"
-                  >
-                    {h}
-                  </th>
-                ))}
+                  "Actions"
+                ].map((h) => {
+                  if (h === "Actions" && isParentOrStudent) return null;
+                  return (
+                    <th
+                      key={h}
+                      className="px-4 py-3 text-left text-xs font-medium text-muted-foreground"
+                    >
+                      {h}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
@@ -241,12 +273,69 @@ export default function HistoryTab({ dropdowns }: { dropdowns?: any }) {
                   <td className="px-4 py-3 text-xs text-muted-foreground">{row.checked_out_at ? new Date(row.checked_out_at).toLocaleTimeString() : "—"}</td>
                   <td className="px-4 py-3"><Badge className={`text-xs ${STATUS_BADGE[row.status] ?? "bg-gray-100 text-gray-700"}`}>{row.status_display || row.status}</Badge></td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{row.marked_by_name || "—"}</td>
+                  {!isParentOrStudent && (
+                    <td className="px-4 py-3 text-xs">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs px-2 text-blue-600 hover:text-blue-700"
+                        onClick={() => setCorrectionModal({ isOpen: true, recordId: row.id, status: row.status, note: row.correction_note || "", submitting: false })}
+                      >
+                        <Edit2 className="w-3 h-3 mr-1" />
+                        Correct
+                      </Button>
+                    </td>
+                  )}
                 </motion.tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+
+      <Dialog open={correctionModal.isOpen} onOpenChange={(open) => !correctionModal.submitting && setCorrectionModal(p => ({ ...p, isOpen: open }))}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Correct Attendance Record</DialogTitle>
+            <DialogDescription>
+              Update the attendance status if it was marked incorrectly. You can also provide a note for the audit log.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">New Status</label>
+              <Select value={correctionModal.status} onValueChange={(v) => setCorrectionModal(p => ({ ...p, status: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="present">Present</SelectItem>
+                  <SelectItem value="absent">Absent</SelectItem>
+                  <SelectItem value="late">Late</SelectItem>
+                  <SelectItem value="half_day">Half Day</SelectItem>
+                  <SelectItem value="on_leave">On Leave</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2 mt-2">
+              <label className="text-sm font-medium">Correction Note (Optional)</label>
+              <Textarea
+                placeholder="e.g., Marked absent by mistake..."
+                value={correctionModal.note}
+                onChange={(e) => setCorrectionModal(p => ({ ...p, note: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCorrectionModal(p => ({ ...p, isOpen: false }))} disabled={correctionModal.submitting}>
+              Cancel
+            </Button>
+            <Button onClick={handleCorrectionSubmit} disabled={correctionModal.submitting}>
+              {correctionModal.submitting ? "Saving..." : "Save Correction"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

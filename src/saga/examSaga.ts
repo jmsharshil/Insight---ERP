@@ -20,4 +20,9 @@ export function* watchExamSaga() {
   yield takeLatest(examActions.REPORT_MALPRACTICE, genericSaga);
   yield takeLatest(examActions.UPDATE_MALPRACTICE, genericSaga);
   yield takeLatest(examActions.DELETE_MALPRACTICE, genericSaga);
+  yield takeLatest(examActions.SCHEDULE_EXAM, genericSaga);
+  yield takeLatest(examActions.GET_PAPERS, genericSaga);
+  yield takeLatest(examActions.UPDATE_PAPER_MARKS, genericSaga);
+  yield takeLatest(examActions.DELETE_PAPER, genericSaga);
+  yield takeLatest(examActions.GET_CHECKER_STATUS, genericSaga);
 }

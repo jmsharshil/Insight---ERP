@@ -165,13 +165,6 @@ export default function CoursesTab({
                   </div> */}
                 </div>
               </div>
-
-              <div className="bg-muted/30 px-5 py-3 border-t border-border flex items-center justify-between gap-2">
-                <span className="text-xs font-medium text-primary group-hover:underline flex items-center gap-0.5">
-                  View Syllabus Details
-                  <ChevronRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" />
-                </span>
-              </div>
             </motion.div>
           ))}
         </div>

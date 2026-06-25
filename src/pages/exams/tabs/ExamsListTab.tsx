@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
-import { Eye, Trash2, Pencil, Search, X, RefreshCw, Info } from "lucide-react";
+import { Eye, Trash2, Pencil, Search, X, RefreshCw, Info, Calendar } from "lucide-react";
 import { examActions, studentActions, dropdownActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import {
@@ -50,6 +50,7 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
   const [editTarget, setEditTarget]         = useState<Exam | null>(null);
   const [editLoading, setEditLoading]       = useState(false);
   const [deleteTarget, setDeleteTarget]     = useState<Exam | null>(null);
+  const [scheduleTarget, setScheduleTarget] = useState<Exam | null>(null);
   const [editForm, setEditForm] = useState({
     title: "", instructions: "", total_marks: "", pass_marks: "",
     exam_type: "offline", result_release_mode: "manual",
@@ -90,10 +91,16 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
   const studentBatchIds = useMemo(() => {
     if (!studentDetail) return new Set<string>();
     const ids = new Set<string>();
-    if (studentDetail.batch) ids.add(String(studentDetail.batch));
+    
+    const getBatchId = (b: any) => (typeof b === "object" && b !== null) ? b.id || b.batch_id : b;
+
+    const currentBatchId = getBatchId(studentDetail.batch);
+    if (currentBatchId) ids.add(String(currentBatchId));
+
     if (studentDetail.batch_history) {
       studentDetail.batch_history.forEach((bh: any) => {
-        if (bh.batch || bh.batch_id) ids.add(String(bh.batch || bh.batch_id));
+        const bhId = getBatchId(bh.batch || bh.batch_id);
+        if (bhId) ids.add(String(bhId));
       });
     }
     return ids;
@@ -187,14 +194,33 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
     });
   };
 
+  const handleSchedule = () => {
+    if (!scheduleTarget) return;
+    // We can use GET or POST based on standard integration, let's use POST by default for triggers.
+    dispatch({
+      type: "SCHEDULE_EXAM",
+      method: "POST",
+      endPoint: API.EXAMS.SCHEDULE(scheduleTarget.id),
+      auth: true,
+      getResponse: (res: any) => {
+        toast.success("Exam scheduled successfully.");
+        setScheduleTarget(null);
+        // refresh list if needed or let the server logic handle it
+        fetchExams();
+      },
+      getError: (err: any) => toast.error(err?.response?.data?.message || "Failed to schedule exam"),
+    });
+  };
+
   const filtered = exams.filter(e => {
-    // Branch filter — skip for faculty since their assigned exams may be in a different branch
-    if (user && user.role !== "super_admin" && user.role !== "faculty" && user.branch) {
+    // Branch filter — apply only for branch_manager / admin who are tied to a specific branch
+    if (user && ["branch_manager", "admin"].includes(user.role ?? "") && user.branch) {
       const branchId = typeof e.branch === "object" && e.branch !== null ? (e.branch as any).id : e.branch;
       if (branchId !== user.branch) return false;
     }
     if ((isStudent || isParent) && studentDetail) {
-      if (e.batch && !studentBatchIds.has(String(e.batch))) {
+      const examBatchId = typeof e.batch === "object" && e.batch !== null ? (e.batch as any).id || (e.batch as any).batch_id : e.batch;
+      if (examBatchId && !studentBatchIds.has(String(examBatchId))) {
         return false;
       }
     }
@@ -341,6 +367,11 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
+                      {canEdit && (
+                        <Button variant="ghost" size="icon" className="w-7 h-7" title="Schedule Exam" onClick={e => { e.stopPropagation(); setScheduleTarget(exam); }}>
+                          <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                        </Button>
+                      )}
                       <Button variant="ghost" size="icon" className="w-7 h-7" onClick={e => { e.stopPropagation(); onSelectExam(exam); }}>
                         <Eye className="w-3.5 h-3.5" />
                       </Button>
@@ -431,6 +462,16 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
         confirmLabel="Delete"
         variant="danger"
         onConfirm={handleDelete}
+      />
+
+      <ConfirmDialog
+        open={!!scheduleTarget}
+        onOpenChange={o => !o && setScheduleTarget(null)}
+        title={`Schedule "${scheduleTarget?.title}"?`}
+        description="Are you sure you want to schedule this exam now? This action will generate the schedule."
+        confirmLabel="Schedule"
+        variant="default"
+        onConfirm={handleSchedule}
       />
     </div>
   );

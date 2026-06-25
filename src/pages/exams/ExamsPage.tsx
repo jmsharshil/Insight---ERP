@@ -19,6 +19,7 @@ import ExamsListTab    from "./tabs/ExamsListTab";
 import QuestionsTab    from "./tabs/QuestionsTab";
 import SeatingTab      from "./tabs/SeatingTab";
 import MalpracticeTab  from "./tabs/MalpracticeTab";
+import PapersTab       from "./tabs/PapersTab";
 import ResultsTab      from "./tabs/ResultsTab";
 
 // ─── Role-based tab config ────────────────────────────────────────────────────
@@ -28,6 +29,7 @@ const getVisibleTabs = (role: string) => {
     { value: "questions",   label: "Questions",   roles: ["super_admin","branch_manager","admin","faculty"] },
     { value: "seating",     label: "Seating",     roles: ["super_admin","branch_manager","admin","faculty"] },
     { value: "malpractice", label: "Malpractice", roles: ["super_admin","branch_manager","admin","faculty"] },
+    { value: "papers",      label: "Papers",      roles: ["super_admin","branch_manager","admin","faculty"] },
     { value: "results",     label: "Results",     roles: ["super_admin","branch_manager","admin","faculty","student","parent","parents"] },
   ];
   return all.filter(t => t.roles.includes(role));
@@ -210,6 +212,15 @@ export default function ExamsPage() {
               {selectedExam
                 ? <MalpracticeTab examId={selectedExam.id} />
                 : <EmptySelectPrompt message="Select an exam from the list to view malpractice reports." />}
+            </TabsContent>
+          )}
+
+          {/* ── Papers ───────────────────────────────────────────────────── */}
+          {visibleTabs.some(t => t.value === "papers") && (
+            <TabsContent value="papers" className="mt-0 outline-none">
+              {selectedExam
+                ? <PapersTab examId={selectedExam.id} />
+                : <EmptySelectPrompt message="Select an exam from the list to view papers." />}
             </TabsContent>
           )}
 

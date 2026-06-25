@@ -5,6 +5,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import PageHeader from "@/components/layout/PageHeader";
 import { useUI } from "@/hooks/useUI";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/useToast";
+import { Button } from "@/components/ui/button";
+import { LogIn, LogOut } from "lucide-react";
 import DashboardTab from "./tabs/DashboardTab";
 import StudentsAttendanceTab from "./tabs/StudentsTab";
 import HistoryTab from "./tabs/HistoryTab";
@@ -13,11 +16,16 @@ import AnalyticsTab from "./tabs/AnalyticsTab";
 import DefaultersTab from "./tabs/DefaultersTab";
 import ViolationsTab from "./tabs/ViolationsTab";
 import RegisterTab from "./tabs/RegisterTab";
+import EmployeeRegisterTab from "./tabs/EmployeeRegisterTab";
+import EmployeePersonalHistoryTab from "./tabs/EmployeePersonalHistoryTab";
 
 export default function AttendancePage() {
   const dispatch = useDispatch();
   const { setPageTitle } = useUI();
   const { user } = useAuth();
+  const toast = useToast();
+  
+  const [scanLoading, setScanLoading] = useState<"check_in" | "check_out" | null>(null);
   const [dropdowns, setDropdowns] = useState<any>({
     branches: [],
     batches: [],
@@ -86,6 +94,7 @@ export default function AttendancePage() {
             ...prev,
             faculty: list.map((item: any) => ({
               id: item.id,
+              user_id: item.user || item.user_id,
               name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim(),
               branch_id: item.branch || item.branch_id,
             })),
@@ -96,22 +105,68 @@ export default function AttendancePage() {
   }, [dispatch, user]);
 
   const isParentOrStudent = user?.role === "parents" || user?.role === "student";
+  const isEmployee = user && !isParentOrStudent;
+  const isAdmin = user && ["super_admin", "admin", "branch_manager"].includes(user.role);
+  const isEmployeeHistoryRole = user && !["super_admin", "student", "parents", "paper_checker"].includes(user.role);
   const defaultTab = isParentOrStudent ? "students" : "dashboard";
 
+  const handleScan = (type: "check_in" | "check_out") => {
+    setScanLoading(type);
+    dispatch({
+      type: dropdownActions.GET_DROPDOWN,
+      method: "POST",
+      endPoint: "/api/v1/attendance/employee/scan/",
+      body: { scan_type: type },
+      auth: true,
+      getResponse: (res: any) => {
+        toast.success(res?.message || (type === "check_in" ? "Check In recorded." : "Check Out recorded."));
+        setScanLoading(null);
+      },
+      getError: (err: any) => {
+        toast.error(err?.response?.data?.message || `Failed to record ${type.replace("_", " ")}`);
+        setScanLoading(null);
+      },
+    } as any);
+  };
+
   return (
-    <div>
-      {/* <PageHeader
-        title="Attendance"
-        subtitle="Track and manage student & faculty attendance."
-      /> */}
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Attendance</h1>
+          <p className="text-muted-foreground">Track and manage student & faculty attendance.</p>
+        </div>
+        {isEmployee && (
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => handleScan("check_in")} 
+              disabled={scanLoading !== null}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <LogIn className="w-4 h-4 mr-2" />
+              {scanLoading === "check_in" ? "Checking In..." : "Check In"}
+            </Button>
+            <Button 
+              onClick={() => handleScan("check_out")} 
+              disabled={scanLoading !== null}
+              variant="destructive"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              {scanLoading === "check_out" ? "Checking Out..." : "Check Out"}
+            </Button>
+          </div>
+        )}
+      </div>
 
       <Tabs defaultValue={defaultTab} className="mt-2">
         <TabsList className="">
           {!isParentOrStudent && <TabsTrigger value="dashboard">Dashboard</TabsTrigger>}
+          {isEmployeeHistoryRole && <TabsTrigger value="my_history">My Attendance</TabsTrigger>}
           <TabsTrigger value="students">Students</TabsTrigger>
-          {!isParentOrStudent && <TabsTrigger value="register">Register</TabsTrigger>}
+          {!isParentOrStudent && <TabsTrigger value="register">Student Register</TabsTrigger>}
+          {/* {isAdmin && <TabsTrigger value="staff_register">Staff Register</TabsTrigger>} */}
           <TabsTrigger value="history">History</TabsTrigger>
-          {!isParentOrStudent && <TabsTrigger value="faculty">Faculty</TabsTrigger>}
+          {!isParentOrStudent && <TabsTrigger value="faculty">Staff</TabsTrigger>}
           {!isParentOrStudent && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
           {!isParentOrStudent && <TabsTrigger value="defaulters">Defaulters</TabsTrigger>}
           <TabsTrigger value="violations">Violations</TabsTrigger>
@@ -130,6 +185,18 @@ export default function AttendancePage() {
         {!isParentOrStudent && (
           <TabsContent value="register" className="mt-4">
             <RegisterTab dropdowns={dropdowns} />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="staff_register" className="mt-4">
+            <EmployeeRegisterTab dropdowns={dropdowns} />
+          </TabsContent>
+        )}
+
+        {isEmployeeHistoryRole && (
+          <TabsContent value="my_history" className="mt-4">
+            <EmployeePersonalHistoryTab />
           </TabsContent>
         )}
 
