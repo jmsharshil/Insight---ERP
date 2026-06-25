@@ -25,4 +25,5 @@ export function* watchExamSaga() {
   yield takeLatest(examActions.UPDATE_PAPER_MARKS, genericSaga);
   yield takeLatest(examActions.DELETE_PAPER, genericSaga);
   yield takeLatest(examActions.GET_CHECKER_STATUS, genericSaga);
+  yield takeLatest(examActions.RAISE_PAPER_QUERY, genericSaga);
 }

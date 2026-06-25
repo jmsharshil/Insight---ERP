@@ -131,11 +131,11 @@ export default function TimetablePage() {
 
 
 
-    // 4. Exam Staff (Examiners & Paper Checkers)
+    // 4. Exam Staff (Examiners)
     dispatch({
       type: dropdownActions.GET_DROPDOWN,
       method: "GET",
-      endPoint: "/api/auth/users/?role=exam_supervisor&role=paper_checker",
+      endPoint: "/api/auth/users/?role=exam_supervisor",
       auth: true,
       getResponse: (res: any) => {
         const data = res?.data?.results || res?.results || res?.data || res;
@@ -147,18 +147,29 @@ export default function TimetablePage() {
             role: item.role,
             roles: item.roles,
           }));
+          setExaminersList(parsed);
+        }
+      },
+      getError: () => {},
+    });
 
-          // Try to segregate by role if the backend returns it, otherwise populate both with the combined data
-          const supervisors = parsed.filter(u => u.role === "exam_supervisor" || (Array.isArray(u.roles) && u.roles.includes("exam_supervisor")));
-          const checkers = parsed.filter(u => u.role === "paper_checker" || (Array.isArray(u.roles) && u.roles.includes("paper_checker")));
-
-          if (supervisors.length > 0 || checkers.length > 0) {
-            setExaminersList(supervisors);
-            setPaperCheckersList(checkers);
-          } else {
-            setExaminersList(parsed);
-            setPaperCheckersList(parsed);
-          }
+    // 5. Exam Staff (Paper Checkers)
+    dispatch({
+      type: dropdownActions.GET_DROPDOWN,
+      method: "GET",
+      endPoint: "/api/auth/users/?role=paper_checker",
+      auth: true,
+      getResponse: (res: any) => {
+        const data = res?.data?.results || res?.results || res?.data || res;
+        if (Array.isArray(data)) {
+          const parsed = data.map((item: any) => ({
+            id: item.id,
+            name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim(),
+            employee_id: item.employee_id,
+            role: item.role,
+            roles: item.roles,
+          }));
+          setPaperCheckersList(parsed);
         }
       },
       getError: () => {},

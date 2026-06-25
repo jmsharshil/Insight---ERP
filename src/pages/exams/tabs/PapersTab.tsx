@@ -46,6 +46,14 @@ export default function PapersTab({ examId }: PapersTabProps) {
     notes: ""
   });
 
+  // Query State
+  const [queryTarget, setQueryTarget] = useState<any | null>(null);
+  const [queryLoading, setQueryLoading] = useState(false);
+  const [queryForm, setQueryForm] = useState({
+    query_type: "",
+    description: ""
+  });
+
   // Filters
   const [search, setSearch] = useState("");
   const [isSubmitted, setIsSubmitted] = useState("all");
@@ -169,6 +177,39 @@ export default function PapersTab({ examId }: PapersTabProps) {
     });
   };
 
+  const handleRaiseQuery = () => {
+    if (!queryTarget || !queryForm.query_type) {
+       toast.error("Please select a query type.");
+       return;
+    }
+    
+    setQueryLoading(true);
+    dispatch({
+      type: examActions.RAISE_PAPER_QUERY,
+      method: "POST",
+      endPoint: API.EXAMS.PAPER_QUERY(examId, queryTarget.id),
+      body: {
+        query_type: queryForm.query_type,
+        description: queryForm.description
+      },
+      auth: true,
+      getResponse: (res: any) => {
+        if (res?.success) {
+          toast.success(res.message || "Query raised successfully.");
+          setQueryTarget(null);
+          fetchPapers(); // refresh data
+        } else {
+          toast.error(res?.message || "Failed to raise query.");
+        }
+        setQueryLoading(false);
+      },
+      getError: (err: any) => {
+        toast.error(err?.response?.data?.message || "Error raising query");
+        setQueryLoading(false);
+      },
+    });
+  };
+
   const handleDeletePaper = () => {
     if (!deleteTarget) return;
     dispatch({
@@ -249,9 +290,7 @@ export default function PapersTab({ examId }: PapersTabProps) {
       </div>
 
       {/* Count */}
-      <p className="text-xs text-muted-foreground">
-        {count} paper(s) found
-      </p>
+      <p className="text-xs text-muted-foreground">{count} paper(s) found</p>
 
       {/* Checker Status Widget */}
       {checkerStatus && (
@@ -280,7 +319,9 @@ export default function PapersTab({ examId }: PapersTabProps) {
                 <Clock className="w-4 h-4" />
                 <span className="text-xs font-medium uppercase tracking-wider">Pending</span>
               </div>
-              <div className="text-2xl font-bold text-amber-700">{checkerStatus.approval_pending || 0}</div>
+              <div className="text-2xl font-bold text-amber-700">
+                {checkerStatus.approval_pending || 0}
+              </div>
             </div>
             <div className="bg-red-50/50 p-3 rounded-lg border border-red-100">
               <div className="flex items-center gap-2 text-red-600 mb-1">
@@ -290,7 +331,7 @@ export default function PapersTab({ examId }: PapersTabProps) {
               <div className="text-2xl font-bold text-red-700">{checkerStatus.overdue || 0}</div>
             </div>
           </div>
-          
+
           {checkerStatus.checkers && checkerStatus.checkers.length > 0 && (
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
@@ -308,10 +349,16 @@ export default function PapersTab({ examId }: PapersTabProps) {
                     <tr key={chk.checker_id}>
                       <td className="px-3 py-2 font-medium">{chk.checker_name || "—"}</td>
                       <td className="px-3 py-2 text-center font-mono">{chk.assigned_count || 0}</td>
-                      <td className="px-3 py-2 text-center font-mono text-blue-600">{chk.submitted_count || 0}</td>
-                      <td className="px-3 py-2 text-center font-mono text-amber-600">{chk.pending_count || 0}</td>
+                      <td className="px-3 py-2 text-center font-mono text-blue-600">
+                        {chk.submitted_count || 0}
+                      </td>
+                      <td className="px-3 py-2 text-center font-mono text-amber-600">
+                        {chk.pending_count || 0}
+                      </td>
                       <td className="px-3 py-2 text-xs text-muted-foreground">
-                        {chk.last_activity ? format(new Date(chk.last_activity), "dd MMM, hh:mm a") : "—"}
+                        {chk.last_activity
+                          ? format(new Date(chk.last_activity), "dd MMM, hh:mm a")
+                          : "—"}
                       </td>
                     </tr>
                   ))}
@@ -330,8 +377,20 @@ export default function PapersTab({ examId }: PapersTabProps) {
           <table className="w-full text-sm">
             <thead className="bg-muted/40 border-b border-border">
               <tr>
-                {["Student", "Checker", "Marks", "Status", "Flags", "Checked At", "Remarks", ""].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                {[
+                  "Student",
+                  "Checker",
+                  "Marks",
+                  "Status",
+                  "Flags",
+                  "Checked At",
+                  "Remarks",
+                  "",
+                ].map((h) => (
+                  <th
+                    key={h}
+                    className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider"
+                  >
                     {h}
                   </th>
                 ))}
@@ -354,8 +413,12 @@ export default function PapersTab({ examId }: PapersTabProps) {
                     className="border-b border-border/50 hover:bg-muted/20 transition-colors"
                   >
                     <td className="px-4 py-3">
-                      <div className="font-medium text-sm text-foreground">{paper.student_name}</div>
-                      <div className="text-[10px] text-muted-foreground mt-0.5">Roll: {paper.roll_number || "—"}</div>
+                      <div className="font-medium text-sm text-foreground">
+                        {paper.student_name}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">
+                        Roll: {paper.roll_number || "—"}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="text-sm">{paper.checker_name || "—"}</div>
@@ -365,33 +428,88 @@ export default function PapersTab({ examId }: PapersTabProps) {
                     </td>
                     <td className="px-4 py-3">
                       {paper.is_absent ? (
-                        <Badge variant="destructive" className="text-[10px]">Absent</Badge>
+                        <Badge variant="destructive" className="text-[10px]">
+                          Absent
+                        </Badge>
                       ) : paper.is_pass ? (
-                        <Badge className="bg-green-100 text-green-700 text-[10px] hover:bg-green-100">Pass</Badge>
+                        <Badge className="bg-green-100 text-green-700 text-[10px] hover:bg-green-100">
+                          Pass
+                        </Badge>
                       ) : (
-                        <Badge className="bg-red-100 text-red-700 text-[10px] hover:bg-red-100">Fail</Badge>
+                        <Badge className="bg-red-100 text-red-700 text-[10px] hover:bg-red-100">
+                          Fail
+                        </Badge>
                       )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1 flex-wrap">
-                        {paper.is_submitted && <Badge variant="outline" className="text-[9px] bg-blue-50 text-blue-700 border-blue-200">Submitted</Badge>}
-                        {paper.is_rechecked && <Badge variant="outline" className="text-[9px] bg-purple-50 text-purple-700 border-purple-200">Rechecked</Badge>}
-                        {paper.has_open_query && <Badge variant="outline" className="text-[9px] bg-amber-50 text-amber-700 border-amber-200">Open Query</Badge>}
+                        {paper.is_submitted && (
+                          <Badge
+                            variant="outline"
+                            className="text-[9px] bg-blue-50 text-blue-700 border-blue-200"
+                          >
+                            Submitted
+                          </Badge>
+                        )}
+                        {paper.is_rechecked && (
+                          <Badge
+                            variant="outline"
+                            className="text-[9px] bg-purple-50 text-purple-700 border-purple-200"
+                          >
+                            Rechecked
+                          </Badge>
+                        )}
+                        {paper.has_open_query && (
+                          <Badge
+                            variant="outline"
+                            className="text-[9px] bg-amber-50 text-amber-700 border-amber-200"
+                          >
+                            Open Query
+                          </Badge>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {paper.checked_at ? format(new Date(paper.checked_at), "dd MMM, hh:mm a") : "—"}
+                      {paper.checked_at
+                        ? format(new Date(paper.checked_at), "dd MMM, hh:mm a")
+                        : "—"}
                     </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground max-w-[200px] truncate" title={paper.remarks}>
+                    <td
+                      className="px-4 py-3 text-xs text-muted-foreground max-w-[200px] truncate"
+                      title={paper.remarks}
+                    >
                       {paper.remarks || "—"}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => openEdit(paper)} disabled={paper.is_absent}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="w-7 h-7"
+                          onClick={() => openEdit(paper)}
+                          disabled={paper.is_absent}
+                        >
                           <Pencil className="w-3.5 h-3.5 text-blue-500" />
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="w-7 h-7"
+                          onClick={() => {
+                            setQueryTarget(paper);
+                            setQueryForm({ query_type: "", description: "" });
+                          }}
+                          title="Raise Query"
+                        >
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                        </Button>
                         {isSuperAdmin && (
-                          <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => setDeleteTarget(paper)}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="w-7 h-7"
+                            onClick={() => setDeleteTarget(paper)}
+                          >
                             <Trash2 className="w-3.5 h-3.5 text-red-500" />
                           </Button>
                         )}
@@ -416,10 +534,10 @@ export default function PapersTab({ examId }: PapersTabProps) {
               Student: <span className="text-foreground">{editTarget?.student_name}</span>
               {editTarget?.roll_number && ` (Roll: ${editTarget.roll_number})`}
             </div>
-            
+
             <div>
               <Label className="text-xs font-semibold">Marks Obtained *</Label>
-              <Input 
+              <Input
                 type="number"
                 step="0.01"
                 value={editForm.marks_obtained}
@@ -431,7 +549,7 @@ export default function PapersTab({ examId }: PapersTabProps) {
 
             <div>
               <Label className="text-xs font-semibold">Remarks</Label>
-              <Textarea 
+              <Textarea
                 value={editForm.remarks}
                 onChange={(e) => setEditForm({ ...editForm, remarks: e.target.value })}
                 className="text-sm resize-none mt-1"
@@ -442,7 +560,7 @@ export default function PapersTab({ examId }: PapersTabProps) {
 
             <div>
               <Label className="text-xs font-semibold">Internal Notes</Label>
-              <Textarea 
+              <Textarea
                 value={editForm.notes}
                 onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
                 className="text-sm resize-none mt-1"
@@ -452,9 +570,73 @@ export default function PapersTab({ examId }: PapersTabProps) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditTarget(null)} disabled={editLoading}>Cancel</Button>
-            <Button onClick={handleUpdateMarks} disabled={editLoading} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+            <Button variant="outline" onClick={() => setEditTarget(null)} disabled={editLoading}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateMarks}
+              disabled={editLoading}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
               {editLoading ? "Saving…" : "Save Marks"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Raise Query Dialog */}
+      <Dialog open={!!queryTarget} onOpenChange={(o) => !o && setQueryTarget(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading">Raise Query</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="text-sm font-medium text-muted-foreground">
+              Student: <span className="text-foreground">{queryTarget?.student_name}</span>
+              {queryTarget?.roll_number && ` (Roll: ${queryTarget.roll_number})`}
+            </div>
+
+            <div>
+              <Label className="text-xs font-semibold">Query Type *</Label>
+              <Select
+                value={queryForm.query_type}
+                onValueChange={(val) => setQueryForm((prev) => ({ ...prev, query_type: val }))}
+              >
+                <SelectTrigger className="mt-1 h-9 text-sm">
+                  <SelectValue placeholder="Select query type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="answer_key_not_available">Answer Key Not Available</SelectItem>
+                  <SelectItem value="marksheet_not_clear">Marksheet Not Clear/Illegible</SelectItem>
+                  <SelectItem value="discrepancy_found">
+                    Discrepancy in Answer Key or Marks
+                  </SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-xs font-semibold">Description</Label>
+              <Textarea
+                value={queryForm.description}
+                onChange={(e) => setQueryForm({ ...queryForm, description: e.target.value })}
+                className="text-sm resize-none mt-1"
+                rows={3}
+                placeholder="Describe the issue in detail..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setQueryTarget(null)} disabled={queryLoading}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRaiseQuery}
+              disabled={queryLoading || !queryForm.query_type}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {queryLoading ? "Submitting…" : "Raise Query"}
             </Button>
           </DialogFooter>
         </DialogContent>

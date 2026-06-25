@@ -189,6 +189,8 @@ export const API = {
       `/api/v1/exams/${examId}/papers/${marksheetId}/`,
     PAPER_MARKS: (examId: string, marksheetId: string) => 
       `/api/v1/exams/${examId}/papers/${marksheetId}/marks/`,
+    PAPER_QUERY: (examId: string, marksheetId: string) =>
+      `/api/v1/exams/${examId}/papers/${marksheetId}/query/`,
     CHECKER_STATUS: (examId: string) => `/api/v1/exams/${examId}/checker-status/`,
   },
 
