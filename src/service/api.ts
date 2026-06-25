@@ -183,6 +183,13 @@ export const API = {
     MALPRACTICE: (examId: string) => `/api/v1/exams/${examId}/malpractice/`,
     MALPRACTICE_DETAIL: (examId: string, rId: string) =>
       `/api/v1/exams/${examId}/malpractice/${rId}/`,
+    SCHEDULE: (examId: string) => `/api/v1/exams/${examId}/schedule/`,
+    PAPERS: (examId: string) => `/api/v1/exams/${examId}/papers/`,
+    PAPER_DETAIL: (examId: string, marksheetId: string) =>
+      `/api/v1/exams/${examId}/papers/${marksheetId}/`,
+    PAPER_MARKS: (examId: string, marksheetId: string) => 
+      `/api/v1/exams/${examId}/papers/${marksheetId}/marks/`,
+    CHECKER_STATUS: (examId: string) => `/api/v1/exams/${examId}/checker-status/`,
   },
 
   /** Fees endpoints */

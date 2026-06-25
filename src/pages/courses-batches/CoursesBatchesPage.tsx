@@ -697,7 +697,7 @@ export default function CoursesBatchesPage() {
               openDeleteBatchConfirm={openDeleteBatchConfirm}
               onViewTimetable={(batchName) => {
                 // Now navigates to the dedicated classroom timetable route
-                navigate("/classroom-timetable");
+                navigate("/timetable");
               }}
               onViewBatchDetails={handleViewBatchDetails}
               onRetry={fetchBatchesList}

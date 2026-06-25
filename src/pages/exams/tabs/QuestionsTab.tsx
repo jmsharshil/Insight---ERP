@@ -201,7 +201,7 @@ export default function QuestionsTab({ examId }: QuestionsTabProps) {
                             {c.is_correct
                               ? <CheckCircle2 className="w-3 h-3 text-green-500 shrink-0" />
                               : <Circle className="w-3 h-3 text-muted-foreground/40 shrink-0" />}
-                            <span>{c.text}</span>
+                            <span>{c.choice_text}</span>
                           </div>
                         ))}
                       </div>
