@@ -68,7 +68,7 @@ export default function RefundsTab({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="approval_pending">Approval Pending</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
                 <SelectItem value="rejected">Rejected</SelectItem>
               </SelectContent>
@@ -169,7 +169,7 @@ function RefundsTable({
       header: "Status",
       render: (r) => {
         const statusColors: Record<string, string> = {
-          pending: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+          approval_pending: "bg-amber-500/10 text-amber-500 border-amber-500/20",
           completed: "bg-green-500/10 text-green-500 border-green-500/20",
           rejected: "bg-red-500/10 text-red-500 border-red-500/20",
         };
@@ -182,13 +182,13 @@ function RefundsTable({
     },
   ];
 
-  const hasPending = data.some((r) => r.status === "pending");
-  if (hasPending) {
+  const hasPending = data.some((r) => r.status === "approval_pending");
+  if (hasPending && isAdmin) {
     cols.push({
       key: "actions",
       header: "Actions",
       render: (r) => {
-        const canApprove = r.status === "pending" && (isAccountant || isAdmin);
+        const canApprove = r.status === "approval_pending" && isAdmin;
         if (!canApprove) return null;
 
         return (
