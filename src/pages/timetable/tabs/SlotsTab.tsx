@@ -54,13 +54,14 @@ interface SlotsTabProps {
   facultyList: { id: string; name: string; employee_id?: string; user_id?: string }[];
   classrooms:     { id: string; name: string }[];
   chapters:       { id: string; name: string; order: number; subject?: string }[];
+  papers:         { id: string; name: string; subject?: string; file?: string }[];
   examinersList:  { id: string; name: string; employee_id?: string }[];
   paperCheckersList: { id: string; name: string; employee_id?: string }[];
   defaultView?:   "grid" | "list";
 }
 
 export default function SlotsTab({
-  batches, subjects, facultyList, classrooms, chapters,
+  batches, subjects, facultyList, classrooms, chapters, papers,
   examinersList, paperCheckersList, defaultView = "list"
 }: SlotsTabProps) {
   const dispatch = useDispatch<AppDispatch>();
@@ -247,6 +248,7 @@ export default function SlotsTab({
               facultyList={facultyList}
               classrooms={classrooms}
               chapters={chapters}
+              papers={papers}
               examinersList={examinersList}
               paperCheckersList={paperCheckersList}
               loading={formLoading}
@@ -269,6 +271,7 @@ export default function SlotsTab({
                 chapters:       (editingSlot.chapters ?? []).join(", "),
                 examiners:      (editingSlot.examiners ?? []).join(", "),
                 paper_checkers: (editingSlot.paper_checkers ?? []).join(", "),
+                selected_papers: (editingSlot.exam?.selected_papers ?? []).map((p: any) => p.id || p).join(", "),
               } : formPreFill ?? undefined}
               lockedFields={editingSlot ? [] : formLockedFields}
               onSubmit={(payload) => handleCreateOrUpdate(payload)}
@@ -470,6 +473,7 @@ export default function SlotsTab({
             facultyList={facultyList}
             classrooms={classrooms}
             chapters={chapters}
+            papers={papers}
             examinersList={examinersList}
             paperCheckersList={paperCheckersList}
             loading={formLoading}
@@ -492,6 +496,7 @@ export default function SlotsTab({
               chapters:       (editingSlot.chapters ?? []).join(", "),
               examiners:      (editingSlot.examiners ?? []).join(", "),
               paper_checkers: (editingSlot.paper_checkers ?? []).join(", "),
+              selected_papers: (editingSlot.exam?.selected_papers ?? []).map((p: any) => p.id || p).join(", "),
             } : formPreFill ?? undefined}
             onSubmit={(payload) => handleCreateOrUpdate(payload)}
             onCancel={() => { setFormOpen(false); setEditingSlot(null); setFormPreFill(null); }}

@@ -60,48 +60,48 @@ export default function AttendancePage() {
       },
     });
 
-    // 2. Fetch students for dropdowns
-    dispatch({
-      type: dropdownActions.GET_DROPDOWN,
-      method: "GET",
-      endPoint: `/api/v1/students/${branchQuery}`,
-      auth: true,
-      getResponse: (res: any) => {
-        const list = res?.data?.results || res?.results || res?.data?.data || res?.data || res;
-        if (Array.isArray(list)) {
-          setDropdowns(prev => ({
-            ...prev,
-            students: list.map((item: any) => ({
-              id: item.id,
-              name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim(),
-              branch_id: item.branch || item.branch_id,
-            })),
-          }));
-        }
-      },
-    });
+  //   // 2. Fetch students for dropdowns
+  //   dispatch({
+  //     type: dropdownActions.GET_DROPDOWN,
+  //     method: "GET",
+  //     endPoint: `/api/v1/students/${branchQuery}`,
+  //     auth: true,
+  //     getResponse: (res: any) => {
+  //       const list = res?.data?.results || res?.results || res?.data?.data || res?.data || res;
+  //       if (Array.isArray(list)) {
+  //         setDropdowns(prev => ({
+  //           ...prev,
+  //           students: list.map((item: any) => ({
+  //             id: item.id,
+  //             name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim(),
+  //             branch_id: item.branch || item.branch_id,
+  //           })),
+  //         }));
+  //       }
+  //     },
+  //   });
 
-    // 3. Fetch faculty for dropdowns
-    dispatch({
-      type: dropdownActions.GET_DROPDOWN,
-      method: "GET",
-      endPoint: `/api/v1/faculty/${branchQuery}`,
-      auth: true,
-      getResponse: (res: any) => {
-        const list = res?.data || res;
-        if (Array.isArray(list)) {
-          setDropdowns(prev => ({
-            ...prev,
-            faculty: list.map((item: any) => ({
-              id: item.id,
-              user_id: item.user || item.user_id,
-              name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim(),
-              branch_id: item.branch || item.branch_id,
-            })),
-          }));
-        }
-      },
-    });
+  //   // 3. Fetch faculty for dropdowns
+  //   dispatch({
+  //     type: dropdownActions.GET_DROPDOWN,
+  //     method: "GET",
+  //     endPoint: `/api/v1/faculty/${branchQuery}`,
+  //     auth: true,
+  //     getResponse: (res: any) => {
+  //       const list = res?.data || res;
+  //       if (Array.isArray(list)) {
+  //         setDropdowns(prev => ({
+  //           ...prev,
+  //           faculty: list.map((item: any) => ({
+  //             id: item.id,
+  //             user_id: item.user || item.user_id,
+  //             name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim(),
+  //             branch_id: item.branch || item.branch_id,
+  //           })),
+  //         }));
+  //       }
+  //     },
+  //   });
   }, [dispatch, user]);
 
   const isParentOrStudent = user?.role === "parents" || user?.role === "student";
@@ -163,9 +163,9 @@ export default function AttendancePage() {
           {!isParentOrStudent && <TabsTrigger value="dashboard">Dashboard</TabsTrigger>}
           {isEmployeeHistoryRole && <TabsTrigger value="my_history">My Attendance</TabsTrigger>}
           <TabsTrigger value="students">Students</TabsTrigger>
-          {!isParentOrStudent && <TabsTrigger value="register">Student Register</TabsTrigger>}
+          {/* {!isParentOrStudent && <TabsTrigger value="register">Student Register</TabsTrigger>} */}
           {/* {isAdmin && <TabsTrigger value="staff_register">Staff Register</TabsTrigger>} */}
-          <TabsTrigger value="history">History</TabsTrigger>
+          {!isParentOrStudent && <TabsTrigger value="history">History</TabsTrigger>}
           {!isParentOrStudent && <TabsTrigger value="faculty">Staff</TabsTrigger>}
           {!isParentOrStudent && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
           {!isParentOrStudent && <TabsTrigger value="defaulters">Defaulters</TabsTrigger>}

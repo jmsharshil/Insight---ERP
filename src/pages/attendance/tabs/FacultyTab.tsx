@@ -44,7 +44,7 @@ export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
     }) || [];
 
   const [f, setF] = useState({
-    user_id: "",
+    search: "",
     branch_id: user && user.role === "branch_manager" && user.branch ? user.branch : "",
     from_date: "",
     to_date: "",
@@ -85,22 +85,12 @@ export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-xl border border-border p-4 flex flex-wrap gap-3">
-        <Select
-          value={f.user_id}
-          onValueChange={(v) => setF((p) => ({ ...p, user_id: v === "all" ? "" : v }))}
-        >
-          <SelectTrigger className="h-9 text-sm w-44 bg-muted/10">
-            <SelectValue placeholder="Select Employee" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Employees</SelectItem>
-            {facultyList.map((fac: any) => (
-              <SelectItem key={fac.id} value={fac.user_id || fac.user || fac.id}>
-                {fac.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Input
+          placeholder="Search Employee"
+          className="h-9 text-sm w-52 bg-muted/10"
+          value={f.search}
+          onChange={(e) => setF((p) => ({ ...p, search: e.target.value }))}
+        />
         <Select
           value={f.branch_id}
           onValueChange={(v) => setF((p) => ({ ...p, branch_id: v === "all" ? "" : v }))}
@@ -156,7 +146,7 @@ export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
           className="h-9 text-sm"
           onClick={() =>
             setF({
-              user_id: "",
+              search: "",
               branch_id: user && user.role === "branch_manager" && user.branch ? user.branch : "",
               from_date: "",
               to_date: "",
@@ -183,7 +173,8 @@ export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
                   "Date",
                   "Status",
                   "Check In",
-                  "Check Out"
+                  "Check Out",
+                  "Action",
                 ].map((h) => (
                   <th
                     key={h}
@@ -197,7 +188,7 @@ export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
             <tbody>
               {faculty.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-muted-foreground text-sm">
+                  <td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">
                     No employee attendance records found.
                   </td>
                 </tr>
@@ -247,6 +238,16 @@ export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">
                       {fac.checked_out_at ? new Date(fac.checked_out_at).toLocaleTimeString() : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs font-semibold hover:bg-muted"
+                        onClick={() => navigate(`/attendance/faculty/${fac.user_id || fac.user || fac.id}`)}
+                      >
+                        <Eye className="w-4 h-4 mr-1.5" /> View
+                      </Button>
                     </td>
                   </motion.tr>
                 ))

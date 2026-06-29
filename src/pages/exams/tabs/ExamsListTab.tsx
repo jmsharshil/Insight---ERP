@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
 import { Eye, Trash2, Pencil, Search, X, RefreshCw, Info, Calendar } from "lucide-react";
-import { examActions, studentActions, dropdownActions } from "@/redux/actions";
+import { examActions, studentActions, dropdownActions, subjectAction } from "@/redux/actions";
 import { API } from "@/service/api";
 import {
   setExams, setExamsLoading,
@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 const EXAM_TYPE_BADGE: Record<string, string> = {
@@ -54,7 +55,11 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
   const [editForm, setEditForm] = useState({
     title: "", instructions: "", total_marks: "", pass_marks: "",
     exam_type: "offline", result_release_mode: "manual",
+    selected_papers: [] as string[],
   });
+
+  const [availablePapers, setAvailablePapers] = useState<any[]>([]);
+  const [papersLoading, setPapersLoading] = useState(false);
 
   const isAdmin   = user && ["super_admin", "branch_manager", "admin"].includes(user.role ?? "");
   const isStudent = user?.role === "student";
@@ -142,6 +147,27 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
   }, [resolvedFacultyId]);
 
   const openEdit = (exam: Exam) => {
+    // We trigger fetching all subjects to extract their papers
+    dispatch({
+      type: subjectAction.GET_SUBJECTS,
+      method: "GET",
+      endPoint: API.SUBJECTS.CREATE,
+      auth: true,
+      setLoading: (v: boolean) => setPapersLoading(v),
+      getResponse: (res: any) => {
+        const subs = res?.data?.results || res?.results || res?.data || [];
+        const allPapers: any[] = [];
+        subs.forEach((s: any) => {
+          if (s.papers && Array.isArray(s.papers)) {
+            s.papers.forEach((p: any) => {
+              allPapers.push({ ...p, subject_name: s.name });
+            });
+          }
+        });
+        setAvailablePapers(allPapers);
+      }
+    } as any);
+
     setEditTarget(exam);
     setEditForm({
       title:               exam.title ?? "",
@@ -150,8 +176,21 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
       pass_marks:          String(exam.pass_marks ?? ""),
       exam_type:           exam.exam_type ?? "offline",
       result_release_mode: exam.result_release_mode ?? "manual",
+      selected_papers:     (exam.selected_papers || []).map((p: any) => typeof p === "string" ? p : p.id)
     });
     setEditOpen(true);
+  };
+
+  const togglePaper = (paperId: string) => {
+    setEditForm(f => {
+      const isSelected = f.selected_papers.includes(paperId);
+      return {
+        ...f,
+        selected_papers: isSelected 
+          ? f.selected_papers.filter(id => id !== paperId)
+          : [...f.selected_papers, paperId]
+      };
+    });
   };
 
   const handleUpdate = () => {
@@ -437,6 +476,31 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
                     <SelectItem value="instant">Instant</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold">Link Subject Papers</Label>
+              <div className="border border-border rounded-md p-2 h-40 overflow-y-auto bg-muted/10 space-y-2">
+                {papersLoading ? (
+                  <div className="text-center text-xs text-muted-foreground mt-4">Loading papers...</div>
+                ) : availablePapers.length === 0 ? (
+                  <div className="text-center text-xs text-muted-foreground mt-4">No papers available across subjects.</div>
+                ) : (
+                  availablePapers.map(p => (
+                    <label key={p.id} className="flex items-start gap-2 cursor-pointer p-2 rounded hover:bg-muted/30">
+                      <Checkbox
+                        checked={editForm.selected_papers.includes(p.id)}
+                        onCheckedChange={() => togglePaper(p.id)}
+                        className="mt-0.5"
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium leading-none">{p.set_name}</span>
+                        <span className="text-xs text-muted-foreground mt-1">Subject: {p.subject_name || p.subject || "—"}</span>
+                      </div>
+                    </label>
+                  ))
+                )}
               </div>
             </div>
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { motion } from "framer-motion";
-import { Search, RefreshCw, Filter, CheckCircle2, XCircle, Pencil, Trash2, Users, FileText, Clock, AlertCircle } from "lucide-react";
+import { Search, RefreshCw, Filter, CheckCircle2, XCircle, Pencil, Trash2, Users, FileText, Clock, AlertCircle, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 
 import { examActions } from "@/redux/actions";
@@ -52,6 +52,14 @@ export default function PapersTab({ examId }: PapersTabProps) {
   const [queryForm, setQueryForm] = useState({
     query_type: "",
     description: ""
+  });
+
+  const [viewQueriesTarget, setViewQueriesTarget] = useState<any | null>(null);
+  const [activeResolveQueryId, setActiveResolveQueryId] = useState<string | null>(null);
+  const [resolveLoading, setResolveLoading] = useState(false);
+  const [resolveForm, setResolveForm] = useState({
+    marks_obtained: "",
+    remarks: ""
   });
 
   // Filters
@@ -206,6 +214,37 @@ export default function PapersTab({ examId }: PapersTabProps) {
       getError: (err: any) => {
         toast.error(err?.response?.data?.message || "Error raising query");
         setQueryLoading(false);
+      },
+    });
+  };
+
+  const handleResolveQuery = (queryId: string) => {
+    if (!viewQueriesTarget) return;
+
+    setResolveLoading(true);
+    dispatch({
+      type: examActions.RESOLVE_PAPER_QUERY,
+      method: "PATCH",
+      endPoint: API.EXAMS.RESOLVE_QUERY(examId, queryId),
+      body: {
+        ...(resolveForm.marks_obtained !== "" ? { marks_obtained: Number(resolveForm.marks_obtained) } : {}),
+        ...(resolveForm.remarks ? { remarks: resolveForm.remarks } : {})
+      },
+      auth: true,
+      getResponse: (res: any) => {
+        if (res?.success) {
+          toast.success(res.message || "Query resolved successfully.");
+          setActiveResolveQueryId(null);
+          setViewQueriesTarget(null);
+          fetchPapers(); // refresh data
+        } else {
+          toast.error(res?.message || "Failed to resolve query.");
+        }
+        setResolveLoading(false);
+      },
+      getError: (err: any) => {
+        toast.error(err?.response?.data?.message || "Error resolving query");
+        setResolveLoading(false);
       },
     });
   };
@@ -503,6 +542,20 @@ export default function PapersTab({ examId }: PapersTabProps) {
                         >
                           <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
                         </Button>
+                        {paper.queries && paper.queries.length > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="w-7 h-7"
+                            onClick={() => {
+                              setViewQueriesTarget(paper);
+                              setActiveResolveQueryId(null);
+                            }}
+                            title="View Queries"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5 text-blue-500" />
+                          </Button>
+                        )}
                         {isSuperAdmin && (
                           <Button
                             variant="ghost"
@@ -637,6 +690,124 @@ export default function PapersTab({ examId }: PapersTabProps) {
               className="bg-amber-600 hover:bg-amber-700 text-white"
             >
               {queryLoading ? "Submitting…" : "Raise Query"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View & Resolve Queries Dialog */}
+      <Dialog open={!!viewQueriesTarget} onOpenChange={(o) => !o && setViewQueriesTarget(null)}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-heading">Queries</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto">
+            <div className="text-sm font-medium text-muted-foreground">
+              Student: <span className="text-foreground">{viewQueriesTarget?.student_name}</span>
+              {viewQueriesTarget?.roll_number && ` (Roll: ${viewQueriesTarget.roll_number})`}
+            </div>
+
+            {viewQueriesTarget?.queries && viewQueriesTarget.queries.length > 0 ? (
+              <div className="space-y-4">
+                {viewQueriesTarget.queries.map((q: any) => (
+                  <div key={q.id} className="p-4 bg-muted/20 border border-border rounded-lg space-y-3">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h4 className="font-semibold text-sm">{q.query_type_display}</h4>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Raised by: <span className="font-medium">{q.raised_by_name}</span> on {format(new Date(q.created_at), "dd MMM, yyyy")}
+                        </p>
+                      </div>
+                      <Badge variant={q.status === "open" ? "default" : "secondary"} className={q.status === "open" ? "bg-amber-100 text-amber-700 hover:bg-amber-100" : ""}>
+                        {q.status_display}
+                      </Badge>
+                    </div>
+                    
+                    {q.description && (
+                      <div className="text-sm bg-white p-3 rounded-md border border-border/50">
+                        {q.description}
+                      </div>
+                    )}
+
+                    {q.status === "open" && isSuperAdmin && (
+                      <div className="pt-2">
+                        {activeResolveQueryId === q.id ? (
+                          <div className="space-y-3 border-t border-border pt-3 mt-2">
+                            <h5 className="text-xs font-semibold">Resolve Query</h5>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <Label className="text-[10px] uppercase">Update Marks (Optional)</Label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  placeholder={`Current: ${viewQueriesTarget.marks_obtained}`}
+                                  value={resolveForm.marks_obtained}
+                                  onChange={(e) => setResolveForm({ ...resolveForm, marks_obtained: e.target.value })}
+                                  className="h-8 text-xs mt-1"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-[10px] uppercase">Remarks (Optional)</Label>
+                              <Textarea
+                                rows={2}
+                                placeholder="Add resolution remarks..."
+                                value={resolveForm.remarks}
+                                onChange={(e) => setResolveForm({ ...resolveForm, remarks: e.target.value })}
+                                className="text-xs resize-none mt-1"
+                              />
+                            </div>
+                            <div className="flex gap-2 justify-end">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-xs"
+                                onClick={() => setActiveResolveQueryId(null)}
+                                disabled={resolveLoading}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white"
+                                onClick={() => handleResolveQuery(q.id)}
+                                disabled={resolveLoading}
+                              >
+                                {resolveLoading ? "Saving..." : "Confirm Resolution"}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs"
+                            onClick={() => {
+                              setActiveResolveQueryId(q.id);
+                              setResolveForm({ marks_obtained: "", remarks: "" });
+                            }}
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                            Resolve
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                    {q.status === "resolved" && q.resolved_by_name && (
+                      <div className="text-xs text-muted-foreground mt-2 border-t border-border/50 pt-2">
+                        Resolved by: <span className="font-medium text-foreground">{q.resolved_by_name}</span> on {format(new Date(q.resolved_at), "dd MMM, yyyy")}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground text-center py-4">No queries found.</div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewQueriesTarget(null)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

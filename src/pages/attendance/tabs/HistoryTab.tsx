@@ -50,7 +50,7 @@ export default function HistoryTab({ dropdowns }: { dropdowns?: any }) {
   }) || [];
 
   const [f, setF] = useState({
-    student_id: "", branch_id: isBranchManager && user.branch ? user.branch : "", batch_id: "", date: "", status: "",
+    search: "", branch_id: isBranchManager && user.branch ? user.branch : "", batch_id: "", date: "", status: "",
   });
 
   const [correctionModal, setCorrectionModal] = useState({ isOpen: false, recordId: "", status: "", note: "", submitting: false });
@@ -116,7 +116,7 @@ export default function HistoryTab({ dropdowns }: { dropdowns?: any }) {
     } as any);
   };
 
-  const clear = () => setF({ student_id: "", branch_id: isBranchManager && user.branch ? user.branch : "", batch_id: "", date: "", status: "" });
+  const clear = () => setF({ search: "", branch_id: isBranchManager && user.branch ? user.branch : "", batch_id: "", date: "", status: "" });
 
   const filteredBranches = useMemo(() => {
     if (!isBranchManager) return branches;
@@ -138,22 +138,12 @@ export default function HistoryTab({ dropdowns }: { dropdowns?: any }) {
         <div className="flex flex-wrap gap-3">
           {!isParentOrStudent && (
             <>
-              <Select
-                value={f.student_id}
-                onValueChange={(v) => setF((p) => ({ ...p, student_id: v === "all" ? "" : v }))}
-              >
-                <SelectTrigger className="h-9 text-sm w-44 bg-muted/10">
-                  <SelectValue placeholder="Select Student" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Students</SelectItem>
-                  {studentsList.map((s: any) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                placeholder="Search Student"
+                className="h-9 text-sm w-52 bg-muted/10"
+                value={f.search}
+                onChange={(e) => setF((p) => ({ ...p, search: e.target.value }))}
+              />
               <Select
                 value={f.branch_id}
                 onValueChange={(v) => setF((p) => ({ ...p, branch_id: v === "all" ? "" : v }))}

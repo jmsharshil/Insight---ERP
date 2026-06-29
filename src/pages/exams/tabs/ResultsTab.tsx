@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
@@ -7,7 +7,12 @@ import { API } from "@/service/api";
 import type { Exam } from "@/redux/slices/examSlice";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Send, Key, BookOpen, Smartphone, Clock } from "lucide-react";
+import { Send, Key, BookOpen, Smartphone, Clock, CheckCircle, Trash2, HelpCircle, FileText, Upload } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion } from "framer-motion";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 
@@ -22,6 +27,24 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
 
   const [distributeLoading, setDistributeLoading] = useState(false);
   const [distributeConfirm, setDistributeConfirm] = useState(false);
+
+  const [results, setResults] = useState<any[]>([]);
+  const [resultsLoading, setResultsLoading] = useState(true);
+  const [publishLoading, setPublishLoading] = useState(false);
+  const [publishConfirm, setPublishConfirm] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const [recheckRequests, setRecheckRequests] = useState<any[]>([]);
+  const [recheckLoading, setRecheckLoading] = useState(false);
+
+  const [recheckModal, setRecheckModal] = useState(false);
+  const [recheckForm, setRecheckForm] = useState<{ reason: string; file: File | null }>({ reason: "", file: null });
+  const [recheckSubmitLoading, setRecheckSubmitLoading] = useState(false);
+
+  const [recheckActionModal, setRecheckActionModal] = useState<any>(null);
+  const [recheckActionForm, setRecheckActionForm] = useState({ action: "", reason: "", new_checker_id: "" });
+  const [recheckActionLoading, setRecheckActionLoading] = useState(false);
 
   const isAdmin   = user && ["super_admin", "branch_manager", "admin"].includes(user.role ?? "");
   const isFaculty = user?.role === "faculty";
@@ -45,6 +68,149 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
         toast.error(err?.response?.data?.message || "Failed to distribute answer key.");
         setDistributeConfirm(false);
       },
+    });
+  };
+
+  const fetchResults = () => {
+    dispatch({
+      type: examActions.GET_RESULTS,
+      method: "GET",
+      endPoint: API.EXAMS.RESULTS(exam.id),
+      auth: true,
+      setLoading: (v: boolean) => setResultsLoading(v),
+      getResponse: (res: any) => {
+        setResults(res?.data || []);
+      },
+      getError: () => {
+        toast.error("Failed to fetch results.");
+      }
+    });
+  };
+
+  const fetchRecheckRequests = () => {
+    dispatch({
+      type: examActions.GET_RECHECK_REQUESTS,
+      method: "GET",
+      endPoint: !isStudent ? API.EXAMS.RECHECK_REQUESTS(exam.id) : API.EXAMS.CREATE_RECHECK_REQUEST(exam.id),
+      auth: true,
+      setLoading: (v: boolean) => setRecheckLoading(v),
+      getResponse: (res: any) => {
+        setRecheckRequests(res?.data || []);
+      },
+      getError: () => {} 
+    });
+  };
+
+  useEffect(() => {
+    fetchResults();
+    if (isAdmin || isFaculty || isStudent) {
+      fetchRecheckRequests();
+    }
+  }, [exam.id]);
+
+  const handlePublishResults = () => {
+    dispatch({
+      type: examActions.PUBLISH_RESULTS,
+      method: "POST",
+      endPoint: API.EXAMS.PUBLISH_RESULTS(exam.id),
+      auth: true,
+      setLoading: (v: boolean) => setPublishLoading(v),
+      getResponse: () => {
+        toast.success("Results published successfully.");
+        setPublishConfirm(false);
+        fetchResults();
+      },
+      getError: (err: any) => {
+        toast.error(err?.response?.data?.message || "Failed to publish results.");
+        setPublishConfirm(false);
+      }
+    });
+  };
+
+  const handleDeleteResult = () => {
+    if (!deleteId) return;
+    dispatch({
+      type: examActions.DELETE_RESULT,
+      method: "DELETE",
+      endPoint: API.EXAMS.RESULT_DETAIL(exam.id, deleteId),
+      auth: true,
+      setLoading: (v: boolean) => setDeleteLoading(v),
+      getResponse: () => {
+        toast.success("Result deleted.");
+        setDeleteId(null);
+        fetchResults();
+      },
+      getError: (err: any) => {
+        toast.error(err?.response?.data?.message || "Failed to delete result.");
+        setDeleteId(null);
+      }
+    });
+  };
+
+  const handleSubmitRecheck = () => {
+    if (!recheckForm.reason) {
+      toast.error("Reason is required.");
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append("reason", recheckForm.reason);
+    if (recheckForm.file) {
+      formData.append("uploaded_marksheet", recheckForm.file);
+    }
+
+    dispatch({
+      type: examActions.CREATE_RECHECK_REQUEST,
+      method: "POST",
+      endPoint: API.EXAMS.CREATE_RECHECK_REQUEST(exam.id),
+      body: formData,
+      isMultipart: true,
+      auth: true,
+      setLoading: (v: boolean) => setRecheckSubmitLoading(v),
+      getResponse: (res: any) => {
+        toast.success(res.message || "Recheck request submitted.");
+        setRecheckModal(false);
+        setRecheckForm({ reason: "", file: null });
+        fetchRecheckRequests();
+      },
+      getError: (err: any) => {
+        toast.error(err?.response?.data?.message || "Failed to submit recheck request.");
+      }
+    });
+  };
+
+  const handleActionRecheck = () => {
+    if (!recheckActionForm.action) {
+      toast.error("Please select an action.");
+      return;
+    }
+    if (recheckActionForm.action === "approve" && !recheckActionForm.new_checker_id) {
+      toast.error("New Checker ID is required for approval.");
+      return;
+    }
+    if (recheckActionForm.action === "reject" && !recheckActionForm.reason) {
+      toast.error("Reason is required for rejection.");
+      return;
+    }
+
+    dispatch({
+      type: examActions.RECHECK_REQUEST_ACTION,
+      method: "PATCH",
+      endPoint: API.EXAMS.RECHECK_REQUEST_ACTION(exam.id, recheckActionModal.id),
+      body: {
+        action: recheckActionForm.action,
+        ...(recheckActionForm.action === "approve" ? { new_checker_id: recheckActionForm.new_checker_id } : { reason: recheckActionForm.reason })
+      },
+      auth: true,
+      setLoading: (v: boolean) => setRecheckActionLoading(v),
+      getResponse: (res: any) => {
+        toast.success(res.message || "Action completed.");
+        setRecheckActionModal(null);
+        fetchRecheckRequests();
+      },
+      getError: (err: any) => {
+        toast.error(err?.response?.data?.message || "Failed to perform action.");
+      }
     });
   };
 
@@ -112,47 +278,274 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
         </motion.div>
       )}
 
+      {/* Admin / Faculty Results List */}
+      {(isAdmin || isFaculty) && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="rounded-xl border border-border bg-white shadow-sm overflow-hidden"
+        >
+          <div className="flex items-center justify-between p-4 border-b border-border">
+            <h3 className="text-sm font-heading font-semibold">Exam Results</h3>
+            {results.length === 0 && !resultsLoading && (
+              <Button 
+                onClick={() => setPublishConfirm(true)}
+                disabled={publishLoading}
+                className="h-8 gap-1.5"
+                size="sm"
+              >
+                <CheckCircle className="w-3.5 h-3.5" />
+                {publishLoading ? "Publishing…" : "Publish Results"}
+              </Button>
+            )}
+          </div>
+          <div className="p-0 overflow-x-auto">
+            {resultsLoading ? (
+              <div className="p-8 text-center text-sm text-muted-foreground">Loading results...</div>
+            ) : results.length > 0 ? (
+              <table className="w-full text-sm text-left">
+                <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Student</th>
+                    <th className="px-4 py-3 font-medium">Roll No</th>
+                    <th className="px-4 py-3 font-medium">Marks</th>
+                    <th className="px-4 py-3 font-medium">%</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3 font-medium">Rank</th>
+                    {isAdmin && <th className="px-4 py-3 font-medium text-right">Actions</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {results.map((res: any) => (
+                    <tr key={res.id} className="hover:bg-muted/20">
+                      <td className="px-4 py-3 font-medium">{res.student_name}</td>
+                      <td className="px-4 py-3">{res.roll_number || "-"}</td>
+                      <td className="px-4 py-3">
+                        {res.marks_obtained} / {res.total_marks}
+                      </td>
+                      <td className="px-4 py-3">{res.percentage}%</td>
+                      <td className="px-4 py-3">
+                        {res.is_pass ? (
+                          <Badge className="bg-green-100 text-green-700 border-green-200">Pass</Badge>
+                        ) : (
+                          <Badge className="bg-red-100 text-red-700 border-red-200">Fail</Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {res.rank ? `#${res.rank}` : "-"}
+                      </td>
+                      {isAdmin && (
+                        <td className="px-4 py-3 text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
+                            onClick={() => setDeleteId(res.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                No results published yet.
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Admin / Faculty Recheck Requests List */}
+      {(isAdmin || isFaculty) && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="rounded-xl border border-border bg-white shadow-sm overflow-hidden"
+        >
+          <div className="flex items-center justify-between p-4 border-b border-border">
+            <h3 className="text-sm font-heading font-semibold">Recheck Requests</h3>
+            <Badge variant="secondary">{recheckRequests.length} Total</Badge>
+          </div>
+          <div className="p-0 overflow-x-auto">
+            {recheckLoading ? (
+              <div className="p-8 text-center text-sm text-muted-foreground">Loading requests...</div>
+            ) : recheckRequests.length > 0 ? (
+              <table className="w-full text-sm text-left">
+                <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Student</th>
+                    <th className="px-4 py-3 font-medium">Roll No</th>
+                    <th className="px-4 py-3 font-medium">Reason</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3 font-medium">Checkers</th>
+                    <th className="px-4 py-3 font-medium">File</th>
+                    <th className="px-4 py-3 font-medium text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {recheckRequests.map((req: any) => (
+                    <tr key={req.id} className="hover:bg-muted/20">
+                      <td className="px-4 py-3 font-medium">{req.student_name}</td>
+                      <td className="px-4 py-3">{req.roll_number || "-"}</td>
+                      <td className="px-4 py-3 max-w-[200px] truncate" title={req.reason}>
+                        {req.reason}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant="outline" className="capitalize">
+                          {req.status_display || req.status.replace("_", " ")}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {req.new_checker_name ? `New: ${req.new_checker_name}` : "-"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {req.uploaded_marksheet_url ? (
+                          <a href={req.uploaded_marksheet_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
+                            <FileText className="w-3.5 h-3.5" /> View
+                          </a>
+                        ) : "-"}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {req.status === "approval_pending" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs"
+                            onClick={() => {
+                              setRecheckActionModal(req);
+                              setRecheckActionForm({ action: "", reason: "", new_checker_id: "" });
+                            }}
+                          >
+                            Review
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                No recheck requests.
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+
       {/* Student / Parent view — exam-taking info */}
       {(isStudent || isParent) && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="rounded-xl border border-blue-200 bg-blue-50/50 p-5 shadow-sm"
+          className="rounded-xl border border-blue-200 bg-blue-50/50 p-5 shadow-sm space-y-6"
         >
-          <div className="flex items-start gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-blue-100 shrink-0">
-              <BookOpen className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <h4 className="text-sm font-heading font-semibold text-blue-900">Exam Information</h4>
-            </div>
-          </div>
-          <div className="space-y-2 text-sm text-blue-800">
-            <div className="flex items-center gap-2">
-              <Smartphone className="w-4 h-4 shrink-0" />
-              <span>This exam is taken on the mobile app. Open the mobile application to start.</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 shrink-0" />
-              <span>Results will be released <strong className="capitalize">{exam.result_release_mode}</strong> after submission.</span>
-            </div>
-            {isParent && (
-              <div className="flex items-center gap-2 text-blue-600">
-                <span>👤 You are viewing this exam as a parent/guardian.</span>
+          <div>
+            <div className="flex items-start gap-3 mb-4">
+              <div className="p-2 rounded-lg bg-blue-100 shrink-0">
+                <BookOpen className="w-5 h-5 text-blue-600" />
               </div>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-3 mt-4">
-            <div className="text-center rounded-lg bg-white/60 p-3 border border-blue-100">
-              <div className="text-lg font-bold text-foreground">{exam.total_marks}</div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Marks</div>
+              <div>
+                <h4 className="text-sm font-heading font-semibold text-blue-900">Exam Information</h4>
+              </div>
             </div>
-            <div className="text-center rounded-lg bg-white/60 p-3 border border-blue-100">
-              <div className="text-lg font-bold text-foreground">{exam.pass_marks}</div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Pass Marks</div>
+            <div className="space-y-2 text-sm text-blue-800">
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-4 h-4 shrink-0" />
+                <span>This exam is taken on the mobile app. Open the mobile application to start.</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 shrink-0" />
+                <span>Results will be released <strong className="capitalize">{exam.result_release_mode}</strong> after submission.</span>
+              </div>
+              {isParent && (
+                <div className="flex items-center gap-2 text-blue-600">
+                  <span>👤 You are viewing this exam as a parent/guardian.</span>
+                </div>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              <div className="text-center rounded-lg bg-white/60 p-3 border border-blue-100">
+                <div className="text-lg font-bold text-foreground">{exam.total_marks}</div>
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Marks</div>
+              </div>
+              <div className="text-center rounded-lg bg-white/60 p-3 border border-blue-100">
+                <div className="text-lg font-bold text-foreground">{exam.pass_marks}</div>
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Pass Marks</div>
+              </div>
             </div>
           </div>
+          
+          {results.length > 0 && (
+            <div className="pt-4 border-t border-blue-200">
+              <h4 className="text-sm font-heading font-semibold text-blue-900 mb-3">Your Result</h4>
+              {results.map((res: any) => (
+                <div key={res.id} className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white/60 p-4 rounded-lg border border-blue-100 mb-4">
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Marks Obtained</span>
+                    <span className="font-bold text-lg">{res.marks_obtained} / {res.total_marks}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Percentage</span>
+                    <span className="font-bold text-lg">{res.percentage}%</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Status</span>
+                    <div className="mt-1">
+                      {res.is_pass ? (
+                        <Badge className="bg-green-100 text-green-700 border-green-200">Pass</Badge>
+                      ) : (
+                        <Badge className="bg-red-100 text-red-700 border-red-200">Fail</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Rank</span>
+                    <span className="font-bold text-lg">{res.rank ? `#${res.rank}` : "-"}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {isStudent && results.length > 0 && (
+            <div className="pt-4 border-t border-blue-200">
+               <div className="flex items-center justify-between">
+                 <h4 className="text-sm font-heading font-semibold text-blue-900">Re-evaluation</h4>
+                 <Button
+                   variant="outline"
+                   size="sm"
+                   className="h-8 gap-1.5 text-blue-700 border-blue-300 hover:bg-blue-100"
+                   onClick={() => setRecheckModal(true)}
+                 >
+                   <HelpCircle className="w-3.5 h-3.5" />
+                   Request Recheck
+                 </Button>
+               </div>
+               {recheckRequests.length > 0 && (
+                 <div className="mt-3 space-y-2">
+                   {recheckRequests.map((req: any) => (
+                     <div key={req.id} className="p-3 bg-white/60 rounded-lg border border-blue-100 text-sm flex justify-between items-center">
+                       <div>
+                         <span className="font-semibold text-blue-900">Status: </span>
+                         <span className="capitalize">{req.status_display || req.status.replace("_", " ")}</span>
+                       </div>
+                       <div className="text-xs text-muted-foreground">
+                         {new Date(req.created_at).toLocaleDateString()}
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               )}
+            </div>
+          )}
         </motion.div>
       )}
 
@@ -164,6 +557,137 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
         confirmLabel="Send Now"
         onConfirm={handleDistributeAnswerKey}
       />
+
+      <ConfirmDialog
+        open={publishConfirm}
+        onOpenChange={o => setPublishConfirm(o)}
+        title="Publish Results?"
+        description="This will calculate and publish the final results for all students. They will be notified and can view their scores."
+        confirmLabel="Publish"
+        onConfirm={handlePublishResults}
+      />
+
+      <ConfirmDialog
+        open={!!deleteId}
+        onOpenChange={o => !o && setDeleteId(null)}
+        title="Delete Result?"
+        description="Are you sure you want to delete this result? This action cannot be undone."
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={handleDeleteResult}
+      />
+
+      {/* Submit Recheck Dialog (Student) */}
+      <Dialog open={recheckModal} onOpenChange={setRecheckModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading">Request Recheck</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label className="text-xs font-semibold">Reason for Recheck *</Label>
+              <Textarea
+                value={recheckForm.reason}
+                onChange={(e) => setRecheckForm({ ...recheckForm, reason: e.target.value })}
+                className="text-sm resize-none mt-1"
+                rows={3}
+                placeholder="Describe the discrepancy..."
+              />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold flex items-center gap-2">
+                Upload Marksheet <span className="text-muted-foreground font-normal">(Optional PDF/Image)</span>
+              </Label>
+              <Input
+                type="file"
+                accept=".pdf,image/*"
+                onChange={(e) => setRecheckForm({ ...recheckForm, file: e.target.files?.[0] || null })}
+                className="h-9 mt-1 text-xs"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRecheckModal(false)} disabled={recheckSubmitLoading}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmitRecheck}
+              disabled={recheckSubmitLoading || !recheckForm.reason}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+            >
+              {recheckSubmitLoading ? "Submitting…" : <><Upload className="w-4 h-4" /> Submit</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Action Recheck Dialog (Admin) */}
+      <Dialog open={!!recheckActionModal} onOpenChange={(o) => !o && setRecheckActionModal(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading">Review Recheck Request</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="text-sm bg-muted/30 p-3 rounded-lg border border-border">
+              <p><span className="font-semibold text-muted-foreground">Student:</span> {recheckActionModal?.student_name}</p>
+              <p><span className="font-semibold text-muted-foreground">Reason:</span> {recheckActionModal?.reason}</p>
+            </div>
+            <div>
+              <Label className="text-xs font-semibold">Action *</Label>
+              <Select
+                value={recheckActionForm.action}
+                onValueChange={(val) => setRecheckActionForm({ action: val, reason: "", new_checker_id: "" })}
+              >
+                <SelectTrigger className="mt-1 h-9 text-sm">
+                  <SelectValue placeholder="Select action" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="approve">Approve & Reassign</SelectItem>
+                  <SelectItem value="reject">Reject</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {recheckActionForm.action === "approve" && (
+              <div>
+                <Label className="text-xs font-semibold">New Checker ID *</Label>
+                <Input
+                  type="text"
+                  placeholder="Enter User UUID"
+                  value={recheckActionForm.new_checker_id}
+                  onChange={(e) => setRecheckActionForm({ ...recheckActionForm, new_checker_id: e.target.value })}
+                  className="h-9 mt-1 text-sm"
+                />
+              </div>
+            )}
+
+            {recheckActionForm.action === "reject" && (
+              <div>
+                <Label className="text-xs font-semibold">Reason for Rejection *</Label>
+                <Textarea
+                  value={recheckActionForm.reason}
+                  onChange={(e) => setRecheckActionForm({ ...recheckActionForm, reason: e.target.value })}
+                  className="text-sm resize-none mt-1"
+                  rows={2}
+                  placeholder="e.g. Insufficient evidence..."
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRecheckActionModal(null)} disabled={recheckActionLoading}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleActionRecheck}
+              disabled={recheckActionLoading || !recheckActionForm.action}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              {recheckActionLoading ? "Processing…" : "Submit"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

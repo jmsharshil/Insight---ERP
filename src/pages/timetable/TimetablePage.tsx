@@ -49,6 +49,7 @@ export default function TimetablePage() {
   });
   const [classrooms,  setClassrooms]  = useState<{ id: string; name: string }[]>([]);
   const [chapters,    setChapters]    = useState<{ id: string; name: string; order: number; subject?: string }[]>([]);
+  const [papers,      setPapers]      = useState<{ id: string; name: string; subject?: string; file?: string }[]>([]);
 
   const [examinersList, setExaminersList] = useState<{ id: string; name: string; employee_id?: string }[]>([]);
   const [paperCheckersList, setPaperCheckersList] = useState<{ id: string; name: string; employee_id?: string }[]>([]);
@@ -83,6 +84,7 @@ export default function TimetablePage() {
 
           if (data.subjects) {
             const flatChapters: any[] = [];
+            const flatPapers: any[] = [];
             data.subjects.forEach((subj: any) => {
               if (subj.chapters && Array.isArray(subj.chapters)) {
                 subj.chapters.forEach((ch: any) => {
@@ -94,8 +96,19 @@ export default function TimetablePage() {
                   });
                 });
               }
+              if (subj.papers && Array.isArray(subj.papers)) {
+                subj.papers.forEach((p: any) => {
+                  flatPapers.push({
+                    id: p.id,
+                    name: p.set_name,
+                    subject: subj.id,
+                    file: p.file,
+                  });
+                });
+              }
             });
             setChapters(flatChapters);
+            setPapers(flatPapers);
           }
         }
       },
@@ -203,6 +216,7 @@ export default function TimetablePage() {
                facultyList={facultyList}
                classrooms={classrooms}
                chapters={chapters}
+               papers={papers}
                examinersList={examinersList}
                paperCheckersList={paperCheckersList}
                defaultView="grid"
@@ -216,6 +230,7 @@ export default function TimetablePage() {
               facultyList={facultyList}
               classrooms={classrooms}
               chapters={chapters}
+              papers={papers}
               examinersList={examinersList}
               paperCheckersList={paperCheckersList}
               defaultView="list"

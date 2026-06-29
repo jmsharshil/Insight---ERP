@@ -15,6 +15,7 @@ export interface Exam {
   subject_name?: string | null;
   batch_name?: string | null;
   faculty_name?: string | null;
+  selected_papers?: any[];
   created_at?: string;
   [key: string]: any;
 }
