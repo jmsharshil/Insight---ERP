@@ -121,7 +121,7 @@ export function buildSlotPayload(values: SlotFormValues): Record<string, any> {
     base.exam_data = {
       title:               values.exam_title,
       exam_type:           values.exam_type,
-      total_marks:         Number(values.exam_total_marks),
+      total_marks:         values.exam_type === "online" ? undefined : Number(values.exam_total_marks),
       pass_marks:          Number(values.exam_pass_marks),
       instructions:        values.exam_instructions,
       result_release_mode: values.exam_result_release_mode,
@@ -137,7 +137,7 @@ export function buildSlotPayload(values: SlotFormValues): Record<string, any> {
     base.exam_data = {
       title:               values.exam_title,
       exam_type:           values.exam_type,
-      total_marks:         Number(values.exam_total_marks),
+      total_marks:         values.exam_type === "online" ? undefined : Number(values.exam_total_marks),
       pass_marks:          Number(values.exam_pass_marks),
       instructions:        values.exam_instructions,
       result_release_mode: values.exam_result_release_mode,
@@ -630,8 +630,8 @@ export default function SlotForm({
               )} />
             </Field>
 
-            <Field label="Total Marks" required={needsExam} error={errors.exam_total_marks?.message}>
-              <Input type="number" {...register("exam_total_marks")} placeholder="100" className="h-9 text-sm" />
+            <Field label="Total Marks" required={needsExam && watch("exam_type") !== "online"} error={errors.exam_total_marks?.message}>
+              <Input type="number" {...register("exam_total_marks")} placeholder={watch("exam_type") === "online" ? "Auto-calculated" : "100"} className="h-9 text-sm" disabled={watch("exam_type") === "online"} />
             </Field>
 
             <Field label="Pass Marks" required={needsExam} error={errors.exam_pass_marks?.message}>

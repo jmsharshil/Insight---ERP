@@ -5,7 +5,7 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 export interface Exam {
   id: string;
   title: string;
-  exam_type: "offline" | "online";
+  exam_type: "offline" | "online" | "mcq" | "subjective";
   total_marks: number;
   pass_marks: number;
   instructions: string | null;
@@ -23,7 +23,8 @@ export interface Exam {
 export interface Question {
   id: string;
   question_text: string;
-  question_type: "mcq" | "subjective";
+  question_type: "mcq" | "subjective" | "paragraph_mcq" | "true_false";
+  paragraph_text?: string;
   marks: number;
   order: number;
   choices: { id?: string; text: string; is_correct: boolean }[];

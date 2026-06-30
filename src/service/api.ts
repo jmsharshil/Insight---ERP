@@ -116,6 +116,8 @@ export const API = {
     CREATE: "/api/v1/subjects/",
     UPDATE: (id: string | number) => `/api/v1/subjects/${id}/`,
     DELETE: (id: string | number) => `/api/v1/subjects/${id}/`,
+    QUESTIONS: (subjectId: string | number) => `/api/v1/subjects/${subjectId}/questions/`,
+    QUESTION_DETAIL: (subjectId: string | number, questionId: string | number) => `/api/v1/subjects/${subjectId}/questions/${questionId}/`,
   },
 
   /** Chapters endpoints */
@@ -188,6 +190,7 @@ export const API = {
     DETAIL: (id: string) => `/api/v1/exams/${id}/`,
     QUESTIONS: (examId: string) => `/api/v1/exams/${examId}/questions/`,
     QUESTION_DETAIL: (examId: string, qId: string) => `/api/v1/exams/${examId}/questions/${qId}/`,
+    IMPORT_QUESTIONS: (examId: string | number) => `/api/v1/exams/${examId}/import-questions/`,
     SEATING: (examId: string) => `/api/v1/exams/${examId}/seating/`,
     SEAT_DETAIL: (examId: string, seatId: string) => `/api/v1/exams/${examId}/seating/${seatId}/`,
     DISTRIBUTE_ANSWER_KEY: (examId: string) => `/api/v1/exams/${examId}/answer-key/distribute/`,

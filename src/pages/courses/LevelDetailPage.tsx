@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { motion } from "framer-motion";
-import { Pencil, Trash2, ChevronLeft, Save, X, Clock, Wallet, ShieldAlert, Layers, BookOpen, Plus, FileText, Download, Upload } from "lucide-react";
+import { Pencil, Trash2, ChevronLeft, Save, X, Clock, Wallet, ShieldAlert, Layers, BookOpen, Plus, FileText, Download, Upload, Database } from "lucide-react";
 
 import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -656,6 +656,14 @@ export default function LevelDetailPage() {
                           
                           {canEdit && !isEditing && (
                             <div className="flex items-center gap-1">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-8 text-xs mr-2 border-primary/20 hover:bg-primary/5 text-primary" 
+                                onClick={() => navigate(`/courses-batches/${courseId}/level/${levelId}/subject/${subject.id}/questions`)}
+                              >
+                                <Database className="w-3.5 h-3.5 mr-1.5" /> Question Bank
+                              </Button>
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10" onClick={() => openSubjectModal(subject)}>
                                 <Pencil className="w-4 h-4" />
                               </Button>

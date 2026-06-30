@@ -33,4 +33,5 @@ export function* watchExamSaga() {
   yield takeLatest(examActions.CREATE_RECHECK_REQUEST, genericSaga);
   yield takeLatest(examActions.GET_RECHECK_REQUESTS, genericSaga);
   yield takeLatest(examActions.RECHECK_REQUEST_ACTION, genericSaga);
+  yield takeLatest(examActions.IMPORT_QUESTIONS, genericSaga);
 }

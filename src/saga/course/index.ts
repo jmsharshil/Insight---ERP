@@ -34,4 +34,10 @@ export function* watchCourseSaga() {
   yield takeLatest(subjectPaperAction.GET_SUBJECT_PAPER_DETAIL, genericSaga);
   yield takeLatest(subjectPaperAction.UPDATE_SUBJECT_PAPER, genericSaga);
   yield takeLatest(subjectPaperAction.DELETE_SUBJECT_PAPER, genericSaga);
+
+  // Subject Question Bank MCQ
+  yield takeLatest(subjectAction.GET_QUESTIONS, genericSaga);
+  yield takeLatest(subjectAction.ADD_QUESTIONS, genericSaga);
+  yield takeLatest(subjectAction.UPDATE_QUESTION, genericSaga);
+  yield takeLatest(subjectAction.DELETE_QUESTION, genericSaga);
 }

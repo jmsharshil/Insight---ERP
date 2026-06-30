@@ -19,12 +19,16 @@ interface LevelsState {
   levels: LevelRecord[];
   loading: boolean;
   error: string | null;
+  subjectQuestions: any[];
+  subjectQuestionsLoading: boolean;
 }
 
 const initialState: LevelsState = {
   levels: [],
   loading: false,
   error: null,
+  subjectQuestions: [],
+  subjectQuestionsLoading: false,
 };
 
 const levelsSlice = createSlice({
@@ -53,6 +57,12 @@ const levelsSlice = createSlice({
     removeLevelFromList(state, action: PayloadAction<string>) {
       state.levels = state.levels.filter((l) => l.id !== action.payload);
     },
+    setSubjectQuestions(state, action: PayloadAction<any[]>) {
+      state.subjectQuestions = action.payload;
+    },
+    setSubjectQuestionsLoading(state, action: PayloadAction<boolean>) {
+      state.subjectQuestionsLoading = action.payload;
+    },
   },
 });
 
@@ -63,6 +73,8 @@ export const {
   addLevelToList,
   updateLevelInList,
   removeLevelFromList,
+  setSubjectQuestions,
+  setSubjectQuestionsLoading,
 } = levelsSlice.actions;
 
 export default levelsSlice.reducer;

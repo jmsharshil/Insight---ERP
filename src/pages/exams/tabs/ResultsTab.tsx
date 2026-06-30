@@ -471,7 +471,7 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
                 </div>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-3 mt-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
               <div className="text-center rounded-lg bg-white/60 p-3 border border-blue-100">
                 <div className="text-lg font-bold text-foreground">{exam.total_marks}</div>
                 <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Marks</div>
@@ -479,6 +479,32 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
               <div className="text-center rounded-lg bg-white/60 p-3 border border-blue-100">
                 <div className="text-lg font-bold text-foreground">{exam.pass_marks}</div>
                 <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Pass Marks</div>
+              </div>
+              <div className="text-center rounded-lg bg-white/60 p-3 border border-blue-100">
+                <div className="text-lg font-bold text-foreground">{exam.duration_minutes || "-"}m</div>
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Duration</div>
+              </div>
+            </div>
+            
+            <div className="mt-4 bg-white/60 p-4 rounded-lg border border-blue-100 space-y-2 text-sm text-blue-900">
+              <div className="flex items-center justify-between border-b border-blue-100 pb-2">
+                <span className="text-muted-foreground">Subject</span>
+                <span className="font-semibold text-right">{exam.subject_name || "N/A"}</span>
+              </div>
+              <div className="flex items-center justify-between border-b border-blue-100 py-2">
+                <span className="text-muted-foreground">Faculty</span>
+                <span className="font-semibold text-right">{exam.faculty_name || "N/A"}</span>
+              </div>
+              <div className="flex items-center justify-between border-b border-blue-100 py-2">
+                <span className="text-muted-foreground">Schedule</span>
+                <span className="font-semibold text-right">
+                  {exam.scheduled_date ? new Date(exam.scheduled_date).toLocaleDateString() : "N/A"} 
+                  {exam.start_time && exam.end_time ? ` (${exam.start_time.slice(0,5)} - ${exam.end_time.slice(0,5)})` : ""}
+                </span>
+              </div>
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-muted-foreground">Batch</span>
+                <span className="font-semibold text-right">{exam.batch_name || "N/A"}</span>
               </div>
             </div>
           </div>
