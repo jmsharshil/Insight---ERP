@@ -395,7 +395,7 @@ export default function AllocationsTab() {
           <table className="w-full text-sm">
             <thead className="bg-muted/50">
               <tr>
-                {["Item", "Issued To", "Type", "Qty", "Status", "Issued At", "Issued By", ""].map(
+                {["Item", "Issued To", "Type", "Qty", "Status", "Issued At", "Issued By", "Return"].map(
                   (h) => (
                     <th
                       key={h}

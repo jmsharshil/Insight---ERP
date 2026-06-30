@@ -27,9 +27,15 @@ export const chatSlice = createSlice({
     setRoomsError: (state, action: PayloadAction<string>) => {
       state.error = action.payload;
     },
+    updateRoomUnreadCount: (state, action: PayloadAction<{ roomId: string; count: number }>) => {
+      const room = state.rooms.find(r => r.id === action.payload.roomId);
+      if (room) {
+        room.unreadCount = action.payload.count;
+      }
+    },
   },
 });
 
-export const { setRooms, setRoomsLoading, setRoomsError } = chatSlice.actions;
+export const { setRooms, setRoomsLoading, setRoomsError, updateRoomUnreadCount } = chatSlice.actions;
 
 export default chatSlice.reducer;

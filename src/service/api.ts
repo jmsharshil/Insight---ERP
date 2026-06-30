@@ -291,4 +291,12 @@ export const API = {
     FACULTY_PAYSLIPS: (fId: string) => `/api/v1/faculty/${fId}/payslips/`,
     FACULTY_PREVIEW: (fId: string) => `/api/v1/faculty/${fId}/salary-preview/`,
   },
+
+  /** Audit Logs endpoints */
+  AUDIT_LOGS: {
+    LIST: "/api/audit-logs/",
+    DETAIL: (id: string) => `/api/audit-logs/${id}/`,
+    FLUSH: "/api/audit-logs/flush/",
+    BY_USER: "/api/audit-logs/by-user/",
+  },
 } as const;

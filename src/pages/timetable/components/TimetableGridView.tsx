@@ -1,7 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Plus, List, LayoutGrid, User, MapPin, BookOpen, CalendarDays, ChevronLeft, ChevronRight, Clock, Layers, GripVertical, Copy } from "lucide-react";
+import { Plus, List, LayoutGrid, User, MapPin, BookOpen, CalendarDays, ChevronLeft, ChevronRight, Clock, Layers, GripVertical, Copy, ChevronsUpDown, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { TimetableSlot } from "@/redux/slices/timetableNewSlice";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -338,6 +342,7 @@ export default function TimetableGridView({
                       const isRegular = firstSlot?.session_type === "regular";
                       const cellKey = `${day.key}:${slot.code}`;
                       const isDragOver = dragOverCell === cellKey && isEmpty;
+                      const isStandardTime = firstSlot?.start_time?.slice(0,5) === slot.start && firstSlot?.end_time?.slice(0,5) === slot.end;
 
                       return (
                         <td key={slot.code}
@@ -383,12 +388,14 @@ export default function TimetableGridView({
                                 <Badge className={`text-[11px] px-2.5 py-0.5 h-auto capitalize font-extrabold tracking-wide ${color?.bg} ${color?.text} border-2 ${color?.border}`}>
                                   {firstSlot.session_type_display || firstSlot.session_type}
                                 </Badge>
-                                <div className="flex items-center gap-1.5 bg-white/70 rounded-md px-2.5 py-1 border border-black/5 shadow-sm">
-                                  <Clock className="w-3.5 h-3.5 text-muted-foreground/70" />
-                                  <span className="text-xs font-mono font-bold text-foreground/80">
-                                    {firstSlot.start_time?.slice(0,5)} – {firstSlot.end_time?.slice(0,5)}
-                                  </span>
-                                </div>
+                                {!isStandardTime && (
+                                  <div className="flex items-center gap-1.5 bg-white/70 rounded-md px-2.5 py-1 border border-black/5 shadow-sm">
+                                    <Clock className="w-3.5 h-3.5 text-muted-foreground/70" />
+                                    <span className="text-xs font-mono font-bold text-foreground/80">
+                                      {firstSlot.start_time?.slice(0,5)} – {firstSlot.end_time?.slice(0,5)}
+                                    </span>
+                                  </div>
+                                )}
                               </div>
 
                               {/* ─── Subject name ─── */}
@@ -517,6 +524,9 @@ function GridHeader({
   showExtraSlots:    boolean;
   onToggleExtraSlots: (v: boolean) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const selectedBatch = batches.find((b) => b.id === selectedBatchId);
+
   return (
     <div className="space-y-3">
       {/* Term info banner */}
@@ -531,23 +541,52 @@ function GridHeader({
 
       {/* Batch selector + week nav + view toggle */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        {/* Batch pills using Tabs */}
+        {/* Searchable Batch Dropdown */}
         <div className="flex flex-wrap gap-2">
-          <Tabs value={selectedBatchId} onValueChange={onBatchChange}>
-            <TabsList className="bg-muted flex flex-wrap h-auto rounded-xl p-1">
-              {batches.map(b => (
-                <TabsTrigger key={b.id} value={b.id} className="text-xs px-3.5 py-1.5 rounded-lg data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">
-                  {b.name}
-                </TabsTrigger>
-              ))}
-              {batches.length === 0 && (
-                <span className="text-xs text-muted-foreground px-2 py-1.5">No batches loaded</span>
-              )}
-            </TabsList>
-          </Tabs>
-        </div>
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={open}
+                className="w-[300px] justify-between h-9 text-sm rounded-xl font-medium"
+              >
+                {selectedBatch ? selectedBatch.name : "Select batch..."}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search batch..." className="h-9 " />
+                <CommandList className="">
+                  <CommandEmpty>No batch found.</CommandEmpty>
+                  <CommandGroup>
+                    {batches.map((batch) => (
+                      <CommandItem
+                        key={batch.id}
+                        value={batch.name}
+                        onSelect={() => {
+                          onBatchChange(batch.id);
+                          setOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            selectedBatchId === batch.id ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {batch.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        
 
-        <div className="flex items-center gap-2 flex-wrap">
+
           {/* Week navigation */}
           {showWeekNav && (
             <div className="flex items-center gap-1 border border-border rounded-lg bg-white px-1 py-0.5 shadow-sm">
@@ -573,7 +612,7 @@ function GridHeader({
           </button>
 
           {/* Grid / List toggle */}
-          <div className="flex items-center border border-border rounded-lg overflow-hidden bg-white shrink-0 shadow-sm">
+          {/* <div className="flex items-center border border-border rounded-lg overflow-hidden bg-white shrink-0 shadow-sm">
             <button
               onClick={() => onViewModeChange("grid")}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer
@@ -588,7 +627,7 @@ function GridHeader({
             >
               <List className="w-3.5 h-3.5" /> List
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

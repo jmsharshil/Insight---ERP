@@ -320,3 +320,9 @@ export const payrollActions = {
   GET_EXTRA_HOURS:      "GET_EXTRA_HOURS",
   UPDATE_EXTRA_HOUR:    "UPDATE_EXTRA_HOUR",
 } as const;
+
+export const auditLogActions = {
+  GET_AUDIT_LOGS:       "GET_AUDIT_LOGS",
+  GET_AUDIT_LOG_DETAIL: "GET_AUDIT_LOG_DETAIL",
+  FLUSH_AUDIT_LOGS:     "FLUSH_AUDIT_LOGS",
+} as const;

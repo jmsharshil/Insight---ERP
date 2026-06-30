@@ -19,6 +19,7 @@ import { watchExamSaga } from "./examSaga";
 import { watchLeaveSaga } from "./leaveSaga";
 import { watchInventorySaga } from "./inventorySaga";
 import { watchPayrollSaga } from "./payrollSaga";
+import { watchAuditLogSaga } from "./auditLogSaga";
 
 function* rootSaga() {
   yield all([
@@ -42,6 +43,7 @@ function* rootSaga() {
     fork(watchLeaveSaga),
     fork(watchInventorySaga),
     fork(watchPayrollSaga),
+    fork(watchAuditLogSaga),
   ]);
 }
 

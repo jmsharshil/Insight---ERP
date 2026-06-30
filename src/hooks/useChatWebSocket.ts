@@ -9,6 +9,7 @@ export interface WSSendMessageEvent {
   file_url?: string;
   file_name?: string;
   file_size?: number | null;
+  target_user_ids?: string[];
 }
 export interface WSTypingStartEvent {
   type: "typing_start";
@@ -19,6 +20,9 @@ export interface WSTypingStopEvent {
 export interface WSMarkReadEvent {
   type: "mark_read";
   message_id: string;
+}
+export interface WSMarkAllReadEvent {
+  type: "mark_all_read";
 }
 export interface WSEditMessageEvent {
   type: "edit_message";
@@ -35,6 +39,7 @@ type WSClientEvent =
   | WSTypingStartEvent
   | WSTypingStopEvent
   | WSMarkReadEvent
+  | WSMarkAllReadEvent
   | WSEditMessageEvent
   | WSDeleteMessageEvent;
 
@@ -43,6 +48,7 @@ export interface WSNewMessagePayload {
   id: string;
   room_id: string;
   sender: { id: string; full_name: string; avatar_url: string };
+  targets?: { id: string; full_name: string; role?: string }[] | null;
   content: string;
   file_url: string;
   file_name: string;
@@ -73,6 +79,17 @@ export interface WSReadReceiptEvent {
   message_id: string;
   user_id: string;
   read_at: string;
+  unread_count?: number;
+}
+export interface WSUnreadUpdateEvent {
+  type: "unread_update";
+  unread_count: number;
+  room_id: string;
+  user_id: string;
+}
+export interface WSAllMessagesReadEvent {
+  type: "all_messages_read";
+  room_id: string;
 }
 export interface WSMessageUpdatedEvent {
   type: "message_updated";
@@ -89,6 +106,8 @@ type WSServerEvent =
   | WSTypingEvent
   | WSDeliveredReceiptEvent
   | WSReadReceiptEvent
+  | WSUnreadUpdateEvent
+  | WSAllMessagesReadEvent
   | WSMessageUpdatedEvent
   | WSMessageDeletedEvent;
 
@@ -99,6 +118,8 @@ export interface ChatWSHandlers {
   onTyping?: (data: WSTypingEvent) => void;
   onDeliveredReceipt?: (data: WSDeliveredReceiptEvent) => void;
   onReadReceipt?: (data: WSReadReceiptEvent) => void;
+  onUnreadUpdate?: (data: WSUnreadUpdateEvent) => void;
+  onAllMessagesRead?: (data: WSAllMessagesReadEvent) => void;
   onMessageUpdated?: (data: WSMessageUpdatedEvent) => void;
   onMessageDeleted?: (data: WSMessageDeletedEvent) => void;
   onConnectionChange?: (connected: boolean) => void;
@@ -212,6 +233,12 @@ export function useChatWebSocket(
         break;
       case "read_receipt":
         h.onReadReceipt?.(data);
+        break;
+      case "unread_update":
+        h.onUnreadUpdate?.(data);
+        break;
+      case "all_messages_read":
+        h.onAllMessagesRead?.(data);
         break;
       case "message_updated":
         h.onMessageUpdated?.(data);
@@ -351,8 +378,8 @@ export function useChatWebSocket(
 
   // ── Typed send methods ───────────────────────────────────────────────────
 
-  const sendMessage = useCallback((content: string, fileData?: { file_url: string, file_name: string, file_size: number | null }) => {
-    send({ type: "send_message", content, ...(fileData || {}) });
+  const sendMessage = useCallback((content: string, fileData?: { file_url: string, file_name: string, file_size: number | null }, targetUserIds?: string[]) => {
+    send({ type: "send_message", content, ...(fileData || {}), ...(targetUserIds && targetUserIds.length > 0 ? { target_user_ids: targetUserIds } : {}) });
   }, [send]);
 
   const startTyping = useCallback(() => {
@@ -365,6 +392,10 @@ export function useChatWebSocket(
 
   const markRead = useCallback((messageId: string) => {
     send({ type: "mark_read", message_id: messageId });
+  }, [send]);
+
+  const markAllRead = useCallback(() => {
+    send({ type: "mark_all_read" });
   }, [send]);
 
   const editMessage = useCallback((messageId: string, content: string) => {
@@ -399,6 +430,7 @@ export function useChatWebSocket(
     startTyping,
     stopTyping,
     markRead,
+    markAllRead,
     editMessage,
     deleteMessage,
     disconnect,

@@ -36,6 +36,7 @@ import examReducer from "@/redux/slices/examSlice";
 import leaveReducer from "@/redux/slices/leaveSlice";
 import inventoryReducer from "@/redux/slices/inventorySlice";
 import payrollReducer from "@/redux/slices/payrollSlice";
+import auditLogReducer from "@/redux/slices/auditLogSlice";
 
 const sagaMiddleware = createSagaMiddleware();
 
@@ -70,6 +71,7 @@ const rootReducer = combineReducers({
   leave: leaveReducer,
   inventory: inventoryReducer,
   payroll: payrollReducer,
+  auditLog: auditLogReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

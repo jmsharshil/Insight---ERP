@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } fr
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send, Paperclip, MessageSquare, Check, CheckCheck,
-  Pencil, Trash2, X, Info, FileText, Download, Image as ImageIcon, Loader2
+  Pencil, Trash2, X, Info, FileText, Download, Image as ImageIcon, Loader2, Lock
 } from "lucide-react";
 import axios from "axios";
 import PageHeader from "@/components/layout/PageHeader";
@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/useToast";
 import { type ChatMessage } from "@/constants/dummy/chat";
 import { ChatAction } from "@/redux/actions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setRooms, setRoomsLoading, setRoomsError } from "@/redux/slices/chatSlice";
+import { setRooms, setRoomsLoading, setRoomsError, updateRoomUnreadCount } from "@/redux/slices/chatSlice";
 import { useUI } from "@/hooks/useUI";
 import CreateChatModal from "./CreateChatModal";
 import RoomDetails from "./RoomDetails";
@@ -30,6 +30,8 @@ import {
   type WSReadReceiptEvent,
   type WSMessageUpdatedEvent,
   type WSMessageDeletedEvent,
+  type WSUnreadUpdateEvent,
+  type WSAllMessagesReadEvent,
 } from "@/hooks/useChatWebSocket";
 
 // ─── Typing indicator state ──────────────────────────────────────────────────
@@ -46,6 +48,15 @@ interface ContextMenuState {
   messageId: string;
   x: number;
   y: number;
+}
+
+// ─── Targeted message participant type ───────────────────────────────────────
+
+interface RoomParticipant {
+  id: string;
+  full_name: string;
+  avatar_url?: string;
+  role?: string;
 }
 
 // ─── Typing debounce constants ───────────────────────────────────────────────
@@ -88,6 +99,14 @@ export default function ChatPage() {
   // Temp message tracking for dedup
   const pendingTempIdsRef = useRef<Set<string>>(new Set());
 
+  // ── Targeted message state ──────────────────────────────────────────────
+  const [targetUsers, setTargetUsers] = useState<RoomParticipant[]>([]);
+  const [showMentionPopover, setShowMentionPopover] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [mentionCursorPos, setMentionCursorPos] = useState(0);
+  const [roomParticipants, setRoomParticipants] = useState<RoomParticipant[]>([]);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   // NOTE: No auto-select — user must click a room to connect WebSocket
 
   const channels = rooms.filter((c) =>
@@ -96,10 +115,43 @@ export default function ChatPage() {
   const active = rooms.find((c) => c.id === activeId);
   const msgs = activeId ? (messages[activeId] || []) : [];
 
-  // ── Reset details view when switching chats ────────────────────────────────
+  // ── Reset details view and targeted state when switching chats ─────────────
   useEffect(() => {
     setShowDetails(false);
+    setTargetUsers([]);
+    setShowMentionPopover(false);
+    setMentionQuery("");
   }, [activeId]);
+
+  // ── Fetch faculty participants for group rooms (for @mention) ──────────────
+  useEffect(() => {
+    if (!activeId || active?.type !== "group") {
+      setRoomParticipants([]);
+      return;
+    }
+    dispatch({
+      type: ChatAction.GET_CHAT_ROOM_DETAILS,
+      method: "GET",
+      endPoint: `/api/v1/chat/rooms/${activeId}/`,
+      auth: true,
+      getResponse: (res: any) => {
+        const details = res?.data || res;
+        const participants = (details?.participants || [])
+          .filter((p: any) => p.id !== user?.id)
+          .filter((p: any) =>
+            p.role !== "student" && p.role !== "parent" && p.role !== "parents"
+          )
+          .map((p: any) => ({
+            id: p.id,
+            full_name: p.full_name,
+            avatar_url: p.avatar_url,
+            role: p.role,
+          }));
+        setRoomParticipants(participants);
+      },
+      getError: () => { /* silent — mention just won't show faculty */ },
+    });
+  }, [activeId, active?.type, dispatch, user?.id]);
 
   const prevRoomRef = useRef({ id: activeId, length: msgs.length });
 
@@ -149,6 +201,7 @@ export default function ChatPage() {
       timestamp: msg.created_at,
       readBy: [],
       status: msg.delivered_at ? "delivered" : "sent",
+      targets: msg.targets || undefined,
     };
 
     setMessages(prev => {
@@ -232,13 +285,40 @@ export default function ChatPage() {
       for (const [roomId, roomMsgs] of Object.entries(prev)) {
         updated[roomId] = roomMsgs.map(m =>
           m.id === data.message_id
-            ? { ...m, status: "read" as const, readBy: [...m.readBy, data.user_id] }
+            ? { ...m, status: "read" as const, readBy: [...(m.readBy || []), data.user_id] }
             : m
         );
       }
       return { ...prev, ...updated };
     });
+    
+    // Instantly update badge count if provided by backend
+    if (data.unread_count !== undefined) {
+      // Find room id from messages if needed, or rely on unread_update event
+      // Actually backend also broadcasts `unread_update`, we'll rely on that.
+      // But we can dispatch here if room_id was in payload, it's not. 
+    }
   }, []);
+
+  const handleUnreadUpdate = useCallback((data: WSUnreadUpdateEvent) => {
+    dispatch(updateRoomUnreadCount({ roomId: data.room_id, count: data.unread_count }));
+  }, [dispatch]);
+
+  const handleAllMessagesRead = useCallback((data: WSAllMessagesReadEvent) => {
+    setMessages(prev => {
+      if (!prev[data.room_id]) return prev;
+      
+      const updatedRoomMsgs = prev[data.room_id].map(m => 
+        // Only mark messages sent TO the current user as read 
+        // (the other person reading their own msgs doesn't make sense)
+        m.senderId !== user?.id && m.status !== "read"
+          ? { ...m, status: "read" as const, readBy: [...(m.readBy || []), user?.id || ""] }
+          : m
+      );
+      
+      return { ...prev, [data.room_id]: updatedRoomMsgs };
+    });
+  }, [user?.id]);
 
   const handleMessageUpdated = useCallback((data: WSMessageUpdatedEvent) => {
     setMessages(prev => {
@@ -274,9 +354,11 @@ export default function ChatPage() {
     onTyping: handleTyping,
     onDeliveredReceipt: handleDeliveredReceipt,
     onReadReceipt: handleReadReceipt,
+    onUnreadUpdate: handleUnreadUpdate,
+    onAllMessagesRead: handleAllMessagesRead,
     onMessageUpdated: handleMessageUpdated,
     onMessageDeleted: handleMessageDeleted,
-  }), [handleNewMessage, handleTyping, handleDeliveredReceipt, handleReadReceipt, handleMessageUpdated, handleMessageDeleted]);
+  }), [handleNewMessage, handleTyping, handleDeliveredReceipt, handleReadReceipt, handleUnreadUpdate, handleAllMessagesRead, handleMessageUpdated, handleMessageDeleted]);
 
   // ── Connect WebSocket ─────────────────────────────────────────────────────
   const {
@@ -286,6 +368,7 @@ export default function ChatPage() {
     startTyping: wsStartTyping,
     stopTyping: wsStopTyping,
     markRead: wsMarkRead,
+    markAllRead: wsMarkAllRead,
     editMessage: wsEditMessage,
     deleteMessage: wsDeleteMessage,
   } = useChatWebSocket(activeId || null, wsHandlers);
@@ -386,6 +469,7 @@ export default function ChatPage() {
             status: mapTickStatus(m.tick_status),
             isEdited: m.updated_at && m.updated_at !== m.created_at ? true : false,
             isDeleted: m.is_deleted || false,
+            targets: m.targets || undefined,
           })).sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
           setMessages(prev => ({ ...prev, [activeId]: mappedMsgs }));
@@ -469,6 +553,7 @@ export default function ChatPage() {
           timestamp: new Date().toISOString(),
           readBy: [user?.id || ""],
           status: "sent",
+          targets: targetUsers.length > 0 ? targetUsers.map(u => ({ id: u.id, full_name: u.full_name, role: u.role })) : undefined,
         };
 
         pendingTempIdsRef.current.add(tempId);
@@ -479,7 +564,7 @@ export default function ChatPage() {
           file_url: data.file_url,
           file_name: data.file_name,
           file_size: data.file_size
-        });
+        }, targetUsers.map(u => u.id));
 
         // Clean up temp tracking after timeout
         setTimeout(() => {
@@ -487,6 +572,7 @@ export default function ChatPage() {
         }, 8000);
         
         setDraft("");
+        setTargetUsers([]);
         setSelectedFile(null);
       } catch (err: any) {
         console.error("Upload error", err);
@@ -516,13 +602,15 @@ export default function ChatPage() {
       timestamp: new Date().toISOString(),
       readBy: [user?.id || ""],
       status: "sent",
+      targets: targetUsers.length > 0 ? targetUsers.map(u => ({ id: u.id, full_name: u.full_name, role: u.role })) : undefined,
     };
 
     pendingTempIdsRef.current.add(tempId);
     setMessages(prev => ({ ...prev, [activeId]: [...(prev[activeId] || []), m] }));
 
     // Send via WebSocket for real-time delivery
-    wsSendMessage(content);
+    wsSendMessage(content, undefined, targetUsers.map(u => u.id));
+    setTargetUsers([]);
 
     // Fallback: if WS doesn't echo back in 8 seconds, remove from pending
     setTimeout(() => {
@@ -535,6 +623,36 @@ export default function ChatPage() {
   const handleDraftChange = (value: string) => {
     setDraft(value);
 
+    // ── @mention detection (group rooms only) ────────────────────────────
+    if (active?.type === "group" && roomParticipants.length > 0) {
+      const cursorPos = textareaRef.current?.selectionStart || value.length;
+      const textBeforeCursor = value.slice(0, cursorPos);
+      const atIndex = textBeforeCursor.lastIndexOf("@");
+
+      if (atIndex !== -1) {
+        const charBeforeAt = atIndex > 0 ? textBeforeCursor[atIndex - 1] : " ";
+        // Only trigger if @ is at start or preceded by whitespace
+        if (atIndex === 0 || charBeforeAt === " " || charBeforeAt === "\n") {
+          const query = textBeforeCursor.slice(atIndex + 1);
+          // Don't trigger if there's a space in the query (user moved past the mention)
+          if (!query.includes(" ")) {
+            setMentionQuery(query);
+            setMentionCursorPos(atIndex);
+            setShowMentionPopover(true);
+          } else {
+            setShowMentionPopover(false);
+          }
+        } else {
+          setShowMentionPopover(false);
+        }
+      } else {
+        setShowMentionPopover(false);
+      }
+    } else {
+      setShowMentionPopover(false);
+    }
+
+    // ── Typing indicator logic (unchanged) ───────────────────────────────
     if (!isConnected || !activeId) return;
 
     if (value.trim()) {
@@ -583,6 +701,36 @@ export default function ChatPage() {
   useEffect(() => {
     setTypingUsers(new Map());
   }, [activeId]);
+
+  // ── @mention selection handler ────────────────────────────────────────────
+
+  const handleSelectMention = useCallback((participant: RoomParticipant) => {
+    // Remove the @query text from the draft
+    const beforeAt = draft.slice(0, mentionCursorPos);
+    const afterQuery = draft.slice(mentionCursorPos + 1 + mentionQuery.length);
+    setDraft(`${beforeAt}${afterQuery}`.trimStart());
+
+    setTargetUsers(prev => {
+      if (prev.some(u => u.id === participant.id)) return prev;
+      return [...prev, participant];
+    });
+    
+    setShowMentionPopover(false);
+    setMentionQuery("");
+
+    // Re-focus the textarea
+    setTimeout(() => textareaRef.current?.focus(), 0);
+  }, [draft, mentionCursorPos, mentionQuery]);
+
+  // ── Filtered faculty list for @mention popover ────────────────────────────
+
+  const filteredMentionUsers = useMemo(() => {
+    if (!mentionQuery) return roomParticipants;
+    const q = mentionQuery.toLowerCase();
+    return roomParticipants.filter(p =>
+      p.full_name.toLowerCase().includes(q)
+    );
+  }, [roomParticipants, mentionQuery]);
 
   // ── Edit message handlers ─────────────────────────────────────────────────
 
@@ -739,6 +887,7 @@ export default function ChatPage() {
                     const isEditing = editingMessage === m.id;
                     const isFirstInGroup = idx === 0 || msgs[idx - 1].senderId !== m.senderId;
                     const isLastInGroup = idx === msgs.length - 1 || msgs[idx + 1].senderId !== m.senderId;
+                    const isPrivateMsg = !!m.targets && m.targets.length > 0;
 
                     return (
                       <motion.div key={m.id}
@@ -761,12 +910,28 @@ export default function ChatPage() {
                         <div className={`max-w-[75%] px-3 py-1.5 text-sm relative group shadow-sm break-words ${
                           m.isDeleted
                             ? "bg-muted/50 border border-border italic text-muted-foreground rounded-2xl"
-                            : own
-                              ? `bg-[#d9fdd3] dark:bg-[#005c4b] text-[#111b21] dark:text-[#e9edef] rounded-2xl ${isFirstInGroup ? 'rounded-tr-sm' : ''}`
-                              : `bg-white dark:bg-[#202c33] text-[#111b21] dark:text-[#e9edef] rounded-2xl ${isFirstInGroup ? 'rounded-tl-sm' : ''}`
+                            : isPrivateMsg
+                              ? own
+                                ? `bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-100 border-l-2 border-amber-400 dark:border-amber-600 rounded-2xl ${isFirstInGroup ? 'rounded-tr-sm' : ''}`
+                                : `bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-100 border-l-2 border-amber-400 dark:border-amber-600 rounded-2xl ${isFirstInGroup ? 'rounded-tl-sm' : ''}`
+                              : own
+                                ? `bg-[#d9fdd3] dark:bg-[#005c4b] text-[#111b21] dark:text-[#e9edef] rounded-2xl ${isFirstInGroup ? 'rounded-tr-sm' : ''}`
+                                : `bg-white dark:bg-[#202c33] text-[#111b21] dark:text-[#e9edef] rounded-2xl ${isFirstInGroup ? 'rounded-tl-sm' : ''}`
                         }`}>
-                          {!own && !m.isDeleted && isFirstInGroup && (
+                          {/* Private message badge */}
+                          {isPrivateMsg && !m.isDeleted && (
+                            <div className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 font-medium mb-1">
+                              <Lock className="w-2.5 h-2.5" />
+                              <span>
+                                {own ? `Private to ${m.targets!.map(t => t.full_name).join(", ")}` : `Private from ${m.senderName}`}
+                              </span>
+                            </div>
+                          )}
+                          {!own && !m.isDeleted && isFirstInGroup && !isPrivateMsg && (
                             <div className="text-[11px] font-bold mb-0.5 text-primary opacity-80">{m.senderName}</div>
+                          )}
+                          {!own && !m.isDeleted && isFirstInGroup && isPrivateMsg && (
+                            <div className="text-[11px] font-bold mb-0.5 text-amber-700 dark:text-amber-300 opacity-80">{m.senderName}</div>
                           )}
 
                           {/* Edit mode */}
@@ -911,6 +1076,34 @@ export default function ChatPage() {
 
               {/* ── Input area ─────────────────────────────────────────── */}
               <div className="p-3 border-t border-border flex flex-col gap-2">
+                {/* Target user chips */}
+                {targetUsers.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    <AnimatePresence>
+                      {targetUsers.map(tu => (
+                        <motion.div
+                          key={tu.id}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.9 }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-sm"
+                        >
+                          <Lock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                          <span className="text-amber-800 dark:text-amber-200">
+                            <strong>{tu.full_name}</strong>
+                          </span>
+                          <button
+                            onClick={() => setTargetUsers(prev => prev.filter(u => u.id !== tu.id))}
+                            className="ml-1 p-0.5 rounded-full hover:bg-amber-200/50 dark:hover:bg-amber-800/50 transition-colors"
+                          >
+                            <X className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                          </button>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                )}
+
                 {selectedFile && (
                   <div className="flex items-center justify-between p-2.5 bg-muted/50 rounded-lg border border-border">
                     <div className="flex items-center gap-3 overflow-hidden">
@@ -928,14 +1121,56 @@ export default function ChatPage() {
                   </div>
                 )}
                 
-                <div className="flex items-end gap-2">
+                <div className="relative flex items-end gap-2">
+                  {/* @Mention popover */}
+                  <AnimatePresence>
+                    {showMentionPopover && filteredMentionUsers.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 8 }}
+                        className="absolute bottom-full left-0 mb-2 w-64 max-h-80 overflow-y-auto bg-popover border border-border rounded-lg shadow-lg z-50 scrollbar-hidden"
+                      >
+                        <div className="p-1.5 ">
+                          <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                            Send privately to
+                          </div>
+                          {filteredMentionUsers.map(p => (
+                            <button
+                              key={p.id}
+                              onClick={() => handleSelectMention(p)}
+                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/60 transition-colors text-left"
+                            >
+                              <Avatar className="w-6 h-6">
+                                {p.avatar_url ? <AvatarImage src={p.avatar_url} /> : null}
+                                <AvatarFallback className="text-[10px] bg-primary/20">
+                                  {p.full_name[0]?.toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium truncate">{p.full_name}</div>
+                                {p.role && (
+                                  <div className="text-[10px] text-muted-foreground capitalize">{p.role.replace("_", " ")}</div>
+                                )}
+                              </div>
+                              <Lock className="w-3 h-3 text-amber-500 shrink-0" />
+                            </button>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
                   <input type="file" className="hidden" ref={fileInputRef} onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} />
                   <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} aria-label="Attach file" className={selectedFile ? "text-primary bg-primary/10" : ""}>
                     <Paperclip className="w-5 h-5" />
                   </Button>
-                  <Textarea value={draft} onChange={e => handleDraftChange(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-                    placeholder={selectedFile ? "Add a caption..." : "Type a message..."} 
+                  <Textarea ref={textareaRef} value={draft} onChange={e => handleDraftChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+                      if (e.key === "Escape" && showMentionPopover) { setShowMentionPopover(false); }
+                    }}
+                    placeholder={targetUsers.length > 0 ? `Private message to ${targetUsers.length} selected...` : selectedFile ? "Add a caption..." : active?.type === "group" ? "Type a message... (@ to mention faculty private msg)" : "Type a message..."} 
                     rows={1} className="resize-none min-h-10 py-2.5 bg-surface" />
                   <Button onClick={send} disabled={(!draft.trim() && !selectedFile) || isUploading} aria-label="Send" className="h-10 px-4">
                     {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}

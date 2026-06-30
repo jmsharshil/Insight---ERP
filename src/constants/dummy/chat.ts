@@ -14,6 +14,7 @@ export interface ChatMessage {
   status: "sent" | "delivered" | "read";
   isEdited?: boolean;
   isDeleted?: boolean;
+  targets?: { id: string; full_name: string; role?: string }[];
 }
 
 export interface ChatChannel {
