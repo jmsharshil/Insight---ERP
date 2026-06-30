@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { motion } from "framer-motion";
-import { Pencil, Trash2, ChevronLeft, Save, X, Clock, Wallet, ShieldAlert, Layers, BookOpen, Plus } from "lucide-react";
+import { Pencil, Trash2, ChevronLeft, Save, X, Clock, Wallet, ShieldAlert, Layers, BookOpen, Plus, FileText, Download, Upload, Database } from "lucide-react";
 
 import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,7 @@ import {
 
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
-import { levelActions, subjectAction, chapterAction } from "@/redux/actions";
+import { levelActions, subjectAction, chapterAction, subjectPaperAction } from "@/redux/actions";
 import { API } from "@/service/api";
 import { cn } from "@/lib/utils";
 import { updateLevelInList, removeLevelFromList } from "@/redux/slices/levelsSlice";
@@ -121,6 +121,16 @@ export default function LevelDetailPage() {
   const [activeSubjectId, setActiveSubjectId] = useState<string>("");
   const [deleteSubjectId, setDeleteSubjectId] = useState<string | null>(null);
   const [deleteChapterId, setDeleteChapterId] = useState<string | null>(null);
+  
+  const [paperModalOpen, setPaperModalOpen] = useState(false);
+  const [editingPaper, setEditingPaper] = useState<any>(null);
+  const [deletePaperId, setDeletePaperId] = useState<string | null>(null);
+
+  const [paperForm, setPaperForm] = useState({
+    set_name: "",
+    file: null as File | null,
+    answer_key: null as File | null,
+  });
 
   const [subjectForm, setSubjectForm] = useState({
     name: "",
@@ -358,6 +368,64 @@ export default function LevelDetailPage() {
     });
   };
 
+  const openPaperModal = (subjectId: string, paper: any = null) => {
+    setActiveSubjectId(subjectId);
+    if (paper) {
+      setEditingPaper(paper);
+      setPaperForm({
+        set_name: paper.set_name || "",
+        file: null,
+        answer_key: null,
+      });
+    } else {
+      setEditingPaper(null);
+      setPaperForm({ set_name: "", file: null, answer_key: null });
+    }
+    setPaperModalOpen(true);
+  };
+
+  const savePaper = () => {
+    if (!paperForm.set_name.trim()) return toast.error("Set name is required");
+    const isEdit = !!editingPaper;
+    if (!isEdit && !paperForm.file) return toast.error("Paper file is required");
+
+    const formData = new FormData();
+    formData.append("set_name", paperForm.set_name.trim());
+    if (paperForm.file) formData.append("file", paperForm.file);
+    if (paperForm.answer_key) formData.append("answer_key", paperForm.answer_key);
+
+    dispatch({
+      type: isEdit ? subjectPaperAction.UPDATE_SUBJECT_PAPER : subjectPaperAction.CREATE_SUBJECT_PAPER,
+      method: isEdit ? "PATCH" : "POST",
+      endPoint: isEdit ? API.SUBJECT_PAPERS.UPDATE(activeSubjectId, editingPaper.id) : API.SUBJECT_PAPERS.CREATE(activeSubjectId),
+      body: formData,
+      isFormData: true,
+      auth: true,
+      getResponse: () => {
+        toast.success(`Paper ${isEdit ? "updated" : "uploaded"} successfully`);
+        setPaperModalOpen(false);
+        fetchLevelDetail();
+      },
+      getError: (err: any) => toast.error(err?.response?.data?.message || err?.message || "Failed to save paper")
+    });
+  };
+
+  const deletePaper = () => {
+    if (!deletePaperId || !activeSubjectId) return;
+    dispatch({
+      type: subjectPaperAction.DELETE_SUBJECT_PAPER,
+      method: "DELETE",
+      endPoint: API.SUBJECT_PAPERS.DELETE(activeSubjectId, deletePaperId),
+      auth: true,
+      getResponse: () => {
+        toast.success("Paper deleted successfully");
+        setDeletePaperId(null);
+        fetchLevelDetail();
+      },
+      getError: (err: any) => toast.error("Failed to delete paper")
+    });
+  };
+
   if (loading) {
     return <LevelDetailSkeleton />;
   }
@@ -588,6 +656,14 @@ export default function LevelDetailPage() {
                           
                           {canEdit && !isEditing && (
                             <div className="flex items-center gap-1">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-8 text-xs mr-2 border-primary/20 hover:bg-primary/5 text-primary" 
+                                onClick={() => navigate(`/courses-batches/${courseId}/level/${levelId}/subject/${subject.id}/questions`)}
+                              >
+                                <Database className="w-3.5 h-3.5 mr-1.5" /> Question Bank
+                              </Button>
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10" onClick={() => openSubjectModal(subject)}>
                                 <Pencil className="w-4 h-4" />
                               </Button>
@@ -662,6 +738,67 @@ export default function LevelDetailPage() {
                                 ) : (
                                   <div className="text-center py-6 text-sm text-muted-foreground bg-background rounded-xl border border-dashed border-border">
                                     No chapters added yet.
+                                  </div>
+                                )}
+                              </AccordionContent>
+                            </AccordionItem>
+
+                            <AccordionItem value="papers" className="border-0 mt-2">
+                              <AccordionTrigger className="py-2.5 px-4 rounded-lg bg-muted/40 hover:bg-muted/60 hover:no-underline text-sm font-semibold text-muted-foreground transition-colors">
+                                <div className="flex items-center gap-2">
+                                  <FileText className="w-4 h-4" />
+                                  <span>Papers ({subject.papers ? subject.papers.length : 0})</span>
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent className="pt-4 pb-0">
+                                <div className="flex justify-end mb-3">
+                                  {canEdit && !isEditing && (
+                                    <Button variant="outline" size="sm" className="h-8 text-xs border-primary/20 hover:bg-primary/5 text-primary" onClick={() => openPaperModal(subject.id)}>
+                                      <Upload className="w-3.5 h-3.5 mr-1.5" /> Upload Paper
+                                    </Button>
+                                  )}
+                                </div>
+                                {subject.papers && subject.papers.length > 0 ? (
+                                  <div className="space-y-3">
+                                    {subject.papers.map((paper: any) => (
+                                      <div key={paper.id} className="group relative flex items-start justify-between p-4 rounded-xl bg-background border border-border/60 hover:border-primary/40 hover:shadow-sm transition-all">
+                                        <div className="space-y-1.5">
+                                          <div className="flex items-center gap-2.5">
+                                            <span className="font-semibold text-text-primary text-base">
+                                              {paper.set_name}
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground mt-2">
+                                            {paper.file && (
+                                              <a href={paper.file} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-primary transition-colors">
+                                                <Download className="w-3.5 h-3.5" /> Question Paper
+                                              </a>
+                                            )}
+                                            {paper.answer_key && (
+                                              <a href={paper.answer_key} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-primary transition-colors">
+                                                <Download className="w-3.5 h-3.5" /> Answer Key
+                                              </a>
+                                            )}
+                                          </div>
+                                        </div>
+                                        {canEdit && !isEditing && (
+                                          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-background/80 backdrop-blur-sm rounded-lg p-1">
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openPaperModal(subject.id, paper)}>
+                                              <Pencil className="w-4 h-4" />
+                                            </Button>
+                                            {canDelete && (
+                                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => { setActiveSubjectId(subject.id); setDeletePaperId(paper.id); }}>
+                                                <Trash2 className="w-4 h-4" />
+                                              </Button>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="text-center py-6 text-sm text-muted-foreground bg-background rounded-xl border border-dashed border-border">
+                                    No papers uploaded yet.
                                   </div>
                                 )}
                               </AccordionContent>
@@ -835,6 +972,42 @@ export default function LevelDetailPage() {
         description="Are you sure you want to delete this chapter?"
         confirmLabel="Delete"
         onConfirm={deleteChapter}
+      />
+
+      {/* Paper Modal */}
+      <Dialog open={paperModalOpen} onOpenChange={setPaperModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingPaper ? "Edit Paper" : "Upload Paper"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-1">
+              <Label htmlFor="paper-name">Set Name <span className="text-destructive">*</span></Label>
+              <Input id="paper-name" placeholder="e.g. Set A, Morning Shift" value={paperForm.set_name} onChange={(e) => setPaperForm({ ...paperForm, set_name: e.target.value })} />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="paper-file">Question Paper (PDF/Doc) {editingPaper ? <span className="text-xs text-muted-foreground ml-2">(Leave blank to keep current)</span> : <span className="text-destructive">*</span>}</Label>
+              <Input id="paper-file" type="file" onChange={(e) => setPaperForm({ ...paperForm, file: e.target.files?.[0] || null })} />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="paper-answer-key">Answer Key (Optional) {editingPaper ? <span className="text-xs text-muted-foreground ml-2">(Leave blank to keep current)</span> : ""}</Label>
+              <Input id="paper-answer-key" type="file" onChange={(e) => setPaperForm({ ...paperForm, answer_key: e.target.files?.[0] || null })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPaperModalOpen(false)}>Cancel</Button>
+            <Button onClick={savePaper}>{editingPaper ? "Save Paper" : "Upload Paper"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={!!deletePaperId}
+        onOpenChange={(op) => !op && setDeletePaperId(null)}
+        title="Delete Paper?"
+        description="Are you sure you want to delete this paper? This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={deletePaper}
       />
     </div>
   );

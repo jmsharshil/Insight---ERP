@@ -91,7 +91,7 @@ export default function FacultyAttendanceDetailPage() {
 
   if (selectedFacultyLoading) {
     return (
-      <div className="container mx-auto p-6 space-y-4">
+      <div className="mx-auto space-y-4">
         <Button variant="ghost" onClick={() => navigate(-1)} className="h-9 text-sm">
           <ArrowLeft className="w-4 h-4 mr-2" /> Back
         </Button>
@@ -111,10 +111,19 @@ export default function FacultyAttendanceDetailPage() {
     );
   }
 
-  const { faculty, summary, working_hours, monthly_analytics, daily_attendance_history, check_in_logs, check_out_logs } = selectedFaculty;
+  const { 
+    employee_profile: faculty, 
+    attendance_percentage,
+    summary, 
+    day_wise_attendance, 
+    recent_absences,
+    check_in_history, 
+    check_out_history,
+    monthly_trend 
+  } = selectedFaculty;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="mx-auto space-y-6">
       {/* Back Button and Header */}
       <div className="flex items-center justify-between">
         <Button
@@ -124,9 +133,6 @@ export default function FacultyAttendanceDetailPage() {
         >
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Faculty
         </Button>
-        <div className="text-sm text-muted-foreground">
-          Faculty ID: <span className="font-mono text-xs font-medium text-foreground">{faculty.id}</span>
-        </div>
       </div>
 
       {/* Layout: Main Panel & Sidebar */}
@@ -147,23 +153,15 @@ export default function FacultyAttendanceDetailPage() {
                 <Mail className="w-3.5 h-3.5" />
                 <span className="font-medium text-foreground truncate">{faculty.email}</span>
               </div>
-              {working_hours && (
-                <div className="flex items-center gap-2 text-muted-foreground pt-1 border-t border-border/40">
-                  <Briefcase className="w-3.5 h-3.5" />
-                  <span className="font-medium text-foreground">
-                    Avg Hours/Day: <span className="font-semibold">{working_hours.average_hours_per_day?.toFixed(1) || 0} hrs</span>
-                  </span>
-                </div>
-              )}
             </div>
 
             <div className="border border-border/60 rounded-xl p-4 bg-gradient-to-b from-muted/10 to-muted/30">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Overall Attendance</span>
               <div className="text-4xl font-extrabold text-primary mb-1">
-                {summary.attendance_percentage?.toFixed(1) || 0}%
+                {attendance_percentage?.toFixed(1) || 0}%
               </div>
-              <Badge className={`text-xs font-semibold px-2.5 py-0.5 ${pct(summary.attendance_percentage || 0)}`}>
-                {summary.attendance_percentage >= 75 ? 'Excellent' : summary.attendance_percentage >= 50 ? 'Average' : 'Low Attendance'}
+              <Badge className={`text-xs font-semibold px-2.5 py-0.5 ${pct(attendance_percentage || 0)}`}>
+                {attendance_percentage >= 75 ? 'Excellent' : attendance_percentage >= 50 ? 'Average' : 'Low Attendance'}
               </Badge>
             </div>
           </div>
@@ -173,9 +171,9 @@ export default function FacultyAttendanceDetailPage() {
             <h3 className="font-bold text-sm text-foreground">Attendance Metrics</h3>
             <div className="grid grid-cols-3 gap-3">
               {[
-                { label: "Present", value: summary.present_count, color: "text-green-600", bg: "bg-green-50" },
-                { label: "Absent",  value: summary.absent_count,  color: "text-red-600", bg: "bg-red-50" },
-                { label: "Leave",   value: summary.leave_count,   color: "text-blue-600", bg: "bg-blue-50" },
+                { label: "Present", value: summary.present_count || 0, color: "text-green-600", bg: "bg-green-50" },
+                { label: "Absent",  value: summary.absent_count || 0,  color: "text-red-600", bg: "bg-red-50" },
+                { label: "Late",    value: summary.late_count || 0,    color: "text-yellow-600", bg: "bg-yellow-50" },
               ].map(item => (
                 <div key={item.label} className={`${item.bg} rounded-lg p-3 text-center border border-border/40`}>
                   <div className={`text-2xl font-extrabold ${item.color}`}>{item.value}</div>
@@ -183,13 +181,18 @@ export default function FacultyAttendanceDetailPage() {
                 </div>
               ))}
             </div>
-            {working_hours && (
-              <div className="bg-muted/10 border border-border/60 rounded-xl p-3.5 text-center mt-2 flex justify-between items-center">
-                <div className="text-left">
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">Total Working Hours</span>
-                  <span className="text-lg font-bold text-foreground">{working_hours.total_hours?.toFixed(1) || 0} hrs</span>
+            
+            {recent_absences?.length > 0 && (
+              <div className="mt-4 border-t border-border/40 pt-4">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Recent Absences</h4>
+                <div className="space-y-2">
+                  {recent_absences.map((abs: any, idx: number) => (
+                    <div key={idx} className="bg-red-50/50 rounded-lg p-2.5 flex items-center justify-between border border-red-100">
+                      <span className="text-xs font-medium text-red-900">{abs.formatted_date || abs.date}</span>
+                      <Badge className="text-[10px] bg-red-100 text-red-700 hover:bg-red-200 border-none">Absent</Badge>
+                    </div>
+                  ))}
                 </div>
-                <Clock className="w-5 h-5 text-primary opacity-80" />
               </div>
             )}
           </div>
@@ -202,11 +205,11 @@ export default function FacultyAttendanceDetailPage() {
             <h3 className="font-bold text-sm text-foreground mb-4 flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-primary" /> Attendance Monthly Trend
             </h3>
-            {monthly_analytics?.length > 0 ? (
+            {monthly_trend?.length > 0 ? (
               <div className="w-full">
                 <ResponsiveContainer width="100%" height={200}>
-                  <LineChart data={monthly_analytics} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                  <LineChart data={monthly_trend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <XAxis dataKey="month_name" tick={{ fontSize: 11 }} />
                     <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} tick={{ fontSize: 11 }} />
                     <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
                     <Line type="monotone" dataKey="percentage" stroke="#F7A900" strokeWidth={2.5} dot={{ fill: "#F7A900", r: 4 }} activeDot={{ r: 6 }} />
@@ -230,7 +233,7 @@ export default function FacultyAttendanceDetailPage() {
                   className={`text-xs font-semibold ${activeTab === "history" ? "bg-white shadow-sm border border-border/40" : ""}`}
                   onClick={() => setActiveTab("history")}
                 >
-                  Daily History ({daily_attendance_history?.length || 0})
+                  Daily History ({day_wise_attendance?.length || 0})
                 </Button>
                 <Button
                   variant={activeTab === "checkin" ? "secondary" : "ghost"}
@@ -238,7 +241,7 @@ export default function FacultyAttendanceDetailPage() {
                   className={`text-xs font-semibold ${activeTab === "checkin" ? "bg-white shadow-sm border border-border/40" : ""}`}
                   onClick={() => setActiveTab("checkin")}
                 >
-                  Check-in Logs ({check_in_logs?.length || 0})
+                  Check-in Logs ({check_in_history?.length || 0})
                 </Button>
                 <Button
                   variant={activeTab === "checkout" ? "secondary" : "ghost"}
@@ -246,7 +249,7 @@ export default function FacultyAttendanceDetailPage() {
                   className={`text-xs font-semibold ${activeTab === "checkout" ? "bg-white shadow-sm border border-border/40" : ""}`}
                   onClick={() => setActiveTab("checkout")}
                 >
-                  Check-out Logs ({check_out_logs?.length || 0})
+                  Check-out Logs ({check_out_history?.length || 0})
                 </Button>
               </div>
             </div>
@@ -254,23 +257,19 @@ export default function FacultyAttendanceDetailPage() {
             <div className="p-4 min-h-64 max-h-[400px] overflow-y-auto">
               {activeTab === "history" && (
                 <div className="space-y-2">
-                  {daily_attendance_history && daily_attendance_history.length > 0 ? (
+                  {day_wise_attendance && day_wise_attendance.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-border text-left font-medium text-muted-foreground pb-2">
                             <th className="pb-2 font-semibold">Date</th>
-                            <th className="pb-2 font-semibold">Check-in Time</th>
-                            <th className="pb-2 font-semibold">Check-out Time</th>
                             <th className="pb-2 font-semibold">Status</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {daily_attendance_history.map((h: any, idx: number) => (
+                          {day_wise_attendance.map((h: any, idx: number) => (
                             <tr key={idx} className="border-b border-border/40 last:border-0 hover:bg-muted/10">
                               <td className="py-2.5 font-medium font-mono">{formatDate(h.date)}</td>
-                              <td className="py-2.5 text-muted-foreground">{formatTime(h.check_in_time)}</td>
-                              <td className="py-2.5 text-muted-foreground">{formatTime(h.check_out_time)}</td>
                               <td className="py-2.5">
                                 <Badge variant="outline" className={`text-[10px] font-semibold ${getStatusBadge(h.status)}`}>
                                   {h.status || "—"}
@@ -291,23 +290,21 @@ export default function FacultyAttendanceDetailPage() {
 
               {activeTab === "checkin" && (
                 <div className="space-y-2">
-                  {check_in_logs && check_in_logs.length > 0 ? (
+                  {check_in_history && check_in_history.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-border text-left font-medium text-muted-foreground pb-2">
                             <th className="pb-2 font-semibold">Time</th>
                             <th className="pb-2 font-semibold">Date</th>
-                            <th className="pb-2 font-semibold">Device / Scanner</th>
                             <th className="pb-2 font-semibold">Status</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {check_in_logs.map((log: any, idx: number) => (
+                          {check_in_history.map((log: any, idx: number) => (
                             <tr key={idx} className="border-b border-border/40 last:border-0 hover:bg-muted/10">
-                              <td className="py-2.5 font-semibold font-mono text-primary">{formatTime(log.time || log.check_in_time)}</td>
-                              <td className="py-2.5 font-mono text-muted-foreground">{formatDate(log.date || log.time)}</td>
-                              <td className="py-2.5 text-muted-foreground font-medium">{log.scanner_device || log.device || "—"}</td>
+                              <td className="py-2.5 font-semibold font-mono text-primary">{formatTime(log.time)}</td>
+                              <td className="py-2.5 font-mono text-muted-foreground">{formatDate(log.date)}</td>
                               <td className="py-2.5">
                                 <Badge className="text-[9px] bg-green-50 text-green-700 border-green-200 border capitalize">
                                   {log.status || "success"}
@@ -328,22 +325,20 @@ export default function FacultyAttendanceDetailPage() {
 
               {activeTab === "checkout" && (
                 <div className="space-y-2">
-                  {check_out_logs && check_out_logs.length > 0 ? (
+                  {check_out_history && check_out_history.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-border text-left font-medium text-muted-foreground pb-2">
                             <th className="pb-2 font-semibold">Time</th>
                             <th className="pb-2 font-semibold">Date</th>
-                            <th className="pb-2 font-semibold">Device / Scanner</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {check_out_logs.map((log: any, idx: number) => (
+                          {check_out_history.map((log: any, idx: number) => (
                             <tr key={idx} className="border-b border-border/40 last:border-0 hover:bg-muted/10">
-                              <td className="py-2.5 font-semibold font-mono text-blue-600">{formatTime(log.time || log.check_out_time)}</td>
-                              <td className="py-2.5 font-mono text-muted-foreground">{formatDate(log.date || log.time)}</td>
-                              <td className="py-2.5 text-muted-foreground font-medium">{log.scanner_device || log.device || "—"}</td>
+                              <td className="py-2.5 font-semibold font-mono text-blue-600">{formatTime(log.time)}</td>
+                              <td className="py-2.5 font-mono text-muted-foreground">{formatDate(log.date)}</td>
                             </tr>
                           ))}
                         </tbody>

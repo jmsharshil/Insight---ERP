@@ -116,6 +116,8 @@ export const API = {
     CREATE: "/api/v1/subjects/",
     UPDATE: (id: string | number) => `/api/v1/subjects/${id}/`,
     DELETE: (id: string | number) => `/api/v1/subjects/${id}/`,
+    QUESTIONS: (subjectId: string | number) => `/api/v1/subjects/${subjectId}/questions/`,
+    QUESTION_DETAIL: (subjectId: string | number, questionId: string | number) => `/api/v1/subjects/${subjectId}/questions/${questionId}/`,
   },
 
   /** Chapters endpoints */
@@ -125,6 +127,18 @@ export const API = {
       `/api/v1/subjects/${subjectId}/chapters/${chapterId}/`,
     DELETE: (subjectId: string | number, chapterId: string | number) =>
       `/api/v1/subjects/${subjectId}/chapters/${chapterId}/`,
+  },
+
+  /** Subject Papers endpoints */
+  SUBJECT_PAPERS: {
+    LIST: (subjectId: string | number) => `/api/v1/subjects/${subjectId}/papers/`,
+    CREATE: (subjectId: string | number) => `/api/v1/subjects/${subjectId}/papers/`,
+    GET: (subjectId: string | number, paperId: string | number) =>
+      `/api/v1/subjects/${subjectId}/papers/${paperId}/`,
+    UPDATE: (subjectId: string | number, paperId: string | number) =>
+      `/api/v1/subjects/${subjectId}/papers/${paperId}/`,
+    DELETE: (subjectId: string | number, paperId: string | number) =>
+      `/api/v1/subjects/${subjectId}/papers/${paperId}/`,
   },
 
   /** Reports endpoints */
@@ -176,6 +190,7 @@ export const API = {
     DETAIL: (id: string) => `/api/v1/exams/${id}/`,
     QUESTIONS: (examId: string) => `/api/v1/exams/${examId}/questions/`,
     QUESTION_DETAIL: (examId: string, qId: string) => `/api/v1/exams/${examId}/questions/${qId}/`,
+    IMPORT_QUESTIONS: (examId: string | number) => `/api/v1/exams/${examId}/import-questions/`,
     SEATING: (examId: string) => `/api/v1/exams/${examId}/seating/`,
     SEAT_DETAIL: (examId: string, seatId: string) => `/api/v1/exams/${examId}/seating/${seatId}/`,
     DISTRIBUTE_ANSWER_KEY: (examId: string) => `/api/v1/exams/${examId}/answer-key/distribute/`,
@@ -189,7 +204,17 @@ export const API = {
       `/api/v1/exams/${examId}/papers/${marksheetId}/`,
     PAPER_MARKS: (examId: string, marksheetId: string) => 
       `/api/v1/exams/${examId}/papers/${marksheetId}/marks/`,
+    PAPER_QUERY: (examId: string, marksheetId: string) =>
+      `/api/v1/exams/${examId}/papers/${marksheetId}/query/`,
+    RESOLVE_QUERY: (examId: string, queryId: string) => 
+      `/api/v1/exams/${examId}/queries/${queryId}/resolve/`,
     CHECKER_STATUS: (examId: string) => `/api/v1/exams/${examId}/checker-status/`,
+    RESULTS: (examId: string) => `/api/v1/exams/${examId}/results/`,
+    PUBLISH_RESULTS: (examId: string) => `/api/v1/exams/${examId}/results/publish/`,
+    RESULT_DETAIL: (examId: string, resultId: string) => `/api/v1/exams/${examId}/results/${resultId}/`,
+    CREATE_RECHECK_REQUEST: (examId: string) => `/api/v1/exams/${examId}/results/recheck-request/`,
+    RECHECK_REQUESTS: (examId: string) => `/api/v1/exams/${examId}/recheck-requests/`,
+    RECHECK_REQUEST_ACTION: (examId: string, requestId: string) => `/api/v1/exams/${examId}/recheck-requests/${requestId}/`,
   },
 
   /** Fees endpoints */

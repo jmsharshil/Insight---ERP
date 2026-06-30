@@ -24,11 +24,11 @@ import StudentAdmissionDetailedPage from "@/pages/students/StudentAdmissionDetai
 const CoursesBatchesPage = lazy(() => import("@/pages/courses-batches/CoursesBatchesPage"));
 import CourseDetailPage from "@/pages/courses/CourseDetailPage";
 import LevelDetailPage from "@/pages/courses/LevelDetailPage";
+const SubjectQuestionBankPage = lazy(() => import("@/pages/courses/SubjectQuestionBankPage"));
 import BatchDetailPage from "@/pages/courses-batches/BatchDetailPage";
 
 const TimetablePage = lazy(() => import("@/pages/timetable/TimetablePage"));
 const AttendancePage = lazy(() => import("@/pages/attendance/AttendancePage"));
-import AttendanceDetailPage from "@/pages/attendance/AttendanceDetailPage";
 import StudentAttendanceDetailPage from "@/pages/attendance/StudentAttendanceDetailPage";
 import FacultyAttendanceDetailPage from "@/pages/attendance/FacultyAttendanceDetailPage";
 const FeesPage = lazy(() => import("@/pages/fees/FeesPage"));
@@ -124,13 +124,14 @@ const router = createBrowserRouter([
     { module: "courses_batches", path: "/courses-batches", element: withSuspense(<CoursesBatchesPage />) },
     { module: "courses_batches", path: "/courses-batches/:id", element: <CourseDetailPage /> },
     { module: "courses_batches", path: "/courses-batches/:courseId/level/:levelId", element: <LevelDetailPage /> },
+    { module: "courses_batches", path: "/courses-batches/:courseId/level/:levelId/subject/:subjectId/questions", element: withSuspense(<SubjectQuestionBankPage />) },
     { module: "courses_batches", path: "/courses-batches/batch/:id", element: <BatchDetailPage /> },
 
     { module: "timetable", path: "/timetable", element: withSuspense(<TimetablePage />) },
     { module: "attendance", path: "/attendance", element: withSuspense(<AttendancePage />) },
     { module: "attendance", path: "/attendance/student/:id", element: <StudentAttendanceDetailPage /> },
     { module: "attendance", path: "/attendance/faculty/:id", element: <FacultyAttendanceDetailPage /> },
-    // { module: "attendance", path: "/attendance/:id", element: <AttendanceDetailPage /> },
+    
     { module: "fees", path: "/fees", element: withSuspense(<FeesPage />) },
     { module: "exams", path: "/exams", element: withSuspense(<ExamsPage />) },
     {

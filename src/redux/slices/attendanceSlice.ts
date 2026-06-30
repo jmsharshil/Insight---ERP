@@ -88,7 +88,7 @@ export interface FacultySummary {
 
 export interface FacultyDetail {
   faculty: { id: string; name: string; employee_id: string; email: string };
-  summary: { present_count: number; absent_count: number; leave_count: number; attendance_percentage: number };
+  summary: { present_count: number; absent_count: number; leave_count: number; late_count: number; attendance_percentage: number };
   daily_attendance_history: any[];
   check_in_logs: any[];
   check_out_logs: any[];

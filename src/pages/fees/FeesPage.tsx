@@ -168,7 +168,7 @@ export default function FeesPage() {
   const isStudentLike = role === "student" || role === "parent" || role === "parents";
   const isAccountant = role === "accountant";
   const isBM = role === "branch_manager";
-  const isAdmin = role === "super_admin" || isBM;
+  const isAdmin = ["super_admin", "branch_manager"].includes(role as string);
   const isAdminSr = role === "admin_senior_executive";
 
   const feeStructure = useSelector((state: RootState) => state.fees.feeStructure);

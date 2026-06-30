@@ -82,9 +82,6 @@ export default function StudentFeesTab({
               return (
                 <div>
                   <div className="font-semibold">{s?.full_name || "—"}</div>
-                  <div className="text-[10px] text-muted-foreground font-mono">
-                    {s?.admission_number || "—"}
-                  </div>
                 </div>
               );
             },

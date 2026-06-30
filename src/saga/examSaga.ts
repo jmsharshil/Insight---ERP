@@ -25,4 +25,13 @@ export function* watchExamSaga() {
   yield takeLatest(examActions.UPDATE_PAPER_MARKS, genericSaga);
   yield takeLatest(examActions.DELETE_PAPER, genericSaga);
   yield takeLatest(examActions.GET_CHECKER_STATUS, genericSaga);
+  yield takeLatest(examActions.RAISE_PAPER_QUERY, genericSaga);
+  yield takeLatest(examActions.RESOLVE_PAPER_QUERY, genericSaga);
+  yield takeLatest(examActions.GET_RESULTS, genericSaga);
+  yield takeLatest(examActions.PUBLISH_RESULTS, genericSaga);
+  yield takeLatest(examActions.DELETE_RESULT, genericSaga);
+  yield takeLatest(examActions.CREATE_RECHECK_REQUEST, genericSaga);
+  yield takeLatest(examActions.GET_RECHECK_REQUESTS, genericSaga);
+  yield takeLatest(examActions.RECHECK_REQUEST_ACTION, genericSaga);
+  yield takeLatest(examActions.IMPORT_QUESTIONS, genericSaga);
 }

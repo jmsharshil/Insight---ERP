@@ -1,5 +1,5 @@
 import { takeLatest } from "redux-saga/effects";
-import { courseAction, levelActions, subjectAction, chapterAction } from "@/redux/actions";
+import { courseAction, levelActions, subjectAction, chapterAction, subjectPaperAction } from "@/redux/actions";
 import { genericSaga } from "@/saga/createGenericSaga/genericSaga";
 
 export function* watchCourseSaga() {
@@ -27,4 +27,17 @@ export function* watchCourseSaga() {
   yield takeLatest(chapterAction.CREATE_CHAPTER, genericSaga);
   yield takeLatest(chapterAction.UPDATE_CHAPTER, genericSaga);
   yield takeLatest(chapterAction.DELETE_CHAPTER, genericSaga);
+
+  // Subject Paper sagas using genericSaga
+  yield takeLatest(subjectPaperAction.GET_SUBJECT_PAPERS, genericSaga);
+  yield takeLatest(subjectPaperAction.CREATE_SUBJECT_PAPER, genericSaga);
+  yield takeLatest(subjectPaperAction.GET_SUBJECT_PAPER_DETAIL, genericSaga);
+  yield takeLatest(subjectPaperAction.UPDATE_SUBJECT_PAPER, genericSaga);
+  yield takeLatest(subjectPaperAction.DELETE_SUBJECT_PAPER, genericSaga);
+
+  // Subject Question Bank MCQ
+  yield takeLatest(subjectAction.GET_QUESTIONS, genericSaga);
+  yield takeLatest(subjectAction.ADD_QUESTIONS, genericSaga);
+  yield takeLatest(subjectAction.UPDATE_QUESTION, genericSaga);
+  yield takeLatest(subjectAction.DELETE_QUESTION, genericSaga);
 }

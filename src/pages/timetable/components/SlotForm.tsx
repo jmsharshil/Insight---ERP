@@ -79,6 +79,7 @@ const schema = z.object({
   exam_pass_marks:          z.string().optional(),
   exam_instructions:        z.string().optional(),
   exam_result_release_mode: z.enum(["instant", "manual"]).optional(),
+  selected_papers:          z.string().optional(), // comma-sep UUIDs
 });
 
 export type SlotFormValues = z.infer<typeof schema>;
@@ -120,10 +121,11 @@ export function buildSlotPayload(values: SlotFormValues): Record<string, any> {
     base.exam_data = {
       title:               values.exam_title,
       exam_type:           values.exam_type,
-      total_marks:         Number(values.exam_total_marks),
+      total_marks:         values.exam_type === "online" ? undefined : Number(values.exam_total_marks),
       pass_marks:          Number(values.exam_pass_marks),
       instructions:        values.exam_instructions,
       result_release_mode: values.exam_result_release_mode,
+      selected_papers:     csvToArray(values.selected_papers),
     };
   }
 
@@ -135,10 +137,11 @@ export function buildSlotPayload(values: SlotFormValues): Record<string, any> {
     base.exam_data = {
       title:               values.exam_title,
       exam_type:           values.exam_type,
-      total_marks:         Number(values.exam_total_marks),
+      total_marks:         values.exam_type === "online" ? undefined : Number(values.exam_total_marks),
       pass_marks:          Number(values.exam_pass_marks),
       instructions:        values.exam_instructions,
       result_release_mode: values.exam_result_release_mode,
+      selected_papers:     csvToArray(values.selected_papers),
     };
   }
 
@@ -156,6 +159,7 @@ interface SlotFormProps {
   facultyList:    { id: string; name: string; employee_id?: string }[];
   classrooms:     { id: string; name: string }[];
   chapters:       { id: string; name: string; order: number; subject?: string }[];
+  papers?:        { id: string; name: string; subject?: string; file?: string }[];
   examinersList?: { id: string; name: string; employee_id?: string }[];
   paperCheckersList?: { id: string; name: string; employee_id?: string }[];
   loading:        boolean;
@@ -168,7 +172,7 @@ interface SlotFormProps {
 
 export default function SlotForm({
   defaultValues, lockedFields = [], batches, subjects, facultyList, classrooms,
-  chapters, examinersList = [], paperCheckersList = [], loading, onSubmit, onCancel, isEdit,
+  chapters, papers = [], examinersList = [], paperCheckersList = [], loading, onSubmit, onCancel, isEdit,
 }: SlotFormProps) {
   const { control, register, handleSubmit, watch, setValue, formState: { errors } } = useForm<SlotFormValues>({
     resolver: zodResolver(schema),
@@ -201,6 +205,11 @@ export default function SlotForm({
   const filteredChapters = selectedSubject
     ? chapters.filter(c => !c.subject || c.subject === selectedSubject)
     : chapters;
+
+  // Filter papers by selected subject
+  const filteredPapers = selectedSubject
+    ? papers.filter(p => p.subject === selectedSubject)
+    : papers;
 
   // Auto-fill start/end time when slot_code changes
   const slotCode = watch("slot_code");
@@ -621,8 +630,8 @@ export default function SlotForm({
               )} />
             </Field>
 
-            <Field label="Total Marks" required={needsExam} error={errors.exam_total_marks?.message}>
-              <Input type="number" {...register("exam_total_marks")} placeholder="100" className="h-9 text-sm" />
+            <Field label="Total Marks" required={needsExam && watch("exam_type") !== "online"} error={errors.exam_total_marks?.message}>
+              <Input type="number" {...register("exam_total_marks")} placeholder={watch("exam_type") === "online" ? "Auto-calculated" : "100"} className="h-9 text-sm" disabled={watch("exam_type") === "online"} />
             </Field>
 
             <Field label="Pass Marks" required={needsExam} error={errors.exam_pass_marks?.message}>
@@ -639,6 +648,49 @@ export default function SlotForm({
                   </SelectContent>
                 </Select>
               )} />
+            </Field>
+
+            <Field label="Select Papers (Optional)">
+              <Controller name="selected_papers" control={control} render={({ field }) => {
+                const selectedIds = csvToArray(field.value);
+                const selectedNames = selectedIds.map(id => filteredPapers.find(p => p.id === id)?.name || id);
+
+                return (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" role="combobox" className="w-full justify-between font-normal text-sm min-h-[36px] h-auto p-2">
+                        {selectedNames.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5 text-left">
+                            {selectedNames.map((name, i) => (
+                              <Badge key={i} variant="secondary" className="text-xs font-medium bg-[#F3E5F5] text-[#8E24AA] hover:bg-[#E1BEE7]">{name}</Badge>
+                            ))}
+                          </div>
+                        ) : <span className="text-muted-foreground">Select papers...</span>}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search papers..." />
+                        <CommandList>
+                          <CommandEmpty>No papers found for this subject.</CommandEmpty>
+                          <CommandGroup>
+                            {filteredPapers.map((paper) => (
+                              <CommandItem key={paper.id} value={paper.name} onSelect={() => {
+                                const newIds = selectedIds.includes(paper.id) ? selectedIds.filter(id => id !== paper.id) : [...selectedIds, paper.id];
+                                field.onChange(newIds.join(", "));
+                              }}>
+                                <Check className={cn("mr-2 h-4 w-4", selectedIds.includes(paper.id) ? "opacity-100" : "opacity-0")} />
+                                {paper.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                );
+              }} />
             </Field>
           </div>
 

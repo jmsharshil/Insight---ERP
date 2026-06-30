@@ -60,55 +60,56 @@ export default function AttendancePage() {
       },
     });
 
-    // 2. Fetch students for dropdowns
-    dispatch({
-      type: dropdownActions.GET_DROPDOWN,
-      method: "GET",
-      endPoint: `/api/v1/students/${branchQuery}`,
-      auth: true,
-      getResponse: (res: any) => {
-        const list = res?.data?.results || res?.results || res?.data?.data || res?.data || res;
-        if (Array.isArray(list)) {
-          setDropdowns(prev => ({
-            ...prev,
-            students: list.map((item: any) => ({
-              id: item.id,
-              name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim(),
-              branch_id: item.branch || item.branch_id,
-            })),
-          }));
-        }
-      },
-    });
+  //   // 2. Fetch students for dropdowns
+  //   dispatch({
+  //     type: dropdownActions.GET_DROPDOWN,
+  //     method: "GET",
+  //     endPoint: `/api/v1/students/${branchQuery}`,
+  //     auth: true,
+  //     getResponse: (res: any) => {
+  //       const list = res?.data?.results || res?.results || res?.data?.data || res?.data || res;
+  //       if (Array.isArray(list)) {
+  //         setDropdowns(prev => ({
+  //           ...prev,
+  //           students: list.map((item: any) => ({
+  //             id: item.id,
+  //             name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim(),
+  //             branch_id: item.branch || item.branch_id,
+  //           })),
+  //         }));
+  //       }
+  //     },
+  //   });
 
-    // 3. Fetch faculty for dropdowns
-    dispatch({
-      type: dropdownActions.GET_DROPDOWN,
-      method: "GET",
-      endPoint: `/api/v1/faculty/${branchQuery}`,
-      auth: true,
-      getResponse: (res: any) => {
-        const list = res?.data || res;
-        if (Array.isArray(list)) {
-          setDropdowns(prev => ({
-            ...prev,
-            faculty: list.map((item: any) => ({
-              id: item.id,
-              user_id: item.user || item.user_id,
-              name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim(),
-              branch_id: item.branch || item.branch_id,
-            })),
-          }));
-        }
-      },
-    });
+  //   // 3. Fetch faculty for dropdowns
+  //   dispatch({
+  //     type: dropdownActions.GET_DROPDOWN,
+  //     method: "GET",
+  //     endPoint: `/api/v1/faculty/${branchQuery}`,
+  //     auth: true,
+  //     getResponse: (res: any) => {
+  //       const list = res?.data || res;
+  //       if (Array.isArray(list)) {
+  //         setDropdowns(prev => ({
+  //           ...prev,
+  //           faculty: list.map((item: any) => ({
+  //             id: item.id,
+  //             user_id: item.user || item.user_id,
+  //             name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim(),
+  //             branch_id: item.branch || item.branch_id,
+  //           })),
+  //         }));
+  //       }
+  //     },
+  //   });
   }, [dispatch, user]);
 
   const isParentOrStudent = user?.role === "parents" || user?.role === "student";
+  const isFaculty = user?.role === "faculty";
   const isEmployee = user && !isParentOrStudent;
   const isAdmin = user && ["super_admin", "admin", "branch_manager"].includes(user.role);
   const isEmployeeHistoryRole = user && !["super_admin", "student", "parents", "paper_checker"].includes(user.role);
-  const defaultTab = isParentOrStudent ? "students" : "dashboard";
+  const defaultTab = isParentOrStudent ? "students" : isFaculty ? "my_history" : "dashboard";
 
   const handleScan = (type: "check_in" | "check_out") => {
     setScanLoading(type);
@@ -160,29 +161,31 @@ export default function AttendancePage() {
 
       <Tabs defaultValue={defaultTab} className="mt-2">
         <TabsList className="">
-          {!isParentOrStudent && <TabsTrigger value="dashboard">Dashboard</TabsTrigger>}
+          {!isParentOrStudent && !isFaculty && <TabsTrigger value="dashboard">Dashboard</TabsTrigger>}
           {isEmployeeHistoryRole && <TabsTrigger value="my_history">My Attendance</TabsTrigger>}
-          <TabsTrigger value="students">Students</TabsTrigger>
-          {!isParentOrStudent && <TabsTrigger value="register">Student Register</TabsTrigger>}
+          {!isFaculty && <TabsTrigger value="students">Students</TabsTrigger>}
+          {/* {!isParentOrStudent && !isFaculty && <TabsTrigger value="register">Student Register</TabsTrigger>} */}
           {/* {isAdmin && <TabsTrigger value="staff_register">Staff Register</TabsTrigger>} */}
-          <TabsTrigger value="history">History</TabsTrigger>
-          {!isParentOrStudent && <TabsTrigger value="faculty">Staff</TabsTrigger>}
-          {!isParentOrStudent && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
-          {!isParentOrStudent && <TabsTrigger value="defaulters">Defaulters</TabsTrigger>}
+          {!isFaculty && <TabsTrigger value="history">History</TabsTrigger>}
+          {!isParentOrStudent && !isFaculty && <TabsTrigger value="faculty">Staff</TabsTrigger>}
+          {!isParentOrStudent && !isFaculty && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
+          {!isParentOrStudent && !isFaculty && <TabsTrigger value="defaulters">Defaulters</TabsTrigger>}
           <TabsTrigger value="violations">Violations</TabsTrigger>
         </TabsList>
 
-        {!isParentOrStudent && (
+        {!isParentOrStudent && !isFaculty && (
           <TabsContent value="dashboard" className="mt-4">
             <DashboardTab dropdowns={dropdowns} />
           </TabsContent>
         )}
 
-        <TabsContent value="students" className="mt-4">
-          <StudentsAttendanceTab dropdowns={dropdowns} />
-        </TabsContent>
+        {!isFaculty && (
+          <TabsContent value="students" className="mt-4">
+            <StudentsAttendanceTab dropdowns={dropdowns} />
+          </TabsContent>
+        )}
 
-        {!isParentOrStudent && (
+        {!isParentOrStudent && !isFaculty && (
           <TabsContent value="register" className="mt-4">
             <RegisterTab dropdowns={dropdowns} />
           </TabsContent>
@@ -200,23 +203,25 @@ export default function AttendancePage() {
           </TabsContent>
         )}
 
-        <TabsContent value="history" className="mt-4">
-          <HistoryTab dropdowns={dropdowns} />
-        </TabsContent>
+        {!isFaculty && (
+          <TabsContent value="history" className="mt-4">
+            <HistoryTab dropdowns={dropdowns} />
+          </TabsContent>
+        )}
 
-        {!isParentOrStudent && (
+        {!isParentOrStudent && !isFaculty && (
           <TabsContent value="faculty" className="mt-4">
             <FacultyTab dropdowns={dropdowns} />
           </TabsContent>
         )}
 
-        {!isParentOrStudent && (
+        {!isParentOrStudent && !isFaculty && (
           <TabsContent value="analytics" className="mt-4">
             <AnalyticsTab dropdowns={dropdowns} />
           </TabsContent>
         )}
 
-        {!isParentOrStudent && (
+        {!isParentOrStudent && !isFaculty && (
           <TabsContent value="defaulters" className="mt-4">
             <DefaultersTab dropdowns={dropdowns} />
           </TabsContent>
