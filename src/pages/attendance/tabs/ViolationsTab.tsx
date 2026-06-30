@@ -29,6 +29,7 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
   const { violations, violationsLoading, violationsCount } = useSelector((s: RootState) => s.attendance);
   const { user } = useAuth();
   const isParentOrStudent = user?.role === "parents" || user?.role === "student";
+  const isFaculty = user?.role === "faculty";
   const isBranchManager = user?.role === "branch_manager";
 
   const studentsList = dropdowns?.students?.filter((s: any) => {
@@ -110,7 +111,7 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-xl border border-border p-4 flex flex-wrap gap-3 items-end">
-        {!isParentOrStudent && (
+        {!isParentOrStudent && !isFaculty && (
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-muted-foreground">Student</Label>
             <Select value={f.student_id} onValueChange={v => setF(p => ({ ...p, student_id: v === "all" ? "" : v }))}>
