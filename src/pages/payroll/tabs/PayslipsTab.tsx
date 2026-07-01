@@ -10,7 +10,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { payrollActions } from "@/redux/actions";
+import { payrollActions, dropdownActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import { setPayslips, setPayslipsLoading } from "@/redux/slices/payrollSlice";
 import type { PaySlip, PayrollRun } from "@/redux/slices/payrollSlice";
@@ -30,81 +30,38 @@ import {
 import { Label } from "@/components/ui/label";
 import PayslipAdjustSheet from "../components/PayslipAdjustSheet";
 
-const DeductionNoteCell = ({ row, status, handleSave }: { row: any; status: string; handleSave: (id: string, note: string) => void }) => {
+const DeductionNoteCell = ({ row }: { row: any }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [note, setNote] = useState(row.deduction_note || "");
 
-  const onSave = () => {
-    if (note !== (row.deduction_note || "")) {
-      handleSave(row.id, note);
-    }
-    setIsOpen(false);
-  };
-
-  const onCancel = () => {
-    setNote(row.deduction_note || "");
-    setIsOpen(false);
-  };
-
-  if (!["draft", "pending", "pending_approval"].includes(status?.toLowerCase())) {
-     return row.deduction_note ? (
-        <div className="text-muted-foreground italic mt-1.5 p-1.5 bg-muted/30 rounded border border-border/50 max-w-xs whitespace-normal">
-          <span className="font-semibold not-italic">Note:</span> {row.deduction_note}
-        </div>
-     ) : "—";
+  if (!row.deduction_note) {
+    return <span className="text-muted-foreground">—</span>;
   }
 
   return (
     <>
-      {!row.deduction_note ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 px-2 text-muted-foreground hover:text-primary mt-1"
-          onClick={() => setIsOpen(true)}
-        >
-          <MessageSquarePlus className="w-3 h-3 mr-1" /> Add Note
-        </Button>
-      ) : (
-        <div className="group relative mt-1.5 p-1.5 bg-muted/30 transition-colors rounded border border-border/50 max-w-xs whitespace-normal">
-          <div className="text-muted-foreground italic pr-5">
-            {row.deduction_note || "—"}
-          </div>
-          <button
-            onClick={() => setIsOpen(true)}
-            className="absolute right-1.5 top-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary"
-          >
-            <Edit3 className="w-3 h-3" />
-          </button>
-        </div>
-      )}
-
-      <Dialog
-        open={isOpen}
-        onOpenChange={(open) => {
-          if (!open) onCancel();
-          setIsOpen(open);
-        }}
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-6 px-2 text-primary hover:text-primary/80 mt-1"
+        onClick={() => setIsOpen(true)}
       >
+        View Deduction note
+      </Button>
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>
-              {row.deduction_note ? "Edit Deduction Note" : "Add Deduction Note"}
-            </DialogTitle>
+            <DialogTitle>Deduction Note</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <Textarea
-              placeholder="Enter deduction note..."
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              className="min-h-[100px]"
-            />
+            <div className="text-sm bg-muted/30 p-4 rounded-md border border-border/50 min-h-[100px] whitespace-pre-wrap">
+              {row.deduction_note}
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={onCancel}>
-              Cancel
+            <Button variant="outline" onClick={() => setIsOpen(false)}>
+              Close
             </Button>
-            <Button onClick={onSave}>Save Note</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -291,7 +248,7 @@ export default function PayslipsTab() {
                     "Employee",
                     "Type",
                     "Basic / Rate",
-                    "Hours",
+                    "Hours / Amount",
                     "Bonus",
                     "Deductions",
                     "Deduction Note",
@@ -340,14 +297,27 @@ export default function PayslipsTab() {
                         </Badge>
                       </td>
                       <td className="px-4 py-3 font-mono text-xs">
-                        {slip.employment_type === 'part_time' || slip.employment_type === 'visiting' 
-                          ? `₹${Number(slip.hourly_rate || 0).toLocaleString("en-IN")}/hr`
-                          : `₹${Number(slip.basic_salary || 0).toLocaleString("en-IN")}`}
+                        {slip.employment_type === 'part_time' || slip.employment_type === 'visiting' || (Number(slip.basic_salary || slip.salary || 0) === 0 && Number(slip.hour_based_amount) > 0)
+                          ? (() => {
+                              const explicitRate = Number(slip.hourly_rate || 0);
+                              const hours = Number(slip.total_session_hours || slip.session_hours || 0);
+                              const amount = Number(slip.hour_based_amount || 0);
+                              const effectiveRate = explicitRate > 0 ? explicitRate : (hours > 0 ? amount / hours : 0);
+                              return effectiveRate > 0 ? `₹${effectiveRate.toLocaleString("en-IN")}/hr` : "—";
+                            })()
+                          : Number(slip.basic_salary || slip.salary || 0) > 0 
+                            ? `₹${Number(slip.basic_salary || slip.salary || 0).toLocaleString("en-IN")}`
+                            : "—"}
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs text-green-600">
-                        {slip.hour_based_amount > 0
-                          ? `₹${Number(slip.hour_based_amount).toLocaleString("en-IN")}`
-                          : "—"}
+                      <td className="px-4 py-3 font-mono text-xs">
+                        {Number(slip.total_session_hours || slip.session_hours || 0) > 0
+                          ? <div>
+                              <div className="text-muted-foreground">{Number(slip.total_session_hours || slip.session_hours)} hrs</div>
+                              <div className="text-green-600 font-medium">₹{Number(slip.hour_based_amount || 0).toLocaleString("en-IN")}</div>
+                            </div>
+                          : Number(slip.hour_based_amount) > 0 ? (
+                            <div className="text-green-600 font-medium">₹{Number(slip.hour_based_amount || 0).toLocaleString("en-IN")}</div>
+                          ) : "—"}
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-green-600">
                         {slip.bonus > 0 ? `₹${Number(slip.bonus).toLocaleString("en-IN")}` : "—"}
@@ -363,53 +333,10 @@ export default function PayslipsTab() {
                         ).toLocaleString("en-IN")}
                       </td>
                       <td className="px-4 py-3 text-xs">
-                        <DeductionNoteCell 
-                          row={slip} 
-                          status={selectedRun?.status || ""} 
-                          handleSave={(slipId, note) => {
-                            dispatch({
-                              type: payrollActions.UPDATE_PAYSLIP,
-                              method: "PATCH",
-                              endPoint: API.PAYROLL.PAYSLIP_DETAIL(selectedRun!.id, slipId),
-                              body: { deduction_note: note },
-                              auth: true,
-                              getResponse: () => {
-                                toast.success("Deduction note updated.");
-                                dispatch({
-                                  type: payrollActions.GET_PAYSLIPS,
-                                  method: "GET",
-                                  endPoint: API.PAYROLL.PAYSLIPS(selectedRun!.id),
-                                  auth: true,
-                                  getResponse: (res: any) => {
-                                    const data = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
-                                    dispatch(setPayslips(data));
-                                  }
-                                } as any);
-                              },
-                              getError: (err: any) => {
-                                toast.error(err?.response?.data?.message || "Failed to update note");
-                              },
-                            } as any);
-                          }} 
-                        />
+                        <DeductionNoteCell row={slip} />
                       </td>
                       <td className="px-4 py-3 font-mono text-sm font-bold text-primary">
-                        ₹{(() => {
-                          if (slip.employment_type === 'part_time' || slip.employment_type === 'visiting') {
-                            const hourlyRate = Number(slip.hourly_rate || 0);
-                            const sessionHours = Number(slip.session_hours || slip.total_session_hours || 0);
-                            const base = hourlyRate * sessionHours;
-                            const deductions = Number(slip.late_penalty || 0) +
-                                               Number(slip.leave_deductions || 0) +
-                                               Number(slip.absence_deductions || 0) +
-                                               Number(slip.retention_deduction || 0) +
-                                               Number(slip.other_deductions || 0);
-                            const bonus = Number(slip.bonus || 0);
-                            const hourBased = Number(slip.hour_based_amount || 0);
-                            return (base + hourBased + bonus - deductions).toLocaleString("en-IN");
-                          }
-                          return Number(slip.net_salary || 0).toLocaleString("en-IN");
-                        })()}
+                        ₹{Number(slip.net_salary || 0).toLocaleString("en-IN")}
                       </td>
                       <td className="px-4 py-3">
                         <Badge

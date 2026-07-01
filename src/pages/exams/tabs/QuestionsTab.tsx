@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
-import { Plus, Trash2, Pencil, CheckCircle2, Circle, X, FileText, Database } from "lucide-react";
+import { Plus, Trash2, Pencil, CheckCircle2, Circle, X, FileText, Database, Search } from "lucide-react";
 import { examActions, subjectAction } from "@/redux/actions";
 import { API } from "@/service/api";
 import { setQuestions, setQuestionsLoading, updateQuestion, removeQuestion } from "@/redux/slices/examSlice";
@@ -74,6 +74,7 @@ export default function QuestionsTab({ examId }: QuestionsTabProps) {
   const [bankLoading, setBankLoading] = useState(false);
   const [selectedBankQuestionIds, setSelectedBankQuestionIds] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const canManage = user && ["super_admin", "branch_manager", "admin", "faculty"].includes(user.role ?? "");
   const isPaperBased = currentExam?.exam_type === "subjective" || currentExam?.exam_type === "offline";
@@ -98,9 +99,18 @@ export default function QuestionsTab({ examId }: QuestionsTabProps) {
     return groups;
   }, [questions, isPaperBased]);
 
+  const filteredBankQuestions = useMemo(() => {
+    if (!searchTerm.trim()) return bankQuestions;
+    const lower = searchTerm.toLowerCase();
+    return bankQuestions.filter(q => 
+      q.question_text?.toLowerCase().includes(lower) || 
+      q.paragraph_text?.toLowerCase().includes(lower)
+    );
+  }, [bankQuestions, searchTerm]);
+
   const groupedBankQuestions = useMemo(() => {
     const groups: any[] = [];
-    bankQuestions.forEach(q => {
+    filteredBankQuestions.forEach(q => {
       if (q.question_type === "paragraph_mcq" && Array.isArray(q.questions)) {
         groups.push({ type: "paragraph", paragraph_text: q.paragraph_text, questions: q.questions, id: `para-bank-${q.questions[0]?.id || Math.random()}` });
       } else if (q.question_type === "paragraph_mcq" && q.paragraph_text) {
@@ -115,7 +125,7 @@ export default function QuestionsTab({ examId }: QuestionsTabProps) {
       }
     });
     return groups;
-  }, [bankQuestions]);
+  }, [filteredBankQuestions]);
 
   useEffect(() => {
     if (isPaperBased) return;
@@ -298,6 +308,7 @@ export default function QuestionsTab({ examId }: QuestionsTabProps) {
   const fetchBankQuestions = (subId: string) => {
     setSelectedSubjectId(subId);
     setSelectedBankQuestionIds([]);
+    setSearchTerm("");
     if (!subId) return;
     dispatch({
       type: subjectAction.GET_QUESTIONS,
@@ -755,7 +766,7 @@ export default function QuestionsTab({ examId }: QuestionsTabProps) {
 
       {/* Import from Bank Dialog */}
       <Dialog open={importOpen} onOpenChange={o => setImportOpen(o)}>
-        <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
+        <DialogContent className="sm:max-w-6xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="font-heading flex items-center gap-2">
               <Database className="w-5 h-5 text-primary" /> Import Questions from Subject Bank
@@ -796,6 +807,16 @@ export default function QuestionsTab({ examId }: QuestionsTabProps) {
                 </div>
               );
             })()}
+
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search questions or paragraphs..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="pl-9 bg-muted/5 border-border"
+              />
+            </div>
 
             <div className="flex-1 overflow-y-auto border border-border rounded-lg bg-muted/5 p-3 space-y-3">
               {!selectedSubjectId ? (

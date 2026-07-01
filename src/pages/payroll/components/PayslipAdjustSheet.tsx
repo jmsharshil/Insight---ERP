@@ -65,16 +65,11 @@ export default function PayslipAdjustSheet({ open, onClose, payslip, runId }: Pa
   };
 
   const isFaculty = !!payslip?.faculty;
-  const isPartTimeOrVisiting = payslip?.employment_type === 'part_time' || payslip?.employment_type === 'visiting';
 
-  let calculatedBase = Number(payslip?.basic_salary || 0);
+  let calculatedBase = Number(payslip?.basic_salary || payslip?.salary || 0);
   let calculatedNetSalary = Number(payslip?.net_salary || 0);
 
-  if (payslip && isPartTimeOrVisiting) {
-    const hourlyRate = Number(payslip.hourly_rate || 0);
-    const sessionHours = Number(payslip.session_hours || payslip.total_session_hours || 0);
-    calculatedBase = hourlyRate * sessionHours;
-
+  if (payslip) {
     const deductions = Number(payslip.late_penalty || 0) +
                        Number(payslip.leave_deductions || 0) +
                        Number(payslip.absence_deductions || 0) +
@@ -122,8 +117,14 @@ export default function PayslipAdjustSheet({ open, onClose, payslip, runId }: Pa
             {/* Current Payslip Summary */}
             <div className="bg-muted/30 rounded-xl border border-border p-4">
               <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Current Breakdown</div>
-              <SummaryRow label={isPartTimeOrVisiting ? "Calculated Salary (Rate × Hours)" : "Basic Salary"} value={calculatedBase} />
-              {isFaculty && <SummaryRow label={isPartTimeOrVisiting ? "Extra Hour Amount" : "Hour-based Amount"} value={payslip.hour_based_amount} color="text-green-600" />}
+              <SummaryRow label="Basic Salary" value={calculatedBase} />
+              {isFaculty && (
+                <SummaryRow 
+                  label={Number(payslip.hour_based_amount) > 0 && calculatedBase === 0 ? "Session Amount (Rate × Hours)" : "Hour-based Amount"} 
+                  value={payslip.hour_based_amount} 
+                  color="text-green-600" 
+                />
+              )}
               <SummaryRow label="Bonus"              value={payslip.bonus} color="text-green-600" />
               <SummaryRow label="Late Penalty"       value={payslip.late_penalty} color="text-red-600" />
               <SummaryRow label="Leave Deductions"   value={payslip.leave_deductions} color="text-red-600" />
