@@ -14,6 +14,23 @@ export interface UserRecord {
   organization_name?: string;
   created_at: string;
   profile_pic: string | null;
+  salary_retention_percentage?: number | string;
+  employee_id?: string;
+  qualification?: string;
+  specialization?: string;
+  subject_expertise?: string;
+  level?: string;
+  employment_type?: string;
+  joining_date?: string;
+  hourly_rate?: number | string;
+  session_hours?: number | string;
+  salary?: number | string;
+  bank_account?: string;
+  ifsc_code?: string;
+  pan_number?: string;
+  work_start_time?: string;
+  work_end_time?: string;
+  per_paper_rate?: number | string;
 }
 
 interface UsersState {

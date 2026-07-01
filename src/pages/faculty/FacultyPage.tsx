@@ -224,7 +224,7 @@ export default function FacultyPage() {
   };
 
   useEffect(() => {
-    setPageTitle("Faculty & Payroll");
+    setPageTitle("Faculty");
   }, [setPageTitle]);
 
   useEffect(() => {
@@ -1141,8 +1141,8 @@ export default function FacultyPage() {
           <TabsTrigger value="summary">Summary</TabsTrigger>
           <TabsTrigger value="directory">Faculty Directory</TabsTrigger>
           <TabsTrigger value="sessions">Session Reports</TabsTrigger>
-          {canPayroll && <TabsTrigger value="payroll">Payroll</TabsTrigger>}
-          {canPayroll && <TabsTrigger value="late-policies">Late Policies</TabsTrigger>}
+          {/* {canPayroll && <TabsTrigger value="payroll">Payroll</TabsTrigger>} */}
+          {/* {canPayroll && <TabsTrigger value="late-policies">Late Policies</TabsTrigger>} */}
         </TabsList>
 
         {renderSummaryTab()}

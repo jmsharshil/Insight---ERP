@@ -28,6 +28,7 @@ export interface PaySlip {
   late_penalty: number;
   leave_deductions: number;
   absence_deductions?: number;
+  retention_deduction?: number;
   bonus: number;
   other_deductions?: number;
   deduction_note?: string;
@@ -35,6 +36,10 @@ export interface PaySlip {
   sessions_conducted: number;
   is_disbursed: boolean;
   late_logs?: any[];
+  employment_type?: string;
+  hourly_rate?: number | string;
+  session_hours?: number | string;
+  total_session_hours?: number | string;
 }
 
 export interface LatePolicy {

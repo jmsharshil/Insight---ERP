@@ -23,7 +23,7 @@ export const NAV_ITEMS: Record<ModuleId, NavItem> = {
   fees:             { label: "Fees",             icon: CreditCard,      path: "/fees" },
   exams:            { label: "Exams",            icon: BookOpen,        path: "/exams" },
   exam_supervision: { label: "Exam Supervision", icon: Eye,             path: "/exam-supervision" },
-  faculty:          { label: "Faculty & Payroll",icon: Briefcase,       path: "/faculty" },
+  faculty:          { label: "Faculty",icon: Briefcase,       path: "/faculty" },
   leave:            { label: "Leave Management", icon: CalendarOff,     path: "/leave" },
   chat:             { label: "Messages",         icon: MessageSquare,   path: "/chat" },
   notifications:    { label: "Notifications",    icon: Bell,            path: "/notifications" },

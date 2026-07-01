@@ -95,6 +95,18 @@ const ROLE_CHOICES = [
   { value: "security", label: "Security" },
 ] as const;
 
+const EMPLOYMENT_TYPE_CHOICES = [
+  { value: "full_time", label: "Full Time" },
+  { value: "part_time", label: "Part Time" },
+  { value: "visiting", label: "Visiting" },
+] as const;
+
+const LEVEL_CHOICES = [
+  { value: "cseet", label: "CSEET" },
+  { value: "cs_executive", label: "CS Executive" },
+  { value: "cs_professional", label: "CS Professional" },
+] as const;
+
 /* ─── Column definitions ────────────────────────────────────── */
 
 const columns: ColumnDef<UserRecord>[] = [
@@ -219,6 +231,22 @@ export default function UsersPage() {
     role: "",
     salary_retention_percentage: "0",
     is_active: true,
+    employee_id: "",
+    qualification: "",
+    specialization: "",
+    subject_expertise: "",
+    level: "",
+    employment_type: "",
+    joining_date: "",
+    hourly_rate: "",
+    session_hours: "",
+    salary: "",
+    bank_account: "",
+    ifsc_code: "",
+    pan_number: "",
+    work_start_time: "",
+    work_end_time: "",
+    per_paper_rate: "",
   });
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
   const [profilePicPreview, setProfilePicPreview] = useState<string | null>(null);
@@ -290,8 +318,27 @@ export default function UsersPage() {
         email: selectedUser.email || "",
         phone: selectedUser.phone || "",
         branch: selectedUser.branch || "",
-        salary_retention_percentage: selectedUser.salary_retention_percentage !== undefined ? String(selectedUser.salary_retention_percentage) : "0",
+        salary_retention_percentage:
+          selectedUser.salary_retention_percentage !== undefined
+            ? String(selectedUser.salary_retention_percentage)
+            : "0",
         is_active: selectedUser.is_active ?? true,
+        employee_id: selectedUser.employee_id || "",
+        qualification: selectedUser.qualification || "",
+        specialization: selectedUser.specialization || "",
+        subject_expertise: selectedUser.subject_expertise || "",
+        level: selectedUser.level || "",
+        employment_type: selectedUser.employment_type || "",
+        joining_date: selectedUser.joining_date || "",
+        hourly_rate: selectedUser.hourly_rate !== undefined && selectedUser.hourly_rate !== null ? String(selectedUser.hourly_rate) : "",
+        session_hours: selectedUser.session_hours !== undefined && selectedUser.session_hours !== null ? String(selectedUser.session_hours) : "",
+        salary: selectedUser.salary !== undefined && selectedUser.salary !== null ? String(selectedUser.salary) : "",
+        bank_account: selectedUser.bank_account || "",
+        ifsc_code: selectedUser.ifsc_code || "",
+        pan_number: selectedUser.pan_number || "",
+        work_start_time: selectedUser.work_start_time || "",
+        work_end_time: selectedUser.work_end_time || "",
+        per_paper_rate: selectedUser.per_paper_rate !== undefined && selectedUser.per_paper_rate !== null ? String(selectedUser.per_paper_rate) : "",
       });
     }
   }, [selectedUser]);
@@ -369,6 +416,22 @@ export default function UsersPage() {
       role: "",
       salary_retention_percentage: "0",
       is_active: true,
+      employee_id: "",
+      qualification: "",
+      specialization: "",
+      subject_expertise: "",
+      level: "",
+      employment_type: "",
+      joining_date: "",
+      hourly_rate: "",
+      session_hours: "",
+      salary: "",
+      bank_account: "",
+      ifsc_code: "",
+      pan_number: "",
+      work_start_time: "",
+      work_end_time: "",
+      per_paper_rate: "",
     });
     setProfilePicFile(null);
     setProfilePicPreview(null);
@@ -390,6 +453,22 @@ export default function UsersPage() {
       branch: editForm.branch,
       salary_retention_percentage: editForm.salary_retention_percentage,
       is_active: editForm.is_active,
+      employee_id: editForm.employee_id,
+      qualification: editForm.qualification,
+      specialization: editForm.specialization,
+      subject_expertise: editForm.subject_expertise,
+      level: editForm.level,
+      employment_type: editForm.employment_type,
+      joining_date: editForm.joining_date,
+      hourly_rate: editForm.hourly_rate ? Number(editForm.hourly_rate) : null,
+      session_hours: editForm.session_hours ? Number(editForm.session_hours) : null,
+      salary: editForm.salary ? Number(editForm.salary) : null,
+      bank_account: editForm.bank_account,
+      ifsc_code: editForm.ifsc_code,
+      pan_number: editForm.pan_number,
+      work_start_time: editForm.work_start_time,
+      work_end_time: editForm.work_end_time,
+      per_paper_rate: editForm.per_paper_rate ? Number(editForm.per_paper_rate) : null,
     };
 
     dispatch({
@@ -429,8 +508,27 @@ export default function UsersPage() {
       phone: selectedUser.phone || "",
       branch: selectedUser.branch || "",
       role: selectedUser.role || "",
-      salary_retention_percentage: selectedUser.salary_retention_percentage !== undefined ? String(selectedUser.salary_retention_percentage) : "0",
+      salary_retention_percentage:
+        selectedUser.salary_retention_percentage !== undefined
+          ? String(selectedUser.salary_retention_percentage)
+          : "0",
       is_active: selectedUser.is_active,
+      employee_id: selectedUser.employee_id || "",
+      qualification: selectedUser.qualification || "",
+      specialization: selectedUser.specialization || "",
+      subject_expertise: selectedUser.subject_expertise || "",
+      level: selectedUser.level || "",
+      employment_type: selectedUser.employment_type || "",
+      joining_date: selectedUser.joining_date || "",
+      hourly_rate: selectedUser.hourly_rate !== undefined && selectedUser.hourly_rate !== null ? String(selectedUser.hourly_rate) : "",
+      session_hours: selectedUser.session_hours !== undefined && selectedUser.session_hours !== null ? String(selectedUser.session_hours) : "",
+      salary: selectedUser.salary !== undefined && selectedUser.salary !== null ? String(selectedUser.salary) : "",
+      bank_account: selectedUser.bank_account || "",
+      ifsc_code: selectedUser.ifsc_code || "",
+      pan_number: selectedUser.pan_number || "",
+      work_start_time: selectedUser.work_start_time || "",
+      work_end_time: selectedUser.work_end_time || "",
+      per_paper_rate: selectedUser.per_paper_rate !== undefined && selectedUser.per_paper_rate !== null ? String(selectedUser.per_paper_rate) : "",
     });
     setProfilePicFile(null);
     setProfilePicPreview(null);
@@ -470,6 +568,23 @@ export default function UsersPage() {
     formData.append("salary_retention_percentage", editForm.salary_retention_percentage);
     if (editForm.branch) formData.append("branch", editForm.branch);
     if (profilePicFile) formData.append("profile_pic", profilePicFile);
+
+    if (editForm.employee_id !== undefined) formData.append("employee_id", editForm.employee_id);
+    if (editForm.qualification !== undefined) formData.append("qualification", editForm.qualification);
+    if (editForm.specialization !== undefined) formData.append("specialization", editForm.specialization);
+    if (editForm.subject_expertise !== undefined) formData.append("subject_expertise", editForm.subject_expertise);
+    if (editForm.level !== undefined) formData.append("level", editForm.level);
+    if (editForm.employment_type !== undefined) formData.append("employment_type", editForm.employment_type);
+    if (editForm.joining_date !== undefined) formData.append("joining_date", editForm.joining_date);
+    if (editForm.hourly_rate !== undefined && editForm.hourly_rate !== "") formData.append("hourly_rate", editForm.hourly_rate);
+    if (editForm.session_hours !== undefined && editForm.session_hours !== "") formData.append("session_hours", editForm.session_hours);
+    if (editForm.salary !== undefined && editForm.salary !== "") formData.append("salary", editForm.salary);
+    if (editForm.bank_account !== undefined) formData.append("bank_account", editForm.bank_account);
+    if (editForm.ifsc_code !== undefined) formData.append("ifsc_code", editForm.ifsc_code);
+    if (editForm.pan_number !== undefined) formData.append("pan_number", editForm.pan_number);
+    if (editForm.work_start_time !== undefined) formData.append("work_start_time", editForm.work_start_time);
+    if (editForm.work_end_time !== undefined) formData.append("work_end_time", editForm.work_end_time);
+    if (editForm.per_paper_rate !== undefined && editForm.per_paper_rate !== "") formData.append("per_paper_rate", editForm.per_paper_rate);
 
     setUpdateLoading(true);
     dispatch({
@@ -517,6 +632,14 @@ export default function UsersPage() {
       pagination: { pageSize: 50 },
     },
   });
+
+  const activeRole = isAdding ? editForm.role : (selectedUser?.role || editForm.role);
+  const isEmployee = activeRole && activeRole !== "student" && activeRole !== "parents";
+  const isFaculty = activeRole === "faculty";
+  const isPartTimeOrVisiting = isFaculty && (editForm.employment_type === "part_time" || editForm.employment_type === "visiting");
+  const isPaperChecker = activeRole === "paper_checker";
+  const isExaminer = activeRole === "exam_supervisor";
+  const showSalary = isEmployee && !(isFaculty && isPartTimeOrVisiting) && !isPaperChecker && !isExaminer;
 
   return (
     <div>
@@ -951,7 +1074,9 @@ export default function UsersPage() {
                     {isEditing ? (
                       <Select
                         value={editForm.salary_retention_percentage}
-                        onValueChange={(val) => setEditForm((f) => ({ ...f, salary_retention_percentage: val }))}
+                        onValueChange={(val) =>
+                          setEditForm((f) => ({ ...f, salary_retention_percentage: val }))
+                        }
                       >
                         <SelectTrigger className="bg-background">
                           <SelectValue placeholder="Select percentage" />
@@ -965,10 +1090,345 @@ export default function UsersPage() {
                       </Select>
                     ) : (
                       <div className="text-sm font-medium text-text-primary pt-0.5">
-                        {selectedUser?.salary_retention_percentage !== undefined ? `${selectedUser.salary_retention_percentage}%` : "0%"}
+                        {selectedUser?.salary_retention_percentage !== undefined
+                          ? `${selectedUser.salary_retention_percentage}%`
+                          : "0%"}
                       </div>
                     )}
                   </div>
+
+                  {/* --- Employee Specific Fields --- */}
+                  {isEmployee && (
+                    <>
+                      {/* <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Employee ID</Label>
+                        {isEditing ? (
+                          <Input value={editForm.employee_id} onChange={e => setEditForm(f => ({...f, employee_id: e.target.value}))} placeholder="Employee ID" className="bg-background" />
+                        ) : (
+                          <div className="text-sm font-medium text-text-primary pt-0.5">{selectedUser?.employee_id || "N/A"}</div>
+                        )}
+                      </div> */}
+
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                          Joining Date
+                        </Label>
+                        {isEditing ? (
+                          <Input
+                            type="date"
+                            value={editForm.joining_date}
+                            onChange={(e) =>
+                              setEditForm((f) => ({ ...f, joining_date: e.target.value }))
+                            }
+                            className="bg-background"
+                          />
+                        ) : (
+                          <div className="text-sm font-medium text-text-primary pt-0.5">
+                            {selectedUser?.joining_date || "N/A"}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                          Bank Account
+                        </Label>
+                        {isEditing ? (
+                          <Input
+                            value={editForm.bank_account}
+                            onChange={(e) =>
+                              setEditForm((f) => ({ ...f, bank_account: e.target.value }))
+                            }
+                            placeholder="Bank Account Number"
+                            className="bg-background"
+                          />
+                        ) : (
+                          <div className="text-sm font-medium text-text-primary pt-0.5">
+                            {selectedUser?.bank_account || "N/A"}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                          IFSC Code
+                        </Label>
+                        {isEditing ? (
+                          <Input
+                            value={editForm.ifsc_code}
+                            onChange={(e) =>
+                              setEditForm((f) => ({ ...f, ifsc_code: e.target.value }))
+                            }
+                            placeholder="IFSC Code"
+                            className="bg-background"
+                          />
+                        ) : (
+                          <div className="text-sm font-medium text-text-primary pt-0.5">
+                            {selectedUser?.ifsc_code || "N/A"}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                          PAN Number
+                        </Label>
+                        {isEditing ? (
+                          <Input
+                            value={editForm.pan_number}
+                            onChange={(e) =>
+                              setEditForm((f) => ({ ...f, pan_number: e.target.value }))
+                            }
+                            placeholder="PAN Number"
+                            className="bg-background"
+                          />
+                        ) : (
+                          <div className="text-sm font-medium text-text-primary pt-0.5">
+                            {selectedUser?.pan_number || "N/A"}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  {isFaculty && (
+                    <>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                          Qualification
+                        </Label>
+                        {isEditing ? (
+                          <Input
+                            value={editForm.qualification}
+                            onChange={(e) =>
+                              setEditForm((f) => ({ ...f, qualification: e.target.value }))
+                            }
+                            placeholder="Qualification"
+                            className="bg-background"
+                          />
+                        ) : (
+                          <div className="text-sm font-medium text-text-primary pt-0.5">
+                            {selectedUser?.qualification || "N/A"}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                          Specialization
+                        </Label>
+                        {isEditing ? (
+                          <Input
+                            value={editForm.specialization}
+                            onChange={(e) =>
+                              setEditForm((f) => ({ ...f, specialization: e.target.value }))
+                            }
+                            placeholder="Specialization"
+                            className="bg-background"
+                          />
+                        ) : (
+                          <div className="text-sm font-medium text-text-primary pt-0.5">
+                            {selectedUser?.specialization || "N/A"}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                          Level
+                        </Label>
+                        {isEditing ? (
+                          <Select
+                            value={editForm.level}
+                            onValueChange={(val) => setEditForm((f) => ({ ...f, level: val }))}
+                          >
+                            <SelectTrigger className="bg-background">
+                              <SelectValue placeholder="Select Level" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {LEVEL_CHOICES.map((c) => (
+                                <SelectItem key={c.value} value={c.value}>
+                                  {c.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <div className="text-sm font-medium text-text-primary pt-0.5">
+                            {LEVEL_CHOICES.find((c) => c.value === selectedUser?.level)?.label ||
+                              selectedUser?.level ||
+                              "N/A"}
+                          </div>
+                        )}
+                      </div> */}
+
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                          Employment Type
+                        </Label>
+                        {isEditing ? (
+                          <Select
+                            value={editForm.employment_type}
+                            onValueChange={(val) =>
+                              setEditForm((f) => ({ ...f, employment_type: val }))
+                            }
+                          >
+                            <SelectTrigger className="bg-background">
+                              <SelectValue placeholder="Select Employment Type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {EMPLOYMENT_TYPE_CHOICES.map((c) => (
+                                <SelectItem key={c.value} value={c.value}>
+                                  {c.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <div className="text-sm font-medium text-text-primary pt-0.5">
+                            {EMPLOYMENT_TYPE_CHOICES.find(
+                              (c) => c.value === selectedUser?.employment_type,
+                            )?.label ||
+                              selectedUser?.employment_type ||
+                              "N/A"}
+                          </div>
+                        )}
+                      </div>
+
+                      {!(isFaculty && editForm.employment_type === "visiting") && (
+                        <>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                              Work Start Time
+                            </Label>
+                            {isEditing ? (
+                              <Input
+                                type="time"
+                                value={editForm.work_start_time}
+                                onChange={(e) =>
+                                  setEditForm((f) => ({ ...f, work_start_time: e.target.value }))
+                                }
+                                className="bg-background"
+                              />
+                            ) : (
+                              <div className="text-sm font-medium text-text-primary pt-0.5">
+                                {selectedUser?.work_start_time || "N/A"}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                              Work End Time
+                            </Label>
+                            {isEditing ? (
+                              <Input
+                                type="time"
+                                value={editForm.work_end_time}
+                                onChange={(e) =>
+                                  setEditForm((f) => ({ ...f, work_end_time: e.target.value }))
+                                }
+                                className="bg-background"
+                              />
+                            ) : (
+                              <div className="text-sm font-medium text-text-primary pt-0.5">
+                                {selectedUser?.work_end_time || "N/A"}
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                          Session Hours
+                        </Label>
+                        {isEditing ? (
+                          <Input
+                            type="number"
+                            step="0.5"
+                            value={editForm.session_hours}
+                            onChange={(e) =>
+                              setEditForm((f) => ({ ...f, session_hours: e.target.value }))
+                            }
+                            placeholder="Session Hours"
+                            className="bg-background"
+                          />
+                        ) : (
+                          <div className="text-sm font-medium text-text-primary pt-0.5">
+                            {selectedUser?.session_hours || "N/A"}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  {isFaculty && isPartTimeOrVisiting && (
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                        Hourly Rate
+                      </Label>
+                      {isEditing ? (
+                        <Input
+                          type="number"
+                          value={editForm.hourly_rate}
+                          onChange={(e) =>
+                            setEditForm((f) => ({ ...f, hourly_rate: e.target.value }))
+                          }
+                          placeholder="Hourly Rate"
+                          className="bg-background"
+                        />
+                      ) : (
+                        <div className="text-sm font-medium text-text-primary pt-0.5">
+                          {selectedUser?.hourly_rate || "N/A"}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {showSalary && (
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                        Salary
+                      </Label>
+                      {isEditing ? (
+                        <Input
+                          type="number"
+                          value={editForm.salary}
+                          onChange={(e) => setEditForm((f) => ({ ...f, salary: e.target.value }))}
+                          placeholder="Salary"
+                          className="bg-background"
+                        />
+                      ) : (
+                        <div className="text-sm font-medium text-text-primary pt-0.5">
+                          {selectedUser?.salary || "N/A"}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {isPaperChecker && (
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                        Per Paper Rate
+                      </Label>
+                      {isEditing ? (
+                        <Input
+                          type="number"
+                          value={editForm.per_paper_rate}
+                          onChange={(e) =>
+                            setEditForm((f) => ({ ...f, per_paper_rate: e.target.value }))
+                          }
+                          placeholder="Per Paper Rate"
+                          className="bg-background"
+                        />
+                      ) : (
+                        <div className="text-sm font-medium text-text-primary pt-0.5">
+                          {selectedUser?.per_paper_rate || "N/A"}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Status (Switch if editing, Badge if viewing) */}
                   <div className="space-y-1">

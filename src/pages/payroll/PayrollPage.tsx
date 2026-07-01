@@ -3,8 +3,9 @@ import { useDispatch, useSelector } from "react-redux";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Calculator, Wallet, Clock, Settings, FileText, View } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/useToast";
 import type { RootState, AppDispatch } from "@/store";
-import { branchAction } from "@/redux/actions";
+import { dropdownActions } from "@/redux/actions";
 
 import PayrollRunsTab from "./tabs/PayrollRunsTab";
 import PayslipsTab from "./tabs/PayslipsTab";
@@ -17,8 +18,9 @@ import { setSelectedRun } from "@/redux/slices/payrollSlice";
 export default function PayrollPage() {
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useAuth();
+  const toast = useToast();
   const role = user?.role ?? "";
-  const { branchList: branches = [] } = useSelector((s: RootState) => s.branch);
+  const [branches, setBranches] = useState<any[]>([]);
 
   const isAdmin    = ["super_admin", "branch_manager"].includes(role);
   const isAccount  = ["accountant"].includes(role);
@@ -29,10 +31,22 @@ export default function PayrollPage() {
   const [activeTab, setActiveTab] = useState(defaultTab);
 
   useEffect(() => {
-    if (branches.length === 0 && isAdmin) {
-      dispatch({ type: branchAction.GET_BRANCH });
+    if (isAdmin) {
+      dispatch({
+        type: dropdownActions.GET_DROPDOWN,
+        method: "GET",
+        endPoint: "/api/v1/branches/",
+        auth: true,
+        getResponse: (res: any) => {
+          const data = res?.data?.results || res?.data || res?.results || res;
+          if (Array.isArray(data)) setBranches(data);
+        },
+        getError: () => {
+          toast.error("Failed to load branches");
+        },
+      } as any);
     }
-  }, [branches.length, isAdmin, dispatch]);
+  }, [isAdmin, dispatch, toast]);
 
   const handleViewPayslips = (run: any) => {
     dispatch(setSelectedRun(run));
