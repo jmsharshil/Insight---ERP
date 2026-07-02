@@ -97,7 +97,7 @@ export default function StructuresTab({
               </div>
             </div>
 
-            <div className="border-t pt-3.5 mb-4 space-y-2">
+            {/* <div className="border-t pt-3.5 mb-4 space-y-2">
               <div className="flex justify-between items-center text-xs">
                 <span className="text-muted-foreground">ICSI Reg. Fees</span>
                 <span className="font-medium text-card-foreground">{formatCurrency(Number(fs.icsi_registration_fees || 0))}</span>
@@ -116,7 +116,7 @@ export default function StructuresTab({
                   {formatCurrency(Number(fs.total_amount))}
                 </span>
               </div>
-            </div>
+            </div> */}
           </div>
 
           {(isAccountant || isAdmin) && (

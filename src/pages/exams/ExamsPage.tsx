@@ -168,7 +168,7 @@ export default function ExamsPage() {
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold">{selectedExam.title}</span>
                   <Badge variant="outline" className="text-[10px] uppercase bg-white">
-                    {selectedExam.exam_type}
+                    {selectedExam.exam_mode} - {selectedExam.exam_type}
                   </Badge>
                 </div>
                 <div className="w-px h-4 bg-border mx-1" />

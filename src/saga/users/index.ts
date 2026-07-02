@@ -1,5 +1,5 @@
 import { takeLatest } from "redux-saga/effects";
-import { userActions, settingActions, branchAction, courseAction, subjectAction } from "@/redux/actions";
+import { userActions, settingActions, branchAction } from "@/redux/actions";
 import { genericSaga } from "@/saga/createGenericSaga/genericSaga";
 
 export function* watchUsersSaga() {
@@ -15,13 +15,5 @@ export function* watchUsersSaga() {
   yield takeLatest(branchAction.UPDATE_BRANCH, genericSaga);
   yield takeLatest(branchAction.DELETE_BRANCH, genericSaga);
   yield takeLatest(branchAction.CREATE_BRANCH, genericSaga);
-  yield takeLatest(courseAction.GET_COURSES, genericSaga);
-  yield takeLatest(courseAction.GET_COURSE_DETAILS, genericSaga);
-  yield takeLatest(courseAction.CREATE_COURSE, genericSaga);
-  yield takeLatest(courseAction.UPDATE_COURSE, genericSaga);
-  yield takeLatest(courseAction.DELETE_COURSE, genericSaga);
-  yield takeLatest(subjectAction.GET_SUBJECTS, genericSaga);
-  yield takeLatest(subjectAction.CREATE_SUBJECT, genericSaga);
-  yield takeLatest(subjectAction.UPDATE_SUBJECT, genericSaga);
-  yield takeLatest(subjectAction.DELETE_SUBJECT, genericSaga);
+
 }

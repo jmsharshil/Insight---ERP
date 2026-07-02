@@ -77,7 +77,7 @@ export default function QuestionsTab({ examId }: QuestionsTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
   const canManage = user && ["super_admin", "branch_manager", "admin", "faculty"].includes(user.role ?? "");
-  const isPaperBased = currentExam?.exam_type === "subjective" || currentExam?.exam_type === "offline";
+  const isPaperBased = currentExam?.exam_mode === "offline" || (currentExam?.exam_mode === "online" && currentExam?.exam_type === "subjective");
 
   const groupedQuestions = useMemo(() => {
     const groups: any[] = [];

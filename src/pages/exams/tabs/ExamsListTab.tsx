@@ -23,9 +23,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 
-const EXAM_TYPE_BADGE: Record<string, string> = {
+const EXAM_MODE_BADGE: Record<string, string> = {
   online:  "bg-blue-100 text-blue-700",
   offline: "bg-gray-100 text-gray-700",
+};
+
+const EXAM_TYPE_BADGE: Record<string, string> = {
+  mcq:  "bg-blue-100 text-blue-700",
+  subjective: "bg-purple-100 text-purple-700",
 };
 
 const RELEASE_BADGE: Record<string, string> = {
@@ -47,6 +52,7 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
 
   const [search, setSearch]                 = useState("");
   const [examTypeFilter, setExamTypeFilter] = useState("");
+  const [examModeFilter, setExamModeFilter] = useState("");
   const [editOpen, setEditOpen]             = useState(false);
   const [editTarget, setEditTarget]         = useState<Exam | null>(null);
   const [editLoading, setEditLoading]       = useState(false);
@@ -54,7 +60,7 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
   const [scheduleTarget, setScheduleTarget] = useState<Exam | null>(null);
   const [editForm, setEditForm] = useState({
     title: "", instructions: "", total_marks: "", pass_marks: "",
-    exam_type: "offline", result_release_mode: "manual",
+    exam_type: "mcq", exam_mode: "offline", result_release_mode: "manual",
     selected_papers: [] as string[],
   });
 
@@ -174,7 +180,8 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
       instructions:        exam.instructions ?? "",
       total_marks:         String(exam.total_marks ?? ""),
       pass_marks:          String(exam.pass_marks ?? ""),
-      exam_type:           exam.exam_type ?? "offline",
+      exam_type:           exam.exam_type ?? "mcq",
+      exam_mode:           exam.exam_mode ?? "offline",
       result_release_mode: exam.result_release_mode ?? "manual",
       selected_papers:     (exam.selected_papers || []).map((p: any) => typeof p === "string" ? p : p.id)
     });
@@ -201,6 +208,7 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
       endPoint: API.EXAMS.DETAIL(editTarget.id),
       body: {
         ...editForm,
+        result_release_mode: (editForm.exam_mode === "online" && editForm.exam_type === "mcq") ? "instant" : "manual",
         total_marks: Number(editForm.total_marks),
         pass_marks:  Number(editForm.pass_marks),
       },
@@ -300,7 +308,8 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
     }
     const matchSearch = !search || e.title?.toLowerCase().includes(search.toLowerCase());
     const matchType   = !examTypeFilter || e.exam_type === examTypeFilter;
-    return matchSearch && matchType;
+    const matchMode   = !examModeFilter || e.exam_mode === examModeFilter;
+    return matchSearch && matchType && matchMode;
   });
 
 
@@ -318,18 +327,29 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
           />
         </div>
 
+        <Select value={examModeFilter || "all"} onValueChange={v => setExamModeFilter(v === "all" ? "" : v)}>
+          <SelectTrigger className="w-[130px] h-9 text-sm">
+            <SelectValue placeholder="All Modes" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Modes</SelectItem>
+            <SelectItem value="online">Online</SelectItem>
+            <SelectItem value="offline">Offline</SelectItem>
+          </SelectContent>
+        </Select>
+
         <Select value={examTypeFilter || "all"} onValueChange={v => setExamTypeFilter(v === "all" ? "" : v)}>
           <SelectTrigger className="w-[130px] h-9 text-sm">
             <SelectValue placeholder="All Types" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="online">Online</SelectItem>
-            <SelectItem value="offline">Offline</SelectItem>
+            <SelectItem value="mcq">MCQ</SelectItem>
+            <SelectItem value="subjective">Subjective</SelectItem>
           </SelectContent>
         </Select>
 
-        <Button variant="outline" className="h-9 text-sm gap-1.5" onClick={() => { setSearch(""); setExamTypeFilter(""); }}>
+        <Button variant="outline" className="h-9 text-sm gap-1.5" onClick={() => { setSearch(""); setExamTypeFilter(""); setExamModeFilter(""); }}>
           <X className="w-3.5 h-3.5" /> Clear
         </Button>
 
@@ -362,14 +382,14 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
           <table className="w-full text-sm">
             <thead className="bg-muted/40 border-b border-border">
               <tr>
-                {["Title", "Type", "Marks", "Pass Marks", "Result Release", "Subject / Batch", ""].map(h => (
+                {["Title", "Mode", "Type", "Marks", "Pass Marks", "Result Release", "Subject / Batch", ""].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-16 text-muted-foreground text-sm">No exams found.</td></tr>
+                <tr><td colSpan={8} className="text-center py-16 text-muted-foreground text-sm">No exams found.</td></tr>
               ) : filtered.map((exam, i) => (
                 <motion.tr
                   key={exam.id}
@@ -389,8 +409,13 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
                     )}
                   </td>
                   <td className="px-4 py-3">
+                    <Badge className={`text-[10px] capitalize font-semibold ${EXAM_MODE_BADGE[exam.exam_mode] ?? "bg-gray-100 text-gray-700"}`}>
+                      {exam.exam_mode || "—"}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3">
                     <Badge className={`text-[10px] capitalize font-semibold ${EXAM_TYPE_BADGE[exam.exam_type] ?? "bg-gray-100 text-gray-700"}`}>
-                      {exam.exam_type}
+                      {exam.exam_type || "—"}
                     </Badge>
                   </td>
                   <td className="px-4 py-3 text-xs font-mono">{exam.total_marks}</td>
@@ -456,10 +481,20 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label className="text-xs font-semibold">Exam Type</Label>
                 <Select value={editForm.exam_type} onValueChange={v => setEditForm(f => ({ ...f, exam_type: v }))}>
+                  <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mcq">MCQ</SelectItem>
+                    <SelectItem value="subjective">Subjective</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Exam Mode</Label>
+                <Select value={editForm.exam_mode} onValueChange={v => setEditForm(f => ({ ...f, exam_mode: v }))}>
                   <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="offline">Offline</SelectItem>
@@ -469,7 +504,7 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
               </div>
               <div>
                 <Label className="text-xs font-semibold">Result Release</Label>
-                <Select value={editForm.result_release_mode} onValueChange={v => setEditForm(f => ({ ...f, result_release_mode: v }))}>
+                <Select value={(editForm.exam_mode === "online" && editForm.exam_type === "mcq") ? "instant" : "manual"} onValueChange={v => setEditForm(f => ({ ...f, result_release_mode: v }))} disabled>
                   <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="manual">Manual</SelectItem>

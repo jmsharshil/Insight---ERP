@@ -74,7 +74,8 @@ const schema = z.object({
 
   // exam_data sub-fields — shown when session needs exam
   exam_title:               z.string().optional(),
-  exam_type:                z.enum(["offline", "online"]).optional(),
+  exam_type:                z.enum(["mcq", "subjective"]).optional(),
+  exam_mode:                z.enum(["online", "offline"]).optional(),
   exam_total_marks:         z.string().optional(),
   exam_pass_marks:          z.string().optional(),
   exam_instructions:        z.string().optional(),
@@ -121,10 +122,11 @@ export function buildSlotPayload(values: SlotFormValues): Record<string, any> {
     base.exam_data = {
       title:               values.exam_title,
       exam_type:           values.exam_type,
-      total_marks:         values.exam_type === "online" ? undefined : Number(values.exam_total_marks),
+      exam_mode:           values.exam_mode,
+      total_marks:         (values.exam_mode === "online" && values.exam_type === "mcq") ? undefined : Number(values.exam_total_marks),
       pass_marks:          Number(values.exam_pass_marks),
       instructions:        values.exam_instructions,
-      result_release_mode: values.exam_result_release_mode,
+      result_release_mode: (values.exam_mode === "online" && values.exam_type === "mcq") ? "instant" : "manual",
       selected_papers:     csvToArray(values.selected_papers),
     };
   }
@@ -137,10 +139,11 @@ export function buildSlotPayload(values: SlotFormValues): Record<string, any> {
     base.exam_data = {
       title:               values.exam_title,
       exam_type:           values.exam_type,
-      total_marks:         values.exam_type === "online" ? undefined : Number(values.exam_total_marks),
+      exam_mode:           values.exam_mode,
+      total_marks:         (values.exam_mode === "online" && values.exam_type === "mcq") ? undefined : Number(values.exam_total_marks),
       pass_marks:          Number(values.exam_pass_marks),
       instructions:        values.exam_instructions,
-      result_release_mode: values.exam_result_release_mode,
+      result_release_mode: (values.exam_mode === "online" && values.exam_type === "mcq") ? "instant" : "manual",
       selected_papers:     csvToArray(values.selected_papers),
     };
   }
@@ -179,7 +182,8 @@ export default function SlotForm({
     defaultValues: {
       session_type: "regular",
       is_recurring: true,
-      exam_type: "offline",
+      exam_type: "mcq",
+      exam_mode: "offline",
       exam_result_release_mode: "manual",
       ...defaultValues,
     },
@@ -620,6 +624,18 @@ export default function SlotForm({
 
             <Field label="Exam Type" required={needsExam}>
               <Controller name="exam_type" control={control} render={({ field }) => (
+                <Select value={field.value || "mcq"} onValueChange={field.onChange}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mcq">MCQ</SelectItem>
+                    <SelectItem value="subjective">Subjective</SelectItem>
+                  </SelectContent>
+                </Select>
+              )} />
+            </Field>
+
+            <Field label="Exam Mode" required={needsExam}>
+              <Controller name="exam_mode" control={control} render={({ field }) => (
                 <Select value={field.value || "offline"} onValueChange={field.onChange}>
                   <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -630,8 +646,8 @@ export default function SlotForm({
               )} />
             </Field>
 
-            <Field label="Total Marks" required={needsExam && watch("exam_type") !== "online"} error={errors.exam_total_marks?.message}>
-              <Input type="number" {...register("exam_total_marks")} placeholder={watch("exam_type") === "online" ? "Auto-calculated" : "100"} className="h-9 text-sm" disabled={watch("exam_type") === "online"} />
+            <Field label="Total Marks" required={needsExam && !(watch("exam_mode") === "online" && watch("exam_type") === "mcq")} error={errors.exam_total_marks?.message}>
+              <Input type="number" {...register("exam_total_marks")} placeholder={(watch("exam_mode") === "online" && watch("exam_type") === "mcq") ? "Auto-calculated" : "100"} className="h-9 text-sm" disabled={(watch("exam_mode") === "online" && watch("exam_type") === "mcq")} />
             </Field>
 
             <Field label="Pass Marks" required={needsExam} error={errors.exam_pass_marks?.message}>
@@ -639,15 +655,18 @@ export default function SlotForm({
             </Field>
 
             <Field label="Result Release Mode" required={needsExam}>
-              <Controller name="exam_result_release_mode" control={control} render={({ field }) => (
-                <Select value={field.value || "manual"} onValueChange={field.onChange}>
-                  <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="manual">Manual</SelectItem>
-                    <SelectItem value="instant">Instant</SelectItem>
-                  </SelectContent>
-                </Select>
-              )} />
+              <Controller name="exam_result_release_mode" control={control} render={({ field }) => {
+                const isOnlineMcq = watch("exam_mode") === "online" && watch("exam_type") === "mcq";
+                return (
+                  <Select value={isOnlineMcq ? "instant" : "manual"} onValueChange={field.onChange} disabled>
+                    <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="manual">Manual</SelectItem>
+                      <SelectItem value="instant">Instant</SelectItem>
+                    </SelectContent>
+                  </Select>
+                );
+              }} />
             </Field>
 
             <Field label="Select Papers (Optional)">
