@@ -49,6 +49,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 export default function LevelsTab() {
@@ -329,9 +330,33 @@ export default function LevelsTab() {
           </p>
         </div>
       ) : levelsLoading ? (
-        <div className="rounded-xl border border-border bg-card p-12 flex flex-col items-center justify-center min-h-[300px]">
-          <Loader2 className="w-8 h-8 text-primary animate-spin mb-3" />
-          <p className="text-sm text-muted-foreground">Loading course levels...</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="rounded-xl border border-border bg-card shadow-sm p-5 space-y-4 h-[210px] flex flex-col">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-2 w-full">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="w-6 h-6 rounded-full shrink-0" />
+                    <Skeleton className="h-5 w-3/4" />
+                  </div>
+                  <Skeleton className="h-3 w-1/2 mt-1" />
+                </div>
+                <Skeleton className="w-16 h-5 rounded-full shrink-0" />
+              </div>
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+              <div className="grid grid-cols-2 gap-3 pt-3 mt-auto border-t border-border/50">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="w-3.5 h-3.5 rounded-full" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="w-3.5 h-3.5 rounded-full" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       ) : levelsError ? (
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 shadow-sm p-8 min-h-[250px] flex flex-col items-center justify-center text-center">
@@ -355,7 +380,8 @@ export default function LevelsTab() {
           {levels.map((level) => (
             <motion.div
               key={level.id}
-              className="rounded-xl border border-border bg-card shadow-sm hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group"
+              className="rounded-xl border border-border bg-card shadow-sm hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group cursor-pointer"
+              onClick={() => navigate(`/courses-batches/${selectedCourseId}/level/${level.id}`)}
             >
               <div className="p-5 space-y-4">
                 <div className="flex items-start justify-between gap-3">
@@ -365,8 +391,7 @@ export default function LevelsTab() {
                         {level.order}0.
                       </span>
                       <h4
-                        className="font-semibold text-base text-text-primary hover:text-primary hover:underline cursor-pointer transition-colors"
-                        onClick={() => navigate(`/courses-batches/${selectedCourseId}/level/${level.id}`)}
+                        className="font-semibold text-base text-text-primary group-hover:text-primary transition-colors"
                       >
                         {level.name}
                       </h4>
@@ -415,7 +440,10 @@ export default function LevelsTab() {
                     variant="ghost"
                     size="sm"
                     className="h-8 hover:bg-muted/80 text-muted-foreground hover:text-text-primary"
-                    onClick={() => handleOpenEdit(level)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenEdit(level);
+                    }}
                   >
                     <Edit2 className="w-3.5 h-3.5 mr-1" /> Edit
                   </Button>
@@ -424,7 +452,10 @@ export default function LevelsTab() {
                       variant="ghost"
                       size="sm"
                       className="h-8 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                      onClick={() => handleOpenDelete(level)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenDelete(level);
+                      }}
                     >
                       <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
                     </Button>

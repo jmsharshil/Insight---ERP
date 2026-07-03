@@ -383,11 +383,11 @@ export default function FacultyPage() {
     });
   };
 
-  useEffect(() => {
-    if (canPayroll) {
-      fetchPayroll();
-    }
-  }, [canPayroll]);
+  // useEffect(() => {
+  //   if (canPayroll) {
+  //     fetchPayroll();
+  //   }
+  // }, [canPayroll]);
 
   const [selectedFacultyForAssign, setSelectedFacultyForAssign] = useState<any | null>(null);
   const [assignModalOpen, setAssignModalOpen] = useState(false);

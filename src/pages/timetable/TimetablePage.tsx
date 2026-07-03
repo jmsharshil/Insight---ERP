@@ -20,7 +20,7 @@ import PersonalTimetableTab from "./tabs/PersonalTimetableTab";
 const TABS = [
   { value: "grid",       label: "Weekly Grid"     },
   { value: "slots",      label: "All Slots"       },
-  { value: "exam_types", label: "Exam Types"      },
+  // { value: "exam_types", label: "Exam Types"      },
   { value: "personal",   label: "Personal View"   },
 ] as const;
 

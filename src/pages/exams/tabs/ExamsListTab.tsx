@@ -166,7 +166,7 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
         subs.forEach((s: any) => {
           if (s.papers && Array.isArray(s.papers)) {
             s.papers.forEach((p: any) => {
-              allPapers.push({ ...p, subject_name: s.name });
+              allPapers.push({ ...p, subject_name: s.name, subject_id: s.id });
             });
           }
         });
@@ -193,9 +193,7 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
       const isSelected = f.selected_papers.includes(paperId);
       return {
         ...f,
-        selected_papers: isSelected 
-          ? f.selected_papers.filter(id => id !== paperId)
-          : [...f.selected_papers, paperId]
+        selected_papers: [paperId]
       };
     });
   };
@@ -522,7 +520,12 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
                 ) : availablePapers.length === 0 ? (
                   <div className="text-center text-xs text-muted-foreground mt-4">No papers available across subjects.</div>
                 ) : (
-                  availablePapers.map(p => (
+                  availablePapers
+                    .filter(p => {
+                      const examSubjId = typeof editTarget?.subject === "object" ? editTarget?.subject?.id : editTarget?.subject;
+                      return p.subject_id === examSubjId || p.subject === examSubjId || p.subject_name === editTarget?.subject_name;
+                    })
+                    .map(p => (
                     <label key={p.id} className="flex items-start gap-2 cursor-pointer p-2 rounded hover:bg-muted/30">
                       <Checkbox
                         checked={editForm.selected_papers.includes(p.id)}

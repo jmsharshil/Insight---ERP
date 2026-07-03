@@ -190,7 +190,7 @@ function PaymentsTable({
     },
   ];
 
-  const hasPending = data.some((r) => r.status === "pending_verification");
+  const hasPending = data.some((r) => r.status === "approval_pending");
   if (hasPending) {
     cols.push({
       key: "actions",

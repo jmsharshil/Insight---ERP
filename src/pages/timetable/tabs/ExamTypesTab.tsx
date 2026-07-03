@@ -32,20 +32,20 @@ export default function ExamTypesTab() {
 
   const canEdit = user && ["super_admin", "branch_manager", "admin_senior_exec", "admin"].includes(user.role ?? "");
 
-  useEffect(() => {
-    dispatch({
-      type: timetableActions.GET_EXAM_TYPES,
-      method: "GET",
-      endPoint: API.TIMETABLE.EXAM_TYPES,
-      auth: true,
-      setLoading: (v: boolean) => dispatch(setExamTypesLoading(v)),
-      getResponse: (res: any) => {
-        if (res?.success) dispatch(setExamTypes(Array.isArray(res.data) ? res.data : []));
-        else toast.error("Failed to load exam types.");
-      },
-      getError: (err: any) => toast.error(err?.response?.data?.message || "Error"),
-    });
-  }, []);
+  // useEffect(() => {
+  //   dispatch({
+  //     type: timetableActions.GET_EXAM_TYPES,
+  //     method: "GET",
+  //     endPoint: API.TIMETABLE.EXAM_TYPES,
+  //     auth: true,
+  //     setLoading: (v: boolean) => dispatch(setExamTypesLoading(v)),
+  //     getResponse: (res: any) => {
+  //       if (res?.success) dispatch(setExamTypes(Array.isArray(res.data) ? res.data : []));
+  //       else toast.error("Failed to load exam types.");
+  //     },
+  //     getError: (err: any) => toast.error(err?.response?.data?.message || "Error"),
+  //   });
+  // }, []);
 
   const openCreate = () => { setEditing(null); setForm({ name: "", description: "", is_active: true }); setFormOpen(true); };
   const openEdit = (et: any) => { setEditing(et); setForm({ name: et.name, description: et.description, is_active: et.is_active }); setFormOpen(true); };
