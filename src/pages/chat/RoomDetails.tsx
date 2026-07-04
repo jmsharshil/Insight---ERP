@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/useToast";
 import { useAppDispatch } from "@/store/hooks";
 import { ChatAction } from "@/redux/actions";
 import { API } from "@/service/api";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Loader2,
   Users,
@@ -220,14 +221,22 @@ export default function RoomDetails({ roomId, onBack }: RoomDetailsProps) {
     return Array.from(userMap.values());
   }, [allParticipants, allUsers]);
 
+  const { user } = useAuth();
+  const isParent = user?.role === "parents";
+  const allowedParentRoles = ["super_admin", "branch_manager", "admin_senior_executive"];
+
   const filteredUsers = useMemo(() => {
-    if (!search) return allAvailableUsers;
+    let usersToFilter = allAvailableUsers;
+    if (isParent) {
+      usersToFilter = usersToFilter.filter((u: any) => allowedParentRoles.includes(u.role));
+    }
+    if (!search) return usersToFilter;
     const lowerSearch = search.toLowerCase();
-    return allAvailableUsers.filter((u: any) =>
+    return usersToFilter.filter((u: any) =>
       (u.full_name || "").toLowerCase().includes(lowerSearch) ||
       (u.role || "").toLowerCase().includes(lowerSearch)
     );
-  }, [allAvailableUsers, search]);
+  }, [allAvailableUsers, search, isParent]);
 
   // Selected users to display as pills at the top
   const selectedUsersList = useMemo(() => {

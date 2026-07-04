@@ -141,7 +141,13 @@ export default function CreateChatModal({ open, onOpenChange, onSuccess }: Creat
     );
   };
 
+  const isParent = user?.role === "parents";
+  const allowedParentRoles = ["super_admin", "branch_manager", "admin_senior_executive"];
+
   const filteredUsers = users.filter((u: any) => {
+    if (isParent && !allowedParentRoles.includes(u.role)) {
+      return false;
+    }
     const name = (u.first_name || u.name || u.email || "").toLowerCase();
     return name.includes(search.toLowerCase());
   });

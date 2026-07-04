@@ -1,38 +1,46 @@
-import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Send, Paperclip, MessageSquare, Check, CheckCheck,
-  Pencil, Trash2, X, Info, FileText, Download, Image as ImageIcon, Loader2, Lock
-} from "lucide-react";
-import axios from "axios";
-import PageHeader from "@/components/layout/PageHeader";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
+import EmptyState from "@/components/common/EmptyState";
+import { ChatSkeleton } from "@/components/common/Skeletons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import EmptyState from "@/components/common/EmptyState";
-import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/useToast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { type ChatMessage } from "@/constants/dummy/chat";
-import { ChatAction } from "@/redux/actions";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setRooms, setRoomsLoading, setRoomsError, updateRoomUnreadCount } from "@/redux/slices/chatSlice";
-import { useUI } from "@/hooks/useUI";
-import CreateChatModal from "./CreateChatModal";
-import RoomDetails from "./RoomDetails";
-import { ChatSkeleton } from "@/components/common/Skeletons";
+import { useAuth } from "@/hooks/useAuth";
 import {
   useChatWebSocket,
-  type WSNewMessageEvent,
-  type WSTypingEvent,
-  type WSDeliveredReceiptEvent,
-  type WSReadReceiptEvent,
-  type WSMessageUpdatedEvent,
-  type WSMessageDeletedEvent,
-  type WSUnreadUpdateEvent,
   type WSAllMessagesReadEvent,
+  type WSDeliveredReceiptEvent,
+  type WSMessageDeletedEvent,
+  type WSMessageUpdatedEvent,
+  type WSNewMessageEvent,
+  type WSReadReceiptEvent,
+  type WSTypingEvent,
+  type WSUnreadUpdateEvent,
 } from "@/hooks/useChatWebSocket";
+import { useToast } from "@/hooks/useToast";
+import { useUI } from "@/hooks/useUI";
+import { ChatAction } from "@/redux/actions";
+import { setRooms, setRoomsError, setRoomsLoading, updateRoomUnreadCount } from "@/redux/slices/chatSlice";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import axios from "axios";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  Check, CheckCheck,
+  Download,
+  FileText,
+  Image as ImageIcon,
+  Info,
+  Loader2, Lock,
+  MessageSquare,
+  Paperclip,
+  Pencil,
+  Send,
+  Trash2, X
+} from "lucide-react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import CreateChatModal from "./CreateChatModal";
+import RoomDetails from "./RoomDetails";
 
 // ─── Typing indicator state ──────────────────────────────────────────────────
 
@@ -80,7 +88,7 @@ export default function ChatPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
-  
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -159,12 +167,12 @@ export default function ChatPage() {
   useLayoutEffect(() => {
     const isRoomSwitch = prevRoomRef.current.id !== activeId;
     const isInitialLoad = isRoomSwitch || Math.abs(msgs.length - prevRoomRef.current.length) > 5;
-    
-    scrollRef.current?.scrollTo({ 
-      top: scrollRef.current.scrollHeight, 
-      behavior: isInitialLoad ? "auto" : "smooth" 
+
+    scrollRef.current?.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: isInitialLoad ? "auto" : "smooth"
     });
-    
+
     prevRoomRef.current = { id: activeId, length: msgs.length };
   }, [activeId, msgs.length]);
 
@@ -291,7 +299,7 @@ export default function ChatPage() {
       }
       return { ...prev, ...updated };
     });
-    
+
     // Instantly update badge count if provided by backend
     if (data.unread_count !== undefined) {
       // Find room id from messages if needed, or rely on unread_update event
@@ -307,15 +315,15 @@ export default function ChatPage() {
   const handleAllMessagesRead = useCallback((data: WSAllMessagesReadEvent) => {
     setMessages(prev => {
       if (!prev[data.room_id]) return prev;
-      
-      const updatedRoomMsgs = prev[data.room_id].map(m => 
+
+      const updatedRoomMsgs = prev[data.room_id].map(m =>
         // Only mark messages sent TO the current user as read 
         // (the other person reading their own msgs doesn't make sense)
         m.senderId !== user?.id && m.status !== "read"
           ? { ...m, status: "read" as const, readBy: [...(m.readBy || []), user?.id || ""] }
           : m
       );
-      
+
       return { ...prev, [data.room_id]: updatedRoomMsgs };
     });
   }, [user?.id]);
@@ -443,8 +451,8 @@ export default function ChatPage() {
           // Handle { results: [...] } wrapper or direct array
           const fetchedMessages = Array.isArray(res?.results) ? res.results
             : Array.isArray(res?.data?.results) ? res.data.results
-            : Array.isArray(res?.data) ? res.data
-            : Array.isArray(res) ? res : [];
+              : Array.isArray(res?.data) ? res.data
+                : Array.isArray(res) ? res : [];
 
           // Map tick_status to our status type
           const mapTickStatus = (tick: string | undefined): "sent" | "delivered" | "read" => {
@@ -528,14 +536,14 @@ export default function ChatPage() {
         const raw = localStorage.getItem("Insight_Login_Data");
         const token = raw ? JSON.parse(raw)?.access : "";
         const baseUrl = import.meta.env.VITE_APP_BASE_URL || "";
-        
+
         const res = await axios.post(`${baseUrl}/api/v1/chat/upload/`, formData, {
           headers: {
             "Authorization": `Bearer ${token}`,
             "Content-Type": "multipart/form-data"
           }
         });
-        
+
         const data = res.data;
 
         // Create optimistic temp message for the file so sender sees it immediately
@@ -570,7 +578,7 @@ export default function ChatPage() {
         setTimeout(() => {
           pendingTempIdsRef.current.delete(tempId);
         }, 8000);
-        
+
         setDraft("");
         setTargetUsers([]);
         setSelectedFile(null);
@@ -714,7 +722,7 @@ export default function ChatPage() {
       if (prev.some(u => u.id === participant.id)) return prev;
       return [...prev, participant];
     });
-    
+
     setShowMentionPopover(false);
     setMentionQuery("");
 
@@ -781,7 +789,7 @@ export default function ChatPage() {
 
 
   const isFaculty = user?.role === "faculty";
-  const isStudentOrParent = user?.role === "student" || user?.role === "parent" || user?.role === "parents";
+  const isStudent = user?.role === "student";
 
   return (
     <div>
@@ -791,8 +799,8 @@ export default function ChatPage() {
           <div className="p-3 border-b border-border space-y-2">
             <Input placeholder="Search conversations" value={search} onChange={e => setSearch(e.target.value)} />
             <Button size="sm" className="w-full"
-              disabled={isStudentOrParent}
-              title={isStudentOrParent ? "Only admins available" : ""}
+              disabled={isStudent}
+              title={isStudent ? "Chat creation not available for students" : ""}
               onClick={() => setIsModalOpen(true)}>
               + New Chat
             </Button>
@@ -842,342 +850,341 @@ export default function ChatPage() {
             ) : (
               <>
                 {/* ── Header ─────────────────────────────────────────────── */}
-              <div className="p-3 border-b border-border flex items-center gap-3">
-                <Avatar className="h-9 w-9">
-                  {active.avatarUrl ? (
-                    <AvatarImage src={active.avatarUrl} alt={active.name || "Chat"} />
-                  ) : null}
-                  <AvatarFallback className="bg-navy text-white text-xs">{(active.name || "D")[0]}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="font-heading font-semibold text-sm">{active.name || "Direct Message"}</div>
-                  {typingText ? (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="text-xs text-primary flex items-center gap-1"
-                    >
-                      <span>{typingText}</span>
-                      <motion.span
-                        animate={{ opacity: [0.3, 1, 0.3] }}
-                        transition={{ repeat: Infinity, duration: 1.2 }}
+                <div className="p-3 border-b border-border flex items-center gap-3">
+                  <Avatar className="h-9 w-9">
+                    {active.avatarUrl ? (
+                      <AvatarImage src={active.avatarUrl} alt={active.name || "Chat"} />
+                    ) : null}
+                    <AvatarFallback className="bg-navy text-white text-xs">{(active.name || "D")[0]}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="font-heading font-semibold text-sm">{active.name || "Direct Message"}</div>
+                    {typingText ? (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-xs text-primary flex items-center gap-1"
                       >
-                        ...
-                      </motion.span>
-                    </motion.div>
-                  ) : (
-                    <div className="text-xs text-muted-foreground">{active.type === "group" ? "Group" : "Direct Message"}</div>
-                  )}
+                        <span>{typingText}</span>
+                        <motion.span
+                          animate={{ opacity: [0.3, 1, 0.3] }}
+                          transition={{ repeat: Infinity, duration: 1.2 }}
+                        >
+                          ...
+                        </motion.span>
+                      </motion.div>
+                    ) : (
+                      <div className="text-xs text-muted-foreground">{active.type === "group" ? "Group" : "Direct Message"}</div>
+                    )}
+                  </div>
+                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={() => setShowDetails(true)} aria-label="Room details">
+                    <Info className="w-5 h-5" />
+                  </Button>
                 </div>
-                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={() => setShowDetails(true)} aria-label="Room details">
-                  <Info className="w-5 h-5" />
-                </Button>
-              </div>
 
-              {/* ── Messages ───────────────────────────────────────────── */}
-              {isLoadingMessages ? (
-                <div className="flex-1 overflow-y-auto bg-[#efeae2] dark:bg-[#0b141a] scrollbar-hidden flex flex-col justify-end">
-                  <ChatSkeleton />
-                </div>
-              ) : (
-                <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 bg-[#efeae2] dark:bg-[#0b141a] scrollbar-hidden">
-                  <AnimatePresence key={activeId} initial={false}>
-                  {msgs.map((m, idx) => {
-                    const own = m.senderId === user?.id;
-                    const isEditing = editingMessage === m.id;
-                    const isFirstInGroup = idx === 0 || msgs[idx - 1].senderId !== m.senderId;
-                    const isLastInGroup = idx === msgs.length - 1 || msgs[idx + 1].senderId !== m.senderId;
-                    const isPrivateMsg = !!m.targets && m.targets.length > 0;
+                {/* ── Messages ───────────────────────────────────────────── */}
+                {isLoadingMessages ? (
+                  <div className="flex-1 overflow-y-auto bg-[#efeae2] dark:bg-[#0b141a] scrollbar-hidden flex flex-col justify-end">
+                    <ChatSkeleton />
+                  </div>
+                ) : (
+                  <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 bg-[#efeae2] dark:bg-[#0b141a] scrollbar-hidden">
+                    <AnimatePresence key={activeId} initial={false}>
+                      {msgs.map((m, idx) => {
+                        const own = m.senderId === user?.id;
+                        const isEditing = editingMessage === m.id;
+                        const isFirstInGroup = idx === 0 || msgs[idx - 1].senderId !== m.senderId;
+                        const isLastInGroup = idx === msgs.length - 1 || msgs[idx + 1].senderId !== m.senderId;
+                        const isPrivateMsg = !!m.targets && m.targets.length > 0;
 
-                    return (
-                      <motion.div key={m.id}
-                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                        className={`flex gap-2 ${own ? "justify-end" : "justify-start"} ${isLastInGroup ? "mb-3" : "mb-0.5"}`}
-                        onContextMenu={(e) => handleContextMenu(e, m)}
-                      >
-                        {!own && (
-                          <div className="w-7 flex-shrink-0 flex items-end">
-                            {isLastInGroup && (
-                              <Avatar className="w-7 h-7 shadow-sm">
-                                {m.senderAvatar ? <AvatarImage src={m.senderAvatar} /> : null}
-                                <AvatarFallback className="bg-primary/20 text-xs">
-                                  {m.senderName[0]?.toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                            )}
-                          </div>
-                        )}
-                        <div className={`max-w-[75%] px-3 py-1.5 text-sm relative group shadow-sm break-words ${
-                          m.isDeleted
-                            ? "bg-muted/50 border border-border italic text-muted-foreground rounded-2xl"
-                            : isPrivateMsg
-                              ? own
-                                ? `bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-100 border-l-2 border-amber-400 dark:border-amber-600 rounded-2xl ${isFirstInGroup ? 'rounded-tr-sm' : ''}`
-                                : `bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-100 border-l-2 border-amber-400 dark:border-amber-600 rounded-2xl ${isFirstInGroup ? 'rounded-tl-sm' : ''}`
-                              : own
-                                ? `bg-[#d9fdd3] dark:bg-[#005c4b] text-[#111b21] dark:text-[#e9edef] rounded-2xl ${isFirstInGroup ? 'rounded-tr-sm' : ''}`
-                                : `bg-white dark:bg-[#202c33] text-[#111b21] dark:text-[#e9edef] rounded-2xl ${isFirstInGroup ? 'rounded-tl-sm' : ''}`
-                        }`}>
-                          {/* Private message badge */}
-                          {isPrivateMsg && !m.isDeleted && (
-                            <div className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 font-medium mb-1">
-                              <Lock className="w-2.5 h-2.5" />
-                              <span>
-                                {own ? `Private to ${m.targets!.map(t => t.full_name).join(", ")}` : `Private from ${m.senderName}`}
-                              </span>
-                            </div>
-                          )}
-                          {!own && !m.isDeleted && isFirstInGroup && !isPrivateMsg && (
-                            <div className="text-[11px] font-bold mb-0.5 text-primary opacity-80">{m.senderName}</div>
-                          )}
-                          {!own && !m.isDeleted && isFirstInGroup && isPrivateMsg && (
-                            <div className="text-[11px] font-bold mb-0.5 text-amber-700 dark:text-amber-300 opacity-80">{m.senderName}</div>
-                          )}
-
-                          {/* Edit mode */}
-                          {isEditing ? (
-                            <div className="space-y-2">
-                              <Textarea
-                                value={editContent}
-                                onChange={e => setEditContent(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSaveEdit(); }
-                                  if (e.key === "Escape") handleCancelEdit();
-                                }}
-                                rows={2}
-                                className="resize-none text-sm bg-background/50 text-foreground min-h-0"
-                                autoFocus
-                              />
-                              <div className="flex gap-1 justify-end">
-                                <Button size="sm" variant="ghost" onClick={handleCancelEdit}
-                                  className="h-6 px-2 text-[11px]">
-                                  <X className="w-3 h-3 mr-1" /> Cancel
-                                </Button>
-                                <Button size="sm" onClick={handleSaveEdit}
-                                  className="h-6 px-2 text-[11px]"
-                                  disabled={!editContent.trim()}>
-                                  <Check className="w-3 h-3 mr-1" /> Save
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              {m.isDeleted ? (
-                                <div>🚫 This message was deleted</div>
-                              ) : (
-                                <div className="space-y-2">
-                                  {m.fileUrl && (
-                                    m.fileName?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                                      <a href={m.fileUrl} target="_blank" rel="noreferrer" className="block w-full max-w-[240px] rounded-md overflow-hidden border border-border mt-1 relative group cursor-pointer">
-                                        <img src={m.fileUrl} alt={m.fileName} className="w-full h-auto object-cover" />
-                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                          <Download className="w-6 h-6 text-white" />
-                                        </div>
-                                      </a>
-                                    ) : (
-                                      <div className={`flex items-center gap-3 p-3 rounded-lg border ${own ? 'border-primary-foreground/20 bg-primary-foreground/10' : 'border-border bg-background/50'}`}>
-                                        <div className={`p-2 rounded-md ${own ? 'bg-primary-foreground/20' : 'bg-muted'}`}>
-                                          <FileText className="w-5 h-5" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                          <p className="text-sm font-medium truncate">{m.fileName || 'Attachment'}</p>
-                                          {m.fileSize && (
-                                            <p className="text-xs opacity-70">{(m.fileSize / 1024 / 1024).toFixed(2)} MB</p>
-                                          )}
-                                        </div>
-                                        <a href={m.fileUrl} target="_blank" rel="noreferrer" className="p-2 hover:bg-black/10 rounded-full transition-colors" title="Download">
-                                          <Download className="w-4 h-4" />
-                                        </a>
-                                      </div>
-                                    )
-                                  )}
-                                  {m.content && <div>{m.content}</div>}
-                                </div>
-                              )}
-                              <div className="text-[10px] mt-1.5 opacity-70 flex items-center gap-1 justify-end">
-                                {/* {m.isEdited && !m.isDeleted && (
-                                  <span className="italic mr-1">edited</span>
-                                )} */}
-                                <span className="opacity-80">
-                                  {new Date(m.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                </span>
-                                {own && !m.isDeleted && (
-                                  m.status === "read"
-                                    ? <CheckCheck className="w-[14px] h-[14px] text-blue-500" />
-                                    : m.status === "delivered"
-                                      ? <CheckCheck className="w-[14px] h-[14px] opacity-70" />
-                                      : <Check className="w-[14px] h-[14px] opacity-70" />
+                        return (
+                          <motion.div key={m.id}
+                            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                            className={`flex gap-2 ${own ? "justify-end" : "justify-start"} ${isLastInGroup ? "mb-3" : "mb-0.5"}`}
+                            onContextMenu={(e) => handleContextMenu(e, m)}
+                          >
+                            {!own && (
+                              <div className="w-7 flex-shrink-0 flex items-end">
+                                {isLastInGroup && (
+                                  <Avatar className="w-7 h-7 shadow-sm">
+                                    {m.senderAvatar ? <AvatarImage src={m.senderAvatar} /> : null}
+                                    <AvatarFallback className="bg-primary/20 text-xs">
+                                      {m.senderName[0]?.toUpperCase()}
+                                    </AvatarFallback>
+                                  </Avatar>
                                 )}
                               </div>
-                            </>
-                          )}
+                            )}
+                            <div className={`max-w-[75%] px-3 py-1.5 text-sm relative group shadow-sm break-words ${m.isDeleted
+                              ? "bg-muted/50 border border-border italic text-muted-foreground rounded-2xl"
+                              : isPrivateMsg
+                                ? own
+                                  ? `bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-100 border-l-2 border-amber-400 dark:border-amber-600 rounded-2xl ${isFirstInGroup ? 'rounded-tr-sm' : ''}`
+                                  : `bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-100 border-l-2 border-amber-400 dark:border-amber-600 rounded-2xl ${isFirstInGroup ? 'rounded-tl-sm' : ''}`
+                                : own
+                                  ? `bg-[#d9fdd3] dark:bg-[#005c4b] text-[#111b21] dark:text-[#e9edef] rounded-2xl ${isFirstInGroup ? 'rounded-tr-sm' : ''}`
+                                  : `bg-white dark:bg-[#202c33] text-[#111b21] dark:text-[#e9edef] rounded-2xl ${isFirstInGroup ? 'rounded-tl-sm' : ''}`
+                              }`}>
+                              {/* Private message badge */}
+                              {isPrivateMsg && !m.isDeleted && (
+                                <div className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 font-medium mb-1">
+                                  <Lock className="w-2.5 h-2.5" />
+                                  <span>
+                                    {own ? `Private to ${m.targets!.map(t => t.full_name).join(", ")}` : `Private from ${m.senderName}`}
+                                  </span>
+                                </div>
+                              )}
+                              {!own && !m.isDeleted && isFirstInGroup && !isPrivateMsg && (
+                                <div className="text-[11px] font-bold mb-0.5 text-primary opacity-80">{m.senderName}</div>
+                              )}
+                              {!own && !m.isDeleted && isFirstInGroup && isPrivateMsg && (
+                                <div className="text-[11px] font-bold mb-0.5 text-amber-700 dark:text-amber-300 opacity-80">{m.senderName}</div>
+                              )}
 
-                          {/* Hover action buttons for own messages */}
-                          {own && !m.isDeleted && !isEditing && !m.id.startsWith("temp-") && (
-                            <div className="absolute -top-3 right-1 hidden group-hover:flex items-center gap-0.5 bg-card border border-border rounded-lg shadow-sm px-1 py-0.5">
-                              <button
-                                onClick={() => handleStartEdit(m)}
-                                className="p-1 rounded hover:bg-muted/60 transition-colors"
-                                title="Edit message"
-                              >
-                                <Pencil className="w-3 h-3 text-muted-foreground" />
-                              </button>
-                              <button
-                                onClick={() => handleDelete(m.id)}
-                                className="p-1 rounded hover:bg-destructive/10 transition-colors"
-                                title="Delete message"
-                              >
-                                <Trash2 className="w-3 h-3 text-destructive" />
-                              </button>
+                              {/* Edit mode */}
+                              {isEditing ? (
+                                <div className="space-y-2">
+                                  <Textarea
+                                    value={editContent}
+                                    onChange={e => setEditContent(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSaveEdit(); }
+                                      if (e.key === "Escape") handleCancelEdit();
+                                    }}
+                                    rows={2}
+                                    className="resize-none text-sm bg-background/50 text-foreground min-h-0"
+                                    autoFocus
+                                  />
+                                  <div className="flex gap-1 justify-end">
+                                    <Button size="sm" variant="ghost" onClick={handleCancelEdit}
+                                      className="h-6 px-2 text-[11px]">
+                                      <X className="w-3 h-3 mr-1" /> Cancel
+                                    </Button>
+                                    <Button size="sm" onClick={handleSaveEdit}
+                                      className="h-6 px-2 text-[11px]"
+                                      disabled={!editContent.trim()}>
+                                      <Check className="w-3 h-3 mr-1" /> Save
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  {m.isDeleted ? (
+                                    <div>🚫 This message was deleted</div>
+                                  ) : (
+                                    <div className="space-y-2">
+                                      {m.fileUrl && (
+                                        m.fileName?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                                          <a href={m.fileUrl} target="_blank" rel="noreferrer" className="block w-full max-w-[240px] rounded-md overflow-hidden border border-border mt-1 relative group cursor-pointer">
+                                            <img src={m.fileUrl} alt={m.fileName} className="w-full h-auto object-cover" />
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                              <Download className="w-6 h-6 text-white" />
+                                            </div>
+                                          </a>
+                                        ) : (
+                                          <div className={`flex items-center gap-3 p-3 rounded-lg border ${own ? 'border-primary-foreground/20 bg-primary-foreground/10' : 'border-border bg-background/50'}`}>
+                                            <div className={`p-2 rounded-md ${own ? 'bg-primary-foreground/20' : 'bg-muted'}`}>
+                                              <FileText className="w-5 h-5" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                              <p className="text-sm font-medium truncate">{m.fileName || 'Attachment'}</p>
+                                              {m.fileSize && (
+                                                <p className="text-xs opacity-70">{(m.fileSize / 1024 / 1024).toFixed(2)} MB</p>
+                                              )}
+                                            </div>
+                                            <a href={m.fileUrl} target="_blank" rel="noreferrer" className="p-2 hover:bg-black/10 rounded-full transition-colors" title="Download">
+                                              <Download className="w-4 h-4" />
+                                            </a>
+                                          </div>
+                                        )
+                                      )}
+                                      {m.content && <div>{m.content}</div>}
+                                    </div>
+                                  )}
+                                  <div className="text-[10px] mt-1.5 opacity-70 flex items-center gap-1 justify-end">
+                                    {/* {m.isEdited && !m.isDeleted && (
+                                  <span className="italic mr-1">edited</span>
+                                )} */}
+                                    <span className="opacity-80">
+                                      {new Date(m.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                    </span>
+                                    {own && !m.isDeleted && (
+                                      m.status === "read"
+                                        ? <CheckCheck className="w-[14px] h-[14px] text-blue-500" />
+                                        : m.status === "delivered"
+                                          ? <CheckCheck className="w-[14px] h-[14px] opacity-70" />
+                                          : <Check className="w-[14px] h-[14px] opacity-70" />
+                                    )}
+                                  </div>
+                                </>
+                              )}
+
+                              {/* Hover action buttons for own messages */}
+                              {own && !m.isDeleted && !isEditing && !m.id.startsWith("temp-") && (
+                                <div className="absolute -top-3 right-1 hidden group-hover:flex items-center gap-0.5 bg-card border border-border rounded-lg shadow-sm px-1 py-0.5">
+                                  <button
+                                    onClick={() => handleStartEdit(m)}
+                                    className="p-1 rounded hover:bg-muted/60 transition-colors"
+                                    title="Edit message"
+                                  >
+                                    <Pencil className="w-3 h-3 text-muted-foreground" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(m.id)}
+                                    className="p-1 rounded hover:bg-destructive/10 transition-colors"
+                                    title="Delete message"
+                                  >
+                                    <Trash2 className="w-3 h-3 text-destructive" />
+                                  </button>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </AnimatePresence>
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
 
-                {/* ── Typing indicator below messages ──────────────────── */}
-                <AnimatePresence>
-                  {typingText && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -5 }}
-                      className="flex justify-start"
-                    >
-                      <div className="bg-card border border-border rounded-2xl px-3 py-2 text-sm">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <div className="flex gap-0.5">
-                            <motion.span
-                              animate={{ opacity: [0.3, 1, 0.3] }}
-                              transition={{ repeat: Infinity, duration: 1.2, delay: 0 }}
-                              className="w-1.5 h-1.5 bg-muted-foreground rounded-full inline-block"
-                            />
-                            <motion.span
-                              animate={{ opacity: [0.3, 1, 0.3] }}
-                              transition={{ repeat: Infinity, duration: 1.2, delay: 0.2 }}
-                              className="w-1.5 h-1.5 bg-muted-foreground rounded-full inline-block"
-                            />
-                            <motion.span
-                              animate={{ opacity: [0.3, 1, 0.3] }}
-                              transition={{ repeat: Infinity, duration: 1.2, delay: 0.4 }}
-                              className="w-1.5 h-1.5 bg-muted-foreground rounded-full inline-block"
-                            />
-                          </div>
-                          <span className="text-xs">{typingText}</span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-              )}
-
-              {/* ── Input area ─────────────────────────────────────────── */}
-              <div className="p-3 border-t border-border flex flex-col gap-2">
-                {/* Target user chips */}
-                {targetUsers.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
+                    {/* ── Typing indicator below messages ──────────────────── */}
                     <AnimatePresence>
-                      {targetUsers.map(tu => (
+                      {typingText && (
                         <motion.div
-                          key={tu.id}
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.9 }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-sm"
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -5 }}
+                          className="flex justify-start"
                         >
-                          <Lock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                          <span className="text-amber-800 dark:text-amber-200">
-                            <strong>{tu.full_name}</strong>
-                          </span>
-                          <button
-                            onClick={() => setTargetUsers(prev => prev.filter(u => u.id !== tu.id))}
-                            className="ml-1 p-0.5 rounded-full hover:bg-amber-200/50 dark:hover:bg-amber-800/50 transition-colors"
-                          >
-                            <X className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                          </button>
+                          <div className="bg-card border border-border rounded-2xl px-3 py-2 text-sm">
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <div className="flex gap-0.5">
+                                <motion.span
+                                  animate={{ opacity: [0.3, 1, 0.3] }}
+                                  transition={{ repeat: Infinity, duration: 1.2, delay: 0 }}
+                                  className="w-1.5 h-1.5 bg-muted-foreground rounded-full inline-block"
+                                />
+                                <motion.span
+                                  animate={{ opacity: [0.3, 1, 0.3] }}
+                                  transition={{ repeat: Infinity, duration: 1.2, delay: 0.2 }}
+                                  className="w-1.5 h-1.5 bg-muted-foreground rounded-full inline-block"
+                                />
+                                <motion.span
+                                  animate={{ opacity: [0.3, 1, 0.3] }}
+                                  transition={{ repeat: Infinity, duration: 1.2, delay: 0.4 }}
+                                  className="w-1.5 h-1.5 bg-muted-foreground rounded-full inline-block"
+                                />
+                              </div>
+                              <span className="text-xs">{typingText}</span>
+                            </div>
+                          </div>
                         </motion.div>
-                      ))}
+                      )}
                     </AnimatePresence>
                   </div>
                 )}
 
-                {selectedFile && (
-                  <div className="flex items-center justify-between p-2.5 bg-muted/50 rounded-lg border border-border">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="p-2 bg-background rounded-md shadow-sm border border-border">
-                        {selectedFile.type.startsWith('image/') ? <ImageIcon className="w-4 h-4 text-primary" /> : <FileText className="w-4 h-4 text-primary" />}
-                      </div>
-                      <div className="flex flex-col truncate">
-                        <span className="text-sm font-medium truncate">{selectedFile.name}</span>
-                        <span className="text-[10px] text-muted-foreground">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</span>
-                      </div>
+                {/* ── Input area ─────────────────────────────────────────── */}
+                <div className="p-3 border-t border-border flex flex-col gap-2">
+                  {/* Target user chips */}
+                  {targetUsers.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      <AnimatePresence>
+                        {targetUsers.map(tu => (
+                          <motion.div
+                            key={tu.id}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-sm"
+                          >
+                            <Lock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                            <span className="text-amber-800 dark:text-amber-200">
+                              <strong>{tu.full_name}</strong>
+                            </span>
+                            <button
+                              onClick={() => setTargetUsers(prev => prev.filter(u => u.id !== tu.id))}
+                              className="ml-1 p-0.5 rounded-full hover:bg-amber-200/50 dark:hover:bg-amber-800/50 transition-colors"
+                            >
+                              <X className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                            </button>
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
                     </div>
-                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive shrink-0" onClick={() => setSelectedFile(null)}>
-                      <X className="w-4 h-4" />
+                  )}
+
+                  {selectedFile && (
+                    <div className="flex items-center justify-between p-2.5 bg-muted/50 rounded-lg border border-border">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <div className="p-2 bg-background rounded-md shadow-sm border border-border">
+                          {selectedFile.type.startsWith('image/') ? <ImageIcon className="w-4 h-4 text-primary" /> : <FileText className="w-4 h-4 text-primary" />}
+                        </div>
+                        <div className="flex flex-col truncate">
+                          <span className="text-sm font-medium truncate">{selectedFile.name}</span>
+                          <span className="text-[10px] text-muted-foreground">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</span>
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive shrink-0" onClick={() => setSelectedFile(null)}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+
+                  <div className="relative flex items-end gap-2">
+                    {/* @Mention popover */}
+                    <AnimatePresence>
+                      {showMentionPopover && filteredMentionUsers.length > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 8 }}
+                          className="absolute bottom-full left-0 mb-2 w-64 max-h-80 overflow-y-auto bg-popover border border-border rounded-lg shadow-lg z-50 scrollbar-hidden"
+                        >
+                          <div className="p-1.5 ">
+                            <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                              Send privately to
+                            </div>
+                            {filteredMentionUsers.map(p => (
+                              <button
+                                key={p.id}
+                                onClick={() => handleSelectMention(p)}
+                                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/60 transition-colors text-left"
+                              >
+                                <Avatar className="w-6 h-6">
+                                  {p.avatar_url ? <AvatarImage src={p.avatar_url} /> : null}
+                                  <AvatarFallback className="text-[10px] bg-primary/20">
+                                    {p.full_name[0]?.toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-medium truncate">{p.full_name}</div>
+                                  {p.role && (
+                                    <div className="text-[10px] text-muted-foreground capitalize">{p.role.replace("_", " ")}</div>
+                                  )}
+                                </div>
+                                <Lock className="w-3 h-3 text-amber-500 shrink-0" />
+                              </button>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    <input type="file" className="hidden" ref={fileInputRef} onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} />
+                    <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} aria-label="Attach file" className={selectedFile ? "text-primary bg-primary/10" : ""}>
+                      <Paperclip className="w-5 h-5" />
+                    </Button>
+                    <Textarea ref={textareaRef} value={draft} onChange={e => handleDraftChange(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+                        if (e.key === "Escape" && showMentionPopover) { setShowMentionPopover(false); }
+                      }}
+                      placeholder={targetUsers.length > 0 ? `Private message to ${targetUsers.length} selected...` : selectedFile ? "Add a caption..." : active?.type === "group" ? "Type a message... (@ to mention faculty private msg)" : "Type a message..."}
+                      rows={1} className="resize-none min-h-10 py-2.5 bg-surface" />
+                    <Button onClick={send} disabled={(!draft.trim() && !selectedFile) || isUploading} aria-label="Send" className="h-10 px-4">
+                      {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </Button>
                   </div>
-                )}
-                
-                <div className="relative flex items-end gap-2">
-                  {/* @Mention popover */}
-                  <AnimatePresence>
-                    {showMentionPopover && filteredMentionUsers.length > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 8 }}
-                        className="absolute bottom-full left-0 mb-2 w-64 max-h-80 overflow-y-auto bg-popover border border-border rounded-lg shadow-lg z-50 scrollbar-hidden"
-                      >
-                        <div className="p-1.5 ">
-                          <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                            Send privately to
-                          </div>
-                          {filteredMentionUsers.map(p => (
-                            <button
-                              key={p.id}
-                              onClick={() => handleSelectMention(p)}
-                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/60 transition-colors text-left"
-                            >
-                              <Avatar className="w-6 h-6">
-                                {p.avatar_url ? <AvatarImage src={p.avatar_url} /> : null}
-                                <AvatarFallback className="text-[10px] bg-primary/20">
-                                  {p.full_name[0]?.toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <div className="text-sm font-medium truncate">{p.full_name}</div>
-                                {p.role && (
-                                  <div className="text-[10px] text-muted-foreground capitalize">{p.role.replace("_", " ")}</div>
-                                )}
-                              </div>
-                              <Lock className="w-3 h-3 text-amber-500 shrink-0" />
-                            </button>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  <input type="file" className="hidden" ref={fileInputRef} onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} />
-                  <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} aria-label="Attach file" className={selectedFile ? "text-primary bg-primary/10" : ""}>
-                    <Paperclip className="w-5 h-5" />
-                  </Button>
-                  <Textarea ref={textareaRef} value={draft} onChange={e => handleDraftChange(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
-                      if (e.key === "Escape" && showMentionPopover) { setShowMentionPopover(false); }
-                    }}
-                    placeholder={targetUsers.length > 0 ? `Private message to ${targetUsers.length} selected...` : selectedFile ? "Add a caption..." : active?.type === "group" ? "Type a message... (@ to mention faculty private msg)" : "Type a message..."} 
-                    rows={1} className="resize-none min-h-10 py-2.5 bg-surface" />
-                  <Button onClick={send} disabled={(!draft.trim() && !selectedFile) || isUploading} aria-label="Send" className="h-10 px-4">
-                    {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                  </Button>
                 </div>
-              </div>
-            </>
+              </>
             )
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-8">
@@ -1187,9 +1194,9 @@ export default function ChatPage() {
                 </div>
                 <h3 className="font-heading font-semibold text-lg">Welcome to Messages</h3>
                 <p className="text-sm text-muted-foreground max-w-[280px]">
-                  Select a conversation from the left or create a new one to start chatting.
+                  Select a conversation from the left to start chatting.
                 </p>
-                <Button size="sm" variant="outline" onClick={() => setIsModalOpen(true)} className="mt-2">
+                <Button size="sm" variant="outline" onClick={() => setIsModalOpen(true)} className="mt-2" disabled={isStudent} title={isStudent ? "Chat creation not available for students" : ""}>
                   + New Chat
                 </Button>
               </div>
