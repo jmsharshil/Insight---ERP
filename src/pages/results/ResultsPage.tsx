@@ -39,11 +39,7 @@ export default function ResultsPage() {
     }
   };
 
-  return (Branch	Students	Attendance %	Revenue	Status
-    Surat Main	847	91%	₹7.2L	Active
-    Vadodara	712	88%	₹6.1L	Active
-    Ahmedabad	859	93%	₹5.1L	Active
-    
+  return (
     <div className="space-y-6 pb-10">
       <PageHeader
         title="Results Analytics"
