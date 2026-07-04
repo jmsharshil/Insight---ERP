@@ -262,6 +262,10 @@ export default function ApplicationsTab() {
     formData.append("reason", applyForm.reason);
     
     if (role === "student" || role === "parents") {
+      if (role === "parents") {
+        const studentId = user?.linked_student;
+        if (studentId) formData.append("student_id", studentId);
+      }
       if (applyForm.from_time) formData.append("from_time", applyForm.from_time);
       if (applyForm.to_time) formData.append("to_time", applyForm.to_time);
       const isCapableOfProof = ["medical", "emergency", "exam"].includes(applyForm.leave_type) || !!applyForm.supporting_document;
