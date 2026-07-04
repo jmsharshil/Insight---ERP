@@ -317,6 +317,15 @@ export const API = {
     FACULTY_PREVIEW: (fId: string) => `/api/v1/faculty/${fId}/salary-preview/`,
   },
 
+  /** Result Analytics endpoints */
+  RESULTS_ANALYTICS: {
+    SUBJECT_WISE: "/api/v1/results/subject-wise/",
+    FACULTY_WISE: "/api/v1/results/faculty-wise/",
+    BATCH_WISE: "/api/v1/results/batch-wise/",
+    SUMMARY: "/api/v1/results/summary/",
+    ANALYTICS: "/api/v1/results/analytics/",
+  },
+
   /** Audit Logs endpoints */
   AUDIT_LOGS: {
     LIST: "/api/audit-logs/",

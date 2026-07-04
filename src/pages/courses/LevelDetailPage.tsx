@@ -107,7 +107,6 @@ export default function LevelDetailPage() {
     name: "",
     order: 1,
     description: "",
-    course_type: "standard",
     duration_months: 0,
     fee_amount: "0.00",
     is_active: true,
@@ -170,7 +169,6 @@ export default function LevelDetailPage() {
             name: data.name || "",
             order: Number(data.order || 1),
             description: data.description || "",
-            course_type: data.course_type || "standard",
             duration_months: Number(data.duration_months || 0),
             fee_amount: String(data.fee_amount || "0.00"),
             is_active: data.is_active !== false,
@@ -201,7 +199,6 @@ export default function LevelDetailPage() {
       name: form.name.trim(),
       order: Number(form.order),
       description: form.description.trim(),
-      course_type: form.course_type,
       duration_months: Number(form.duration_months),
       fee_amount: form.fee_amount,
       is_active: form.is_active,
@@ -526,21 +523,6 @@ export default function LevelDetailPage() {
                 <CardTitle>Level Parameters</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-1">
-                  <Label htmlFor="course_type" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Course Type</Label>
-                  <Select
-                    value={form.course_type}
-                    onValueChange={(val) => setForm({ ...form, course_type: val })}
-                  >
-                    <SelectTrigger id="course_type">
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="standard">Standard</SelectItem>
-                      <SelectItem value="fast_track">Fast Track</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
 
                 <div className="space-y-1">
                   <Label htmlFor="level-duration" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Duration (Months)</Label>
@@ -849,15 +831,6 @@ export default function LevelDetailPage() {
                       Level {level.order}
                     </p>
                   </div>
-
-                  {level.course_type_display && (
-                    <div className="space-y-1.5">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Course Type</p>
-                      <Badge variant="outline" className="text-sm font-medium capitalize py-1">
-                        {level.course_type_display}
-                      </Badge>
-                    </div>
-                  )}
 
                   <div className="space-y-1.5">
                     <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold flex items-center gap-1.5">

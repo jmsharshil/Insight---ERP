@@ -53,22 +53,23 @@ export default function LatePolicyTab({ branches }: LatePolicyTabProps) {
   const handleOpenSheet = (pol?: LatePolicy) => {
     if (pol) {
       setEditing(pol);
-      setForm({ ...pol });
+      setForm({ ...pol, branch_id: (pol as any).branch_id || (pol as any).branch });
     } else {
       setEditing(null);
-      setForm({ branch: "", grace_period_minutes: 15, deduction_per_minute: 10, max_deduction_per_session: 500, auto_halfday_deduction: true, is_active: true });
+      setForm({ branch_id: "", grace_period_minutes: 15, deduction_per_minute: 10, max_deduction_per_session: 500, auto_halfday_deduction: true, is_active: true } as any);
     }
     setSheetOpen(true);
   };
 
   const handleSave = () => {
-    if (!form.branch) return toast.error("Select a branch");
+    const branchId = (form as any).branch_id || (form as any).branch;
+    if (!branchId) return toast.error("Select a branch");
     const isNew = !editing;
     dispatch({
       type: isNew ? payrollActions.CREATE_LATE_POLICY : payrollActions.UPDATE_LATE_POLICY,
       method: isNew ? "POST" : "PATCH",
       endPoint: isNew ? API.PAYROLL.LATE_POLICY : API.PAYROLL.LATE_POLICY_DETAIL(editing.id),
-      body: form,
+      body: { ...form, branch_id: branchId },
       auth: true,
       setLoading: setSaveLoading,
       getResponse: (res: any) => {
@@ -159,7 +160,7 @@ export default function LatePolicyTab({ branches }: LatePolicyTabProps) {
           <div className="space-y-4">
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Branch <span className="text-red-500">*</span></Label>
-              <Select value={form.branch} onValueChange={v => setForm({ ...form, branch: v })}>
+              <Select value={(form as any).branch_id || (form as any).branch} onValueChange={v => setForm({ ...form, branch_id: v } as any)}>
                 <SelectTrigger className="h-9"><SelectValue placeholder="Select branch" /></SelectTrigger>
                 <SelectContent>{branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
               </Select>

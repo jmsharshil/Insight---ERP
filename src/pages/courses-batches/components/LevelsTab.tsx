@@ -387,20 +387,12 @@ export default function LevelsTab() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center justify-center bg-primary/10 text-primary rounded-full w-6 h-6 text-xs font-bold shrink-0">
-                        {level.order}0.
-                      </span>
                       <h4
                         className="font-semibold text-base text-text-primary group-hover:text-primary transition-colors"
                       >
                         {level.name}
                       </h4>
                     </div>
-                    {level.course_type_display && (
-                      <p className="text-[11px] text-muted-foreground capitalize mt-0.5">
-                        Type: {level.course_type_display}
-                      </p>
-                    )}
                   </div>
                   <span
                     className={cn(
@@ -515,22 +507,6 @@ export default function LevelsTab() {
                   />
                 </div>
               </div>
-
-              {/* <div className="space-y-2">
-                  <Label htmlFor="course_type">Course Type</Label>
-                  <Select
-                    value={levelForm.course_type}
-                    onValueChange={(val) => setLevelForm({ ...levelForm, course_type: val })}
-                  >
-                    <SelectTrigger id="course_type">
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="standard">Standard</SelectItem>
-                      <SelectItem value="fast_track">Fast Track</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div> */}
 
               <div className="space-y-2">
                 <Label htmlFor="duration_months">Duration (Months)</Label>

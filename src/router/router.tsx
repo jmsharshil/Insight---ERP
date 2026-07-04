@@ -45,6 +45,7 @@ const ReportsPage = lazy(() => import("@/pages/reports/ReportsPage"));
 const SettingsPage = lazy(() => import("@/pages/settings/SettingsPage"));
 const UsersPage = lazy(() => import("@/pages/users/UsersPage"));
 const PayrollPage = lazy(() => import("@/pages/payroll/PayrollPage"));
+const ResultsPage = lazy(() => import("@/pages/results/ResultsPage"));
 
 /* ─── Helpers ───────────────────────────────────────────────── */
 
@@ -153,6 +154,7 @@ const router = createBrowserRouter([
     { module: "reports", path: "/reports", element: withSuspense(<ReportsPage />) },
     { module: "payroll", path: "/payroll", element: withSuspense(<PayrollPage />) },
     { module: "users", path: "/users", element: withSuspense(<UsersPage />) },
+    { module: "results", path: "/results", element: withSuspense(<ResultsPage />) },
   ].map(({ module, path, element }) => ({
     element: <ProtectedRoute module={module as any} />,
     children: [
