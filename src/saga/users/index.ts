@@ -15,5 +15,5 @@ export function* watchUsersSaga() {
   yield takeLatest(branchAction.UPDATE_BRANCH, genericSaga);
   yield takeLatest(branchAction.DELETE_BRANCH, genericSaga);
   yield takeLatest(branchAction.CREATE_BRANCH, genericSaga);
-
+  // Note: course and subject sagas are handled by watchCourseSaga — do not duplicate here
 }

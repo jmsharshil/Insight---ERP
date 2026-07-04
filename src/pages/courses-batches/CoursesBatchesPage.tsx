@@ -99,10 +99,13 @@ export default function CoursesBatchesPage() {
   const activeSubTab = params.get("tab") || "courses";
 
   const setActiveSubTab = (tab: string) => {
-    setParams((prev) => {
-      prev.set("tab", tab);
-      return prev;
-    }, { replace: true });
+    setParams(
+      (prev) => {
+        prev.set("tab", tab);
+        return prev;
+      },
+      { replace: true },
+    );
   };
   const [courseSheetOpen, setCourseSheetOpen] = useState(false);
   const [courseUpdateLoading, setCourseUpdateLoading] = useState(false);
@@ -113,7 +116,9 @@ export default function CoursesBatchesPage() {
   const [batchesError, setBatchesError] = useState<string | null>(null);
 
   // Classroom States
-  const { classrooms, isLoading: classroomsLoading } = useSelector((state: RootState) => state.classRoom);
+  const { classrooms, isLoading: classroomsLoading } = useSelector(
+    (state: RootState) => state.classRoom,
+  );
   const [classroomSheetOpen, setClassroomSheetOpen] = useState(false);
   const [classroomUpdateLoading, setClassroomUpdateLoading] = useState(false);
   const [editingClassroom, setEditingClassroom] = useState<any>(null);
@@ -446,9 +451,8 @@ export default function CoursesBatchesPage() {
 
   const canEdit =
     user && ["super_admin", "branch_manager", "admin_senior_executive"].includes(user.role);
-  
-  const canDelete =
-    user && ["super_admin", "branch_manager"].includes(user.role);
+
+  const canDelete = user && ["super_admin", "branch_manager"].includes(user.role);
 
   // Student-filtered data
   const displayCourses = useMemo(() => {
@@ -458,7 +462,12 @@ export default function CoursesBatchesPage() {
       const matchId = studentDetail.course && String(c.id) === String(studentDetail.course);
       const matchName = studentDetail.course_name && c.name === studentDetail.course_name;
       const matchCode = studentDetail.course && c.code === studentDetail.course;
-      const matchString = studentDetail.course && c.name.toLowerCase().replace(/[^a-z0-9]/g, "") === String(studentDetail.course).toLowerCase().replace(/[^a-z0-9]/g, "");
+      const matchString =
+        studentDetail.course &&
+        c.name.toLowerCase().replace(/[^a-z0-9]/g, "") ===
+          String(studentDetail.course)
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, "");
       return matchId || matchName || matchCode || matchString;
     });
   }, [courses, isStudent, studentDetail]);
@@ -475,13 +484,21 @@ export default function CoursesBatchesPage() {
     if (!isStudent) return filtered;
     if (!studentDetail) return [];
 
-    const normalizeStr = (s: any) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-    
+    const normalizeStr = (s: any) =>
+      String(s || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+
     return filtered.filter((b: any) => {
       const matchId = studentBatchIds.has(String(b.id));
-      const matchName = studentDetail.batch_name && normalizeStr(b.name) === normalizeStr(studentDetail.batch_name);
-      const matchCurrentName = studentDetail.current_batch_name && normalizeStr(b.name) === normalizeStr(studentDetail.current_batch_name);
-      const matchCode = studentDetail.batch_name && normalizeStr(b.batch_code) === normalizeStr(studentDetail.batch_name);
+      const matchName =
+        studentDetail.batch_name && normalizeStr(b.name) === normalizeStr(studentDetail.batch_name);
+      const matchCurrentName =
+        studentDetail.current_batch_name &&
+        normalizeStr(b.name) === normalizeStr(studentDetail.current_batch_name);
+      const matchCode =
+        studentDetail.batch_name &&
+        normalizeStr(b.batch_code) === normalizeStr(studentDetail.batch_name);
       return matchId || matchName || matchCurrentName || matchCode;
     });
   }, [batches, isStudent, studentBatchIds, studentDetail, user]);
@@ -527,25 +544,8 @@ export default function CoursesBatchesPage() {
   }
 
   useEffect(() => {
-    // Always preload courses if they are empty
-    if (courses.length === 0 && !coursesLoading) {
-      dispatch({
-        type: courseAction.GET_COURSES,
-        method: "GET",
-        endPoint: API.COURSES.LIST,
-        auth: true,
-        setLoading: (val: boolean) => dispatch(setCoursesLoading(val)),
-        getResponse: (res: any) => {
-          if (res?.data) {
-            dispatch(setCourses(Array.isArray(res.data) ? res.data : []));
-          } else if (Array.isArray(res)) {
-            dispatch(setCourses(res));
-          }
-        },
-      });
-    }
-
     if (activeSubTab === "courses") {
+      // Primary fetch for the courses tab
       dispatch({
         type: courseAction.GET_COURSES,
         method: "GET",
@@ -570,6 +570,41 @@ export default function CoursesBatchesPage() {
       });
     } else if (activeSubTab === "batches") {
       fetchBatchesList();
+      // Preload courses if needed (used in batch form dropdowns)
+      if (courses.length === 0 && !coursesLoading) {
+        dispatch({
+          type: courseAction.GET_COURSES,
+          method: "GET",
+          endPoint: API.COURSES.LIST,
+          auth: true,
+          setLoading: (val: boolean) => dispatch(setCoursesLoading(val)),
+          getResponse: (res: any) => {
+            if (res?.data) {
+              dispatch(setCourses(Array.isArray(res.data) ? res.data : []));
+            } else if (Array.isArray(res)) {
+              dispatch(setCourses(res));
+            }
+          },
+        });
+      }
+    } else if (activeSubTab === "levels") {
+      // Preload courses if needed (used in level's course dropdown)
+      if (courses.length === 0 && !coursesLoading) {
+        dispatch({
+          type: courseAction.GET_COURSES,
+          method: "GET",
+          endPoint: API.COURSES.LIST,
+          auth: true,
+          setLoading: (val: boolean) => dispatch(setCoursesLoading(val)),
+          getResponse: (res: any) => {
+            if (res?.data) {
+              dispatch(setCourses(Array.isArray(res.data) ? res.data : []));
+            } else if (Array.isArray(res)) {
+              dispatch(setCourses(res));
+            }
+          },
+        });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSubTab, dispatch]);
@@ -577,7 +612,13 @@ export default function CoursesBatchesPage() {
   return (
     <div className="space-y-4 mx-auto w-full pb-10">
       <PageHeader
-        title={isStudent ? "My Courses & Batches" : (activeSubTab === "courses" ? "Courses" : "Student Batches")}
+        title={
+          isStudent
+            ? "My Courses & Batches"
+            : activeSubTab === "courses"
+              ? "Courses"
+              : "Student Batches"
+        }
         subtitle={
           isStudent
             ? "Your enrolled course and assigned batch."
