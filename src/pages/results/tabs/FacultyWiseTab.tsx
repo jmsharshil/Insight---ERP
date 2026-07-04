@@ -56,7 +56,6 @@ export default function FacultyWiseTab() {
           <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
             <tr>
               <th className="px-4 py-3 font-medium">Faculty</th>
-              <th className="px-4 py-3 font-medium">Subject</th>
               <th className="px-4 py-3 font-medium text-center">Total Students</th>
               <th className="px-4 py-3 font-medium text-center">Passed</th>
               <th className="px-4 py-3 font-medium text-center">Pass %</th>
@@ -69,7 +68,6 @@ export default function FacultyWiseTab() {
             {data.map((row: any, i: number) => (
               <tr key={i} className="hover:bg-muted/20">
                 <td className="px-4 py-3 font-medium">{row.faculty_name || "-"}</td>
-                <td className="px-4 py-3 text-muted-foreground">{row.subject_name || "-"}</td>
                 <td className="px-4 py-3 text-center">{row.total_students || 0}</td>
                 <td className="px-4 py-3 text-center">{row.passed_students || 0}</td>
                 <td className="px-4 py-3 text-center">

@@ -22,7 +22,7 @@ export const NAV_ITEMS: Record<ModuleId, NavItem> = {
   attendance:       { label: "Attendance",       icon: ScanLine,        path: "/attendance" },
   fees:             { label: "Fees",             icon: CreditCard,      path: "/fees" },
   exams:            { label: "Exams",            icon: BookOpen,        path: "/exams" },
-  exam_supervision: { label: "Exam Supervision", icon: Eye,             path: "/exam-supervision" },
+  results:          { label: "Results",          icon: PieChart,        path: "/results" },
   faculty:          { label: "Faculty",icon: Briefcase,       path: "/faculty" },
   leave:            { label: "Leave Management", icon: CalendarOff,     path: "/leave" },
   chat:             { label: "Messages",         icon: MessageSquare,   path: "/chat" },
@@ -33,5 +33,4 @@ export const NAV_ITEMS: Record<ModuleId, NavItem> = {
   settings:         { label: "Settings",         icon: Settings,        path: "/settings" },
   users:            { label: "Users",            icon: Users,           path: "/users" },
   inventory:        { label: "Inventory",        icon: Package,         path: "/inventory" },
-  results:          { label: "Results",          icon: PieChart,        path: "/results" },
 };

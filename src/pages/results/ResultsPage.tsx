@@ -2,7 +2,12 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import PageHeader from "@/components/layout/PageHeader";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Download, Loader2 } from "lucide-react";
 import { useUI } from "@/hooks/useUI";
+import { useToast } from "@/hooks/useToast";
+import { downloadExcel } from "@/lib/exportUtils";
+import { API } from "@/service/api";
 
 import SummaryTab from "./tabs/SummaryTab";
 import SubjectWiseTab from "./tabs/SubjectWiseTab";
@@ -12,16 +17,43 @@ import BatchWiseTab from "./tabs/BatchWiseTab";
 export default function ResultsPage() {
   const { setPageTitle } = useUI();
   const [activeTab, setActiveTab] = useState("summary");
+  const [isExporting, setIsExporting] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     setPageTitle("Results Analytics");
   }, [setPageTitle]);
 
-  return (
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      let type = activeTab;
+      if (activeTab === "summary") type = "analytics";
+      
+      await downloadExcel(API.RESULTS_ANALYTICS.EXPORT, { type }, `results_${type}.xlsx`);
+      toast.success("Export completed successfully");
+    } catch (err) {
+      toast.error("Failed to export data");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  return (Branch	Students	Attendance %	Revenue	Status
+    Surat Main	847	91%	₹7.2L	Active
+    Vadodara	712	88%	₹6.1L	Active
+    Ahmedabad	859	93%	₹5.1L	Active
+    
     <div className="space-y-6 pb-10">
       <PageHeader
         title="Results Analytics"
         subtitle="View and analyze organization-wide exam performance."
+        actions={
+          <Button variant="outline" onClick={handleExport} disabled={isExporting}>
+            {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+            Export Excel
+          </Button>
+        }
       />
 
       <motion.div

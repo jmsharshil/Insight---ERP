@@ -7,7 +7,7 @@ import { API } from "@/service/api";
 import type { Exam } from "@/redux/slices/examSlice";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Send, Key, BookOpen, Smartphone, Clock, CheckCircle, Trash2, HelpCircle, FileText, Upload } from "lucide-react";
+import { Send, Key, BookOpen, Smartphone, Clock, CheckCircle, Trash2, HelpCircle, FileText, Upload, Download, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion } from "framer-motion";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
+import { downloadCsv } from "@/lib/exportUtils";
 
 interface ResultsTabProps {
   exam: Exam;
@@ -34,6 +35,7 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
   const [publishConfirm, setPublishConfirm] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [exportingExam, setExportingExam] = useState(false);
 
   const [recheckRequests, setRecheckRequests] = useState<any[]>([]);
   const [recheckLoading, setRecheckLoading] = useState(false);
@@ -145,6 +147,18 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
         setDeleteId(null);
       }
     });
+  };
+
+  const handleExportExamResults = async () => {
+    setExportingExam(true);
+    try {
+      await downloadCsv(API.RESULTS_ANALYTICS.EXPORT, { type: "exam", exam_id: exam.id }, `exam_${exam.id}_results.csv`);
+      toast.success("Exam results exported successfully");
+    } catch (err) {
+      toast.error("Failed to export exam results");
+    } finally {
+      setExportingExam(false);
+    }
   };
 
   const handleSubmitRecheck = () => {
@@ -288,17 +302,31 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
         >
           <div className="flex items-center justify-between p-4 border-b border-border">
             <h3 className="text-sm font-heading font-semibold">Exam Results</h3>
-            {results.length === 0 && !resultsLoading && (
-              <Button 
-                onClick={() => setPublishConfirm(true)}
-                disabled={publishLoading}
-                className="h-8 gap-1.5"
-                size="sm"
-              >
-                <CheckCircle className="w-3.5 h-3.5" />
-                {publishLoading ? "Publishing…" : "Publish Results"}
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {results.length > 0 && !resultsLoading && (
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5"
+                  onClick={handleExportExamResults}
+                  disabled={exportingExam}
+                >
+                  {exportingExam ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                  Export CSV
+                </Button>
+              )}
+              {results.length === 0 && !resultsLoading && (
+                <Button 
+                  onClick={() => setPublishConfirm(true)}
+                  disabled={publishLoading}
+                  className="h-8 gap-1.5"
+                  size="sm"
+                >
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  {publishLoading ? "Publishing…" : "Publish Results"}
+                </Button>
+              )}
+            </div>
           </div>
           <div className="p-0 overflow-x-auto">
             {resultsLoading ? (

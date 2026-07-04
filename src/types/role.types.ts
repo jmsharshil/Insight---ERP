@@ -7,8 +7,8 @@ export type RoleId =
 
 export type ModuleId =
   | "crm" | "students" | "courses_batches" | "timetable" | "attendance" | "fees"
-  | "exams" | "exam_supervision" | "faculty" | "leave" | "chat" 
-  | "notifications" | "audit_logs" | "reports" | "payroll" | "dashboard" | "settings" | "users" | "inventory" | "results";
+  | "exams" | "results" | "faculty" | "leave" | "chat" 
+  | "notifications" | "audit_logs" | "reports" | "payroll" | "dashboard" | "settings" | "users" | "inventory";
 
 export interface RoleDefinition {
   id: RoleId;

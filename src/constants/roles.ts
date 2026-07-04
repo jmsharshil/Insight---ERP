@@ -4,19 +4,19 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   super_admin: {
     id: "super_admin", label: "Super Admin", description: "Unrestricted access across all branches",
     color: "bg-red-100", textColor: "text-red-800",
-    modules: ["dashboard","crm","students","courses_batches","timetable","attendance","fees","exams","exam_supervision","faculty","leave","chat","inventory","notifications","audit_logs","reports","payroll","settings","users","results"],
+    modules: ["dashboard","crm","students","courses_batches","timetable","attendance","fees","exams","results","faculty","leave","chat","inventory","notifications","audit_logs","reports","payroll","settings","users"],
     canDelete: true, canExport: true,
   },
   branch_manager: {
     id: "branch_manager", label: "Branch Manager", description: "Controls a single assigned branch",
     color: "bg-purple-100", textColor: "text-purple-800",
-    modules: ["dashboard","crm","students","courses_batches","timetable","attendance","fees","exams","exam_supervision","faculty","payroll","leave","chat","notifications","audit_logs","reports","results", "settings"],
+    modules: ["dashboard","crm","students","courses_batches","timetable","attendance","fees","exams","results","faculty","payroll","leave","chat","notifications","audit_logs","reports", "settings"],
     canDelete: false, canExport: true,
   },
   admin_senior_executive: {
     id: "admin_senior_executive", label: "Admin Senior Executive", description: "Operational head for a branch",
     color: "bg-blue-100", textColor: "text-blue-800",
-    modules: ["dashboard","crm","students","courses_batches","timetable","attendance","fees","exams","leave","chat","notifications","reports","payroll","results", "settings"],
+    modules: ["dashboard","crm","students","courses_batches","timetable","attendance","fees","exams","results","leave","chat","notifications","reports","payroll", "settings"],
     canDelete: false, canExport: true,
   },
   admin_executive: {
@@ -76,7 +76,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   exam_supervisor: {
     id: "exam_supervisor", label: "Exam Supervisor", description: "On-ground exam operations",
     color: "bg-orange-100", textColor: "text-orange-800",
-    modules: ["dashboard","exam_supervision","notifications","payroll","settings"],
+    modules: ["dashboard","exams","notifications","payroll","settings"],
     canDelete: false, canExport: false,
   },
   paper_checker: {

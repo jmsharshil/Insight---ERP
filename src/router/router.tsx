@@ -37,7 +37,7 @@ const FacultyPage = lazy(() => import("@/pages/faculty/FacultyPage"));
 import FacultyPayrollDetailPage from "@/pages/faculty/FacultyPayrollDetailPage";
 const InventoryPage = lazy(() => import("@/pages/inventory/InventoryPage"));
 const LeavePage = lazy(() => import("@/pages/leave/LeavePage"));
-const ExamSupervisionPage = lazy(() => import("@/pages/exam-supervision/ExamSupervisionPage"));
+
 const ChatPage = lazy(() => import("@/pages/chat/ChatPage"));
 const NotificationsPage = lazy(() => import("@/pages/notifications/NotificationsPage"));
 const AuditLogsPage = lazy(() => import("@/pages/audit-logs/AuditLogsPage"));
@@ -135,11 +135,7 @@ const router = createBrowserRouter([
     
     { module: "fees", path: "/fees", element: withSuspense(<FeesPage />) },
     { module: "exams", path: "/exams", element: withSuspense(<ExamsPage />) },
-    {
-      module: "exam_supervision",
-      path: "/exam-supervision",
-      element: withSuspense(<ExamSupervisionPage />),
-    },
+
     { module: "faculty", path: "/faculty", element: withSuspense(<FacultyPage />) },
     { module: "faculty", path: "/faculty/payroll/:id", element: <FacultyPayrollDetailPage /> },
     { module: "leave", path: "/leave", element: withSuspense(<LeavePage />) },

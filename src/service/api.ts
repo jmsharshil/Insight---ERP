@@ -324,6 +324,7 @@ export const API = {
     BATCH_WISE: "/api/v1/results/batch-wise/",
     SUMMARY: "/api/v1/results/summary/",
     ANALYTICS: "/api/v1/results/analytics/",
+    EXPORT: "/api/v1/results/export/",
   },
 
   /** Audit Logs endpoints */
