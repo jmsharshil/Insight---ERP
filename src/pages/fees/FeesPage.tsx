@@ -285,6 +285,7 @@ export default function FeesPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [fsLoading, setFsLoading] = useState(false);
   const [feeStructuresLoading, setFeeStructuresLoading] = useState(false);
+  const [feeStructuresFetched, setFeeStructuresFetched] = useState(false);
   const [studentFeesLoading, setStudentFeesLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("reports");
   const [reportData, setReportData] = useState<any>(null);
@@ -406,7 +407,8 @@ export default function FeesPage() {
   }, [createRefundOpen, fetchPayments]);
 
   useEffect(() => {
-    if (activeTab === "structures") {
+    if ((activeTab === "structures" || activeTab === "student-fees") && !feeStructuresFetched) {
+      setFeeStructuresFetched(true);
       dispatch({
         type: feesActions.GET_FEE_STRUCTURES,
         method: "GET",
@@ -427,7 +429,7 @@ export default function FeesPage() {
         },
       });
     }
-  }, [dispatch, activeTab]);
+  }, [dispatch, activeTab, feeStructuresFetched]);
 
   useEffect(() => {
     if (activeTab === "student-fees") {
@@ -821,7 +823,7 @@ export default function FeesPage() {
   // Fetch student detail for student/parent role
   const [studentDetail, setStudentDetail] = useState<any>(null);
   const [studentDetailLoading, setStudentDetailLoading] = useState(false);
-
+  console.log('user', user)
   useEffect(() => {
     const targetStudentId = user?.linked_student || user?.id;
     if (isStudentLike && targetStudentId) {
@@ -1495,7 +1497,7 @@ function StudentFeesView({
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-xl bg-gradient-to-br from-navy to-navy-light text-white p-5 mb-4"
+        className="rounded-xl bg-sidebar text-white p-5 mb-4"
       >
         <p className="text-xs uppercase tracking-wider opacity-80">My Fee Summary</p>
         {courseName && (

@@ -286,17 +286,6 @@ export default function PapersTab({ examId }: PapersTabProps) {
           />
         </div>
 
-        <Select value={isSubmitted} onValueChange={setIsSubmitted}>
-          <SelectTrigger className="w-[140px] h-9 text-sm">
-            <SelectValue placeholder="Submitted" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Submissions</SelectItem>
-            <SelectItem value="true">Submitted</SelectItem>
-            <SelectItem value="false">Not Submitted</SelectItem>
-          </SelectContent>
-        </Select>
-
         <Select value={isPass} onValueChange={setIsPass}>
           <SelectTrigger className="w-[120px] h-9 text-sm">
             <SelectValue placeholder="Pass/Fail" />

@@ -38,7 +38,6 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
   const [exportingExam, setExportingExam] = useState(false);
 
   const [recheckRequests, setRecheckRequests] = useState<any[]>([]);
-  const [recheckLoading, setRecheckLoading] = useState(false);
 
   const [recheckModal, setRecheckModal] = useState(false);
   const [recheckForm, setRecheckForm] = useState<{ reason: string; file: File | null }>({ reason: "", file: null });
@@ -81,7 +80,16 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
       auth: true,
       setLoading: (v: boolean) => setResultsLoading(v),
       getResponse: (res: any) => {
-        setResults(res?.data || []);
+        const data = res?.data || [];
+        setResults(data);
+        const extractedRecheckRequests = data.flatMap((r: any) => 
+          (r.recheck_requests || []).map((req: any) => ({
+            ...req,
+            student_name: r.student_name,
+            roll_number: r.roll_number
+          }))
+        );
+        setRecheckRequests(extractedRecheckRequests);
       },
       getError: () => {
         toast.error("Failed to fetch results.");
@@ -89,25 +97,8 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
     });
   };
 
-  const fetchRecheckRequests = () => {
-    dispatch({
-      type: examActions.GET_RECHECK_REQUESTS,
-      method: "GET",
-      endPoint: !isStudent ? API.EXAMS.RECHECK_REQUESTS(exam.id) : API.EXAMS.CREATE_RECHECK_REQUEST(exam.id),
-      auth: true,
-      setLoading: (v: boolean) => setRecheckLoading(v),
-      getResponse: (res: any) => {
-        setRecheckRequests(res?.data || []);
-      },
-      getError: () => {} 
-    });
-  };
-
   useEffect(() => {
     fetchResults();
-    if (isAdmin || isFaculty || isStudent) {
-      fetchRecheckRequests();
-    }
   }, [exam.id]);
 
   const handlePublishResults = () => {
@@ -185,7 +176,7 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
         toast.success(res.message || "Recheck request submitted.");
         setRecheckModal(false);
         setRecheckForm({ reason: "", file: null });
-        fetchRecheckRequests();
+        fetchResults();
       },
       getError: (err: any) => {
         toast.error(err?.response?.data?.message || "Failed to submit recheck request.");
@@ -220,13 +211,22 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
       getResponse: (res: any) => {
         toast.success(res.message || "Action completed.");
         setRecheckActionModal(null);
-        fetchRecheckRequests();
+        fetchResults();
       },
       getError: (err: any) => {
         toast.error(err?.response?.data?.message || "Failed to perform action.");
       }
     });
   };
+
+  if (resultsLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 space-y-4">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground font-medium">Fetching your results...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -303,7 +303,7 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
           <div className="flex items-center justify-between p-4 border-b border-border">
             <h3 className="text-sm font-heading font-semibold">Exam Results</h3>
             <div className="flex items-center gap-2">
-              {results.length > 0 && !resultsLoading && (
+              {results.length > 0 && (
                 <Button 
                   variant="outline"
                   size="sm"
@@ -315,7 +315,7 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
                   Export CSV
                 </Button>
               )}
-              {results.length === 0 && !resultsLoading && (
+              {results.length === 0 && (
                 <Button 
                   onClick={() => setPublishConfirm(true)}
                   disabled={publishLoading}
@@ -329,9 +329,7 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
             </div>
           </div>
           <div className="p-0 overflow-x-auto">
-            {resultsLoading ? (
-              <div className="p-8 text-center text-sm text-muted-foreground">Loading results...</div>
-            ) : results.length > 0 ? (
+            {results.length > 0 ? (
               <table className="w-full text-sm text-left">
                 <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
                   <tr>
@@ -401,9 +399,7 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
             <Badge variant="secondary">{recheckRequests.length} Total</Badge>
           </div>
           <div className="p-0 overflow-x-auto">
-            {recheckLoading ? (
-              <div className="p-8 text-center text-sm text-muted-foreground">Loading requests...</div>
-            ) : recheckRequests.length > 0 ? (
+            {recheckRequests.length > 0 ? (
               <table className="w-full text-sm text-left">
                 <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
                   <tr>
