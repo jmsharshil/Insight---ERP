@@ -164,7 +164,7 @@ export default function FeesPage() {
   }, [instStudentName]);
 
   const role = user?.role;
-  console.log(role)
+
   const isStudentLike = role === "student" || role === "parent" || role === "parents";
   const isAccountant = role === "accountant";
   const isBM = role === "branch_manager";
@@ -407,7 +407,14 @@ export default function FeesPage() {
   }, [createRefundOpen, fetchPayments]);
 
   useEffect(() => {
-    if ((activeTab === "structures" || activeTab === "student-fees") && !feeStructuresFetched) {
+    if (
+      (activeTab === "structures" || 
+       activeTab === "student-fees" || 
+       role === "student" || 
+       role === "parent" || 
+       role === "parents") && 
+      !feeStructuresFetched
+    ) {
       setFeeStructuresFetched(true);
       dispatch({
         type: feesActions.GET_FEE_STRUCTURES,
@@ -429,13 +436,13 @@ export default function FeesPage() {
         },
       });
     }
-  }, [dispatch, activeTab, feeStructuresFetched]);
+  }, [dispatch, activeTab, feeStructuresFetched, role]);
 
   useEffect(() => {
-    if (activeTab === "student-fees") {
+    if (activeTab === "student-fees" || role === "student" || role === "parent" || role === "parents") {
       fetchStudentFees(debouncedSfStudentName, sfStatus);
     }
-  }, [fetchStudentFees, debouncedSfStudentName, sfStatus, activeTab]);
+  }, [fetchStudentFees, debouncedSfStudentName, sfStatus, activeTab, role]);
 
   const fetchRefunds = useCallback(
     (studentName?: string, status?: string) => {
@@ -472,12 +479,12 @@ export default function FeesPage() {
     }
   }, [activeTab, role, fetchRefunds, debouncedRefStudentName, refStatus]);
 
-  function handleUpdateRefundStatus(id: string, status: "completed" | "rejected") {
+  function handleUpdateRefundStatus(id: string, status: "completed" | "rejected", payload?: any) {
     dispatch({
       type: feesActions.UPDATE_REFUND,
       method: "PATCH",
       endPoint: API.REFUNDS.UPDATE(id),
-      body: { status },
+      body: { status, ...payload },
       auth: true,
       getResponse: (res: any) => {
         toast.success(`Refund status updated to ${status}.`);
@@ -821,11 +828,18 @@ export default function FeesPage() {
   }
 
   // Fetch student detail for student/parent role
+  const [selectedLinkedStudentId, setSelectedLinkedStudentId] = useState<string | null>(null);
   const [studentDetail, setStudentDetail] = useState<any>(null);
   const [studentDetailLoading, setStudentDetailLoading] = useState(false);
-  console.log('user', user)
+
   useEffect(() => {
-    const targetStudentId = user?.linked_student || user?.id;
+    if (user?.linked_students && user.linked_students.length > 0 && !selectedLinkedStudentId) {
+      setSelectedLinkedStudentId(user.linked_students[0]);
+    }
+  }, [user?.linked_students, selectedLinkedStudentId]);
+
+  useEffect(() => {
+    const targetStudentId = selectedLinkedStudentId || user?.linked_students?.[0] || user?.id;
     if (isStudentLike && targetStudentId) {
       setStudentDetailLoading(true);
       dispatch({
@@ -844,7 +858,7 @@ export default function FeesPage() {
         },
       });
     }
-  }, [isStudentLike, user?.linked_student, dispatch]);
+  }, [isStudentLike, user?.linked_students, dispatch]);
 
   // Filter fee structures for the student's course/batch
   const studentFeeStructures = useMemo(() => {
@@ -877,7 +891,7 @@ export default function FeesPage() {
   }, [isStudentLike, studentDetail, feeStructure]);
 
   const studentId = isStudentLike
-    ? studentDetail?.id || user?.linked_student || user?.id || ""
+    ? studentDetail?.id || selectedLinkedStudentId || user?.linked_students?.[0] || user?.id || ""
     : "";
 
   const myStudentFees = useMemo(() => {
@@ -974,6 +988,10 @@ export default function FeesPage() {
         paymentHistory={myPayments}
         paymentHistoryLoading={paymentsLoading}
         bankAccounts={bankAccounts}
+        selectedLinkedStudentId={selectedLinkedStudentId}
+        setSelectedLinkedStudentId={setSelectedLinkedStudentId}
+        linkedStudents={user?.linked_students || []}
+        students={students}
       />
     );
 
@@ -1448,6 +1466,10 @@ function StudentFeesView({
   paymentHistory,
   paymentHistoryLoading,
   bankAccounts = [],
+  selectedLinkedStudentId,
+  setSelectedLinkedStudentId,
+  linkedStudents,
+  students,
 }: {
   studentFees: StudentFee[];
   installments: any[];
@@ -1460,13 +1482,17 @@ function StudentFeesView({
   paymentHistory: any[];
   paymentHistoryLoading: boolean;
   bankAccounts?: any[];
+  selectedLinkedStudentId: string | null;
+  setSelectedLinkedStudentId: (id: string) => void;
+  linkedStudents: string[];
+  students: any[];
 }) {
   const toast = useToast();
   const { user } = useAuth();
 
   // Derive student info from real API data, fallback to dummy if not loaded yet
   const studentName = studentDetail?.full_name || user?.name || "Loading...";
-  const studentId = studentDetail?.id || user?.linked_student || user?.id || "";
+  const studentId = studentDetail?.id || selectedLinkedStudentId || user?.linked_students?.[0] || user?.id || "";
   const courseName = studentDetail?.course_name || studentDetail?.course || "";
   const batchName = studentDetail?.current_batch_name || studentDetail?.batch_name || "";
 
@@ -1485,12 +1511,31 @@ function StudentFeesView({
         title="My Fees"
         subtitle={`Account: ${studentName}`}
         actions={
-          <Button
-            onClick={() => setUploadOpen(true)}
-            className="bg-primary hover:bg-primary-dark text-primary-foreground gap-1.5"
-          >
-            <Wallet className="w-4 h-4" /> Record Payment
-          </Button>
+          <div className="flex gap-2 items-center">
+            {linkedStudents.length > 1 && (
+              <Select value={selectedLinkedStudentId || ""} onValueChange={setSelectedLinkedStudentId}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Select Student" />
+                </SelectTrigger>
+                <SelectContent>
+                  {linkedStudents.map((id) => {
+                    const stu = students.find((s) => s.id === id);
+                    return (
+                      <SelectItem key={id} value={id}>
+                        {stu ? stu.full_name || stu.first_name : `Student (${id.slice(0, 4)})`}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            )}
+            <Button
+              onClick={() => setUploadOpen(true)}
+              className="bg-primary hover:bg-primary-dark text-primary-foreground gap-1.5"
+            >
+              <Wallet className="w-4 h-4" /> Record Payment
+            </Button>
+          </div>
         }
       />
 
@@ -1540,7 +1585,7 @@ function StudentFeesView({
               >
                 <div className="flex justify-between items-start mb-2">
                   <h4 className="font-heading font-semibold text-sm">
-                    {sf.fee_structure_name || sf.id}
+                    {sf.fee_name || sf.id}
                   </h4>
                   <span
                     className={cn(
@@ -1648,7 +1693,7 @@ function PaymentsTable({
       header: "Fee Allocation",
       render: (r) => {
         const fee = studentFees.find((f) => f.id === r.student_fee);
-        return fee ? fee.fee_structure_name || fee.name || "Fee Allocation" : "Fee Allocation";
+        return fee ? fee.fee_structure_name || fee.name || "-" : "-";
       },
     },
     {
@@ -1735,7 +1780,7 @@ function PaymentsHistoryTable({ data, studentFees }: { data: any[]; studentFees:
       header: "Fee Allocation",
       render: (r) => {
         const sf = studentFees.find((f) => f.id === r.student_fee);
-        return sf?.fee_structure_name || r.student_fee;
+        return sf?.fee_name || r.student_fee;
       },
     },
     { key: "amount", header: "Amount", render: (r) => formatCurrency(Number(r.amount)) },

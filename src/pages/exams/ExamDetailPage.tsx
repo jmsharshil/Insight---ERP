@@ -22,10 +22,10 @@ import ResultsTab      from "./tabs/ResultsTab";
 
 const getVisibleTabs = (role: string) => {
   const all = [
-    { value: "questions",   label: "Questions",   roles: ["super_admin","branch_manager","admin","faculty"] },
-    { value: "malpractice", label: "Malpractice", roles: ["super_admin","branch_manager","admin","faculty"] },
-    { value: "papers",      label: "Papers",      roles: ["super_admin","branch_manager","admin","faculty"] },
-    { value: "results",     label: "Results",     roles: ["super_admin","branch_manager","admin","faculty","student","parent","parents"] },
+    { value: "questions",   label: "Questions",   roles: ["super_admin","branch_manager","admin","admin_senior_executive","faculty"] },
+    { value: "malpractice", label: "Malpractice", roles: ["super_admin","branch_manager","admin","admin_senior_executive","faculty","exam_supervisor"] },
+    { value: "papers",      label: "Papers",      roles: ["super_admin","branch_manager","admin","admin_senior_executive","faculty","paper_checker"] },
+    { value: "results",     label: "Results",     roles: ["super_admin","branch_manager","admin","admin_senior_executive","faculty","student","parent","parents"] },
   ];
   return all.filter(t => t.roles.includes(role));
 };
@@ -136,6 +136,12 @@ export default function ExamDetailPage() {
               <QuestionsTab examId={selectedExam.id} />
             </TabsContent>
           )}
+
+          {/* {visibleTabs.some(t => t.value === "seating") && (
+            <TabsContent value="seating" className="mt-0 outline-none">
+              <SeatingTab examId={selectedExam.id} />
+            </TabsContent>
+          )} */}
 
           {visibleTabs.some(t => t.value === "malpractice") && (
             <TabsContent value="malpractice" className="mt-0 outline-none">

@@ -6,6 +6,13 @@ import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { useUI } from "@/hooks/useUI";
 import { useAuth } from "@/hooks/useAuth";
@@ -49,10 +56,18 @@ export default function CoursesBatchesPage() {
   } = useSelector((state: RootState) => state.courses);
 
   const isStudent = user?.role === "student" || user?.role === "parent" || user?.role === "parents";
+  const { students } = useSelector((state: RootState) => state.students);
 
   // Student detail state — used to filter courses & batches for student role
+  const [selectedLinkedStudentId, setSelectedLinkedStudentId] = useState<string | null>(null);
   const [studentDetail, setStudentDetail] = useState<any>(null);
   const [studentDetailLoading, setStudentDetailLoading] = useState(false);
+
+  useEffect(() => {
+    if (user?.linked_students && user.linked_students.length > 0 && !selectedLinkedStudentId) {
+      setSelectedLinkedStudentId(user.linked_students[0]);
+    }
+  }, [user?.linked_students, selectedLinkedStudentId]);
 
   useEffect(() => {
     setPageTitle("Courses & Batches");
@@ -60,7 +75,7 @@ export default function CoursesBatchesPage() {
 
   // Fetch student detail when logged in as student
   useEffect(() => {
-    const targetStudentId = user?.linked_student || user?.id;
+    const targetStudentId = selectedLinkedStudentId || user?.linked_students?.[0] || user?.id;
     if (isStudent && targetStudentId) {
       setStudentDetailLoading(true);
       dispatch({
@@ -79,7 +94,7 @@ export default function CoursesBatchesPage() {
         },
       });
     }
-  }, [isStudent, user?.linked_student, dispatch]);
+  }, [isStudent, selectedLinkedStudentId, user?.linked_students, user?.id, dispatch]);
 
   // Compute student's assigned course/batch IDs for filtering
   const studentCourseId = studentDetail?.course || null;
@@ -627,34 +642,53 @@ export default function CoursesBatchesPage() {
               : "Manage student batches, classrooms, and mentors."
         }
         actions={
-          activeSubTab === "batches" && canEdit ? (
-            <Button
-              variant="outline"
-              className="bg-primary hover:bg-primary-dark text-primary-foreground"
-              onClick={openAddBatchModal}
-            >
-              <Plus className="w-4 h-4" /> Add Batch
-            </Button>
-          ) : activeSubTab === "classrooms" && canEdit ? (
-            <Button
-              variant="outline"
-              className="bg-primary hover:bg-primary-dark text-primary-foreground"
-              onClick={() => {
-                setEditingClassroom(null);
-                setClassroomSheetOpen(true);
-              }}
-            >
-              <Plus className="w-4 h-4" /> Add Classroom
-            </Button>
-          ) : activeSubTab === "courses" && canEdit ? (
-            <Button
-              variant="outline"
-              className="bg-primary hover:bg-primary-dark text-primary-foreground"
-              onClick={handleAddCourseClick}
-            >
-              <Plus className="w-4 h-4" /> Add Course
-            </Button>
-          ) : null
+          <div className="flex gap-2 items-center">
+            {isStudent && user?.linked_students && user.linked_students.length > 1 && (
+              <Select value={selectedLinkedStudentId || ""} onValueChange={setSelectedLinkedStudentId}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Select Student" />
+                </SelectTrigger>
+                <SelectContent>
+                  {user.linked_students.map((id) => {
+                    const stu = students?.find((s: any) => s.id === id);
+                    return (
+                      <SelectItem key={id} value={id}>
+                        {stu ? stu.full_name || stu.first_name : `Student (${id.slice(0, 4)})`}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            )}
+            {activeSubTab === "batches" && canEdit ? (
+              <Button
+                variant="outline"
+                className="bg-primary hover:bg-primary-dark text-primary-foreground"
+                onClick={openAddBatchModal}
+              >
+                <Plus className="w-4 h-4" /> Add Batch
+              </Button>
+            ) : activeSubTab === "classrooms" && canEdit ? (
+              <Button
+                variant="outline"
+                className="bg-primary hover:bg-primary-dark text-primary-foreground"
+                onClick={() => {
+                  setEditingClassroom(null);
+                  setClassroomSheetOpen(true);
+                }}
+              >
+                <Plus className="w-4 h-4" /> Add Classroom
+              </Button>
+            ) : activeSubTab === "courses" && canEdit ? (
+              <Button
+                variant="outline"
+                className="bg-primary hover:bg-primary-dark text-primary-foreground"
+                onClick={handleAddCourseClick}
+              >
+                <Plus className="w-4 h-4" /> Add Course
+              </Button>
+            ) : null}
+          </div>
         }
       />
 

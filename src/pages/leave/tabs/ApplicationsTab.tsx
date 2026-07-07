@@ -210,6 +210,7 @@ export default function ApplicationsTab() {
     reason: "", supporting_document: null as File | null,
     from_time: "", to_time: "",
     is_capable_of_proof: false, parent_consulted: false, parent_signature_date: "",
+    student_id: user?.linked_students?.[0] || "",
   });
 
   // ── Edit form ─────────────────────────────────────────────────────────────
@@ -263,7 +264,7 @@ export default function ApplicationsTab() {
     
     if (role === "student" || role === "parents") {
       if (role === "parents") {
-        const studentId = user?.linked_student;
+        const studentId = applyForm.student_id;
         if (studentId) formData.append("student_id", studentId);
       }
       if (applyForm.from_time) formData.append("from_time", applyForm.from_time);
@@ -297,7 +298,7 @@ export default function ApplicationsTab() {
           dispatch(addApplication(res.data));
           toast.success("Leave application submitted.");
           setApplyOpen(false);
-          setApplyForm({ leave_type: "casual", from_date: "", to_date: "", is_half_day: false, half_day_session: "morning", reason: "", supporting_document: null, from_time: "", to_time: "", is_capable_of_proof: false, parent_consulted: false, parent_signature_date: "" });
+          setApplyForm({ leave_type: "casual", from_date: "", to_date: "", is_half_day: false, half_day_session: "morning", reason: "", supporting_document: null, from_time: "", to_time: "", is_capable_of_proof: false, parent_consulted: false, parent_signature_date: "", student_id: user?.linked_students?.[0] || "" });
         } else toast.error("Failed to submit application.");
       },
       getError: (err: any) => toast.error(err?.response?.data?.message || "Failed to submit leave application"),
@@ -567,12 +568,27 @@ export default function ApplicationsTab() {
           <DialogHeader><DialogTitle>Apply for Leave</DialogTitle></DialogHeader>
           <div className="space-y-3 py-2">
             {(role === "student" || role === "parents") ? (
-              <div>
-                <Label className="text-xs mb-1 block">Leave Type *</Label>
-                <Select value={applyForm.leave_type} onValueChange={v => setApplyForm(f => ({ ...f, leave_type: v }))}>
-                  <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                  <SelectContent>{STUDENT_LEAVE_TYPE_OPTS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-                </Select>
+              <div className="space-y-3">
+                {role === "parents" && user?.linked_students && user.linked_students.length > 1 && (
+                  <div>
+                    <Label className="text-xs mb-1 block">Select Student *</Label>
+                    <Select value={applyForm.student_id} onValueChange={v => setApplyForm(f => ({ ...f, student_id: v }))}>
+                      <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select a student" /></SelectTrigger>
+                      <SelectContent>
+                        {user.linked_students.map(id => (
+                          <SelectItem key={id} value={id}>Student ({id.slice(0, 4)})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <div>
+                  <Label className="text-xs mb-1 block">Leave Type *</Label>
+                  <Select value={applyForm.leave_type} onValueChange={v => setApplyForm(f => ({ ...f, leave_type: v }))}>
+                    <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent>{STUDENT_LEAVE_TYPE_OPTS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
               </div>
             ) : (
               <div>
@@ -665,7 +681,7 @@ export default function ApplicationsTab() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setApplyOpen(false)} disabled={applyLoading}>Cancel</Button>
             <Button onClick={handleApply}
-              disabled={applyLoading || !applyForm.from_date || !applyForm.to_date || !applyForm.reason.trim() || (isSuperAdmin && !selectedBranch)}
+              disabled={applyLoading || !applyForm.from_date || !applyForm.to_date || !applyForm.reason.trim() || (isSuperAdmin && !selectedBranch) || (role === "parents" && !applyForm.student_id)}
               className="bg-primary hover:bg-primary/90 text-primary-foreground">
               {applyLoading ? "Submitting…" : "Submit Application"}
             </Button>

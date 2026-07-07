@@ -55,8 +55,8 @@ export default function QuestionsTab({ examId }: QuestionsTabProps) {
   const dispatch = useDispatch();
   const toast = useToast();
   const { user } = useAuth();
-  const { questions, questionsLoading, exams } = useSelector((s: RootState) => s.exams);
-  const currentExam = useMemo(() => exams.find(e => e.id === examId), [exams, examId]);
+  const { questions, questionsLoading, selectedExam, exams } = useSelector((s: RootState) => s.exams);
+  const currentExam = selectedExam?.id === examId ? selectedExam : exams.find((e: any) => e.id === examId);
 
   const [addOpen, setAddOpen]           = useState(false);
   const [drafts, setDrafts]             = useState<DraftQuestion[]>([blankQuestion()]);

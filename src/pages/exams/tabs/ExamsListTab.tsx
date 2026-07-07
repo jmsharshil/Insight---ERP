@@ -49,6 +49,15 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
   const toast = useToast();
   const { user } = useAuth();
   const { exams, examsLoading, examsCount } = useSelector((s: RootState) => s.exams);
+  const { students } = useSelector((state: RootState) => state.students);
+
+  const [selectedLinkedStudentId, setSelectedLinkedStudentId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user?.linked_students && user.linked_students.length > 0 && !selectedLinkedStudentId) {
+      setSelectedLinkedStudentId(user.linked_students[0]);
+    }
+  }, [user?.linked_students, selectedLinkedStudentId]);
 
   const [search, setSearch]                 = useState("");
   const [examTypeFilter, setExamTypeFilter] = useState("");
@@ -78,7 +87,7 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
   const [studentDetailLoading, setStudentDetailLoading] = useState(false);
 
   useEffect(() => {
-    const targetStudentId = user?.linked_student || user?.id;
+    const targetStudentId = selectedLinkedStudentId || user?.linked_students?.[0] || user?.id;
     if ((isStudent || isParent) && targetStudentId) {
       setStudentDetailLoading(true);
       dispatch({
@@ -97,7 +106,7 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
         },
       } as any);
     }
-  }, [isStudent, isParent, user?.linked_student, user?.id, dispatch]);
+  }, [isStudent, isParent, selectedLinkedStudentId, user?.linked_students, user?.id, dispatch]);
 
   const studentBatchIds = useMemo(() => {
     if (!studentDetail) return new Set<string>();
@@ -315,6 +324,23 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
+        {isParent && user?.linked_students && user.linked_students.length > 1 && (
+          <Select value={selectedLinkedStudentId || ""} onValueChange={setSelectedLinkedStudentId}>
+            <SelectTrigger className="w-[200px] h-9 text-sm">
+              <SelectValue placeholder="Select Student" />
+            </SelectTrigger>
+            <SelectContent>
+              {user.linked_students.map((id) => {
+                const stu = students?.find((s: any) => s.id === id);
+                return (
+                  <SelectItem key={id} value={id}>
+                    {stu ? stu.full_name || stu.first_name : `Student (${id.slice(0, 4)})`}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        )}
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input

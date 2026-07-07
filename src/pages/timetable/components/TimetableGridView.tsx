@@ -239,7 +239,7 @@ export default function TimetableGridView({
                 const color = SESSION_COLORS[slot.session_type] ?? SESSION_COLORS.custom;
                 return (
                   <tr key={slot.id}
-                    className="border-b border-border/50 hover:bg-muted/20 cursor-pointer transition-colors"
+                    className={`border-b border-border/50 hover:bg-muted/20 transition-colors ${canEdit ? "cursor-pointer" : ""}`}
                     onClick={() => onSlotClick?.(slot)}>
                     <td className="px-4 py-3">
                       <Badge className={`text-xs capitalize font-semibold ${color.bg} ${color.text} border ${color.border}`}>
@@ -348,7 +348,7 @@ export default function TimetableGridView({
                         <td key={slot.code}
                           className={`p-0 border-b border-r border-border align-top last:border-r-0 transition-all relative group
                             ${isEmpty && canEdit ? "hover:bg-blue-50/40 cursor-pointer" : ""}
-                            ${!isEmpty ? "cursor-pointer" : ""}
+                            ${!isEmpty && canEdit ? "cursor-pointer" : ""}
                             ${isDragOver ? "!bg-blue-100/60 ring-2 ring-inset ring-blue-400/50" : ""}
                             ${draggingSlot && !isEmpty ? "opacity-60" : ""}`}
                           style={{ height: "230px" }}
@@ -543,47 +543,53 @@ function GridHeader({
       <div className="flex items-center justify-between gap-3 flex-wrap">
         {/* Searchable Batch Dropdown */}
         <div className="flex flex-wrap gap-2">
-          <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={open}
-                className="w-[300px] justify-between h-9 text-sm rounded-xl font-medium"
-              >
-                {selectedBatch ? selectedBatch.name : "Select batch..."}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Command>
-                <CommandInput placeholder="Search batch..." className="h-9 " />
-                <CommandList className="">
-                  <CommandEmpty>No batch found.</CommandEmpty>
-                  <CommandGroup>
-                    {batches.map((batch) => (
-                      <CommandItem
-                        key={batch.id}
-                        value={batch.name}
-                        onSelect={() => {
-                          onBatchChange(batch.id);
-                          setOpen(false);
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            selectedBatchId === batch.id ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {batch.name}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+          {batches.length <= 1 ? (
+            <div className="flex items-center h-9 px-4 text-sm font-medium bg-muted/30 border border-border rounded-xl text-foreground">
+              {selectedBatch ? selectedBatch.name : (batches[0]?.name || "No Batch")}
+            </div>
+          ) : (
+            <Popover open={open} onOpenChange={setOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={open}
+                  className="w-[300px] justify-between h-9 text-sm rounded-xl font-medium"
+                >
+                  {selectedBatch ? selectedBatch.name : "Select batch..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search batch..." className="h-9 " />
+                  <CommandList className="">
+                    <CommandEmpty>No batch found.</CommandEmpty>
+                    <CommandGroup>
+                      {batches.map((batch) => (
+                        <CommandItem
+                          key={batch.id}
+                          value={batch.name}
+                          onSelect={() => {
+                            onBatchChange(batch.id);
+                            setOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedBatchId === batch.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {batch.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          )}
         
 
 

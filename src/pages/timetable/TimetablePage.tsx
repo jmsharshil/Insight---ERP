@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
 
 import PageHeader from "@/components/layout/PageHeader";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUI } from "@/hooks/useUI";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
-import { dropdownActions, subjectAction, batchAction, ClassroomAction } from "@/redux/actions";
+import { dropdownActions, subjectAction, batchAction, ClassroomAction, studentActions } from "@/redux/actions";
 import { API } from "@/service/api";
-import type { AppDispatch } from "@/store";
+import type { AppDispatch, RootState } from "@/store";
 
 // ── Tab Components ────────────────────────────────────────────────────────────
 import SlotsTab           from "./tabs/SlotsTab";
@@ -38,6 +39,32 @@ export default function TimetablePage() {
   const toast = useToast();
 
   const [activeTab, setActiveTab] = useState<TabValue>("grid");
+  const isStudent = user?.role === "student" || user?.role === "parent" || user?.role === "parents";
+  const { students } = useSelector((state: RootState) => state.students);
+  const [selectedLinkedStudentId, setSelectedLinkedStudentId] = useState<string | null>(null);
+  const [studentDetail, setStudentDetail] = useState<any>(null);
+
+  useEffect(() => {
+    if (user?.linked_students && user.linked_students.length > 0 && !selectedLinkedStudentId) {
+      setSelectedLinkedStudentId(user.linked_students[0]);
+    }
+  }, [user?.linked_students, selectedLinkedStudentId]);
+
+  useEffect(() => {
+    const targetStudentId = selectedLinkedStudentId || user?.linked_students?.[0] || user?.id;
+    if (isStudent && targetStudentId) {
+      dispatch({
+        type: studentActions.GET_STUDENT_DETAIL,
+        method: "GET",
+        endPoint: API.STUDENTS.GET(targetStudentId),
+        auth: true,
+        getResponse: (res: any) => {
+          setStudentDetail(res?.data ?? res);
+        },
+        getError: () => {},
+      } as any);
+    }
+  }, [isStudent, selectedLinkedStudentId, user?.linked_students, user?.id, dispatch]);
 
   // ── Shared dropdown data (loaded once, passed as props) ───────────────────
   const [dropdowns, setDropdowns] = useState<any>({
@@ -196,8 +223,30 @@ export default function TimetablePage() {
   const facultyList = Array.isArray(dropdowns.faculty) ? dropdowns.faculty : [];
 
   return (
-    <div>
-    
+    <div className="space-y-4">
+      <PageHeader
+        title="Timetable"
+        subtitle="Manage and view schedules, exams, and classes."
+        actions={
+          isStudent && user?.linked_students && user.linked_students.length > 1 ? (
+            <Select value={selectedLinkedStudentId || ""} onValueChange={setSelectedLinkedStudentId}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Select Student" />
+              </SelectTrigger>
+              <SelectContent>
+                {user.linked_students.map((id) => {
+                  const stu = students?.find((s: any) => s.id === id);
+                  return (
+                    <SelectItem key={id} value={id}>
+                      {stu ? stu.full_name || stu.first_name : `Student (${id.slice(0, 4)})`}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          ) : undefined
+        }
+      />
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
         <Tabs value={activeTab} onValueChange={v => setActiveTab(v as TabValue)}>
@@ -220,6 +269,7 @@ export default function TimetablePage() {
                examinersList={examinersList}
                paperCheckersList={paperCheckersList}
                defaultView="grid"
+               studentDetail={studentDetail}
             />
           </TabsContent>
 
@@ -234,6 +284,7 @@ export default function TimetablePage() {
               examinersList={examinersList}
               paperCheckersList={paperCheckersList}
               defaultView="list"
+              studentDetail={studentDetail}
             />
           </TabsContent>
 
