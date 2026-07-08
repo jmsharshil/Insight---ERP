@@ -30,7 +30,6 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
   const navigate = useNavigate();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
-  
   // pinned = user clicked the pin button (uses Redux state)
   const pinned = !mobile && !sidebarCollapsed;
 
