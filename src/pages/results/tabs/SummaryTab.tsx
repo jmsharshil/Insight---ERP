@@ -6,6 +6,7 @@ import { API } from "@/service/api";
 import { motion } from "framer-motion";
 import { Users, CheckCircle, GraduationCap, Trophy, BarChart2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 export default function SummaryTab() {
   const { user } = useAuth();
@@ -126,68 +127,100 @@ export default function SummaryTab() {
         </motion.div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         {/* Top Subjects */}
-        <div className="bg-white p-5 rounded-xl border border-border shadow-sm">
+        <div className="bg-white p-5 rounded-xl border border-border shadow-sm flex flex-col">
           <h3 className="font-heading font-semibold mb-4 text-sm">Top Subjects (By Pass %)</h3>
           {data.top_subjects && data.top_subjects.length > 0 ? (
-            <div className="space-y-3">
-              {data.top_subjects.map((sub: any, i: number) => (
-                <div
-                  key={i}
-                  className="flex justify-between items-center p-3 bg-muted/30 rounded-lg border border-border"
+            <div className="w-full mt-4" style={{ height: 350 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={data.top_subjects.map((s: any) => {
+                    const name = s.exam__subject__name || s.subject_name || "Unknown";
+                    return {
+                      name: name.length > 12 ? name.substring(0, 12) + "..." : name,
+                      passPct: s.pass_pct ? Number(s.pass_pct.toFixed(2)) : 0,
+                      avgMarks: s.avg_marks ? Number(s.avg_marks.toFixed(2)) : 0,
+                    };
+                   })}
+                  margin={{ top: 10, right: 10, left: 0, bottom: 40 }}
                 >
-                  <div>
-                    <p className="text-sm font-medium">
-                      {sub.exam__subject__name || sub.subject_name || "Unknown Subject"}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Students: {sub.total}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-green-600">
-                      {sub.pass_pct ? sub.pass_pct.toFixed(1) : 0}% Pass
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Avg: {sub.avg_marks ? sub.avg_marks.toFixed(1) : 0}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="name" 
+                    tick={{ fontSize: 12, fill: "#6b7280" }} 
+                    angle={-45}
+                    textAnchor="end" 
+                    axisLine={false} 
+                    tickLine={false} 
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 12, fill: "#6b7280" }} 
+                    axisLine={false} 
+                    tickLine={false} 
+                  />
+                  <Tooltip 
+                    cursor={{ fill: '#f3f4f6' }}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                  <Bar dataKey="passPct" name="Pass %" fill="#22c55e" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                  <Bar dataKey="avgMarks" name="Avg Marks" fill="#f97316" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No subject data available.</p>
+            <div className="h-80 w-full flex items-center justify-center border-2 border-dashed border-border rounded-lg">
+              <p className="text-sm text-muted-foreground">No subject data available.</p>
+            </div>
           )}
         </div>
 
         {/* Top Faculty */}
-        <div className="bg-white p-5 rounded-xl border border-border shadow-sm">
+        <div className="bg-white p-5 rounded-xl border border-border shadow-sm flex flex-col">
           <h3 className="font-heading font-semibold mb-4 text-sm">Top Faculty (By Pass %)</h3>
           {data.top_faculty && data.top_faculty.length > 0 ? (
-            <div className="space-y-3">
-              {data.top_faculty.map((fac: any, i: number) => (
-                <div
-                  key={i}
-                  className="flex justify-between items-center p-3 bg-muted/30 rounded-lg border border-border"
+            <div className="w-full mt-4" style={{ height: 350 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={data.top_faculty.map((f: any) => {
+                    const name = f.exam__faculty__user__name || f.faculty_name || "Unknown";
+                    return {
+                      name: name.length > 12 ? name.substring(0, 12) + "..." : name,
+                      passPct: f.pass_pct ? Number(f.pass_pct.toFixed(2)) : 0,
+                      avgMarks: f.avg_marks ? Number(f.avg_marks.toFixed(2)) : 0,
+                    };
+                  })}
+                  margin={{ top: 10, right: 10, left: 0, bottom: 40 }}
                 >
-                  <div>
-                    <p className="text-sm font-medium">
-                      {fac.exam__faculty__user__name || fac.faculty_name || "Unknown Faculty"}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Students: {fac.total}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-green-600">
-                      {fac.pass_pct ? fac.pass_pct.toFixed(1) : 0}% Pass
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Avg: {fac.avg_marks ? fac.avg_marks.toFixed(1) : 0}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                  <XAxis 
+                    dataKey="name" 
+                    tick={{ fontSize: 12, fill: "#6b7280" }} 
+                    angle={-45} 
+                    textAnchor="end" 
+                    axisLine={false} 
+                    tickLine={false} 
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 12, fill: "#6b7280" }} 
+                    axisLine={false} 
+                    tickLine={false} 
+                  />
+                  <Tooltip 
+                    cursor={{ fill: '#f3f4f6' }}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                  <Bar dataKey="passPct" name="Pass %" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                  <Bar dataKey="avgMarks" name="Avg Marks" fill="#a855f7" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No faculty data available.</p>
+            <div className="h-80 w-full flex items-center justify-center border-2 border-dashed border-border rounded-lg">
+              <p className="text-sm text-muted-foreground">No faculty data available.</p>
+            </div>
           )}
         </div>
       </div>
