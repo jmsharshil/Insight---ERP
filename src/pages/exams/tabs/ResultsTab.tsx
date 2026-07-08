@@ -53,6 +53,7 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
   const isFaculty = user?.role === "faculty";
   const isStudent = user?.role === "student";
   const isParent  = user?.role === "parent" || user?.role === "parents";
+  const isPaperChecker = user?.role === "paper_checker";
 
   const canDistribute = isAdmin || isFaculty;
 
@@ -314,8 +315,8 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
         </motion.div>
       )}
 
-      {/* Admin / Faculty Results List */}
-      {(isAdmin || isFaculty) && (
+      {/* Admin / Faculty / Paper Checker Results List */}
+      {(isAdmin || isFaculty || isPaperChecker) && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -337,7 +338,7 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
                   Export CSV
                 </Button>
               )}
-              {results.length === 0 && (
+              {results.length === 0 && (isAdmin || isFaculty || isPaperChecker) && (
                 <Button 
                   onClick={() => setPublishConfirm(true)}
                   disabled={publishLoading}
@@ -408,8 +409,8 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
         </motion.div>
       )}
 
-      {/* Admin / Faculty Recheck Requests List */}
-      {(isAdmin || isFaculty) && (
+      {/* Admin / Faculty / Paper Checker Recheck Requests List */}
+      {(isAdmin || isFaculty || isPaperChecker) && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
