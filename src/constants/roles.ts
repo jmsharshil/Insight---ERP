@@ -76,7 +76,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   exam_supervisor: {
     id: "exam_supervisor", label: "Exam Supervisor", description: "On-ground exam operations",
     color: "bg-orange-100", textColor: "text-orange-800",
-    modules: ["dashboard","exams","notifications","payroll","settings"],
+    modules: ["dashboard","attendance","exams","notifications","payroll","settings"],
     canDelete: false, canExport: false,
   },
   paper_checker: {

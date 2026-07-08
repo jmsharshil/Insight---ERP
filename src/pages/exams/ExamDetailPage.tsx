@@ -23,9 +23,9 @@ import ResultsTab      from "./tabs/ResultsTab";
 const getVisibleTabs = (role: string) => {
   const all = [
     { value: "questions",   label: "Questions",   roles: ["super_admin","branch_manager","admin","faculty"] },
-    { value: "malpractice", label: "Malpractice", roles: ["super_admin","branch_manager","admin","faculty"] },
-    { value: "papers",      label: "Papers",      roles: ["super_admin","branch_manager","admin","faculty"] },
-    { value: "results",     label: "Results",     roles: ["super_admin","branch_manager","admin","faculty","student","parent","parents"] },
+    { value: "malpractice", label: "Malpractice", roles: ["super_admin","branch_manager","admin","faculty","exam_supervisor"] },
+    { value: "papers",      label: "Papers",      roles: ["super_admin","branch_manager","admin","faculty","paper_checker"] },
+    { value: "results",     label: "Results",     roles: ["super_admin","branch_manager","admin","faculty","student","parent","parents","paper_checker"] },
   ];
   return all.filter(t => t.roles.includes(role));
 };
@@ -41,7 +41,7 @@ export default function ExamDetailPage() {
   const role = user?.role ?? "student";
   const visibleTabs = getVisibleTabs(role);
 
-  const defaultTab = ["student","parent","parents"].includes(role) ? "results" : role === "paper_checker" ? "papers" : "questions";
+  const defaultTab = ["student","parent","parents"].includes(role) ? "results" : role === "paper_checker" ? "papers" : role === "exam_supervisor" ? "malpractice" : "questions";
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [loading, setLoading] = useState(!selectedExam || selectedExam.id !== id);
 

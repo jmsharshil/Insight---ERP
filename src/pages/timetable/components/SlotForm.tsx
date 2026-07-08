@@ -291,6 +291,96 @@ export default function SlotForm({
     </div>
   );
 
+  const ExaminersField = () => (
+    <Field label="Examiners" required error={errors.examiners?.message}>
+      <Controller name="examiners" control={control} render={({ field }) => {
+        const selectedIds = csvToArray(field.value);
+        const selectedNames = selectedIds.map(id => examinersList.find(f => f.id === id)?.name || id);
+
+        return (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" role="combobox" className="w-full justify-between font-normal text-sm min-h-[36px] h-auto p-2">
+                {selectedNames.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 text-left">
+                    {selectedNames.map((name, i) => (
+                      <Badge key={i} variant="secondary" className="text-xs font-medium">{name}</Badge>
+                    ))}
+                  </div>
+                ) : <span className="text-muted-foreground">Select examiners...</span>}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[400px] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search faculty..." />
+                <CommandList>
+                  <CommandEmpty>No faculty found.</CommandEmpty>
+                  <CommandGroup>
+                    {examinersList.map((fac) => (
+                      <CommandItem key={fac.id} value={fac.name} onSelect={() => {
+                        const newIds = selectedIds.includes(fac.id) ? selectedIds.filter(id => id !== fac.id) : [...selectedIds, fac.id];
+                        field.onChange(newIds.join(", "));
+                      }}>
+                        <Check className={cn("mr-2 h-4 w-4", selectedIds.includes(fac.id) ? "opacity-100" : "opacity-0")} />
+                        {fac.name} {fac.employee_id ? `(${fac.employee_id})` : ""}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        );
+      }} />
+    </Field>
+  );
+
+  const PaperCheckersField = () => (
+    <Field label="Paper Checkers" required error={errors.paper_checkers?.message}>
+      <Controller name="paper_checkers" control={control} render={({ field }) => {
+        const selectedIds = csvToArray(field.value);
+        const selectedNames = selectedIds.map(id => paperCheckersList.find(f => f.id === id)?.name || id);
+
+        return (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" role="combobox" className="w-full justify-between font-normal text-sm min-h-[36px] h-auto p-2">
+                {selectedNames.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 text-left">
+                    {selectedNames.map((name, i) => (
+                      <Badge key={i} variant="secondary" className="text-xs font-medium">{name}</Badge>
+                    ))}
+                  </div>
+                ) : <span className="text-muted-foreground">Select paper checkers...</span>}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[400px] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search faculty..." />
+                <CommandList>
+                  <CommandEmpty>No faculty found.</CommandEmpty>
+                  <CommandGroup>
+                    {paperCheckersList.map((fac) => (
+                      <CommandItem key={fac.id} value={fac.name} onSelect={() => {
+                        const newIds = selectedIds.includes(fac.id) ? selectedIds.filter(id => id !== fac.id) : [...selectedIds, fac.id];
+                        field.onChange(newIds.join(", "));
+                      }}>
+                        <Check className={cn("mr-2 h-4 w-4", selectedIds.includes(fac.id) ? "opacity-100" : "opacity-0")} />
+                        {fac.name} {fac.employee_id ? `(${fac.employee_id})` : ""}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        );
+      }} />
+    </Field>
+  );
+
   return (
     <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
 
@@ -517,97 +607,8 @@ export default function SlotForm({
         </div>
       )}
 
-      {/* ── Examiners ──────────────────────────────────────────────────────── */}
-      {needsExaminers && (
-        <Field label="Examiners" required error={errors.examiners?.message}>
-          <Controller name="examiners" control={control} render={({ field }) => {
-            const selectedIds = csvToArray(field.value);
-            const selectedNames = selectedIds.map(id => examinersList.find(f => f.id === id)?.name || id);
-
-            return (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" role="combobox" className="w-full justify-between font-normal text-sm min-h-[36px] h-auto p-2">
-                    {selectedNames.length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5 text-left">
-                        {selectedNames.map((name, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs font-medium">{name}</Badge>
-                        ))}
-                      </div>
-                    ) : <span className="text-muted-foreground">Select examiners...</span>}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[400px] p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search faculty..." />
-                    <CommandList>
-                      <CommandEmpty>No faculty found.</CommandEmpty>
-                      <CommandGroup>
-                        {examinersList.map((fac) => (
-                          <CommandItem key={fac.id} value={fac.name} onSelect={() => {
-                            const newIds = selectedIds.includes(fac.id) ? selectedIds.filter(id => id !== fac.id) : [...selectedIds, fac.id];
-                            field.onChange(newIds.join(", "));
-                          }}>
-                            <Check className={cn("mr-2 h-4 w-4", selectedIds.includes(fac.id) ? "opacity-100" : "opacity-0")} />
-                            {fac.name} {fac.employee_id ? `(${fac.employee_id})` : ""}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            );
-          }} />
-        </Field>
-      )}
-
-      {/* ── Paper Checkers ─────────────────────────────────────────────────── */}
-      {needsPaperCheck && (
-        <Field label="Paper Checkers" required error={errors.paper_checkers?.message}>
-          <Controller name="paper_checkers" control={control} render={({ field }) => {
-            const selectedIds = csvToArray(field.value);
-            const selectedNames = selectedIds.map(id => paperCheckersList.find(f => f.id === id)?.name || id);
-
-            return (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" role="combobox" className="w-full justify-between font-normal text-sm min-h-[36px] h-auto p-2">
-                    {selectedNames.length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5 text-left">
-                        {selectedNames.map((name, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs font-medium">{name}</Badge>
-                        ))}
-                      </div>
-                    ) : <span className="text-muted-foreground">Select paper checkers...</span>}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[400px] p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search faculty..." />
-                    <CommandList>
-                      <CommandEmpty>No faculty found.</CommandEmpty>
-                      <CommandGroup>
-                        {paperCheckersList.map((fac) => (
-                          <CommandItem key={fac.id} value={fac.name} onSelect={() => {
-                            const newIds = selectedIds.includes(fac.id) ? selectedIds.filter(id => id !== fac.id) : [...selectedIds, fac.id];
-                            field.onChange(newIds.join(", "));
-                          }}>
-                            <Check className={cn("mr-2 h-4 w-4", selectedIds.includes(fac.id) ? "opacity-100" : "opacity-0")} />
-                            {fac.name} {fac.employee_id ? `(${fac.employee_id})` : ""}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            );
-          }} />
-        </Field>
-      )}
+      {/* ── Examiners (For Practice Session) ───────────────────────────────── */}
+      {needsExaminers && !needsExam && !customExamOpt && <ExaminersField />}
 
 
 
@@ -618,6 +619,8 @@ export default function SlotForm({
             Exam Details {customExamOpt && <span className="font-normal normal-case text-[#8E24AA]/60">(optional for custom)</span>}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {needsExaminers && <ExaminersField />}
+            {needsPaperCheck && <PaperCheckersField />}
             <Field label="Exam Title" required={needsExam} error={errors.exam_title?.message}>
               <Input {...register("exam_title")} placeholder="e.g. Company Law — Ch 1 & 2 Test" className="h-9 text-sm" />
             </Field>

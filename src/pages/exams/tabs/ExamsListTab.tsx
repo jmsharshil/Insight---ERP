@@ -304,6 +304,59 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
         return false;
       }
     }
+    if (user?.role === "exam_supervisor") {
+      let isAssigned = false;
+      if (Array.isArray(e.supervisors)) {
+        isAssigned = e.supervisors.some((sup: any) => {
+          const uId = user.id?.toLowerCase();
+          const sId = sup.id?.toLowerCase();
+          const suId = sup.user_id?.toLowerCase();
+          const uEmail = user.email?.toLowerCase();
+          const sEmail = sup.email?.toLowerCase();
+          const uName = user.name?.toLowerCase();
+          const sName = sup.name?.toLowerCase();
+          return (uId && (uId === sId || uId === suId)) || 
+                 (uEmail && uEmail === sEmail) || 
+                 (uName && uName === sName);
+        });
+      }
+      // Fallback check
+      if (!isAssigned) {
+        try {
+          const strExam = JSON.stringify(e.supervisors || []).toLowerCase();
+          if (user.name && strExam.includes(String(user.name).trim().toLowerCase())) isAssigned = true;
+          else if (user.email && strExam.includes(String(user.email).trim().toLowerCase())) isAssigned = true;
+          else if (user.id && strExam.includes(String(user.id).trim().toLowerCase())) isAssigned = true;
+        } catch (err) {}
+      }
+      if (!isAssigned) return false;
+    }
+    if (user?.role === "paper_checker") {
+      let isAssigned = false;
+      if (Array.isArray(e.paper_checkers)) {
+        isAssigned = e.paper_checkers.some((pc: any) => {
+          const uId = user.id?.toLowerCase();
+          const sId = pc.id?.toLowerCase();
+          const suId = pc.user_id?.toLowerCase();
+          const uEmail = user.email?.toLowerCase();
+          const sEmail = pc.email?.toLowerCase();
+          const uName = user.name?.toLowerCase();
+          const sName = pc.name?.toLowerCase();
+          return (uId && (uId === sId || uId === suId)) || 
+                 (uEmail && uEmail === sEmail) || 
+                 (uName && uName === sName);
+        });
+      }
+      if (!isAssigned) {
+        try {
+          const strExam = JSON.stringify(e.paper_checkers || []).toLowerCase();
+          if (user.name && strExam.includes(String(user.name).trim().toLowerCase())) isAssigned = true;
+          else if (user.email && strExam.includes(String(user.email).trim().toLowerCase())) isAssigned = true;
+          else if (user.id && strExam.includes(String(user.id).trim().toLowerCase())) isAssigned = true;
+        } catch (err) {}
+      }
+      if (!isAssigned) return false;
+    }
     const matchSearch = !search || e.title?.toLowerCase().includes(search.toLowerCase());
     const matchType   = !examTypeFilter || e.exam_type === examTypeFilter;
     const matchMode   = !examModeFilter || e.exam_mode === examModeFilter;
@@ -380,14 +433,14 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
           <table className="w-full text-sm">
             <thead className="bg-muted/40 border-b border-border">
               <tr>
-                {["Title", "Mode", "Type", "Marks", "Pass Marks", "Result Release", "Subject / Batch", ""].map(h => (
+                {["Title", "Mode", "Type", "Marks", "Pass Marks", "Result Release", "Date", "Slot", "Classroom", "Subject / Batch", ""].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={8} className="text-center py-16 text-muted-foreground text-sm">No exams found.</td></tr>
+                <tr><td colSpan={11} className="text-center py-16 text-muted-foreground text-sm">No exams found.</td></tr>
               ) : filtered.map((exam, i) => (
                 <motion.tr
                   key={exam.id}
@@ -422,6 +475,28 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
                     <Badge className={`text-[10px] capitalize font-semibold ${RELEASE_BADGE[exam.result_release_mode] ?? "bg-gray-100 text-gray-700"}`}>
                       {exam.result_release_mode}
                     </Badge>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="text-xs font-medium">
+                      {exam.scheduled_date ? new Date(exam.scheduled_date).toLocaleDateString() : (exam.session_date || "—")}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    {exam.start_time && exam.end_time ? (
+                      <div className="text-xs">
+                        {exam.start_time.slice(0, 5)} - {exam.end_time.slice(0, 5)}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-muted-foreground">—</div>
+                    )}
+                    {exam.duration_minutes && (
+                      <div className="text-[10px] text-muted-foreground mt-0.5">
+                        {exam.duration_minutes} min
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="text-xs font-medium">{(exam as any).classroom_name ?? "—"}</div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="text-xs">{exam.subject_name ?? "—"}</div>
