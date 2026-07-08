@@ -90,7 +90,7 @@ export default function ExamDetailPage() {
     <div className="space-y-6 pb-10">
       <PageHeader
         title={selectedExam.title}
-        subtitle="Manage exam details, questions, and seating."
+        subtitle="Manage exam settings, papers, results, and related activities."
       />
 
       {error && (
