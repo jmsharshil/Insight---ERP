@@ -63,13 +63,13 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   student: {
     id: "student", label: "Student", description: "Enrolled student — mobile app user",
     color: "bg-green-100", textColor: "text-green-800",
-    modules: ["attendance","courses_batches","exams","fees","leave","chat","notifications","settings"],
+    modules: ["dashboard","timetable","attendance","courses_batches","exams","fees","leave","chat","notifications","settings"],
     canDelete: false, canExport: false,
   },
   parents: {
     id: "parents", label: "Parents", description: "Guardian linked to enrolled student(s)",
     color: "bg-emerald-100", textColor: "text-emerald-800",
-    modules: ["attendance","fees","exams","leave","chat","notifications","settings"],
+    modules: ["dashboard","timetable","attendance","courses_batches","fees","exams","leave","chat","notifications","settings"],
     canDelete: false, canExport: false,
   },
   faculty: {
@@ -81,7 +81,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   exam_supervisor: {
     id: "exam_supervisor", label: "Exam Supervisor", description: "On-ground exam operations",
     color: "bg-orange-100", textColor: "text-orange-800",
-    modules: ["exams","notifications","payroll","settings"],
+    modules: ["dashboard","attendance","exams","notifications","payroll","settings"],
     canDelete: false, canExport: false,
   },
   paper_checker: {

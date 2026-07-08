@@ -45,7 +45,7 @@ export default function MalpracticeTab({ examId }: MalpracticeTabProps) {
 
   const [form, setForm] = useState({ student_id: "", description: "", severity: "minor" as "minor" | "major" | "disqualified" });
 
-  const canManage = user && ["super_admin", "branch_manager", "admin", "faculty"].includes(user.role ?? "");
+  const canManage = user && ["super_admin", "branch_manager", "admin", "faculty", "exam_supervisor"].includes(user.role ?? "");
 
   useEffect(() => {
     dispatch({

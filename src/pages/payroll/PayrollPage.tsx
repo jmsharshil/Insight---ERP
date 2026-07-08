@@ -25,6 +25,7 @@ export default function PayrollPage() {
   const isAdmin    = ["super_admin", "branch_manager"].includes(role);
   const isAccount  = ["accountant"].includes(role);
   const isFaculty  = ["faculty"].includes(role);
+  const canPreviewSalary = ["faculty", "exam_supervisor"].includes(role);
   
   // Decide default tab based on role
   const defaultTab = (isAdmin || isAccount) ? "runs" : "my-payroll";
@@ -78,7 +79,7 @@ export default function PayrollPage() {
               <Wallet className="w-4 h-4" /> My Payroll
             </TabsTrigger>
             
-            {isFaculty && (
+            {canPreviewSalary && (
               <TabsTrigger value="preview" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md text-xs font-medium px-4 py-2 flex items-center gap-1.5 transition-all">
                 <View className="w-4 h-4" /> Salary Preview
               </TabsTrigger>
@@ -114,7 +115,7 @@ export default function PayrollPage() {
         <div className="mt-2 outline-none">
           {/* Employee Tabs */}
           <TabsContent value="my-payroll" className="outline-none border-none p-0 m-0"><MyPayrollTab /></TabsContent>
-          {isFaculty && <TabsContent value="preview" className="outline-none border-none p-0 m-0"><SalaryPreviewTab /></TabsContent>}
+          {canPreviewSalary && <TabsContent value="preview" className="outline-none border-none p-0 m-0"><SalaryPreviewTab /></TabsContent>}
 
           {/* Admin Tabs */}
           {(isAdmin || isAccount) && (

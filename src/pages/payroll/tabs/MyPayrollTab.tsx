@@ -12,6 +12,65 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+
+const DeductionNoteCell = ({ row }: { row: any }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (!row.deduction_note) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  const parts: string[] = [];
+  let current = "";
+  row.deduction_note.split(/,\s*/).forEach((chunk: string) => {
+    if (current) current += ", " + chunk;
+    else current = chunk;
+    
+    if (/:\s*-?\d/.test(chunk)) {
+      parts.push(current);
+      current = "";
+    }
+  });
+  if (current) parts.push(current);
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-6 px-2 text-primary hover:text-primary/80 mt-1"
+        onClick={() => setIsOpen(true)}
+      >
+        View Deduction note
+      </Button>
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Deduction Note</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="text-sm bg-muted/30 p-4 rounded-md border border-border/50 min-h-[100px]">
+              <ul className="list-disc pl-4 space-y-2">
+                {parts.map((part, idx) => (
+                  <li key={idx} className="leading-relaxed">
+                    {part}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
 
 const MONTHS = [
   {v:"all",l:"All Months"},{v:"1",l:"January"},{v:"2",l:"February"},
@@ -96,7 +155,7 @@ export default function MyPayrollTab() {
         <Button onClick={fetch} className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm">Apply</Button>
       </div>
 
-      {myPayrollLoading ? <TableSkeleton columns={5} rows={4} className="mt-0" /> : (
+      {myPayrollLoading ? <TableSkeleton columns={8} rows={4} className="mt-0" /> : (
         <>
           {/* Summary Cards */}
           {summary && (
@@ -140,27 +199,30 @@ export default function MyPayrollTab() {
           <div className="bg-white rounded-xl border border-border overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-muted/40 border-b border-border">
-                <tr>{["Month / Year", "Basic", "Bonus", "Deductions", "Net Salary", "Sessions", "Status"].map(h => (
+                <tr>{["Month / Year", "Basic", "Bonus", "Deductions", "Deduction Note", "Net Salary", "Sessions", "Status"].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">{h}</th>
                 ))}</tr>
               </thead>
               <tbody>
                 {!myPayroll?.payslips?.length ? (
-                  <tr><td colSpan={7} className="text-center py-12 text-muted-foreground text-sm">No payslip records found.</td></tr>
+                  <tr><td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">No payslip records found.</td></tr>
                 ) : myPayroll.payslips.map((slip, i) => (
                   <motion.tr key={slip.id} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.025 }}
                     className="border-b border-border/50 hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs">{slip.employee_id}</td>
+                    <td className="px-4 py-3 font-mono text-xs">{slip.payroll_month} / {slip.payroll_year}</td>
                     <td className="px-4 py-3 font-mono text-xs">₹{Number(slip.basic_salary).toLocaleString("en-IN")}</td>
                     <td className="px-4 py-3 font-mono text-xs text-green-600">₹{Number(slip.bonus || 0).toLocaleString("en-IN")}</td>
                     <td className="px-4 py-3 font-mono text-xs text-red-600">
-                      ₹{(Number(slip.late_penalty || 0) + Number(slip.leave_deductions || 0) + Number(slip.other_deductions || 0)).toLocaleString("en-IN")}
+                      ₹{(Number(slip.late_penalty || 0) + Number(slip.leave_deductions || 0) + Number(slip.absence_deductions || 0) + Number(slip.retention_deduction || 0) + Number(slip.other_deductions || 0)).toLocaleString("en-IN")}
+                    </td>
+                    <td className="px-4 py-3 text-xs">
+                      <DeductionNoteCell row={slip} />
                     </td>
                     <td className="px-4 py-3 font-mono text-sm font-bold text-primary">₹{Number(slip.net_salary).toLocaleString("en-IN")}</td>
                     <td className="px-4 py-3 text-xs">{slip.sessions_conducted}</td>
                     <td className="px-4 py-3">
-                      <Badge className={`text-xs ${slip.is_disbursed ? "bg-blue-100 text-blue-700" : "bg-yellow-100 text-yellow-700"}`}>
-                        {slip.is_disbursed ? "Disbursed" : "Pending"}
+                      <Badge className={`text-xs ${STATUS_BADGE[slip.payroll_status?.toLowerCase().replace(" ", "_")] || "bg-yellow-100 text-yellow-700"}`}>
+                        {slip.payroll_status || (slip.is_disbursed ? "Disbursed" : "Pending")}
                       </Badge>
                     </td>
                   </motion.tr>

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
-import { examActions } from "@/redux/actions";
+import { examActions, userActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import type { Exam } from "@/redux/slices/examSlice";
 import { Button } from "@/components/ui/button";
@@ -38,7 +38,6 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
   const [exportingExam, setExportingExam] = useState(false);
 
   const [recheckRequests, setRecheckRequests] = useState<any[]>([]);
-  const [recheckLoading, setRecheckLoading] = useState(false);
 
   const [recheckModal, setRecheckModal] = useState(false);
   const [recheckForm, setRecheckForm] = useState<{ reason: string; file: File | null }>({ reason: "", file: null });
@@ -47,11 +46,14 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
   const [recheckActionModal, setRecheckActionModal] = useState<any>(null);
   const [recheckActionForm, setRecheckActionForm] = useState({ action: "", reason: "", new_checker_id: "" });
   const [recheckActionLoading, setRecheckActionLoading] = useState(false);
+  const [checkers, setCheckers] = useState<any[]>([]);
+  const [checkersLoading, setCheckersLoading] = useState(false);
 
-  const isAdmin   = user && ["super_admin", "branch_manager", "admin"].includes(user.role ?? "");
+  const isAdmin   = user && ["super_admin", "branch_manager", "admin", "admin_senior_executive"].includes(user.role ?? "");
   const isFaculty = user?.role === "faculty";
   const isStudent = user?.role === "student";
   const isParent  = user?.role === "parent" || user?.role === "parents";
+  const isPaperChecker = user?.role === "paper_checker";
 
   const canDistribute = isAdmin || isFaculty;
 
@@ -81,7 +83,16 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
       auth: true,
       setLoading: (v: boolean) => setResultsLoading(v),
       getResponse: (res: any) => {
-        setResults(res?.data || []);
+        const data = res?.data || [];
+        setResults(data);
+        const extractedRecheckRequests = data.flatMap((r: any) => 
+          (r.recheck_requests || []).map((req: any) => ({
+            ...req,
+            student_name: r.student_name,
+            roll_number: r.roll_number
+          }))
+        );
+        setRecheckRequests(extractedRecheckRequests);
       },
       getError: () => {
         toast.error("Failed to fetch results.");
@@ -89,26 +100,29 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
     });
   };
 
-  const fetchRecheckRequests = () => {
-    dispatch({
-      type: examActions.GET_RECHECK_REQUESTS,
-      method: "GET",
-      endPoint: !isStudent ? API.EXAMS.RECHECK_REQUESTS(exam.id) : API.EXAMS.CREATE_RECHECK_REQUEST(exam.id),
-      auth: true,
-      setLoading: (v: boolean) => setRecheckLoading(v),
-      getResponse: (res: any) => {
-        setRecheckRequests(res?.data || []);
-      },
-      getError: () => {} 
-    });
-  };
-
   useEffect(() => {
     fetchResults();
-    if (isAdmin || isFaculty || isStudent) {
-      fetchRecheckRequests();
-    }
   }, [exam.id]);
+
+  useEffect(() => {
+    if (recheckActionModal && checkers.length === 0 && !checkersLoading) {
+      setCheckersLoading(true);
+      dispatch({
+        type: userActions.GET_USERS,
+        method: "GET",
+        endPoint: API.USERS.LIST,
+        auth: true,
+        getResponse: (res: any) => {
+          const data = Array.isArray(res) ? res : res?.results ?? res?.data ?? [];
+          setCheckers(data.filter((u: any) => u.role === "paper_checker"));
+          setCheckersLoading(false);
+        },
+        getError: () => {
+          setCheckersLoading(false);
+        },
+      } as any);
+    }
+  }, [recheckActionModal, checkers.length, dispatch]);
 
   const handlePublishResults = () => {
     dispatch({
@@ -185,7 +199,7 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
         toast.success(res.message || "Recheck request submitted.");
         setRecheckModal(false);
         setRecheckForm({ reason: "", file: null });
-        fetchRecheckRequests();
+        fetchResults();
       },
       getError: (err: any) => {
         toast.error(err?.response?.data?.message || "Failed to submit recheck request.");
@@ -220,13 +234,22 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
       getResponse: (res: any) => {
         toast.success(res.message || "Action completed.");
         setRecheckActionModal(null);
-        fetchRecheckRequests();
+        fetchResults();
       },
       getError: (err: any) => {
         toast.error(err?.response?.data?.message || "Failed to perform action.");
       }
     });
   };
+
+  if (resultsLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 space-y-4">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground font-medium">Fetching your results...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -292,8 +315,8 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
         </motion.div>
       )}
 
-      {/* Admin / Faculty Results List */}
-      {(isAdmin || isFaculty) && (
+      {/* Admin / Faculty / Paper Checker Results List */}
+      {(isAdmin || isFaculty || isPaperChecker) && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -303,7 +326,7 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
           <div className="flex items-center justify-between p-4 border-b border-border">
             <h3 className="text-sm font-heading font-semibold">Exam Results</h3>
             <div className="flex items-center gap-2">
-              {results.length > 0 && !resultsLoading && (
+              {results.length > 0 && (
                 <Button 
                   variant="outline"
                   size="sm"
@@ -315,7 +338,7 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
                   Export CSV
                 </Button>
               )}
-              {results.length === 0 && !resultsLoading && (
+              {results.length === 0 && (isAdmin || isFaculty || isPaperChecker) && (
                 <Button 
                   onClick={() => setPublishConfirm(true)}
                   disabled={publishLoading}
@@ -329,9 +352,7 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
             </div>
           </div>
           <div className="p-0 overflow-x-auto">
-            {resultsLoading ? (
-              <div className="p-8 text-center text-sm text-muted-foreground">Loading results...</div>
-            ) : results.length > 0 ? (
+            {results.length > 0 ? (
               <table className="w-full text-sm text-left">
                 <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
                   <tr>
@@ -388,8 +409,8 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
         </motion.div>
       )}
 
-      {/* Admin / Faculty Recheck Requests List */}
-      {(isAdmin || isFaculty) && (
+      {/* Admin / Faculty / Paper Checker Recheck Requests List */}
+      {(isAdmin || isFaculty || isPaperChecker) && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -401,9 +422,7 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
             <Badge variant="secondary">{recheckRequests.length} Total</Badge>
           </div>
           <div className="p-0 overflow-x-auto">
-            {recheckLoading ? (
-              <div className="p-8 text-center text-sm text-muted-foreground">Loading requests...</div>
-            ) : recheckRequests.length > 0 ? (
+            {recheckRequests.length > 0 ? (
               <table className="w-full text-sm text-left">
                 <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
                   <tr>
@@ -413,7 +432,9 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
                     <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 font-medium">Checkers</th>
                     <th className="px-4 py-3 font-medium">File</th>
-                    <th className="px-4 py-3 font-medium text-right">Action</th>
+                    {recheckRequests.some((r: any) => r.status === "approval_pending") && (
+                      <th className="px-4 py-3 font-medium text-right">Action</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -439,21 +460,23 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
                           </a>
                         ) : "-"}
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        {req.status === "approval_pending" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 text-xs"
-                            onClick={() => {
-                              setRecheckActionModal(req);
-                              setRecheckActionForm({ action: "", reason: "", new_checker_id: "" });
-                            }}
-                          >
-                            Review
-                          </Button>
-                        )}
-                      </td>
+                      {recheckRequests.some((r: any) => r.status === "approval_pending") && (
+                        <td className="px-4 py-3 text-right">
+                          {req.status === "approval_pending" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs"
+                              onClick={() => {
+                                setRecheckActionModal(req);
+                                setRecheckActionForm({ action: "", reason: "", new_checker_id: "" });
+                              }}
+                            >
+                              Review
+                            </Button>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -704,14 +727,25 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
 
             {recheckActionForm.action === "approve" && (
               <div>
-                <Label className="text-xs font-semibold">New Checker ID *</Label>
-                <Input
-                  type="text"
-                  placeholder="Enter User UUID"
+                <Label className="text-xs font-semibold">Assign to New Checker *</Label>
+                <Select
                   value={recheckActionForm.new_checker_id}
-                  onChange={(e) => setRecheckActionForm({ ...recheckActionForm, new_checker_id: e.target.value })}
-                  className="h-9 mt-1 text-sm"
-                />
+                  onValueChange={(val) => setRecheckActionForm({ ...recheckActionForm, new_checker_id: val })}
+                >
+                  <SelectTrigger className="mt-1 h-9 text-sm">
+                    <SelectValue placeholder={checkersLoading ? "Loading checkers..." : "Select paper checker"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {checkers.length === 0 && !checkersLoading && (
+                      <SelectItem value="none" disabled>No paper checkers found</SelectItem>
+                    )}
+                    {checkers.map(checker => (
+                      <SelectItem key={checker.id} value={checker.id}>
+                        {checker.name || checker.full_name || checker.first_name || checker.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
 

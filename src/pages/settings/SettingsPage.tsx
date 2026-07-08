@@ -97,7 +97,7 @@ export default function SettingsPage() {
             phone: res.phone,
             name: res.name,
             role: res.role,
-            linked_student: res.linked_student,
+            linked_students: res.linked_students,
             branch: res.branch,
             organization: res.organization,
             organization_name: res.organization_name,
@@ -171,7 +171,7 @@ export default function SettingsPage() {
               phone: updated.phone,
               name: updated.name,
               role: updated.role,
-              linked_student: updated.linked_student,
+              linked_students: updated.linked_students,
               branch: updated.branch,
               organization: updated.organization,
               organization_name: updated.organization_name,
@@ -612,8 +612,8 @@ export default function SettingsPage() {
                       Linked Student
                     </span>
                     <span className="text-sm font-medium text-text-primary block">
-                      {profile.linked_student
-                        ? profile.linked_student
+                      {profile.linked_students && profile.linked_students.length > 0
+                        ? profile.linked_students.join(", ")
                         : "No linked student profile"}
                     </span>
                   </div>

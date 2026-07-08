@@ -286,17 +286,6 @@ export default function PapersTab({ examId }: PapersTabProps) {
           />
         </div>
 
-        <Select value={isSubmitted} onValueChange={setIsSubmitted}>
-          <SelectTrigger className="w-[140px] h-9 text-sm">
-            <SelectValue placeholder="Submitted" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Submissions</SelectItem>
-            <SelectItem value="true">Submitted</SelectItem>
-            <SelectItem value="false">Not Submitted</SelectItem>
-          </SelectContent>
-        </Select>
-
         <Select value={isPass} onValueChange={setIsPass}>
           <SelectTrigger className="w-[120px] h-9 text-sm">
             <SelectValue placeholder="Pass/Fail" />
@@ -410,7 +399,7 @@ export default function PapersTab({ examId }: PapersTabProps) {
 
       {/* Table */}
       {loading ? (
-        <TableSkeleton rows={5} columns={7} />
+        <TableSkeleton rows={5} columns={9} />
       ) : (
         <div className="bg-white rounded-xl border border-border overflow-hidden shadow-sm">
           <table className="w-full text-sm">
@@ -424,6 +413,7 @@ export default function PapersTab({ examId }: PapersTabProps) {
                   "Flags",
                   "Checked At",
                   "Remarks",
+                  "Answer Sheet",
                   "",
                 ].map((h) => (
                   <th
@@ -438,7 +428,7 @@ export default function PapersTab({ examId }: PapersTabProps) {
             <tbody>
               {papers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-16 text-muted-foreground text-sm">
+                  <td colSpan={9} className="text-center py-16 text-muted-foreground text-sm">
                     No papers found matching the criteria.
                   </td>
                 </tr>
@@ -469,6 +459,10 @@ export default function PapersTab({ examId }: PapersTabProps) {
                       {paper.is_absent ? (
                         <Badge variant="destructive" className="text-[10px]">
                           Absent
+                        </Badge>
+                      ) : paper.is_pass === null ? (
+                        <Badge variant="secondary" className="text-[10px]">
+                          Pending
                         </Badge>
                       ) : paper.is_pass ? (
                         <Badge className="bg-green-100 text-green-700 text-[10px] hover:bg-green-100">
@@ -518,6 +512,20 @@ export default function PapersTab({ examId }: PapersTabProps) {
                       title={paper.remarks}
                     >
                       {paper.remarks || "—"}
+                    </td>
+                    <td className="px-4 py-3 text-xs">
+                      {paper.uploaded_answer_sheet_url ? (
+                        <a
+                          href={paper.uploaded_answer_sheet_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline flex items-center gap-1"
+                        >
+                          <FileText className="w-3.5 h-3.5" /> View
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-1">

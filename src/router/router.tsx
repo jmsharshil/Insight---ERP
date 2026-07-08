@@ -33,6 +33,7 @@ import StudentAttendanceDetailPage from "@/pages/attendance/StudentAttendanceDet
 import FacultyAttendanceDetailPage from "@/pages/attendance/FacultyAttendanceDetailPage";
 const FeesPage = lazy(() => import("@/pages/fees/FeesPage"));
 const ExamsPage = lazy(() => import("@/pages/exams/ExamsPage"));
+import ExamDetailPage from "@/pages/exams/ExamDetailPage";
 const FacultyPage = lazy(() => import("@/pages/faculty/FacultyPage"));
 import FacultyPayrollDetailPage from "@/pages/faculty/FacultyPayrollDetailPage";
 const InventoryPage = lazy(() => import("@/pages/inventory/InventoryPage"));
@@ -135,6 +136,7 @@ const router = createBrowserRouter([
     
     { module: "fees", path: "/fees", element: withSuspense(<FeesPage />) },
     { module: "exams", path: "/exams", element: withSuspense(<ExamsPage />) },
+    { module: "exams", path: "/exams/:id", element: <ExamDetailPage /> },
 
     { module: "faculty", path: "/faculty", element: withSuspense(<FacultyPage />) },
     { module: "faculty", path: "/faculty/payroll/:id", element: <FacultyPayrollDetailPage /> },

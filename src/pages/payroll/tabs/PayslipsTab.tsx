@@ -37,6 +37,19 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
     return <span className="text-muted-foreground">—</span>;
   }
 
+  const parts: string[] = [];
+  let current = "";
+  row.deduction_note.split(/,\s*/).forEach((chunk: string) => {
+    if (current) current += ", " + chunk;
+    else current = chunk;
+    
+    if (/:\s*-?\d/.test(chunk)) {
+      parts.push(current);
+      current = "";
+    }
+  });
+  if (current) parts.push(current);
+
   return (
     <>
       <Button
@@ -54,8 +67,14 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
             <DialogTitle>Deduction Note</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="text-sm bg-muted/30 p-4 rounded-md border border-border/50 min-h-[100px] whitespace-pre-wrap">
-              {row.deduction_note}
+            <div className="text-sm bg-muted/30 p-4 rounded-md border border-border/50 min-h-[100px]">
+              <ul className="list-disc pl-4 space-y-2">
+                {parts.map((part, idx) => (
+                  <li key={idx} className="leading-relaxed">
+                    {part}
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
           <DialogFooter>

@@ -57,12 +57,14 @@ interface SlotsTabProps {
   papers:         { id: string; name: string; subject?: string; file?: string }[];
   examinersList:  { id: string; name: string; employee_id?: string }[];
   paperCheckersList: { id: string; name: string; employee_id?: string }[];
+  paperCheckersList: { id: string; name: string; employee_id?: string }[];
   defaultView?:   "grid" | "list";
+  studentDetail?: any;
 }
 
 export default function SlotsTab({
   batches, subjects, facultyList, classrooms, chapters, papers,
-  examinersList, paperCheckersList, defaultView = "list"
+  examinersList, paperCheckersList, defaultView = "list", studentDetail
 }: SlotsTabProps) {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
@@ -127,6 +129,31 @@ export default function SlotsTab({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentFacultyProfile?.id]);
 
+  const isStudentLike = user && (user.role === "student" || user.role === "parent" || user.role === "parents");
+  
+  const studentBatchIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (isStudentLike && studentDetail) {
+      const getBatchId = (b: any) => (typeof b === "object" && b !== null) ? b.id || b.batch_id : b;
+      const currentBatchId = getBatchId(studentDetail.batch);
+      if (currentBatchId) ids.add(String(currentBatchId));
+      if (studentDetail.batch_history) {
+        studentDetail.batch_history.forEach((bh: any) => {
+          const bhId = getBatchId(bh.batch || bh.batch_id);
+          if (bhId) ids.add(String(bhId));
+        });
+      }
+    }
+    return ids;
+  }, [isStudentLike, studentDetail]);
+
+  const filteredBatches = useMemo(() => {
+    if (isStudentLike && studentBatchIds.size > 0) {
+      return batches.filter(b => studentBatchIds.has(String(b.id)));
+    }
+    return batches;
+  }, [batches, isStudentLike, studentBatchIds]);
+
   const filteredSlots = useMemo(() => {
     let result = slots;
     if (isBranchManager) {
@@ -145,8 +172,14 @@ export default function SlotsTab({
         return false;
       });
     }
+    if (isStudentLike && studentBatchIds.size > 0) {
+      result = result.filter((slot: any) => {
+        const slotBatchId = typeof slot.batch === "object" && slot.batch !== null ? slot.batch.id || slot.batch.batch_id : slot.batch;
+        return studentBatchIds.has(String(slotBatchId));
+      });
+    }
     return result;
-  }, [slots, isBranchManager, isFaculty, batches, currentFacultyProfile, user?.name]);
+  }, [slots, isBranchManager, isFaculty, batches, currentFacultyProfile, user?.name, isStudentLike, studentBatchIds]);
 
   const handleCreateOrUpdate = (payload: Record<string, any>) => {
     const isEdit = !!editingSlot;
@@ -206,10 +239,11 @@ export default function SlotsTab({
         {slotsLoading ? <TableSkeleton columns={7} rows={6} className="mt-0" /> : (
           <TimetableGridView
             slots={filteredSlots}
-            batches={batches}
+            batches={filteredBatches}
             canEdit={canEdit}
             canDelete={canDelete}
             onAddClick={(day, slotCode, batchId, date) => {
+              if (!canEdit) return;
               const times = SLOT_TIMES[slotCode];
               const isExtraSlot = slotCode === "P5" || slotCode === "P6";
               setEditingSlot(null);
@@ -226,6 +260,7 @@ export default function SlotsTab({
               setFormOpen(true);
             }}
             onSlotClick={(slot) => {
+              if (!canEdit) return;
               setEditingSlot(slot);
               setFormLockedFields([]);
               setFormOpen(true);
@@ -243,7 +278,7 @@ export default function SlotsTab({
               <DialogTitle>{editingSlot ? "Edit Timetable Slot" : "Create Timetable Slot"}</DialogTitle>
             </DialogHeader>
             <SlotForm
-              batches={batches}
+              batches={filteredBatches}
               subjects={subjects}
               facultyList={facultyList}
               classrooms={classrooms}
@@ -468,7 +503,7 @@ export default function SlotsTab({
             <DialogTitle>{editingSlot ? "Edit Timetable Slot" : "Create Timetable Slot"}</DialogTitle>
           </DialogHeader>
           <SlotForm
-            batches={batches}
+            batches={filteredBatches}
             subjects={subjects}
             facultyList={facultyList}
             classrooms={classrooms}

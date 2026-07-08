@@ -8,7 +8,7 @@ export interface UserProfile {
   name: string;
   role: string;
   branch: string | null;
-  linked_student: string | null;
+  linked_students: string[] | null;
   organization: string;
   organization_name: string;
   profile_pic: string | null;

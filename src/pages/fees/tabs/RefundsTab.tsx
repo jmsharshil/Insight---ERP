@@ -16,12 +16,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { useState } from "react";
 
 interface RefundsTabProps {
   refunds: any[];
   refundsLoading: boolean;
-  onUpdateStatus: (id: string, status: "completed" | "rejected") => void;
+  onUpdateStatus: (id: string, status: "completed" | "rejected", payload?: any) => void;
   students: any[];
   payments: any[];
   refStudentName: string;
@@ -108,13 +117,23 @@ function RefundsTable({
   isAdmin,
 }: {
   data: any[];
-  onUpdateStatus: (id: string, status: "completed" | "rejected") => void;
+  onUpdateStatus: (id: string, status: "completed" | "rejected", payload?: any) => void;
   loading: boolean;
   students: any[];
   payments: any[];
   isAccountant: boolean;
   isAdmin: boolean;
 }) {
+  const [approveDialogId, setApproveDialogId] = useState<string | null>(null);
+  const [transactionId, setTransactionId] = useState("");
+
+  const handleApproveSubmit = () => {
+    if (!approveDialogId || !transactionId.trim()) return;
+    onUpdateStatus(approveDialogId, "completed", { transaction_id: transactionId.trim() });
+    setApproveDialogId(null);
+    setTransactionId("");
+  };
+
   const cols: DataTableColumn<any>[] = [
     {
       key: "id",
@@ -201,7 +220,10 @@ function RefundsTable({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  onClick={() => onUpdateStatus(r.id, "completed")}
+                  onClick={() => {
+                    setTransactionId("");
+                    setApproveDialogId(r.id);
+                  }}
                   className="text-green-600 hover:bg-green-500/10 cursor-pointer font-medium gap-1.5"
                 >
                   <CheckCircle className="w-4 h-4" /> Complete Refund
@@ -220,5 +242,43 @@ function RefundsTable({
     });
   }
 
-  return <DataTable columns={cols} data={data} />;
+  return (
+    <>
+      <DataTable columns={cols} data={data} />
+      
+      <Dialog open={!!approveDialogId} onOpenChange={(o) => !o && setApproveDialogId(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Complete Refund</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Please provide the transaction ID or Cheque Number to complete this refund.
+            </p>
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold">Transaction ID / Cheque Number *</Label>
+              <Input
+                placeholder="e.g. TXN123456789"
+                value={transactionId}
+                onChange={(e) => setTransactionId(e.target.value)}
+                className="h-9"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApproveDialogId(null)}>
+              Cancel
+            </Button>
+            <Button 
+              className="bg-green-600 hover:bg-green-700 text-white"
+              onClick={handleApproveSubmit}
+              disabled={!transactionId.trim()}
+            >
+              Confirm Refund
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }
