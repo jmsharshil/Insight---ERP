@@ -38,6 +38,14 @@ const RELEASE_BADGE: Record<string, string> = {
   manual:  "bg-yellow-100 text-yellow-700",
 };
 
+const EXAM_STATUS_BADGE: Record<string, string> = {
+  draft: "bg-gray-100 text-gray-700",
+  scheduled: "bg-yellow-100 text-yellow-700",
+  ongoing: "bg-blue-100 text-blue-700",
+  completed: "bg-green-100 text-green-700",
+  results_published: "bg-purple-100 text-purple-700",
+};
+
 interface ExamsListTabProps {
   onSelectExam: (exam: Exam) => void;
   selectedExamId: string | null;
@@ -459,7 +467,7 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
           <table className="w-full text-sm">
             <thead className="bg-muted/40 border-b border-border">
               <tr>
-                {["Title", "Mode", "Type", "Marks", "Pass Marks", "Result Release", "Date", "Slot", "Classroom", "Subject / Batch", ""].map(h => (
+                {["Title", "Mode", "Type", "Marks", "Pass Marks", "Result Release", "Status", "Date", "Slot", "Classroom", "Subject / Batch", ""].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
@@ -500,6 +508,11 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
                   <td className="px-4 py-3">
                     <Badge className={`text-[10px] capitalize font-semibold ${RELEASE_BADGE[exam.result_release_mode] ?? "bg-gray-100 text-gray-700"}`}>
                       {exam.result_release_mode}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge className={`text-[10px] font-semibold whitespace-nowrap ${EXAM_STATUS_BADGE[(exam.status as string)?.toLowerCase()] ?? "bg-gray-100 text-gray-700"}`}>
+                      {exam.status_display || exam.status || "—"}
                     </Badge>
                   </td>
                   <td className="px-4 py-3">
