@@ -454,3 +454,30 @@ export function FacultySummarySkeleton() {
     </div>
   );
 }
+
+export function NotificationsSkeleton() {
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300">
+      {Array.from({ length: 2 }).map((_, gIdx) => (
+        <div key={gIdx}>
+          <Skeleton width={80} height={14} className="mb-3 ml-1" />
+          <div className="space-y-2">
+            {Array.from({ length: gIdx === 0 ? 3 : 2 }).map((_, nIdx) => (
+              <div key={nIdx} className="w-full text-left rounded-lg border border-border bg-card p-4 flex items-start gap-4 shadow-sm">
+                <Skeleton circle width={36} height={36} className="mt-0.5 flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <Skeleton width="40%" height={16} />
+                    <Skeleton width={60} height={12} />
+                  </div>
+                  <Skeleton width="90%" height={14} />
+                  <Skeleton width="60%" height={14} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}

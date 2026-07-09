@@ -8,10 +8,12 @@ import { notificationActions } from "@/redux/actions";
 import { setNotifications, setNotificationsLoading, markAllAsRead, markAsRead, AppNotification } from "@/redux/slices/notificationsSlice";
 import PageHeader from "@/components/layout/PageHeader";
 import EmptyState from "@/components/common/EmptyState";
+import { NotificationsSkeleton } from "@/components/common/Skeletons";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/useToast";
+import { useUI } from "@/hooks/useUI";
 
 function relative(ts: string) {
   const diff = Date.now() - new Date(ts).getTime();
@@ -36,6 +38,7 @@ function groupByDay(notifs: AppNotification[]) {
 
 export default function NotificationsPage() {
   const { notifications, loading } = useSelector((state: RootState) => state.notifications);
+  const { setPageTitle } = useUI();
   const [filter, setFilter] = useState<"all" | "unread" | "high">("all");
   const navigate = useNavigate();
   const toast = useToast();
@@ -68,6 +71,11 @@ export default function NotificationsPage() {
       }
     });
   }, [dispatch, toast]);
+
+    // 2. Auto-fetch notifications on mount
+  useEffect(() => {
+    setPageTitle("Notifications"); // Set header name
+  }, [setPageTitle]);
 
   useEffect(() => {
     fetchNotifications();
@@ -113,7 +121,7 @@ export default function NotificationsPage() {
   }, [loading, notifications, handleMarkAll]);
 
   return (
-    <div className="max-w-4xl mx-auto pb-10">
+    <div className="mx-auto pb-10">
       <PageHeader title="Notifications" subtitle={loading ? "Loading..." : `${notifications.filter(n => !n.isRead).length} unread`}
         actions={
           <div className="flex gap-2">
@@ -133,9 +141,8 @@ export default function NotificationsPage() {
       />
       
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-          <Loader2 className="w-8 h-8 animate-spin mb-4 text-primary" />
-          <p className="text-sm">Loading notifications...</p>
+        <div className="mt-6">
+          <NotificationsSkeleton />
         </div>
       ) : filtered.length === 0 ? (
         <div className="py-10">

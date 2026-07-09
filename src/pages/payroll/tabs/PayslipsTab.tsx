@@ -42,7 +42,7 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
   row.deduction_note.split(/,\s*/).forEach((chunk: string) => {
     if (current) current += ", " + chunk;
     else current = chunk;
-    
+
     if (/:\s*-?\d/.test(chunk)) {
       parts.push(current);
       current = "";
@@ -316,27 +316,43 @@ export default function PayslipsTab() {
                         </Badge>
                       </td>
                       <td className="px-4 py-3 font-mono text-xs">
-                        {slip.employment_type === 'part_time' || slip.employment_type === 'visiting' || (Number(slip.basic_salary || slip.salary || 0) === 0 && Number(slip.hour_based_amount) > 0)
+                        {slip.employment_type === "part_time" ||
+                        slip.employment_type === "visiting" ||
+                        (Number(slip.basic_salary || slip.salary || 0) === 0 &&
+                          Number(slip.hour_based_amount) > 0)
                           ? (() => {
                               const explicitRate = Number(slip.hourly_rate || 0);
-                              const hours = Number(slip.total_session_hours || slip.session_hours || 0);
+                              const hours = Number(
+                                slip.total_session_hours || slip.session_hours || 0,
+                              );
                               const amount = Number(slip.hour_based_amount || 0);
-                              const effectiveRate = explicitRate > 0 ? explicitRate : (hours > 0 ? amount / hours : 0);
-                              return effectiveRate > 0 ? `₹${effectiveRate.toLocaleString("en-IN")}/hr` : "—";
+                              const effectiveRate =
+                                explicitRate > 0 ? explicitRate : hours > 0 ? amount / hours : 0;
+                              return effectiveRate > 0
+                                ? `₹${effectiveRate.toLocaleString("en-IN")}/hr`
+                                : "—";
                             })()
-                          : Number(slip.basic_salary || slip.salary || 0) > 0 
+                          : Number(slip.basic_salary || slip.salary || 0) > 0
                             ? `₹${Number(slip.basic_salary || slip.salary || 0).toLocaleString("en-IN")}`
                             : "—"}
                       </td>
                       <td className="px-4 py-3 font-mono text-xs">
-                        {Number(slip.total_session_hours || slip.session_hours || 0) > 0
-                          ? <div>
-                              <div className="text-muted-foreground">{Number(slip.total_session_hours || slip.session_hours)} hrs</div>
-                              <div className="text-green-600 font-medium">₹{Number(slip.hour_based_amount || 0).toLocaleString("en-IN")}</div>
+                        {Number(slip.total_session_hours || slip.session_hours || 0) > 0 ? (
+                          <div>
+                            <div className="text-muted-foreground">
+                              {Number(slip.total_session_hours || slip.session_hours)} hrs
                             </div>
-                          : Number(slip.hour_based_amount) > 0 ? (
-                            <div className="text-green-600 font-medium">₹{Number(slip.hour_based_amount || 0).toLocaleString("en-IN")}</div>
-                          ) : "—"}
+                            <div className="text-green-600 font-medium">
+                              ₹{Number(slip.hour_based_amount || 0).toLocaleString("en-IN")}
+                            </div>
+                          </div>
+                        ) : Number(slip.hour_based_amount) > 0 ? (
+                          <div className="text-green-600 font-medium">
+                            ₹{Number(slip.hour_based_amount || 0).toLocaleString("en-IN")}
+                          </div>
+                        ) : (
+                          "—"
+                        )}
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-green-600">
                         {slip.bonus > 0 ? `₹${Number(slip.bonus).toLocaleString("en-IN")}` : "—"}
