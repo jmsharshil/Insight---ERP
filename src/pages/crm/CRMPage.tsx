@@ -312,19 +312,29 @@ export default function CRMPage() {
         title="CRM & Pre-Admission"
         subtitle="Manage inquiries through the admission pipeline."
         actions={
-          <Button onClick={fetchLeads} variant="outline" disabled={leadsLoading} className="gap-2">
-            {leadsLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <RefreshCw className="w-4 h-4" />
-            )}
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => window.open("https://insight.jmstech.co/insight/public/lead-inquiry-form", "_blank")}
+              variant="default"
+              className="gap-2"
+            >
+              <UserPlus className="w-4 h-4" />
+              Inquiry Form
+            </Button>
+            <Button onClick={fetchLeads} variant="outline" disabled={leadsLoading} className="gap-2">
+              {leadsLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              Refresh
+            </Button>
+          </div>
         }
       />
 
       {/* ─── Stat cards ─────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-9 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-9 gap-3 mb-6">
         <StatCard title="Total Leads" value={stats.total} icon={Users} />
         <StatCard title="New" value={stats.new} icon={UserPlus} />
         <StatCard title="Contacted" value={stats.contacted} icon={Phone} />
