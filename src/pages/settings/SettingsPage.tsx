@@ -612,8 +612,8 @@ export default function SettingsPage() {
                       Linked Student
                     </span>
                     <span className="text-sm font-medium text-text-primary block">
-                      {profile.linked_students && profile.linked_students.length > 0
-                        ? profile.linked_students.join(", ")
+                      {profile.linked_student_names && profile.linked_student_names.length > 0
+                        ? profile.linked_student_names.join(", ")
                         : "No linked student profile"}
                     </span>
                   </div>

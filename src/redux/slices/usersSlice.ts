@@ -31,6 +31,9 @@ export interface UserRecord {
   work_start_time?: string;
   work_end_time?: string;
   per_paper_rate?: number | string;
+  accessible_modules?: string[];
+  canDelete?: boolean;
+  canExport?: boolean;
 }
 
 interface UsersState {

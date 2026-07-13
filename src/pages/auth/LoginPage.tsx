@@ -68,9 +68,9 @@ export default function LoginPage() {
         }));
         toast.success(`Welcome back, ${res.user.name}! 🤝`);
 
-        const roleDef = ROLES[res.user.role as keyof typeof ROLES];
-        const firstModule = roleDef?.modules?.[0];
-        const defaultPath = firstModule ? NAV_ITEMS[firstModule]?.path || "/crm" : "/crm";
+        const accessibleModules = res.user.accessible_modules || ROLES[res.user.role as keyof typeof ROLES]?.modules || [];
+        const firstModule = accessibleModules[0];
+        const defaultPath = firstModule ? NAV_ITEMS[firstModule as keyof typeof NAV_ITEMS]?.path || "/crm" : "/crm";
         navigate(defaultPath);
       },
       getError: (err: any) => {
