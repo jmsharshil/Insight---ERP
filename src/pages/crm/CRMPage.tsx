@@ -325,21 +325,14 @@ export default function CRMPage() {
         actions={
           <div className="flex items-center gap-2">
             <Button
-              onClick={() =>
-                window.open("https://insight.jmstech.co/insight/public/lead-inquiry-form", "_blank")
-              }
+              onClick={() => window.open("https://insight.jmstech.co/insight/public/lead-inquiry-form", "_blank")}
               variant="default"
               className="gap-2"
             >
               <UserPlus className="w-4 h-4" />
               Inquiry Form
             </Button>
-            <Button
-              onClick={fetchLeads}
-              variant="outline"
-              disabled={leadsLoading}
-              className="gap-2"
-            >
+            <Button onClick={fetchLeads} variant="outline" disabled={leadsLoading} className="gap-2">
               {leadsLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
