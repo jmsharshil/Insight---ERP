@@ -78,7 +78,7 @@ import { ROLES } from "@/constants/roles";
 /* ─── Role choices ──────────────────────────────────────────── */
 
 const ROLE_CHOICES = [
-  { value: "super_admin", label: "Super Admin" },
+  // { value: "super_admin", label: "Super Admin" },
   { value: "branch_manager", label: "Branch Manager" },
   { value: "admin_senior_executive", label: "Admin Senior Executive" },
   { value: "admin_executive", label: "Admin Executive" },
@@ -90,8 +90,8 @@ const ROLE_CHOICES = [
   { value: "exam_supervisor", label: "Exam Supervisor" },
   { value: "paper_checker", label: "Paper Checker" },
   { value: "accountant", label: "Accountant" },
-  { value: "student", label: "Student" },
-  { value: "parents", label: "Parents" },
+  // { value: "student", label: "Student" },
+  // { value: "parents", label: "Parents" },
   { value: "faculty", label: "Faculty" },
   { value: "house_keeping", label: "House Keping" },
   { value: "security", label: "Security" },

@@ -647,7 +647,14 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
                         className="mt-0.5"
                       />
                       <div className="flex flex-col">
-                        <span className="text-sm font-medium leading-none">{p.set_name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium leading-none">{p.set_name}</span>
+                          {p.no_of_questions > 0 && (
+                            <Badge variant="outline" className="text-[10px] py-0 h-4 text-muted-foreground bg-muted/20">
+                              {p.no_of_questions} Qs
+                            </Badge>
+                          )}
+                        </div>
                         <span className="text-xs text-muted-foreground mt-1">Subject: {p.subject_name || p.subject || "—"}</span>
                       </div>
                     </label>

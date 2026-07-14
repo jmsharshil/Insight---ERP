@@ -352,7 +352,7 @@ export default function CRMPage() {
       />
 
       {/* ─── Stat cards ─────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-9 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
         <StatCard title="Total Leads" value={stats.total} icon={Users} />
         <StatCard title="New" value={stats.new} icon={UserPlus} />
         <StatCard title="Contacted" value={stats.contacted} icon={Phone} />

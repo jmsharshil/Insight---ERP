@@ -216,7 +216,7 @@ export default function EmployeePersonalHistoryTab() {
                         {r.checked_out_at ? new Date(r.checked_out_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "—"}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground text-xs">
-                        {r.marked_by_name || "Self"}
+                        {r.marked_by_name || "-"}
                         {r.is_corrected && <span className="ml-2 text-orange-600 font-medium">(Corrected)</span>}
                       </td>
                     </motion.tr>
