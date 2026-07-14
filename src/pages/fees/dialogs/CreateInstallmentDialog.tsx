@@ -139,8 +139,10 @@ export function CreateInstallmentDialog({
                   size="sm"
                   variant="outline"
                   className="h-7 px-2 text-xs"
+                  disabled={instItems.length >= 6}
                   onClick={() => {
                     setInstItems((prev) => {
+                      if (prev.length >= 6) return prev;
                       const newCount = prev.length + 1;
                       const baseAmount = Math.floor(instTotalAmount / newCount);
                       const remainder = instTotalAmount - baseAmount * newCount;

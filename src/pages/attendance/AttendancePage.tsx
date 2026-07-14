@@ -18,6 +18,7 @@ import ViolationsTab from "./tabs/ViolationsTab";
 import RegisterTab from "./tabs/RegisterTab";
 import EmployeeRegisterTab from "./tabs/EmployeeRegisterTab";
 import EmployeePersonalHistoryTab from "./tabs/EmployeePersonalHistoryTab";
+import StudentPersonalHistoryTab from "./tabs/StudentPersonalHistoryTab";
 
 export default function AttendancePage() {
   const dispatch = useDispatch();
@@ -138,7 +139,7 @@ export default function AttendancePage() {
           <h1 className="text-2xl font-bold tracking-tight">Attendance</h1>
           <p className="text-muted-foreground">Track and manage student & faculty attendance.</p>
         </div>
-        {isEmployee && (
+       {/* {isEmployee && (
           <div className="flex gap-2">
             <Button 
               onClick={() => handleScan("check_in")} 
@@ -150,14 +151,14 @@ export default function AttendancePage() {
             </Button>
             <Button 
               onClick={() => handleScan("check_out")} 
-              disabled={scanLoading !== null}
+              dis abled={scanLoading !== null}
               variant="destructive"
             >
               <LogOut className="w-4 h-4 mr-2" />
               {scanLoading === "check_out" ? "Checking Out..." : "Check Out"}
             </Button>
           </div>
-        )}
+        )} */}
       </div>
 
       <Tabs defaultValue={defaultTab} className="mt-2">
@@ -206,7 +207,7 @@ export default function AttendancePage() {
 
         {!isFaculty && !isExamSupervisor && (
           <TabsContent value="history" className="mt-4">
-            <HistoryTab dropdowns={dropdowns} />
+            {isParentOrStudent ? <StudentPersonalHistoryTab dropdowns={dropdowns} /> : <HistoryTab dropdowns={dropdowns} />}
           </TabsContent>
         )}
 

@@ -473,7 +473,7 @@ export default function CoursesBatchesPage() {
   const displayCourses = useMemo(() => {
     if (!isStudent) return courses;
     if (!studentDetail) return [];
-    return courses.filter((c) => {
+    const filtered = courses.filter((c) => {
       const matchId = studentDetail.course && String(c.id) === String(studentDetail.course);
       const matchName = studentDetail.course_name && c.name === studentDetail.course_name;
       const matchCode = studentDetail.course && c.code === studentDetail.course;
@@ -485,6 +485,7 @@ export default function CoursesBatchesPage() {
             .replace(/[^a-z0-9]/g, "");
       return matchId || matchName || matchCode || matchString;
     });
+    return filtered.length > 0 ? filtered : courses;
   }, [courses, isStudent, studentDetail]);
 
   const displayBatches = useMemo(() => {

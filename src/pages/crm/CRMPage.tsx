@@ -70,7 +70,16 @@ import LeadDetailSheet from "./components/LeadDetailSheet";
 
 /* ─── Stage config ───────────────────────────────────────────── */
 
-const STAGES: LeadStatus[] = ["new", "contacted", "interested", "visit", "visited", "follow_up", "converted", "lost"];
+const STAGES: LeadStatus[] = [
+  "new",
+  "contacted",
+  "interested",
+  "visit",
+  "visited",
+  "follow_up",
+  "converted",
+  "lost",
+];
 const COURSE_LABELS: Record<string, string> = {
   cs_executive: "CS Executive",
   cs_professional: "CS Professional",
@@ -112,9 +121,10 @@ export default function CRMPage() {
 
   /* ─── Fetch analytics ──────────────────────────────────────── */
   useEffect(() => {
-    const endPoint = user && user.role === "branch_manager" && user.branch
-      ? `${API.REPORTS.LEADS}${API.REPORTS.LEADS.includes('?') ? '&' : '?'}branch_id=${user.branch}`
-      : API.REPORTS.LEADS;
+    const endPoint =
+      user && user.role === "branch_manager" && user.branch
+        ? `${API.REPORTS.LEADS}${API.REPORTS.LEADS.includes("?") ? "&" : "?"}branch_id=${user.branch}`
+        : API.REPORTS.LEADS;
 
     dispatch({
       type: crmActions.GET_CRM_ANALYTICS,
@@ -134,9 +144,10 @@ export default function CRMPage() {
 
   /* ─── Fetch leads list ─────────────────────────────────────── */
   const fetchLeads = useCallback(() => {
-    const endPoint = user && user.role === "branch_manager" && user.branch
-      ? `${API.LEADS.LIST}${API.LEADS.LIST.includes('?') ? '&' : '?'}branch_id=${user.branch}`
-      : API.LEADS.LIST;
+    const endPoint =
+      user && user.role === "branch_manager" && user.branch
+        ? `${API.LEADS.LIST}${API.LEADS.LIST.includes("?") ? "&" : "?"}branch_id=${user.branch}`
+        : API.LEADS.LIST;
 
     dispatch({
       type: leadActions.GET_LEADS,
@@ -312,19 +323,36 @@ export default function CRMPage() {
         title="CRM & Pre-Admission"
         subtitle="Manage inquiries through the admission pipeline."
         actions={
-          <Button onClick={fetchLeads} variant="outline" disabled={leadsLoading} className="gap-2">
-            {leadsLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <RefreshCw className="w-4 h-4" />
-            )}
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() =>
+                window.open("https://insight.jmstech.co/insight/public/lead-inquiry-form", "_blank")
+              }
+              variant="default"
+              className="gap-2"
+            >
+              <UserPlus className="w-4 h-4" />
+              Inquiry Form
+            </Button>
+            <Button
+              onClick={fetchLeads}
+              variant="outline"
+              disabled={leadsLoading}
+              className="gap-2"
+            >
+              {leadsLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              Refresh
+            </Button>
+          </div>
         }
       />
 
       {/* ─── Stat cards ─────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-9 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-9 gap-3 mb-6">
         <StatCard title="Total Leads" value={stats.total} icon={Users} />
         <StatCard title="New" value={stats.new} icon={UserPlus} />
         <StatCard title="Contacted" value={stats.contacted} icon={Phone} />
@@ -343,26 +371,24 @@ export default function CRMPage() {
           <TabsTrigger value="pipeline">Kanban Board</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
-      
-      
-      
+
         {/* Table View */}
         <TabsContent value="table">
           {leadsLoading ? (
             <TableSkeleton rows={10} columns={8} className="mt-3" />
           ) : (
-          <LeadsTable
-            leads={filteredLeads}
-            onView={(lead) => {
-              setSelectedLead(lead);
-              fetchLeadDetails(lead);
-            }}
-            onChangeStage={(lead, stage) => {
-              setPendingMove({ leadId: String(lead.id), stage });
-            }}
-            onAssignSuccess={() => fetchLeads()}
-          />
-        )}
+            <LeadsTable
+              leads={filteredLeads}
+              onView={(lead) => {
+                setSelectedLead(lead);
+                fetchLeadDetails(lead);
+              }}
+              onChangeStage={(lead, stage) => {
+                setPendingMove({ leadId: String(lead.id), stage });
+              }}
+              onAssignSuccess={() => fetchLeads()}
+            />
+          )}
         </TabsContent>
 
         {/* Pipeline (Kanban) */}
@@ -379,7 +405,6 @@ export default function CRMPage() {
             onAssignSuccess={() => fetchLeads()}
           />
         </TabsContent>
-
 
         {/* Analytics */}
         <TabsContent value="analytics">
@@ -403,7 +428,7 @@ export default function CRMPage() {
         onSuccess={() => {
           fetchLeads();
           if (selectedLead) {
-             fetchLeadDetails(selectedLead);
+            fetchLeadDetails(selectedLead);
           }
         }}
       />
@@ -475,6 +500,3 @@ export default function CRMPage() {
     </div>
   );
 }
-
-
-

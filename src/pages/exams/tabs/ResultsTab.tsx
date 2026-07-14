@@ -564,29 +564,60 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
             <div className="pt-4 border-t border-blue-200">
               <h4 className="text-sm font-heading font-semibold text-blue-900 mb-3">Your Result</h4>
               {results.map((res: any) => (
-                <div key={res.id} className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white/60 p-4 rounded-lg border border-blue-100 mb-4">
-                  <div className="flex flex-col">
-                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Marks Obtained</span>
-                    <span className="font-bold text-lg">{res.marks_obtained} / {res.total_marks}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Percentage</span>
-                    <span className="font-bold text-lg">{res.percentage}%</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Status</span>
-                    <div className="mt-1">
-                      {res.is_pass ? (
-                        <Badge className="bg-green-100 text-green-700 border-green-200">Pass</Badge>
-                      ) : (
-                        <Badge className="bg-red-100 text-red-700 border-red-200">Fail</Badge>
-                      )}
+                <div key={res.id} className="mb-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white/60 p-4 rounded-lg border border-blue-100">
+                    <div className="flex flex-col">
+                      <span className="text-xs text-muted-foreground uppercase tracking-wider">Marks Obtained</span>
+                      <span className="font-bold text-lg">{res.marks_obtained} / {res.total_marks}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs text-muted-foreground uppercase tracking-wider">Percentage</span>
+                      <span className="font-bold text-lg">{res.percentage}%</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs text-muted-foreground uppercase tracking-wider">Status</span>
+                      <div className="mt-1">
+                        {res.is_pass ? (
+                          <Badge className="bg-green-100 text-green-700 border-green-200">Pass</Badge>
+                        ) : (
+                          <Badge className="bg-red-100 text-red-700 border-red-200">Fail</Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs text-muted-foreground uppercase tracking-wider">Rank</span>
+                      <span className="font-bold text-lg">{res.rank ? `#${res.rank}` : "-"}</span>
                     </div>
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Rank</span>
-                    <span className="font-bold text-lg">{res.rank ? `#${res.rank}` : "-"}</span>
-                  </div>
+
+                  {res.mcq_breakdown && res.mcq_breakdown.length > 0 && (
+                    <div className="mt-4 bg-white/60 p-4 rounded-lg border border-blue-100">
+                      <h5 className="text-sm font-semibold text-blue-900 mb-3">MCQ Breakdown</h5>
+                      <div className="space-y-3">
+                        {res.mcq_breakdown.map((mcq: any, index: number) => (
+                          <div key={mcq.question_id || index} className="p-3 bg-white rounded-md border border-border shadow-sm">
+                            <p className="text-sm font-medium mb-2">Q{index + 1}. {mcq.question_text}</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                              <div>
+                                <span className="text-muted-foreground">Your Answer: </span>
+                                <span className={mcq.is_student_correct ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
+                                  {mcq.student_answer || "Not Answered"}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Correct Answer: </span>
+                                <span className="text-green-600 font-semibold">{mcq.correct_answer}</span>
+                              </div>
+                              <div className="sm:col-span-2">
+                                <span className="text-muted-foreground">Marks: </span>
+                                <span className="font-semibold">{mcq.marks_awarded} / {mcq.question_marks}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

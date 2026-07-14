@@ -13,6 +13,7 @@ export interface Exam {
   result_release_mode: "instant" | "manual";
   session_type?: string;
   session_date?: string | null;
+  status_display?: string;
   subject_name?: string | null;
   batch_name?: string | null;
   faculty_name?: string | null;

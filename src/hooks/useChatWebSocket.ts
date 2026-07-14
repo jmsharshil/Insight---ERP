@@ -153,14 +153,18 @@ function getAccessToken(): string | null {
 // ─── Helper: build WS URL ────────────────────────────────────────────────────
 
 function buildWSUrl(roomId: string, token: string): string {
-  const baseUrl = import.meta.env.VITE_APP_BASE_URL as string;
+  const baseUrl = (import.meta.env.VITE_APP_BASE_URL as string || "").trim();
   // Convert http(s) → ws(s), or use as-is if already ws
   const wsBase = baseUrl
     .replace(/^https:\/\//, "wss://")
     .replace(/^http:\/\//, "ws://")
     .replace(/\/$/, ""); // strip trailing slash
 
-  return `${wsBase}/ws/chat/${roomId}/?token=${token}`;
+  const url = `${wsBase}/ws/chat/${roomId}/?token=${token}`;
+
+  // console.log("[WS] Connecting to:", url.replace(/token=.*$/, "token=***"));
+  
+  return url;
 }
 
 // ─── The Hook ─────────────────────────────────────────────────────────────────
