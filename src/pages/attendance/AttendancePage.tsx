@@ -18,6 +18,7 @@ import ViolationsTab from "./tabs/ViolationsTab";
 import RegisterTab from "./tabs/RegisterTab";
 import EmployeeRegisterTab from "./tabs/EmployeeRegisterTab";
 import EmployeePersonalHistoryTab from "./tabs/EmployeePersonalHistoryTab";
+import StudentPersonalHistoryTab from "./tabs/StudentPersonalHistoryTab";
 
 export default function AttendancePage() {
   const dispatch = useDispatch();
@@ -206,7 +207,7 @@ export default function AttendancePage() {
 
         {!isFaculty && !isExamSupervisor && (
           <TabsContent value="history" className="mt-4">
-            <HistoryTab dropdowns={dropdowns} />
+            {isParentOrStudent ? <StudentPersonalHistoryTab dropdowns={dropdowns} /> : <HistoryTab dropdowns={dropdowns} />}
           </TabsContent>
         )}
 
