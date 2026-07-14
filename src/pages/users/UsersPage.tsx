@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Sheet,
   SheetContent,
@@ -72,6 +73,7 @@ import EmptyState from "@/components/common/EmptyState";
 
 import { cn, formatDate } from "@/lib/utils";
 import { TableSkeleton, SheetSkeleton } from "@/components/common/Skeletons";
+import { ROLES } from "@/constants/roles";
 
 /* ─── Role choices ──────────────────────────────────────────── */
 
@@ -101,11 +103,25 @@ const EMPLOYMENT_TYPE_CHOICES = [
   { value: "visiting", label: "Visiting" },
 ] as const;
 
-const LEVEL_CHOICES = [
-  { value: "cseet", label: "CSEET" },
-  { value: "cs_executive", label: "CS Executive" },
-  { value: "cs_professional", label: "CS Professional" },
-] as const;
+const ALL_MODULES = [
+  { id: "crm", label: "CRM" },
+  { id: "students", label: "Students" },
+  { id: "courses_batches", label: "Courses & Batches" },
+  { id: "timetable", label: "Timetable" },
+  { id: "attendance", label: "Attendance" },
+  { id: "fees", label: "Fees" },
+  { id: "exams", label: "Exams" },
+  { id: "results", label: "Results" },
+  { id: "faculty", label: "Faculty" },
+  { id: "leave", label: "Leave" },
+  { id: "chat", label: "Chat" },
+  { id: "inventory", label: "Inventory" },
+  { id: "notifications", label: "Notifications" },
+  { id: "audit_logs", label: "Audit Logs" },
+  { id: "payroll", label: "Payroll" },
+  { id: "settings", label: "Settings" },
+  { id: "users", label: "Users" },
+];
 
 /* ─── Column definitions ────────────────────────────────────── */
 
@@ -247,6 +263,7 @@ export default function UsersPage() {
     work_start_time: "",
     work_end_time: "",
     per_paper_rate: "",
+    accessible_modules: [] as string[],
   });
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
   const [profilePicPreview, setProfilePicPreview] = useState<string | null>(null);
@@ -339,6 +356,7 @@ export default function UsersPage() {
         work_start_time: selectedUser.work_start_time || "",
         work_end_time: selectedUser.work_end_time || "",
         per_paper_rate: selectedUser.per_paper_rate !== undefined && selectedUser.per_paper_rate !== null ? String(selectedUser.per_paper_rate) : "",
+        accessible_modules: selectedUser.accessible_modules || [],
       });
     }
   }, [selectedUser]);
@@ -432,6 +450,7 @@ export default function UsersPage() {
       work_start_time: "",
       work_end_time: "",
       per_paper_rate: "",
+      accessible_modules: [],
     });
     setProfilePicFile(null);
     setProfilePicPreview(null);
@@ -469,6 +488,14 @@ export default function UsersPage() {
       work_start_time: editForm.work_start_time,
       work_end_time: editForm.work_end_time,
       per_paper_rate: editForm.per_paper_rate ? Number(editForm.per_paper_rate) : null,
+      accessible_modules: Array.from(
+        new Set([
+          ...(editForm.role && ROLES[editForm.role as keyof typeof ROLES]
+            ? ROLES[editForm.role as keyof typeof ROLES].modules
+            : []),
+          ...editForm.accessible_modules,
+        ])
+      ),
     };
 
     dispatch({
@@ -529,6 +556,7 @@ export default function UsersPage() {
       work_start_time: selectedUser.work_start_time || "",
       work_end_time: selectedUser.work_end_time || "",
       per_paper_rate: selectedUser.per_paper_rate !== undefined && selectedUser.per_paper_rate !== null ? String(selectedUser.per_paper_rate) : "",
+      accessible_modules: selectedUser.accessible_modules || [],
     });
     setProfilePicFile(null);
     setProfilePicPreview(null);
@@ -586,6 +614,21 @@ export default function UsersPage() {
     if (editForm.work_end_time !== undefined) formData.append("work_end_time", editForm.work_end_time);
     if (editForm.per_paper_rate !== undefined && editForm.per_paper_rate !== "") formData.append("per_paper_rate", editForm.per_paper_rate);
 
+    const allModules = Array.from(
+      new Set([
+        ...(editForm.role && ROLES[editForm.role as keyof typeof ROLES]
+          ? ROLES[editForm.role as keyof typeof ROLES].modules
+          : []),
+        ...editForm.accessible_modules,
+      ])
+    );
+    if (allModules.length > 0) {
+      allModules.forEach((mod) => formData.append("accessible_modules", mod));
+    } else {
+      // If we need to send empty array, DRF might expect an empty string for the key
+      formData.append("accessible_modules", "");
+    }
+
     setUpdateLoading(true);
     dispatch({
       type: userActions.UPDATE_USER,
@@ -640,6 +683,12 @@ export default function UsersPage() {
   const isPaperChecker = activeRole === "paper_checker";
   const isExaminer = activeRole === "exam_supervisor";
   const showSalary = isEmployee && !(isFaculty && isPartTimeOrVisiting) && !isPaperChecker && !isExaminer;
+
+  const defaultModules = useMemo(() => {
+    if (!editForm.role) return [];
+    const roleDef = ROLES[editForm.role as keyof typeof ROLES];
+    return roleDef ? roleDef.modules : [];
+  }, [editForm.role]);
 
   return (
     <div>
@@ -1233,35 +1282,6 @@ export default function UsersPage() {
                         )}
                       </div>
 
-                      {/* <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                          Level
-                        </Label>
-                        {isEditing ? (
-                          <Select
-                            value={editForm.level}
-                            onValueChange={(val) => setEditForm((f) => ({ ...f, level: val }))}
-                          >
-                            <SelectTrigger className="bg-background">
-                              <SelectValue placeholder="Select Level" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {LEVEL_CHOICES.map((c) => (
-                                <SelectItem key={c.value} value={c.value}>
-                                  {c.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <div className="text-sm font-medium text-text-primary pt-0.5">
-                            {LEVEL_CHOICES.find((c) => c.value === selectedUser?.level)?.label ||
-                              selectedUser?.level ||
-                              "N/A"}
-                          </div>
-                        )}
-                      </div> */}
-
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
                           Employment Type
@@ -1474,6 +1494,47 @@ export default function UsersPage() {
                         </div>
                       </>
                     )}
+                  </div>
+
+                  {/* Accessible Modules */}
+                  <div className="space-y-3 pt-2">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                      Accessible Modules
+                    </Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {ALL_MODULES.map((mod) => {
+                        const isDefault = defaultModules.includes(mod.id as any);
+                        const isChecked = isDefault || editForm.accessible_modules.includes(mod.id);
+
+                        return (
+                          <div key={mod.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`module-${mod.id}`}
+                              checked={isChecked}
+                              disabled={isDefault || (!isEditing && !isAdding)}
+                              onCheckedChange={(checked) => {
+                                if (isDefault || (!isEditing && !isAdding)) return;
+                                setEditForm((f) => {
+                                  const newModules = checked
+                                    ? [...f.accessible_modules, mod.id]
+                                    : f.accessible_modules.filter((m) => m !== mod.id);
+                                  return { ...f, accessible_modules: newModules };
+                                });
+                              }}
+                            />
+                            <Label
+                              htmlFor={`module-${mod.id}`}
+                              className={cn(
+                                "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+                                isDefault ? "text-muted-foreground" : "text-text-primary"
+                              )}
+                            >
+                              {mod.label}
+                            </Label>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 

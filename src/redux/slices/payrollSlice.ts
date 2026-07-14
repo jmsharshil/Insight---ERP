@@ -40,6 +40,9 @@ export interface PaySlip {
   hourly_rate?: number | string;
   session_hours?: number | string;
   total_session_hours?: number | string;
+  payroll_month?: string;
+  payroll_year?: string;
+  payroll_status?: string;
 }
 
 export interface LatePolicy {

@@ -15,6 +15,9 @@ export interface AuthUser {
   organization?: string;
   organization_name?: string;
   profile_pic?: string | null;
+  accessible_modules?: string[];
+  canDelete?: boolean;
+  canExport?: boolean;
 }
 
 export interface LoginResponse {

@@ -63,8 +63,9 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
 
   // expanded when: mobile, pinned open, or hovered
   const expanded = mobile || pinned || hovered;
-  const role = user ? ROLES[user.role] : null;
-  const items = role?.modules.map((m) => ({ id: m, ...NAV_ITEMS[m] })) ?? [];
+  const role = user ? ROLES[user.role as keyof typeof ROLES] : null;
+  const modules = user?.accessible_modules || role?.modules || [];
+  const items = modules.map((m) => ({ id: m, ...NAV_ITEMS[m] })).filter((item) => item.label);
 
   return (
     <aside
