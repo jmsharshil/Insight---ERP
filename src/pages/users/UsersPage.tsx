@@ -260,6 +260,7 @@ export default function UsersPage() {
     bank_account: "",
     ifsc_code: "",
     pan_number: "",
+    aadhar_number: "",
     work_start_time: "",
     work_end_time: "",
     per_paper_rate: "",
@@ -353,6 +354,7 @@ export default function UsersPage() {
         bank_account: selectedUser.bank_account || "",
         ifsc_code: selectedUser.ifsc_code || "",
         pan_number: selectedUser.pan_number || "",
+        aadhar_number: selectedUser.aadhar_number || "",
         work_start_time: selectedUser.work_start_time || "",
         work_end_time: selectedUser.work_end_time || "",
         per_paper_rate: selectedUser.per_paper_rate !== undefined && selectedUser.per_paper_rate !== null ? String(selectedUser.per_paper_rate) : "",
@@ -447,6 +449,7 @@ export default function UsersPage() {
       bank_account: "",
       ifsc_code: "",
       pan_number: "",
+      aadhar_number: "",
       work_start_time: "",
       work_end_time: "",
       per_paper_rate: "",
@@ -485,6 +488,7 @@ export default function UsersPage() {
       bank_account: editForm.bank_account,
       ifsc_code: editForm.ifsc_code,
       pan_number: editForm.pan_number,
+      aadhar_number: editForm.aadhar_number,
       work_start_time: editForm.work_start_time,
       work_end_time: editForm.work_end_time,
       per_paper_rate: editForm.per_paper_rate ? Number(editForm.per_paper_rate) : null,
@@ -553,6 +557,7 @@ export default function UsersPage() {
       bank_account: selectedUser.bank_account || "",
       ifsc_code: selectedUser.ifsc_code || "",
       pan_number: selectedUser.pan_number || "",
+      aadhar_number: selectedUser.aadhar_number || "",
       work_start_time: selectedUser.work_start_time || "",
       work_end_time: selectedUser.work_end_time || "",
       per_paper_rate: selectedUser.per_paper_rate !== undefined && selectedUser.per_paper_rate !== null ? String(selectedUser.per_paper_rate) : "",
@@ -610,6 +615,7 @@ export default function UsersPage() {
     if (editForm.bank_account !== undefined) formData.append("bank_account", editForm.bank_account);
     if (editForm.ifsc_code !== undefined) formData.append("ifsc_code", editForm.ifsc_code);
     if (editForm.pan_number !== undefined) formData.append("pan_number", editForm.pan_number);
+    if (editForm.aadhar_number !== undefined) formData.append("aadhar_number", editForm.aadhar_number);
     if (editForm.work_start_time !== undefined) formData.append("work_start_time", editForm.work_start_time);
     if (editForm.work_end_time !== undefined) formData.append("work_end_time", editForm.work_end_time);
     if (editForm.per_paper_rate !== undefined && editForm.per_paper_rate !== "") formData.append("per_paper_rate", editForm.per_paper_rate);
@@ -1234,6 +1240,26 @@ export default function UsersPage() {
                         ) : (
                           <div className="text-sm font-medium text-text-primary pt-0.5">
                             {selectedUser?.pan_number || "N/A"}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                          Aadhar Number
+                        </Label>
+                        {isEditing ? (
+                          <Input
+                            value={editForm.aadhar_number}
+                            onChange={(e) =>
+                              setEditForm((f) => ({ ...f, aadhar_number: e.target.value }))
+                            }
+                            placeholder="Aadhar Number"
+                            className="bg-background"
+                          />
+                        ) : (
+                          <div className="text-sm font-medium text-text-primary pt-0.5">
+                            {selectedUser?.aadhar_number || "N/A"}
                           </div>
                         )}
                       </div>
