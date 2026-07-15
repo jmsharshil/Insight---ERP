@@ -128,7 +128,7 @@ export function AssignStudentFeeDialog({
               <Label htmlFor="total_amount">Total Amount</Label>
               <Input
                 id="total_amount"
-                type="number"
+                type="number" min="0"
                 step="0.01"
                 placeholder="0.00"
                 value={totalAmount}
@@ -140,7 +140,7 @@ export function AssignStudentFeeDialog({
               <Label htmlFor="discount">Discount Amount</Label>
               <Input
                 id="discount"
-                type="number"
+                type="number" min="0"
                 step="0.01"
                 placeholder="0.00"
                 value={discount}

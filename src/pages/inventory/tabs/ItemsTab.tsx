@@ -345,13 +345,13 @@ export default function ItemsTab() {
               </div>
               <div>
                 <Label className="text-xs mb-1 block">Reorder Level *</Label>
-                <Input type="number" value={form.reorder_level}
+                <Input type="number" min="0" value={form.reorder_level}
                   onChange={e => setForm(f => ({ ...f, reorder_level: e.target.value }))}
                   placeholder="10" className="h-9 text-sm" />
               </div>
               <div>
                 <Label className="text-xs mb-1 block">Unit Price (₹) *</Label>
-                <Input type="number" step="0.01" value={form.unit_price}
+                <Input type="number" min="0" step="0.01" value={form.unit_price}
                   onChange={e => setForm(f => ({ ...f, unit_price: e.target.value }))}
                   placeholder="250.00" className="h-9 text-sm" />
               </div>
@@ -394,13 +394,13 @@ export default function ItemsTab() {
                 </div>
                 <div>
                   <Label className="text-xs mb-1 block">Reorder Level</Label>
-                  <Input type="number" value={editTarget.reorder_level}
+                  <Input type="number" min="0" value={editTarget.reorder_level}
                     onChange={e => setEditTarget(p => p ? { ...p, reorder_level: Number(e.target.value) } : null)}
                     className="h-9 text-sm" />
                 </div>
                 <div>
                   <Label className="text-xs mb-1 block">Unit Price (₹)</Label>
-                  <Input type="number" step="0.01" value={editTarget.unit_price}
+                  <Input type="number" min="0" step="0.01" value={editTarget.unit_price}
                     onChange={e => setEditTarget(p => p ? { ...p, unit_price: e.target.value } : null)}
                     className="h-9 text-sm" />
                 </div>
@@ -453,7 +453,7 @@ export default function ItemsTab() {
             <div className="grid grid-cols-1 gap-3">
               <div>
                 <Label className="text-xs mb-1 block">Quantity *</Label>
-                <Input type="number" value={txnForm.quantity}
+                <Input type="number" min="0" value={txnForm.quantity}
                   onChange={e => setTxnForm(f => ({ ...f, quantity: e.target.value }))}
                   placeholder="100" className="h-9 text-sm" />
               </div>

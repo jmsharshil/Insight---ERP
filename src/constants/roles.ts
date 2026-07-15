@@ -27,37 +27,37 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   admin_executive: {
     id: "admin_executive", label: "Admin Executive", description: "Day-to-day data entry operator",
     color: "bg-sky-100", textColor: "text-sky-800",
-    modules: ["students","attendance","courses_batches","timetable","payroll","settings"],
+    modules: ["students","attendance","courses_batches","timetable","payroll","notifications","settings"],
     canDelete: false, canExport: false,
   },
   front_desk: {
     id: "front_desk", label: "Front Desk", description: "Reception and inquiry intake",
     color: "bg-teal-100", textColor: "text-teal-800",
-    modules: ["crm","payroll","settings"],
+    modules: ["crm","payroll","notifications","settings"],
     canDelete: false, canExport: false,
   },
   counsellor: {
     id: "counsellor", label: "Counsellor", description: "Manages assigned leads through pipeline",
     color: "bg-cyan-100", textColor: "text-cyan-800",
-    modules: ["crm","students","payroll","settings"],
+    modules: ["crm","students","payroll","notifications","settings"],
     canDelete: false, canExport: false,
   },
   tele_caller: {
     id: "tele_caller", label: "Tele Caller", description: "Outreach and lead contact role",
     color: "bg-indigo-100", textColor: "text-indigo-800",
-    modules: ["crm","payroll","settings"],
+    modules: ["crm","payroll","notifications","settings"],
     canDelete: false, canExport: false,
   },
   sales_senior_executive: {
     id: "sales_senior_executive", label: "Sales Senior Executive", description: "Full CRM pipeline authority",
     color: "bg-violet-100", textColor: "text-violet-800",
-    modules: ["crm","payroll","settings"],
+    modules: ["crm","payroll","notifications","settings"],
     canDelete: false, canExport: true,
   },
   sales_executive: {
     id: "sales_executive", label: "Sales Executive", description: "Lead assignment only",
     color: "bg-fuchsia-100", textColor: "text-fuchsia-800",
-    modules: ["crm","payroll","settings"],
+    modules: ["crm","payroll","notifications","settings"],
     canDelete: false, canExport: false,
   },
   student: {

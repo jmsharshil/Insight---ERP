@@ -696,7 +696,7 @@ export default function PapersTab({ examId }: PapersTabProps) {
                           Q {qNum}
                         </Label>
                         <Input
-                          type="number"
+                          type="number" min="0"
                           step="0.5"
                           className="h-9 text-sm font-semibold px-2 text-center border-none shadow-none focus-visible:ring-0 bg-transparent"
                           value={editForm.question_marks[qNum] || ""}
@@ -712,7 +712,7 @@ export default function PapersTab({ examId }: PapersTabProps) {
                   <Label className="text-xs font-semibold text-amber-800">Total Marks (Manual Override)</Label>
                   <p className="text-[11px] text-amber-700/80 mb-2">No questions configured. Enter the total manually.</p>
                   <Input
-                    type="number"
+                    type="number" min="0"
                     step="0.01"
                     value={editForm.marks_obtained}
                     onChange={(e) => setEditForm({ ...editForm, marks_obtained: e.target.value })}
@@ -864,7 +864,7 @@ export default function PapersTab({ examId }: PapersTabProps) {
                               <div>
                                 <Label className="text-[10px] uppercase">Update Marks (Optional)</Label>
                                 <Input
-                                  type="number"
+                                  type="number" min="0"
                                   step="0.01"
                                   placeholder={`Current: ${viewQueriesTarget.marks_obtained}`}
                                   value={resolveForm.marks_obtained}

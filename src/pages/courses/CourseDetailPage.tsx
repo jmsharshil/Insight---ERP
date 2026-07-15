@@ -473,7 +473,7 @@ export default function CourseDetailPage() {
                   <Label htmlFor="course-duration" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Duration (Months)</Label>
                   <Input
                     id="course-duration"
-                    type="number"
+                    type="number" min="0"
                     value={courseEditForm.duration_months}
                     onChange={(e) => setCourseEditForm({ ...courseEditForm, duration_months: Number(e.target.value) })}
                     placeholder="e.g. 12"
@@ -484,7 +484,7 @@ export default function CourseDetailPage() {
                   <Label htmlFor="course-fees" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Fee Amount</Label>
                   <Input
                     id="course-fees"
-                    type="number"
+                    type="number" min="0"
                     value={courseEditForm.fee_amount}
                     onChange={(e) => setCourseEditForm({ ...courseEditForm, fee_amount: e.target.value })}
                     placeholder="e.g. 52000"
@@ -723,7 +723,7 @@ export default function CourseDetailPage() {
               <Label htmlFor="subject-hours" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Hours</Label>
               <Input
                 id="subject-hours"
-                type="number"
+                type="number" min="0"
                 value={subjectForm.total_hours}
                 onChange={(e) => setSubjectForm({ ...subjectForm, total_hours: e.target.value })}
                 placeholder="e.g. 60"

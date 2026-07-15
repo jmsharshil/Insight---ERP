@@ -263,7 +263,7 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
             { label: "Total Marks",   value: exam.total_marks,          color: "text-foreground" },
-            { label: "Pass Marks",    value: exam.pass_marks,           color: "text-foreground" },
+            { label: "Passing Marks",    value: exam.pass_marks,           color: "text-foreground" },
             { label: "Exam Type",     value: exam.exam_type,            color: "text-blue-600"   },
             { label: "Result Mode",   value: exam.result_release_mode,  color: exam.result_release_mode === "instant" ? "text-green-600" : "text-yellow-600" },
           ].map(item => (

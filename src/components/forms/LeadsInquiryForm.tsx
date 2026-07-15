@@ -788,7 +788,7 @@ export default function LeadsInquiryForm() {
                           Percentage (%)
                         </Label>
                         <Input
-                          type="number"
+                          type="number" min="0"
                           step="0.01"
                           value={inquiryData.tenth_percentage}
                           onChange={(e) => handleInquiryChange("tenth_percentage", e.target.value)}
@@ -801,7 +801,7 @@ export default function LeadsInquiryForm() {
                           Percentile
                         </Label>
                         <Input
-                          type="number"
+                          type="number" min="0"
                           step="0.01"
                           value={inquiryData.tenth_percentile}
                           onChange={(e) => handleInquiryChange("tenth_percentile", e.target.value)}
@@ -864,7 +864,7 @@ export default function LeadsInquiryForm() {
                           Percentage (%)
                         </Label>
                         <Input
-                          type="number"
+                          type="number" min="0"
                           step="0.01"
                           value={inquiryData.twelfth_percentage}
                           onChange={(e) =>
@@ -879,7 +879,7 @@ export default function LeadsInquiryForm() {
                           Percentile
                         </Label>
                         <Input
-                          type="number"
+                          type="number" min="0"
                           step="0.01"
                           value={inquiryData.twelfth_percentile}
                           onChange={(e) =>

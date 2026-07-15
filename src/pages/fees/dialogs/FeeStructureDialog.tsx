@@ -196,7 +196,7 @@ export function FeeStructureDialog({
             <Label htmlFor="fs-amount">Total Amount *</Label>
             <Input
               id="fs-amount"
-              type="number"
+              type="number" min="0"
               value={totalAmount}
               readOnly
               placeholder="Select a level to auto-fill"

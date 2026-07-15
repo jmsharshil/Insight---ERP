@@ -9,7 +9,10 @@ export const useRole = () => {
   return {
     role,
     hasModule: (module: string) => {
-      if (user?.accessible_modules) {
+      // Globally allow notifications for all users/roles
+      if (module === "notifications") return true;
+
+      if (user?.accessible_modules && user.accessible_modules.length > 0) {
         return user.accessible_modules.includes(module);
       }
       return !!role?.modules.includes(module as ModuleId);

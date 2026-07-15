@@ -584,7 +584,7 @@ export default function AllocationsTab() {
                 <div>
                   <Label className="text-xs mb-1 block">Quantity *</Label>
                   <Input
-                    type="number"
+                    type="number" min="0"
                     value={singleForm.quantity}
                     onChange={(e) => setSingleForm((f) => ({ ...f, quantity: e.target.value }))}
                     min="1"
@@ -690,7 +690,7 @@ export default function AllocationsTab() {
                     <div className="col-span-2">
                       {idx === 0 && <Label className="text-xs mb-1 block">Qty</Label>}
                       <Input
-                        type="number"
+                        type="number" min="0"
                         value={line.quantity}
                         onChange={(e) => updateBulkLine(idx, "quantity", e.target.value)}
                         min="1"

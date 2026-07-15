@@ -1621,7 +1621,7 @@ export default function FacultyPage() {
                 Grace Period (Minutes)
               </Label>
               <Input
-                type="number"
+                type="number" min="0"
                 value={latePolicyForm.grace_period_minutes}
                 onChange={(e) =>
                   setLatePolicyForm({
@@ -1638,7 +1638,7 @@ export default function FacultyPage() {
                 Deduction Per Minute (₹)
               </Label>
               <Input
-                type="number"
+                type="number" min="0"
                 step="0.01"
                 value={latePolicyForm.deduction_per_minute}
                 onChange={(e) =>
@@ -1656,7 +1656,7 @@ export default function FacultyPage() {
                 Max Deduction Per Session (₹)
               </Label>
               <Input
-                type="number"
+                type="number" min="0"
                 step="0.01"
                 value={latePolicyForm.max_deduction_per_session}
                 onChange={(e) =>
@@ -1674,7 +1674,7 @@ export default function FacultyPage() {
                 Absence Deduction Per Day (₹)
               </Label>
               <Input
-                type="number"
+                type="number" min="0"
                 step="0.01"
                 value={latePolicyForm.absence_deduction_per_day}
                 onChange={(e) =>
@@ -1692,7 +1692,7 @@ export default function FacultyPage() {
                 Late Entry Threshold
               </Label>
               <Input
-                type="number"
+                type="number" min="0"
                 value={latePolicyForm.late_entry_threshold}
                 onChange={(e) =>
                   setLatePolicyForm({

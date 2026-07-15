@@ -157,7 +157,7 @@ export default function PayslipAdjustSheet({ open, onClose, payslip, runId }: Pa
                   <TrendingUp className="w-3 h-3 text-green-600" /> Bonus (₹)
                 </Label>
                 <Input
-                  type="number"
+                  type="number" min="0"
                   value={form.bonus}
                   onChange={e => setForm(f => ({ ...f, bonus: e.target.value }))}
                   placeholder="0"
@@ -170,7 +170,7 @@ export default function PayslipAdjustSheet({ open, onClose, payslip, runId }: Pa
                   <TrendingDown className="w-3 h-3 text-red-500" /> Other Deductions (₹)
                 </Label>
                 <Input
-                  type="number"
+                  type="number" min="0"
                   value={form.other_deductions}
                   onChange={e => setForm(f => ({ ...f, other_deductions: e.target.value }))}
                   placeholder="0"

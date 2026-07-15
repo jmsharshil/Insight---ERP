@@ -250,7 +250,7 @@ export default function StudentPaymentUploadForm() {
                     Payment Amount <span style={{ color: T.error }}>*</span>
                   </Label>
                   <Input
-                    type="number"
+                    type="number" min="0"
                     placeholder="e.g. 50000"
                     value={paymentAmount}
                     onChange={(e) => setPaymentAmount(e.target.value)}

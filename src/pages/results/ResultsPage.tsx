@@ -43,7 +43,7 @@ export default function ResultsPage() {
     <div className="space-y-6 pb-10">
       <PageHeader
         title="Results Analytics"
-        subtitle="View and analyze organization-wide exam performance."
+        subtitle="View and analyze organization wise exam performance."
         actions={
           <Button variant="outline" onClick={handleExport} disabled={isExporting}>
             {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
