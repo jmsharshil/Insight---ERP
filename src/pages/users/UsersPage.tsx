@@ -93,7 +93,7 @@ const ROLE_CHOICES = [
   // { value: "student", label: "Student" },
   // { value: "parents", label: "Parents" },
   { value: "faculty", label: "Faculty" },
-  { value: "house_keeping", label: "House Keping" },
+  { value: "house_keeping", label: "House Keeping" },
   { value: "security", label: "Security" },
 ] as const;
 
