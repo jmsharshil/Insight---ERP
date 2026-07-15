@@ -292,7 +292,7 @@ export default function PoliciesTab() {
               ].map(f => (
                 <div key={f.key}>
                   <Label className="text-xs mb-1 block">{f.label}</Label>
-                  <Input type="number" value={(form as any)[f.key]}
+                  <Input type="number" min="0" value={(form as any)[f.key]}
                     onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} className="h-9 text-sm" />
                 </div>
               ))}
@@ -335,7 +335,7 @@ export default function PoliciesTab() {
                 ].map(f => (
                   <div key={f.key}>
                     <Label className="text-xs mb-1 block">{f.label}</Label>
-                    <Input type="number" value={(editTarget as any)[f.key]}
+                    <Input type="number" min="0" value={(editTarget as any)[f.key]}
                       onChange={e => setEditTarget(p => p ? { ...p, [f.key]: Number(e.target.value) } : null)}
                       className="h-9 text-sm" />
                   </div>

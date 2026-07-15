@@ -188,7 +188,7 @@ export default function HolidaysTab() {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <CalendarDays className="w-4 h-4 text-muted-foreground" />
-          <Input type="number" placeholder="Year" value={yearFilter}
+          <Input type="number" min="0" placeholder="Year" value={yearFilter}
             onChange={e => setYearFilter(e.target.value)}
             className="h-9 text-sm w-28" />
           <p className="text-xs text-muted-foreground">{holidays.length} holiday(s)</p>

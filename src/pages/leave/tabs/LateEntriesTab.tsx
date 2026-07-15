@@ -242,22 +242,34 @@ export default function LateEntriesTab() {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2 justify-between">
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Search staff / notes..." className="pl-8 h-9 text-sm w-52"
-              value={search} onChange={e => setSearch(e.target.value)} />
+      <div className="flex flex-wrap items-end gap-2 justify-between">
+        <div className="flex items-end gap-2 flex-wrap">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground font-medium">Search</Label>
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input placeholder="Search staff / notes..." className="pl-8 h-9 text-sm w-52"
+                value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
           </div>
-          <Select value={penaltyFilter} onValueChange={v => setPenaltyFilter(v === "all" ? "" : v)}>
-            <SelectTrigger className="h-9 text-sm w-44"><SelectValue placeholder="All Penalties" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Penalties</SelectItem>
-              {PENALTY_OPTS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Input type="date" className="h-9 text-sm w-36" value={fromDate} onChange={e => setFromDate(e.target.value)} placeholder="From" />
-          <Input type="date" className="h-9 text-sm w-36" value={toDate} onChange={e => setToDate(e.target.value)} placeholder="To" />
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground font-medium">Penalty Type</Label>
+            <Select value={penaltyFilter} onValueChange={v => setPenaltyFilter(v === "all" ? "" : v)}>
+              <SelectTrigger className="h-9 text-sm w-44"><SelectValue placeholder="All Penalties" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Penalties</SelectItem>
+                {PENALTY_OPTS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground font-medium">From Date</Label>
+            <Input type="date" className="h-9 text-sm w-36" value={fromDate} onChange={e => setFromDate(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground font-medium">To Date</Label>
+            <Input type="date" className="h-9 text-sm w-36" value={toDate} onChange={e => setToDate(e.target.value)} />
+          </div>
           <Button variant="outline" className="h-9 text-sm"
             onClick={() => { setSearch(""); setPenaltyFilter(""); setFromDate(""); setToDate(""); fetchLateEntries(); }}>
             Clear

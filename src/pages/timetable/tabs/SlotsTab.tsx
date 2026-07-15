@@ -85,6 +85,7 @@ export default function SlotsTab({
   const [formLoading, setFormLoading] = useState(false);
   const [formPreFill, setFormPreFill] = useState<Partial<SlotFormValues> | null>(null);
   const [formLockedFields, setFormLockedFields] = useState<(keyof SlotFormValues)[]>([]);
+  const [conflictData, setConflictData] = useState<{ payload: any, clashingSlots: any[], conflicts: string[], message: string } | null>(null);
 
   // Drag-and-copy state
   const [duplicateTarget, setDuplicateTarget] = useState<{
@@ -201,6 +202,7 @@ export default function SlotsTab({
           }
           setFormOpen(false);
           setEditingSlot(null);
+          setConflictData(null);
         } else {
           toast.error("Unexpected response from server.");
         }
@@ -208,11 +210,53 @@ export default function SlotsTab({
       getError: (err: any) => {
         const data = err?.response?.data;
         // Handle clash error specifically
-        if (data?.clashing_slots?.length) {
-          toast.error(`Faculty scheduling conflict detected. Clashing slot IDs: ${data.clashing_slots.join(", ")}`);
+        if ((data?.clashing_slots?.length || data?.conflicts?.length) && !payload.ignore_conflict) {
+          setConflictData({ 
+            payload, 
+            clashingSlots: data.clashing_slots || [], 
+            conflicts: data.conflicts || [],
+            message: data.message || "Faculty scheduling conflict detected." 
+          });
         } else {
           toast.error(data?.message || err?.message || `Failed to ${isEdit ? "update" : "create"} slot`);
         }
+      },
+    });
+  };
+
+  const handleConfirmConflict = () => {
+    if (!conflictData) return;
+    const isEdit = !!editingSlot;
+    const bodyPayload = { ...conflictData.payload };
+    if (isEdit) {
+      bodyPayload.id = editingSlot.id;
+    }
+    
+    dispatch({
+      type: isEdit ? timetableActions.UPDATE_SLOT : timetableActions.CREATE_SLOT,
+      method: "POST",
+      endPoint: "/api/v1/timetable/confirm/",
+      body: bodyPayload,
+      auth: true,
+      setLoading: (v: boolean) => setFormLoading(v),
+      getResponse: (res: any) => {
+        if (res?.success && res?.data) {
+          if (isEdit) {
+            dispatch(updateSlotInList(res.data));
+            toast.success("Timetable slot updated.");
+          } else {
+            dispatch(addSlot(res.data));
+            toast.success("Timetable slot created.");
+          }
+          setFormOpen(false);
+          setEditingSlot(null);
+          setConflictData(null);
+        } else {
+          toast.error("Unexpected response from server.");
+        }
+      },
+      getError: (err: any) => {
+        toast.error(err?.response?.data?.message || err?.message || "Failed to confirm slot");
       },
     });
   };
@@ -386,6 +430,34 @@ export default function SlotsTab({
             </div>
           )}
         </ConfirmDialog>
+
+        <ConfirmDialog
+          open={!!conflictData}
+          onOpenChange={o => { if (!o) setConflictData(null); }}
+          title="Scheduling Conflict Detected"
+          description={conflictData?.conflicts?.length ? "The following conflicts were found. Do you want to proceed and save this slot anyway?" : conflictData?.message}
+          confirmLabel={formLoading ? "Saving..." : "Confirm & Save"}
+          variant="warning"
+          onConfirm={handleConfirmConflict}
+        >
+          {conflictData && (
+            <div className="mt-2 space-y-2">
+              {conflictData.conflicts && conflictData.conflicts.length > 0 ? (
+                conflictData.conflicts.map((conflict, idx) => (
+                  <div key={idx} className="bg-yellow-50 text-yellow-800 text-sm border border-yellow-300 rounded-md p-2.5">
+                    {conflict}
+                  </div>
+                ))
+              ) : conflictData.clashingSlots && conflictData.clashingSlots.length > 0 ? (
+                conflictData.clashingSlots.map((slot, idx) => (
+                  <div key={idx} className="bg-yellow-50 text-yellow-800 text-sm border border-yellow-300 rounded-md p-2.5">
+                    {typeof slot === "string" ? slot : `Clashing Slot: ${slot.batch_name || "Unknown Batch"} - ${slot.day_label || slot.session_date} ${slot.start_time}-${slot.end_time}`}
+                  </div>
+                ))
+              ) : null}
+            </div>
+          )}
+        </ConfirmDialog>
       </div>
     );
   }
@@ -549,6 +621,35 @@ export default function SlotsTab({
         variant="danger"
         onConfirm={handleDelete}
       />
+
+      {/* Conflict Confirm */}
+      <ConfirmDialog
+        open={!!conflictData}
+        onOpenChange={o => { if (!o) setConflictData(null); }}
+        title="Scheduling Conflict Detected"
+        description={conflictData?.conflicts?.length ? "The following conflicts were found. Do you want to proceed and save this slot anyway?" : conflictData?.message}
+        confirmLabel={formLoading ? "Saving..." : "Confirm & Save"}
+        variant="warning"
+        onConfirm={handleConfirmConflict}
+      >
+        {conflictData && (
+          <div className="mt-2 space-y-2">
+            {conflictData.conflicts && conflictData.conflicts.length > 0 ? (
+              conflictData.conflicts.map((conflict, idx) => (
+                <div key={idx} className="bg-yellow-50 text-yellow-800 text-sm border border-yellow-300 rounded-md p-2.5">
+                  {conflict}
+                </div>
+              ))
+            ) : conflictData.clashingSlots && conflictData.clashingSlots.length > 0 ? (
+              conflictData.clashingSlots.map((slot, idx) => (
+                <div key={idx} className="bg-yellow-50 text-yellow-800 text-sm border border-yellow-300 rounded-md p-2.5">
+                  {typeof slot === "string" ? slot : `Clashing Slot: ${slot.batch_name || "Unknown Batch"} - ${slot.day_label || slot.session_date} ${slot.start_time}-${slot.end_time}`}
+                </div>
+              ))
+            ) : null}
+          </div>
+        )}
+      </ConfirmDialog>
     </div>
   );
 }

@@ -28,13 +28,13 @@ export default function EmployeePersonalHistoryTab() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<{ summary: any; records: any[] } | null>(null);
 
-  const fetchHistory = () => {
+  const fetchHistory = (filtersToUse = f) => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (f.year && f.year !== "all") params.set("year", f.year);
-    if (f.month && f.month !== "all") params.set("month", f.month);
-    if (f.from_date) params.set("from_date", f.from_date);
-    if (f.to_date) params.set("to_date", f.to_date);
+    if (filtersToUse.year && filtersToUse.year !== "all") params.set("year", filtersToUse.year);
+    if (filtersToUse.month && filtersToUse.month !== "all") params.set("month", filtersToUse.month);
+    if (filtersToUse.from_date) params.set("from_date", filtersToUse.from_date);
+    if (filtersToUse.to_date) params.set("to_date", filtersToUse.to_date);
 
     dispatch({
       type: dropdownActions.GET_DROPDOWN,
@@ -57,8 +57,20 @@ export default function EmployeePersonalHistoryTab() {
   };
 
   useEffect(() => {
-    fetchHistory();
+    fetchHistory(f);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleClear = () => {
+    const defaultFilters = {
+      year: currentYear.toString(),
+      month: currentMonth.toString(),
+      from_date: "",
+      to_date: "",
+    };
+    setF(defaultFilters);
+    fetchHistory(defaultFilters);
+  };
 
   const getStatusBadge = (status: string, display: string) => {
     let className = "bg-muted text-muted-foreground";
@@ -141,7 +153,8 @@ export default function EmployeePersonalHistoryTab() {
           />
         </div>
 
-        <Button onClick={fetchHistory} className="h-9">Apply Filters</Button>
+        <Button onClick={() => fetchHistory(f)} className="h-9">Apply Filters</Button>
+        <Button variant="outline" onClick={handleClear} className="h-9 gap-1.5"><XCircle className="w-3.5 h-3.5" /> Clear</Button>
       </div>
 
       {loading ? (

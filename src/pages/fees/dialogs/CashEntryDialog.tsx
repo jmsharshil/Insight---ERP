@@ -61,7 +61,7 @@ export function CashEntryDialog({
           <div>
             <Label>Amount *</Label>
             <Input
-              type="number"
+              type="number" min="0"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               className="mt-1"

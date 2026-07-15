@@ -93,7 +93,7 @@ const ROLE_CHOICES = [
   // { value: "student", label: "Student" },
   // { value: "parents", label: "Parents" },
   { value: "faculty", label: "Faculty" },
-  { value: "house_keeping", label: "House Keping" },
+  { value: "house_keeping", label: "House Keeping" },
   { value: "security", label: "Security" },
 ] as const;
 
@@ -1391,7 +1391,7 @@ export default function UsersPage() {
                         </Label>
                         {isEditing ? (
                           <Input
-                            type="number"
+                            type="number" min="0"
                             step="0.5"
                             value={editForm.session_hours}
                             onChange={(e) =>
@@ -1416,7 +1416,7 @@ export default function UsersPage() {
                       </Label>
                       {isEditing ? (
                         <Input
-                          type="number"
+                          type="number" min="0"
                           value={editForm.hourly_rate}
                           onChange={(e) =>
                             setEditForm((f) => ({ ...f, hourly_rate: e.target.value }))
@@ -1439,7 +1439,7 @@ export default function UsersPage() {
                       </Label>
                       {isEditing ? (
                         <Input
-                          type="number"
+                          type="number" min="0"
                           value={editForm.salary}
                           onChange={(e) => setEditForm((f) => ({ ...f, salary: e.target.value }))}
                           placeholder="Salary"
@@ -1460,7 +1460,7 @@ export default function UsersPage() {
                       </Label>
                       {isEditing ? (
                         <Input
-                          type="number"
+                          type="number" min="0"
                           value={editForm.per_paper_rate}
                           onChange={(e) =>
                             setEditForm((f) => ({ ...f, per_paper_rate: e.target.value }))

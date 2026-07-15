@@ -168,7 +168,7 @@ export function CreateInstallmentDialog({
                     <div className="flex-1">
                       <Label className="text-[10px] text-muted-foreground">Amount (₹)</Label>
                       <Input
-                        type="number"
+                        type="number" min="0"
                         placeholder="Amount"
                         className="h-8 text-xs mt-0.5"
                         value={item.amount}
