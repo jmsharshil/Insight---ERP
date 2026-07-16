@@ -78,7 +78,7 @@ import { ROLES } from "@/constants/roles";
 /* ─── Role choices ──────────────────────────────────────────── */
 
 const ROLE_CHOICES = [
-  // { value: "super_admin", label: "Super Admin" },
+  { value: "super_admin", label: "Super Admin" },
   { value: "branch_manager", label: "Branch Manager" },
   { value: "admin_senior_executive", label: "Admin Senior Executive" },
   { value: "admin_executive", label: "Admin Executive" },
@@ -86,12 +86,12 @@ const ROLE_CHOICES = [
   { value: "counsellor", label: "Counsellor" },
   { value: "sales_senior_executive", label: "Sales Senior Executive" },
   { value: "sales_executive", label: "Sales Executive" },
-  { value: "tele_caller", label: "Tele Caller" },
+  { value: "tele_caller", label: "Telecaller" },
   { value: "exam_supervisor", label: "Exam Supervisor" },
   { value: "paper_checker", label: "Paper Checker" },
   { value: "accountant", label: "Accountant" },
-  // { value: "student", label: "Student" },
-  // { value: "parents", label: "Parents" },
+  { value: "student", label: "Student" },
+  { value: "parents", label: "Parents" },
   { value: "faculty", label: "Faculty" },
   { value: "house_keeping", label: "House Keeping" },
   { value: "security", label: "Security" },
@@ -348,16 +348,28 @@ export default function UsersPage() {
         level: selectedUser.level || "",
         employment_type: selectedUser.employment_type || "",
         joining_date: selectedUser.joining_date || "",
-        hourly_rate: selectedUser.hourly_rate !== undefined && selectedUser.hourly_rate !== null ? String(selectedUser.hourly_rate) : "",
-        session_hours: selectedUser.session_hours !== undefined && selectedUser.session_hours !== null ? String(selectedUser.session_hours) : "",
-        salary: selectedUser.salary !== undefined && selectedUser.salary !== null ? String(selectedUser.salary) : "",
+        hourly_rate:
+          selectedUser.hourly_rate !== undefined && selectedUser.hourly_rate !== null
+            ? String(selectedUser.hourly_rate)
+            : "",
+        session_hours:
+          selectedUser.session_hours !== undefined && selectedUser.session_hours !== null
+            ? String(selectedUser.session_hours)
+            : "",
+        salary:
+          selectedUser.salary !== undefined && selectedUser.salary !== null
+            ? String(selectedUser.salary)
+            : "",
         bank_account: selectedUser.bank_account || "",
         ifsc_code: selectedUser.ifsc_code || "",
         pan_number: selectedUser.pan_number || "",
         aadhar_number: selectedUser.aadhar_number || "",
         work_start_time: selectedUser.work_start_time || "",
         work_end_time: selectedUser.work_end_time || "",
-        per_paper_rate: selectedUser.per_paper_rate !== undefined && selectedUser.per_paper_rate !== null ? String(selectedUser.per_paper_rate) : "",
+        per_paper_rate:
+          selectedUser.per_paper_rate !== undefined && selectedUser.per_paper_rate !== null
+            ? String(selectedUser.per_paper_rate)
+            : "",
         accessible_modules: selectedUser.accessible_modules || [],
       });
     }
@@ -498,7 +510,7 @@ export default function UsersPage() {
             ? ROLES[editForm.role as keyof typeof ROLES].modules
             : []),
           ...editForm.accessible_modules,
-        ])
+        ]),
       ),
     };
 
@@ -551,16 +563,28 @@ export default function UsersPage() {
       level: selectedUser.level || "",
       employment_type: selectedUser.employment_type || "",
       joining_date: selectedUser.joining_date || "",
-      hourly_rate: selectedUser.hourly_rate !== undefined && selectedUser.hourly_rate !== null ? String(selectedUser.hourly_rate) : "",
-      session_hours: selectedUser.session_hours !== undefined && selectedUser.session_hours !== null ? String(selectedUser.session_hours) : "",
-      salary: selectedUser.salary !== undefined && selectedUser.salary !== null ? String(selectedUser.salary) : "",
+      hourly_rate:
+        selectedUser.hourly_rate !== undefined && selectedUser.hourly_rate !== null
+          ? String(selectedUser.hourly_rate)
+          : "",
+      session_hours:
+        selectedUser.session_hours !== undefined && selectedUser.session_hours !== null
+          ? String(selectedUser.session_hours)
+          : "",
+      salary:
+        selectedUser.salary !== undefined && selectedUser.salary !== null
+          ? String(selectedUser.salary)
+          : "",
       bank_account: selectedUser.bank_account || "",
       ifsc_code: selectedUser.ifsc_code || "",
       pan_number: selectedUser.pan_number || "",
       aadhar_number: selectedUser.aadhar_number || "",
       work_start_time: selectedUser.work_start_time || "",
       work_end_time: selectedUser.work_end_time || "",
-      per_paper_rate: selectedUser.per_paper_rate !== undefined && selectedUser.per_paper_rate !== null ? String(selectedUser.per_paper_rate) : "",
+      per_paper_rate:
+        selectedUser.per_paper_rate !== undefined && selectedUser.per_paper_rate !== null
+          ? String(selectedUser.per_paper_rate)
+          : "",
       accessible_modules: selectedUser.accessible_modules || [],
     });
     setProfilePicFile(null);
@@ -603,22 +627,33 @@ export default function UsersPage() {
     if (profilePicFile) formData.append("profile_pic", profilePicFile);
 
     if (editForm.employee_id !== undefined) formData.append("employee_id", editForm.employee_id);
-    if (editForm.qualification !== undefined) formData.append("qualification", editForm.qualification);
-    if (editForm.specialization !== undefined) formData.append("specialization", editForm.specialization);
-    if (editForm.subject_expertise !== undefined) formData.append("subject_expertise", editForm.subject_expertise);
+    if (editForm.qualification !== undefined)
+      formData.append("qualification", editForm.qualification);
+    if (editForm.specialization !== undefined)
+      formData.append("specialization", editForm.specialization);
+    if (editForm.subject_expertise !== undefined)
+      formData.append("subject_expertise", editForm.subject_expertise);
     if (editForm.level !== undefined) formData.append("level", editForm.level);
-    if (editForm.employment_type !== undefined) formData.append("employment_type", editForm.employment_type);
+    if (editForm.employment_type !== undefined)
+      formData.append("employment_type", editForm.employment_type);
     if (editForm.joining_date !== undefined) formData.append("joining_date", editForm.joining_date);
-    if (editForm.hourly_rate !== undefined && editForm.hourly_rate !== "") formData.append("hourly_rate", editForm.hourly_rate);
-    if (editForm.session_hours !== undefined && editForm.session_hours !== "") formData.append("session_hours", editForm.session_hours);
-    if (editForm.salary !== undefined && editForm.salary !== "") formData.append("salary", editForm.salary);
+    if (editForm.hourly_rate !== undefined && editForm.hourly_rate !== "")
+      formData.append("hourly_rate", editForm.hourly_rate);
+    if (editForm.session_hours !== undefined && editForm.session_hours !== "")
+      formData.append("session_hours", editForm.session_hours);
+    if (editForm.salary !== undefined && editForm.salary !== "")
+      formData.append("salary", editForm.salary);
     if (editForm.bank_account !== undefined) formData.append("bank_account", editForm.bank_account);
     if (editForm.ifsc_code !== undefined) formData.append("ifsc_code", editForm.ifsc_code);
     if (editForm.pan_number !== undefined) formData.append("pan_number", editForm.pan_number);
-    if (editForm.aadhar_number !== undefined) formData.append("aadhar_number", editForm.aadhar_number);
-    if (editForm.work_start_time !== undefined) formData.append("work_start_time", editForm.work_start_time);
-    if (editForm.work_end_time !== undefined) formData.append("work_end_time", editForm.work_end_time);
-    if (editForm.per_paper_rate !== undefined && editForm.per_paper_rate !== "") formData.append("per_paper_rate", editForm.per_paper_rate);
+    if (editForm.aadhar_number !== undefined)
+      formData.append("aadhar_number", editForm.aadhar_number);
+    if (editForm.work_start_time !== undefined)
+      formData.append("work_start_time", editForm.work_start_time);
+    if (editForm.work_end_time !== undefined)
+      formData.append("work_end_time", editForm.work_end_time);
+    if (editForm.per_paper_rate !== undefined && editForm.per_paper_rate !== "")
+      formData.append("per_paper_rate", editForm.per_paper_rate);
 
     const allModules = Array.from(
       new Set([
@@ -626,7 +661,7 @@ export default function UsersPage() {
           ? ROLES[editForm.role as keyof typeof ROLES].modules
           : []),
         ...editForm.accessible_modules,
-      ])
+      ]),
     );
     if (allModules.length > 0) {
       allModules.forEach((mod) => formData.append("accessible_modules", mod));
@@ -682,13 +717,16 @@ export default function UsersPage() {
     },
   });
 
-  const activeRole = isAdding ? editForm.role : (selectedUser?.role || editForm.role);
+  const activeRole = isAdding ? editForm.role : selectedUser?.role || editForm.role;
   const isEmployee = activeRole && activeRole !== "student" && activeRole !== "parents";
   const isFaculty = activeRole === "faculty";
-  const isPartTimeOrVisiting = isFaculty && (editForm.employment_type === "part_time" || editForm.employment_type === "visiting");
+  const isPartTimeOrVisiting =
+    isFaculty &&
+    (editForm.employment_type === "part_time" || editForm.employment_type === "visiting");
   const isPaperChecker = activeRole === "paper_checker";
   const isExaminer = activeRole === "exam_supervisor";
-  const showSalary = isEmployee && !(isFaculty && isPartTimeOrVisiting) && !isPaperChecker && !isExaminer;
+  const showSalary =
+    isEmployee && !(isFaculty && isPartTimeOrVisiting) && !isPaperChecker && !isExaminer;
 
   const defaultModules = useMemo(() => {
     if (!editForm.role) return [];
@@ -1100,7 +1138,12 @@ export default function UsersPage() {
                           <SelectValue placeholder="Select a role" />
                         </SelectTrigger>
                         <SelectContent>
-                          {ROLE_CHOICES.map((r) => (
+                          {ROLE_CHOICES.filter(
+                            (r) =>
+                              r.value !== "super_admin" &&
+                              r.value !== "student" &&
+                              r.value !== "parents",
+                          ).map((r) => (
                             <SelectItem key={r.value} value={r.value}>
                               {r.label}
                             </SelectItem>
@@ -1391,7 +1434,8 @@ export default function UsersPage() {
                         </Label>
                         {isEditing ? (
                           <Input
-                            type="number" min="0"
+                            type="number"
+                            min="0"
                             step="0.5"
                             value={editForm.session_hours}
                             onChange={(e) =>
@@ -1416,7 +1460,8 @@ export default function UsersPage() {
                       </Label>
                       {isEditing ? (
                         <Input
-                          type="number" min="0"
+                          type="number"
+                          min="0"
                           value={editForm.hourly_rate}
                           onChange={(e) =>
                             setEditForm((f) => ({ ...f, hourly_rate: e.target.value }))
@@ -1439,7 +1484,8 @@ export default function UsersPage() {
                       </Label>
                       {isEditing ? (
                         <Input
-                          type="number" min="0"
+                          type="number"
+                          min="0"
                           value={editForm.salary}
                           onChange={(e) => setEditForm((f) => ({ ...f, salary: e.target.value }))}
                           placeholder="Salary"
@@ -1460,7 +1506,8 @@ export default function UsersPage() {
                       </Label>
                       {isEditing ? (
                         <Input
-                          type="number" min="0"
+                          type="number"
+                          min="0"
                           value={editForm.per_paper_rate}
                           onChange={(e) =>
                             setEditForm((f) => ({ ...f, per_paper_rate: e.target.value }))
@@ -1552,7 +1599,7 @@ export default function UsersPage() {
                               htmlFor={`module-${mod.id}`}
                               className={cn(
                                 "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
-                                isDefault ? "text-muted-foreground" : "text-text-primary"
+                                isDefault ? "text-muted-foreground" : "text-text-primary",
                               )}
                             >
                               {mod.label}

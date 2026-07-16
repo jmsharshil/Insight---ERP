@@ -8,7 +8,13 @@ import { Users, CheckCircle, GraduationCap, Trophy, BarChart2 } from "lucide-rea
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
+import ModulePlaceholder from "@/pages/ModulePlaceholder";
+
 export default function SummaryTab() {
+  return <ModulePlaceholder title="Results Summary" />;
+}
+
+export function SummaryTabOld() {
   const { user } = useAuth();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);

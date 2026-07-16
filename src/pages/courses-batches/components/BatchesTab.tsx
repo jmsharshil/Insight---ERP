@@ -284,8 +284,7 @@ export default function BatchesTab({
           <Users className="w-12 h-12 text-muted-foreground opacity-50 mb-3" />
           <h3 className="font-semibold text-lg text-text-primary">No Batches Found</h3>
           <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-            No batches match your query or filters. Click "Add Batch" to register a new student
-            batch.
+            No batches match your query or filters.
           </p>
         </div>
       )}

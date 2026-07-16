@@ -110,8 +110,11 @@ export default function AttendancePage() {
   const isExamSupervisor = user?.role === "exam_supervisor";
   const isEmployee = user && !isParentOrStudent;
   const isAdmin = user && ["super_admin", "admin", "branch_manager"].includes(user.role);
-  const isEmployeeHistoryRole = user && !["super_admin", "student", "parents", "paper_checker"].includes(user.role);
-  const defaultTab = isParentOrStudent ? "students" : (isFaculty || isExamSupervisor) ? "my_history" : "dashboard";
+  const isEmployeeHistoryRole = user && !["super_admin", "student", "parents"].includes(user.role);
+  const fullAttendanceRoles = ["super_admin", "branch_manager", "admin_senior_executive", "admin_executive"];
+  const isFullAttendanceUser = user && fullAttendanceRoles.includes(user.role);
+  
+  const defaultTab = isParentOrStudent ? "students" : isFullAttendanceUser ? "dashboard" : "my_history";
 
   const handleScan = (type: "check_in" | "check_out") => {
     setScanLoading(type);
@@ -139,7 +142,7 @@ export default function AttendancePage() {
           <h1 className="text-2xl font-bold tracking-tight">Attendance</h1>
           <p className="text-muted-foreground">Track and manage student & faculty attendance.</p>
         </div>
-       {/* {isEmployee && (
+        {/* {isEmployee && (
           <div className="flex gap-2">
             <Button 
               onClick={() => handleScan("check_in")} 
@@ -163,15 +166,16 @@ export default function AttendancePage() {
 
       <Tabs defaultValue={defaultTab} className="mt-2">
         <TabsList className="">
-          {!isParentOrStudent && !isFaculty && !isExamSupervisor && <TabsTrigger value="dashboard">Dashboard</TabsTrigger>}
+          {isFullAttendanceUser && <TabsTrigger value="dashboard">Dashboard</TabsTrigger>}
           {isEmployeeHistoryRole && <TabsTrigger value="my_history">My Attendance</TabsTrigger>}
-          {!isFaculty && !isExamSupervisor && <TabsTrigger value="students">Students</TabsTrigger>}
-          {/* {!isParentOrStudent && !isFaculty && !isExamSupervisor && <TabsTrigger value="register">Student Register</TabsTrigger>} */}
+          {isFullAttendanceUser ||
+            (user?.role === "faculty" && <TabsTrigger value="students">Students</TabsTrigger>)}
+          {/* {isFullAttendanceUser && <TabsTrigger value="register">Student Register</TabsTrigger>} */}
           {/* {isAdmin && <TabsTrigger value="staff_register">Staff Register</TabsTrigger>} */}
-          {!isFaculty && !isExamSupervisor && <TabsTrigger value="history">History</TabsTrigger>}
-          {!isParentOrStudent && !isFaculty && !isExamSupervisor && <TabsTrigger value="faculty">Staff</TabsTrigger>}
-          {!isParentOrStudent && !isFaculty && !isExamSupervisor && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
-          {!isParentOrStudent && !isFaculty && !isExamSupervisor && <TabsTrigger value="defaulters">Defaulters</TabsTrigger>}
+          {isFullAttendanceUser && <TabsTrigger value="history">History</TabsTrigger>}
+          {isFullAttendanceUser && <TabsTrigger value="faculty">Staff</TabsTrigger>}
+          {isFullAttendanceUser && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
+          {isFullAttendanceUser && <TabsTrigger value="defaulters">Defaulters</TabsTrigger>}
           <TabsTrigger value="violations">Violations</TabsTrigger>
         </TabsList>
 
@@ -181,13 +185,14 @@ export default function AttendancePage() {
           </TabsContent>
         )}
 
-        {!isFaculty && !isExamSupervisor && (
-          <TabsContent value="students" className="mt-4">
-            <StudentsAttendanceTab dropdowns={dropdowns} />
-          </TabsContent>
-        )}
+        {isFullAttendanceUser ||
+          (user?.role === "faculty" && (
+            <TabsContent value="students" className="mt-4">
+              <StudentsAttendanceTab dropdowns={dropdowns} />
+            </TabsContent>
+          ))}
 
-        {!isParentOrStudent && !isFaculty && !isExamSupervisor && (
+        {isFullAttendanceUser && (
           <TabsContent value="register" className="mt-4">
             <RegisterTab dropdowns={dropdowns} />
           </TabsContent>
@@ -205,25 +210,29 @@ export default function AttendancePage() {
           </TabsContent>
         )}
 
-        {!isFaculty && !isExamSupervisor && (
+        {isFullAttendanceUser && (
           <TabsContent value="history" className="mt-4">
-            {isParentOrStudent ? <StudentPersonalHistoryTab dropdowns={dropdowns} /> : <HistoryTab dropdowns={dropdowns} />}
+            {isParentOrStudent ? (
+              <StudentPersonalHistoryTab dropdowns={dropdowns} />
+            ) : (
+              <HistoryTab dropdowns={dropdowns} />
+            )}
           </TabsContent>
         )}
 
-        {!isParentOrStudent && !isFaculty && !isExamSupervisor && (
+        {isFullAttendanceUser && (
           <TabsContent value="faculty" className="mt-4">
             <FacultyTab dropdowns={dropdowns} />
           </TabsContent>
         )}
 
-        {!isParentOrStudent && !isFaculty && !isExamSupervisor && (
+        {isFullAttendanceUser && (
           <TabsContent value="analytics" className="mt-4">
             <AnalyticsTab dropdowns={dropdowns} />
           </TabsContent>
         )}
 
-        {!isParentOrStudent && !isFaculty && !isExamSupervisor && (
+        {isFullAttendanceUser && (
           <TabsContent value="defaulters" className="mt-4">
             <DefaultersTab dropdowns={dropdowns} />
           </TabsContent>
