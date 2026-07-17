@@ -997,33 +997,6 @@ export default function BranchesTab() {
                       </div>
                     </div>
                   </div>
-
-                  {/* QR Code */}
-                  <div className="p-4 rounded-xl border border-border bg-muted/10 space-y-3">
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Branch QR Code
-                    </h4>
-                    <div className="flex justify-center">
-                      {(() => {
-                        const qrPath = selectedBranch.qr_image || selectedBranch.qr;
-                        if (qrPath) {
-                          const src = qrPath.startsWith("http") ? qrPath : import.meta.env.VITE_APP_BASE_URL + qrPath;
-                          return (
-                            <img
-                              src={src}
-                              alt="Branch QR Code"
-                              className="w-40 h-40 object-contain rounded-lg border border-border bg-white p-2"
-                            />
-                          );
-                        }
-                        return (
-                          <div className="text-sm text-muted-foreground py-8">
-                            No QR code available for this branch.
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
                 </div>
               )}
               {user?.role === "super_admin" && (
