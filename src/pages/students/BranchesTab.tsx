@@ -20,6 +20,8 @@ import {
   FileSearch,
   ChevronRight,
   ChevronLeft,
+  QrCode,
+  Download,
 } from "lucide-react";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -980,30 +982,48 @@ export default function BranchesTab() {
 
                     {/* QR Code Information */}
                     {selectedBranch.qr_image && (
-                      <div className="p-4 rounded-xl border border-border bg-muted/10 space-y-3 col-span-1 md:col-span-2 flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4">
-                        <div className="space-y-2">
-                          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                            Attendance QR Code
-                          </h4>
-                          <p className="text-sm text-muted-foreground max-w-sm">
-                            Employees and students can scan this QR code using their app to check in and check out at this branch.
-                          </p>
-                          <div>
-                            <a 
-                              href={selectedBranch.qr_image} 
-                              target="_blank" 
-                              rel="noreferrer" 
-                              className="text-primary text-sm font-medium hover:underline inline-block mt-1"
-                            >
-                              Download / View Full Size
-                            </a>
+                      <div className="relative overflow-hidden p-6 rounded-2xl border border-border bg-gradient-to-br from-primary/5 via-transparent to-primary/5 col-span-1 md:col-span-2 group">
+                        {/* Decorative background element */}
+                        <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-colors duration-500 pointer-events-none" />
+                        
+                        <div className="relative flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6">
+                          <div className="space-y-4 flex-1 text-center sm:text-left">
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-center sm:justify-start gap-2 text-primary">
+                                <QrCode className="w-5 h-5" />
+                                <h4 className="font-semibold text-text-primary text-base">
+                                  Attendance QR Code
+                                </h4>
+                              </div>
+                              <p className="text-sm text-muted-foreground leading-relaxed max-w-md mx-auto sm:mx-0">
+                                Scan this QR code using the app to instantly record check-in and check-out times at this branch.
+                              </p>
+                            </div>
+                            
+                            <div>
+                              <a 
+                                href={selectedBranch.qr_image} 
+                                target="_blank" 
+                                rel="noreferrer" 
+                                className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-sm font-medium rounded-lg transition-colors cursor-pointer"
+                              >
+                                <Download className="w-4 h-4" />
+                                Download Full Size
+                              </a>
+                            </div>
+                          </div>
+                          
+                          <div className="shrink-0 group/qr">
+                            <div className="relative p-3 bg-white rounded-2xl shadow-sm border border-border transition-transform duration-300 group-hover/qr:scale-105 group-hover/qr:shadow-md">
+                              <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 to-transparent opacity-0 group-hover/qr:opacity-100 rounded-2xl transition-opacity duration-300 pointer-events-none" />
+                              <img 
+                                src={selectedBranch.qr_image} 
+                                alt={`${selectedBranch.name} QR Code`} 
+                                className="w-36 h-36 object-contain rounded-xl relative z-10 bg-white" 
+                              />
+                            </div>
                           </div>
                         </div>
-                        <img 
-                          src={selectedBranch.qr_image} 
-                          alt={`${selectedBranch.name} QR Code`} 
-                          className="w-32 h-32 rounded-xl border border-border bg-white p-2 shrink-0 object-contain" 
-                        />
                       </div>
                     )}
 

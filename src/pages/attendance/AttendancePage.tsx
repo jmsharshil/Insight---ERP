@@ -107,7 +107,7 @@ export default function AttendancePage() {
 
   const isParentOrStudent = user?.role === "parents" || user?.role === "student";
   const isFaculty = user?.role === "faculty";
-  const isExamSupervisor = user?.role === "exam_supervisor";
+  const isExamSupervisor = user?.role === "exam_supervisor" || user?.role === "paper_checker";
   const isSecurityOrHouseKeeping = user?.role === "security" || user?.role === "house_keeping";
   const isEmployee = user && !isParentOrStudent;
   const isAdmin = user && ["super_admin", "admin", "branch_manager"].includes(user.role);
