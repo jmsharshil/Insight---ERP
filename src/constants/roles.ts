@@ -99,13 +99,13 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   security: {
     id: "security", label: "Security", description: "Campus security personnel",
     color: "bg-slate-100", textColor: "text-slate-800",
-    modules: ["attendance","payroll","leave","chat","notifications","settings"],
+    modules: ["attendance","payroll","notifications","settings"],
     canDelete: false, canExport: false,
   },
   house_keeping: {
     id: "house_keeping", label: "House Keeping", description: "Maintenance and house keeping staff",
     color: "bg-pink-100", textColor: "text-pink-800",
-    modules: ["attendance","payroll","leave","chat","notifications","settings"],
+    modules: ["attendance","payroll","notifications","settings"],
     canDelete: false, canExport: false,
   },
 };

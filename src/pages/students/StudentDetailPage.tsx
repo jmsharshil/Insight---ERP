@@ -969,7 +969,7 @@ export default function StudentDetailPage() {
               <div>
                 <Label className="text-sm mb-1 block">Quantity *</Label>
                 <Input
-                  type="number" min="0"
+                  type="number"
                   value={issueForm.quantity}
                   onChange={(e) => setIssueForm((prev) => ({ ...prev, quantity: e.target.value }))}
                   min="1"
@@ -1027,7 +1027,7 @@ export default function StudentDetailPage() {
                     <div className="col-span-2">
                       {idx === 0 && <Label className="text-xs mb-1 block">Qty</Label>}
                       <Input
-                        type="number" min="0"
+                        type="number"
                         value={line.quantity}
                         onChange={(e) => updateBulkLine(idx, "quantity", e.target.value)}
                         min="1"
