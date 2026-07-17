@@ -64,7 +64,13 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
   // expanded when: mobile, pinned open, or hovered
   const expanded = mobile || pinned || hovered;
   const role = user ? ROLES[user.role as keyof typeof ROLES] : null;
-  const rawModules = user?.accessible_modules || role?.modules || [];
+  let rawModules = user?.accessible_modules || role?.modules || [];
+  
+  // Force add attendance for all staff roles so they can view their My Attendance tab
+  if (user && !["student", "parents"].includes(user.role) && !rawModules.includes("attendance")) {
+    rawModules = [...rawModules, "attendance"];
+  }
+
   const modules = rawModules.includes("notifications") ? rawModules : [...rawModules, "notifications"];
   const items = modules.map((m) => ({ id: m, ...NAV_ITEMS[m] })).filter((item) => item.label);
 

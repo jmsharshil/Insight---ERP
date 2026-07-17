@@ -827,7 +827,7 @@ export default function BatchDetailPage() {
             </div>
           </div>
 
-          {(batch.qr_image_url || batch.qr_image) && (
+          {/* {(batch.qr_image_url || batch.qr_image) && (
             <div className="shrink-0 flex flex-col items-center bg-white p-5 rounded-2xl border border-border shadow-sm w-full md:w-auto">
               <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
                 Attendance QR Code
@@ -847,7 +847,7 @@ export default function BatchDetailPage() {
                 </Button>
               </div>
             </div>
-          )}
+          )} */}
         </div>
 
         <div className="pt-4 border-t border-border grid grid-cols-1 md:grid-cols-2 gap-6">

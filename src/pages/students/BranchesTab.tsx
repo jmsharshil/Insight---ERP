@@ -80,6 +80,8 @@ export interface BranchRecord {
   email: string;
   principal_name: string;
   logo: string | null;
+  qr_image?: string | null;
+  qr?: string | null;
   latitude: number | null;
   longitude: number | null;
   is_active: boolean;

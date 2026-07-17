@@ -56,7 +56,13 @@ interface ReportsTabProps {
   COLORS: string[];
 }
 
-export default function ReportsTab({
+import ModulePlaceholder from "@/pages/ModulePlaceholder";
+
+export default function ReportsTab() {
+  return <ModulePlaceholder title="Fees Reports" />;
+}
+
+export function ReportsTabOld({
   reportLoading,
   reportMonth,
   reportYear,
