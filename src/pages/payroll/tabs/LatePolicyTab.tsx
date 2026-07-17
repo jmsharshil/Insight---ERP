@@ -168,16 +168,16 @@ export default function LatePolicyTab({ branches }: LatePolicyTabProps) {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Grace Period (mins)</Label>
-                <Input type="number" value={form.grace_period_minutes} onChange={e => setForm({...form, grace_period_minutes: Number(e.target.value)})} className="h-9" />
+                <Input type="number" min="0" value={form.grace_period_minutes} onChange={e => setForm({...form, grace_period_minutes: Number(e.target.value)})} className="h-9" />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Deduction per min (₹)</Label>
-                <Input type="number" value={form.deduction_per_minute} onChange={e => setForm({...form, deduction_per_minute: Number(e.target.value)})} className="h-9" />
+                <Input type="number" min="0" value={form.deduction_per_minute} onChange={e => setForm({...form, deduction_per_minute: Number(e.target.value)})} className="h-9" />
               </div>
             </div>
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Max Deduction per session (₹)</Label>
-              <Input type="number" value={form.max_deduction_per_session} onChange={e => setForm({...form, max_deduction_per_session: Number(e.target.value)})} className="h-9" />
+              <Input type="number" min="0" value={form.max_deduction_per_session} onChange={e => setForm({...form, max_deduction_per_session: Number(e.target.value)})} className="h-9" />
             </div>
             <div className="flex items-center gap-2 pt-2">
               <Checkbox id="autoHalfday" checked={form.auto_halfday_deduction} onCheckedChange={(c: boolean) => setForm({...form, auto_halfday_deduction: c})} />

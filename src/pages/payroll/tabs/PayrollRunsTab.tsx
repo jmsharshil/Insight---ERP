@@ -165,33 +165,62 @@ export default function PayrollRunsTab({ branches, onViewPayslips }: PayrollRuns
       {/* Generate Panel */}
       {canGenerate && (
         <div className="bg-white rounded-xl border border-border p-4">
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Generate New Payroll Run</div>
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+            Generate New Payroll Run
+          </div>
           <div className="flex flex-wrap gap-3 items-end">
             <div className="flex flex-col gap-1">
-              <Label className="text-xs text-muted-foreground">Branch <span className="text-red-500">*</span></Label>
+              <Label className="text-xs text-muted-foreground">
+                Branch <span className="text-red-500">*</span>
+              </Label>
               <Select value={genBranch} onValueChange={setGenBranch}>
-                <SelectTrigger className="h-9 text-sm w-48"><SelectValue placeholder="Select branch" /></SelectTrigger>
+                <SelectTrigger className="h-9 text-sm w-48">
+                  <SelectValue placeholder="Select branch" />
+                </SelectTrigger>
                 <SelectContent>
-                  {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="flex flex-col gap-1">
               <Label className="text-xs text-muted-foreground">Month</Label>
               <Select value={genMonth} onValueChange={setGenMonth}>
-                <SelectTrigger className="h-9 text-sm w-36"><SelectValue /></SelectTrigger>
-                <SelectContent>{MONTH_NUMS.map(m => <SelectItem key={m.v} value={m.v}>{m.l}</SelectItem>)}</SelectContent>
+                <SelectTrigger className="h-9 text-sm w-36">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MONTH_NUMS.map((m) => (
+                    <SelectItem key={m.v} value={m.v}>
+                      {m.l}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
             <div className="flex flex-col gap-1">
               <Label className="text-xs text-muted-foreground">Year</Label>
               <Select value={genYear} onValueChange={setGenYear}>
-                <SelectTrigger className="h-9 text-sm w-28"><SelectValue /></SelectTrigger>
-                <SelectContent>{YEAR_NUMS.map(y => <SelectItem key={y.v} value={y.v}>{y.l}</SelectItem>)}</SelectContent>
+                <SelectTrigger className="h-9 text-sm w-28">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {YEAR_NUMS.map((y) => (
+                    <SelectItem key={y.v} value={y.v}>
+                      {y.l}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleGenerate} disabled={genLoading || !genBranch}
-              className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm gap-1.5">
+            <Button
+              onClick={handleGenerate}
+              disabled={genLoading || !genBranch}
+              className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm gap-1.5"
+            >
               <Plus className="w-4 h-4" />
               {genLoading ? "Generating…" : "Generate Payroll"}
             </Button>
@@ -204,31 +233,55 @@ export default function PayrollRunsTab({ branches, onViewPayslips }: PayrollRuns
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">Month</Label>
           <Select value={fMonth} onValueChange={setFMonth}>
-            <SelectTrigger className="h-9 text-sm w-36"><SelectValue placeholder="All Months" /></SelectTrigger>
-            <SelectContent>{MONTHS.map(m => <SelectItem key={m.v} value={m.v}>{m.l}</SelectItem>)}</SelectContent>
+            <SelectTrigger className="h-9 text-sm w-36">
+              <SelectValue placeholder="All Months" />
+            </SelectTrigger>
+            <SelectContent>
+              {MONTHS.map((m) => (
+                <SelectItem key={m.v} value={m.v}>
+                  {m.l}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">Year</Label>
           <Select value={fYear} onValueChange={setFYear}>
-            <SelectTrigger className="h-9 text-sm w-28"><SelectValue placeholder="Year" /></SelectTrigger>
-            <SelectContent>{YEARS.map(y => <SelectItem key={y.v} value={y.v}>{y.l}</SelectItem>)}</SelectContent>
+            <SelectTrigger className="h-9 text-sm w-28">
+              <SelectValue placeholder="Year" />
+            </SelectTrigger>
+            <SelectContent>
+              {YEARS.map((y) => (
+                <SelectItem key={y.v} value={y.v}>
+                  {y.l}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">Branch</Label>
           <Select value={fBranch} onValueChange={setFBranch}>
-            <SelectTrigger className="h-9 text-sm w-44"><SelectValue placeholder="All Branches" /></SelectTrigger>
+            <SelectTrigger className="h-9 text-sm w-44">
+              <SelectValue placeholder="All Branches" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Branches</SelectItem>
-              {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+              {branches.map((b) => (
+                <SelectItem key={b.id} value={b.id}>
+                  {b.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">Status</Label>
           <Select value={fStatus} onValueChange={setFStatus}>
-            <SelectTrigger className="h-9 text-sm w-44"><SelectValue placeholder="All Statuses" /></SelectTrigger>
+            <SelectTrigger className="h-9 text-sm w-44">
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="draft">Draft</SelectItem>
@@ -238,13 +291,18 @@ export default function PayrollRunsTab({ branches, onViewPayslips }: PayrollRuns
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={fetchRuns} className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm gap-1.5">
+        <Button
+          onClick={fetchRuns}
+          className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm gap-1.5"
+        >
           <RefreshCw className="w-3.5 h-3.5" /> Refresh
         </Button>
       </div>
 
       {/* Runs Table */}
-      {runsLoading ? <TableSkeleton columns={6} rows={5} className="mt-0" /> : (
+      {runsLoading ? (
+        <TableSkeleton columns={6} rows={5} className="mt-0" />
+      ) : (
         <div className="bg-white rounded-xl border border-border overflow-hidden">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <span className="text-sm font-medium text-foreground">Payroll Runs</span>
@@ -253,75 +311,122 @@ export default function PayrollRunsTab({ branches, onViewPayslips }: PayrollRuns
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[800px]">
               <thead className="bg-muted/40">
-                <tr>{["Period", "Branch", "Employees", "Total Amount", "Status", "Generated", "Actions"].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">{h}</th>
-                ))}</tr>
+                <tr>
+                  {[
+                    "Period",
+                    "Branch",
+                    "Employees",
+                    "Total Amount",
+                    "Status",
+                    "Generated",
+                    "Actions",
+                  ].map((h) => (
+                    <th
+                      key={h}
+                      className="px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap"
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
               </thead>
               <tbody>
                 {runs.length === 0 ? (
-                  <tr><td colSpan={7} className="text-center py-14 text-muted-foreground text-sm">No payroll runs found.</td></tr>
-                ) : runs.map((run, i) => (
-                  <motion.tr key={run.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.025 }}
-                    className="border-b border-border/50 hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs font-medium">
-                      {MONTH_NAMES[String(run.month)] ?? run.month} {run.year}
+                  <tr>
+                    <td colSpan={7} className="text-center py-14 text-muted-foreground text-sm">
+                      No payroll runs found.
                     </td>
-                    <td className="px-4 py-3 text-xs">{run.branch_name ?? "—"}</td>
-                    <td className="px-4 py-3 text-xs">{run.employee_count} employees</td>
-                    <td className="px-4 py-3 font-mono text-sm font-bold text-primary">
-                      ₹{Number(run.total_amount ?? 0).toLocaleString("en-IN")}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge className={`text-xs capitalize ${STATUS_BADGE[run.status] ?? ""}`}>
-                        {run.status.replace(/_/g, " ")}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {new Date(run.generated_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1 flex-wrap">
-                        {/* View Payslips */}
-                        <Button variant="outline" size="sm" className="h-7 text-xs gap-1 px-2"
-                          onClick={() => { dispatch(setSelectedRun(run)); onViewPayslips(run); }}>
-                          <Eye className="w-3 h-3" /> Payslips
-                        </Button>
-
-                        {/* Submit for Review (draft → pending_approval) */}
-                        {run.status === "draft" && canApprove && (
-                          <Button variant="outline" size="sm" className="h-7 text-xs gap-1 px-2 border-yellow-300 text-yellow-700 hover:bg-yellow-50"
-                            onClick={() => setActionTarget({ run, type: "submit" })}>
-                            Submit
+                  </tr>
+                ) : (
+                  runs.map((run, i) => (
+                    <motion.tr
+                      key={run.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.025 }}
+                      className="border-b border-border/50 hover:bg-muted/20 transition-colors"
+                    >
+                      <td className="px-4 py-3 font-mono text-xs font-medium">
+                        {MONTH_NAMES[String(run.month)] ?? run.month} {run.year}
+                      </td>
+                      <td className="px-4 py-3 text-xs">{run.branch_name ?? "—"}</td>
+                      <td className="px-4 py-3 text-xs">{run.faculty_count} employees</td>
+                      <td className="px-4 py-3 font-mono text-sm font-bold text-primary">
+                        ₹{Number(run.total_amount ?? 0).toLocaleString("en-IN")}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge className={`text-xs capitalize ${STATUS_BADGE[run.status] ?? ""}`}>
+                          {run.status.replace(/_/g, " ")}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {new Date(run.generated_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {/* View Payslips */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs gap-1 px-2"
+                            onClick={() => {
+                              dispatch(setSelectedRun(run));
+                              onViewPayslips(run);
+                            }}
+                          >
+                            <Eye className="w-3 h-3" /> Payslips
                           </Button>
-                        )}
 
-                        {/* Approve */}
-                        {run.status === "pending_approval" && canApprove && (
-                          <Button size="sm" className="h-7 text-xs gap-1 px-2 bg-green-600 hover:bg-green-700 text-white"
-                            onClick={() => setActionTarget({ run, type: "approve" })}>
-                            <CheckCircle2 className="w-3 h-3" /> Approve
-                          </Button>
-                        )}
+                          {/* Submit for Review (draft → pending_approval) */}
+                          {run.status === "draft" && canApprove && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs gap-1 px-2 border-yellow-300 text-yellow-700 hover:bg-yellow-50"
+                              onClick={() => setActionTarget({ run, type: "submit" })}
+                            >
+                              Submit
+                            </Button>
+                          )}
 
-                        {/* Disburse */}
-                        {run.status === "approved" && canDisburse && (
-                          <Button size="sm" className="h-7 text-xs gap-1 px-2 bg-blue-600 hover:bg-blue-700 text-white"
-                            onClick={() => setActionTarget({ run, type: "disburse" })}>
-                            <Send className="w-3 h-3" /> Disburse
-                          </Button>
-                        )}
+                          {/* Approve */}
+                          {run.status === "pending_approval" && canApprove && (
+                            <Button
+                              size="sm"
+                              className="h-7 text-xs gap-1 px-2 bg-green-600 hover:bg-green-700 text-white"
+                              onClick={() => setActionTarget({ run, type: "approve" })}
+                            >
+                              <CheckCircle2 className="w-3 h-3" /> Approve
+                            </Button>
+                          )}
 
-                        {/* Delete */}
-                        {["draft","pending_approval"].includes(run.status) && canDelete && (
-                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0"
-                            onClick={() => setActionTarget({ run, type: "delete" })}>
-                            <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </motion.tr>
-                ))}
+                          {/* Disburse */}
+                          {run.status === "approved" && canDisburse && (
+                            <Button
+                              size="sm"
+                              className="h-7 text-xs gap-1 px-2 bg-blue-600 hover:bg-blue-700 text-white"
+                              onClick={() => setActionTarget({ run, type: "disburse" })}
+                            >
+                              <Send className="w-3 h-3" /> Disburse
+                            </Button>
+                          )}
+
+                          {/* Delete */}
+                          {["draft", "pending_approval"].includes(run.status) && canDelete && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={() => setActionTarget({ run, type: "delete" })}
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -332,7 +437,7 @@ export default function PayrollRunsTab({ branches, onViewPayslips }: PayrollRuns
       {actionTarget && (
         <ConfirmDialog
           open={!!actionTarget}
-          onOpenChange={o => !o && setActionTarget(null)}
+          onOpenChange={(o) => !o && setActionTarget(null)}
           title={confirmMessages[actionTarget.type].title}
           description={confirmMessages[actionTarget.type].desc}
           confirmLabel={actionLoading ? "Processing…" : confirmMessages[actionTarget.type].label}

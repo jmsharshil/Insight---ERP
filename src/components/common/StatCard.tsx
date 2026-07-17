@@ -28,18 +28,18 @@ export default function StatCard({ title, value, icon: Icon, trend, trendType = 
       whileHover={{ y: -3, transition: { duration: 0.2 } }}
       className="rounded-xl bg-card border border-border p-5 shadow-sm hover:shadow-md transition-shadow"
     >
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <p className="text-sm text-muted-foreground font-medium">{title}</p>
-          <p className="mt-2 text-2xl font-heading font-bold text-text-primary">{value}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-muted-foreground font-medium truncate">{title}</p>
+          <p className="mt-2 text-2xl font-heading font-bold text-text-primary truncate">{value}</p>
           {trend && (
             <div className={cn("mt-2 inline-flex items-center gap-1 text-xs font-medium", trendColor)}>
-              <TrendIcon className="w-3.5 h-3.5" />
-              <span>{trend}</span>
+              <TrendIcon className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">{trend}</span>
             </div>
           )}
         </div>
-        <div className="rounded-lg bg-primary-light p-2.5">
+        <div className="shrink-0 rounded-lg bg-primary-light p-2.5">
           <Icon className="w-5 h-5 text-primary-dark" />
         </div>
       </div>

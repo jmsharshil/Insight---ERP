@@ -126,7 +126,7 @@ export const DUMMY_USERS: DummyUser[] = [
     phone: "9664838362",
     name: "Aryan tele",
     role: "tele_caller",
-    role_display: "Tele Caller",
+    role_display: "Telecaller",
     is_active: true,
     created_at: "2026-06-04 13:55:38",
     profile_pic: null,

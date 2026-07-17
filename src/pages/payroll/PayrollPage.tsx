@@ -73,22 +73,19 @@ export default function PayrollPage() {
         {/* Dynamic Tab List based on role */}
         <div className="bg-white rounded-lg border border-border p-1 mb-5 inline-flex w-full md:w-auto overflow-x-auto">
           <TabsList className="bg-transparent gap-1 w-full justify-start md:w-auto">
-            
             {/* Employee self-service tabs */}
-            <TabsTrigger value="my-payroll" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md text-xs font-medium px-4 py-2 flex items-center gap-1.5 transition-all">
-              <Wallet className="w-4 h-4" /> My Payroll
-            </TabsTrigger>
-            
-            {canPreviewSalary && (
-              <TabsTrigger value="preview" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md text-xs font-medium px-4 py-2 flex items-center gap-1.5 transition-all">
-                <View className="w-4 h-4" /> Salary Preview
+            {user?.role !== "super_admin" && (
+              <TabsTrigger
+                value="my-payroll"
+                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md text-xs font-medium px-4 py-2 flex items-center gap-1.5 transition-all"
+              >
+                <Wallet className="w-4 h-4" /> My Payroll
               </TabsTrigger>
             )}
 
             {/* Admin / Management tabs */}
             {(isAdmin || isAccount) && (
               <>
-                <div className="w-[1px] h-6 bg-border mx-2 self-center hidden md:block" />
                 <TabsTrigger value="runs" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md text-xs font-medium px-4 py-2 flex items-center gap-1.5 transition-all">
                   <Calculator className="w-4 h-4" /> Payroll Runs
                 </TabsTrigger>

@@ -263,7 +263,7 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
             { label: "Total Marks",   value: exam.total_marks,          color: "text-foreground" },
-            { label: "Pass Marks",    value: exam.pass_marks,           color: "text-foreground" },
+            { label: "Passing Marks",    value: exam.pass_marks,           color: "text-foreground" },
             { label: "Exam Type",     value: exam.exam_type,            color: "text-blue-600"   },
             { label: "Result Mode",   value: exam.result_release_mode,  color: exam.result_release_mode === "instant" ? "text-green-600" : "text-yellow-600" },
           ].map(item => (
@@ -614,6 +614,23 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
                               </div>
                             </div>
                           </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {res.question_marks && Array.isArray(res.question_marks) && res.question_marks.length > 0 && (
+                    <div className="mt-4 bg-white/60 p-4 rounded-lg border border-blue-100">
+                      <h5 className="text-sm font-semibold text-blue-900 mb-3">Subjective Marks Breakdown</h5>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                        {res.question_marks
+                           .slice()
+                           .sort((a: any, b: any) => a.question_no - b.question_no)
+                           .map((qm: any) => (
+                             <div key={qm.question_no} className="p-3 bg-white rounded-md border border-border shadow-sm text-center">
+                               <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Q {qm.question_no}</p>
+                               <p className="text-lg font-semibold text-blue-700">{qm.obtained_marks}</p>
+                             </div>
                         ))}
                       </div>
                     </div>

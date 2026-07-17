@@ -28,6 +28,7 @@ export interface UserRecord {
   bank_account?: string;
   ifsc_code?: string;
   pan_number?: string;
+  aadhar_number?: string;
   work_start_time?: string;
   work_end_time?: string;
   per_paper_rate?: number | string;

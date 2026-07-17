@@ -34,7 +34,13 @@ const DASHBOARDS: Partial<Record<RoleId, React.ComponentType>> = {
   accountant: AccountantDashboard,
 };
 
+import ModulePlaceholder from "@/pages/ModulePlaceholder";
+
 export default function DashboardRouter() {
+  return <ModulePlaceholder title="Dashboard" />;
+}
+
+export function DashboardRouterOld() {
   const { user } = useAuth();
   
   if (!user) return null;

@@ -576,11 +576,11 @@ export default function QuestionsTab({ examId }: QuestionsTabProps) {
                     <>
                       <div>
                         <Label className="text-xs font-semibold">Marks</Label>
-                        <Input type="number" value={draft.marks} onChange={e => updateDraft(idx, "marks", e.target.value)} className="h-9 text-sm mt-1" />
+                        <Input type="number" min="0" value={draft.marks} onChange={e => updateDraft(idx, "marks", e.target.value)} className="h-9 text-sm mt-1" />
                       </div>
                       <div>
                         <Label className="text-xs font-semibold">Order</Label>
-                        <Input type="number" value={draft.order} onChange={e => updateDraft(idx, "order", e.target.value)} className="h-9 text-sm mt-1" />
+                        <Input type="number" min="0" value={draft.order} onChange={e => updateDraft(idx, "order", e.target.value)} className="h-9 text-sm mt-1" />
                       </div>
                     </>
                   )}
@@ -616,11 +616,11 @@ export default function QuestionsTab({ examId }: QuestionsTabProps) {
                           <div className="grid grid-cols-2 gap-3">
                             <div>
                               <Label className="text-xs font-semibold">Marks</Label>
-                              <Input type="number" value={sq.marks} onChange={e => updateSubQuestion(idx, si, "marks", e.target.value)} className="h-8 text-sm mt-1" />
+                              <Input type="number" min="0" value={sq.marks} onChange={e => updateSubQuestion(idx, si, "marks", e.target.value)} className="h-8 text-sm mt-1" />
                             </div>
                             <div>
                               <Label className="text-xs font-semibold">Order</Label>
-                              <Input type="number" value={sq.order} onChange={e => updateSubQuestion(idx, si, "order", e.target.value)} className="h-8 text-sm mt-1" />
+                              <Input type="number" min="0" value={sq.order} onChange={e => updateSubQuestion(idx, si, "order", e.target.value)} className="h-8 text-sm mt-1" />
                             </div>
                           </div>
                           <div className="space-y-2">
@@ -716,13 +716,13 @@ export default function QuestionsTab({ examId }: QuestionsTabProps) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs font-semibold">Marks</Label>
-                  <Input type="number" value={editTarget.marks}
+                  <Input type="number" min="0" value={editTarget.marks}
                     onChange={e => setEditTarget(prev => prev ? { ...prev, marks: Number(e.target.value) } : null)}
                     className="h-9 text-sm mt-1" />
                 </div>
                 <div>
                   <Label className="text-xs font-semibold">Order</Label>
-                  <Input type="number" value={editTarget.order}
+                  <Input type="number" min="0" value={editTarget.order}
                     onChange={e => setEditTarget(prev => prev ? { ...prev, order: Number(e.target.value) } : null)}
                     className="h-9 text-sm mt-1" />
                 </div>

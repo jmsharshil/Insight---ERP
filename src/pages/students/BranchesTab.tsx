@@ -80,6 +80,8 @@ export interface BranchRecord {
   email: string;
   principal_name: string;
   logo: string | null;
+  qr_image?: string | null;
+  qr?: string | null;
   latitude: number | null;
   longitude: number | null;
   is_active: boolean;
@@ -975,6 +977,35 @@ export default function BranchesTab() {
                         </div>
                       </div>
                     </div>
+
+                    {/* QR Code Information */}
+                    {selectedBranch.qr_image && (
+                      <div className="p-4 rounded-xl border border-border bg-muted/10 space-y-3 col-span-1 md:col-span-2 flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4">
+                        <div className="space-y-2">
+                          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            Attendance QR Code
+                          </h4>
+                          <p className="text-sm text-muted-foreground max-w-sm">
+                            Employees and students can scan this QR code using their app to check in and check out at this branch.
+                          </p>
+                          <div>
+                            <a 
+                              href={selectedBranch.qr_image} 
+                              target="_blank" 
+                              rel="noreferrer" 
+                              className="text-primary text-sm font-medium hover:underline inline-block mt-1"
+                            >
+                              Download / View Full Size
+                            </a>
+                          </div>
+                        </div>
+                        <img 
+                          src={selectedBranch.qr_image} 
+                          alt={`${selectedBranch.name} QR Code`} 
+                          className="w-32 h-32 rounded-xl border border-border bg-white p-2 shrink-0 object-contain" 
+                        />
+                      </div>
+                    )}
 
                     {/* System Information */}
                     <div className="p-4 rounded-xl border border-border bg-muted/10 space-y-3 col-span-1 md:col-span-2">

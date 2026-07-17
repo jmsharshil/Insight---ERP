@@ -662,13 +662,14 @@ export default function CoursesBatchesPage() {
               </Select>
             )}
             {activeSubTab === "batches" && canEdit ? (
-              <Button
-                variant="outline"
-                className="bg-primary hover:bg-primary-dark text-primary-foreground"
-                onClick={openAddBatchModal}
-              >
-                <Plus className="w-4 h-4" /> Add Batch
-              </Button>
+              // <Button
+              //   variant="outline"
+              //   className="bg-primary hover:bg-primary-dark text-primary-foreground"
+              //   onClick={openAddBatchModal}
+              // >
+              //   <Plus className="w-4 h-4" /> Add Batch
+              // </Button>
+              null
             ) : activeSubTab === "classrooms" && canEdit ? (
               <Button
                 variant="outline"

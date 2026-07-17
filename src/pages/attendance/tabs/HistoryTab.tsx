@@ -7,6 +7,7 @@ import type { RootState, AppDispatch } from "@/store";
 import { useToast } from "@/hooks/useToast";
 import { TableSkeleton } from "@/components/common/Skeletons";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -135,70 +136,85 @@ export default function HistoryTab({ dropdowns }: { dropdowns?: any }) {
     <div className="space-y-4">
       {/* Filters */}
       <div className="bg-white rounded-xl border border-border p-4 space-y-3">
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-3 items-end">
           {!isParentOrStudent && (
             <>
-              <Input
-                placeholder="Search Student"
-                className="h-9 text-sm w-52 bg-muted/10"
-                value={f.search}
-                onChange={(e) => setF((p) => ({ ...p, search: e.target.value }))}
-              />
-              <Select
-                value={f.branch_id}
-                onValueChange={(v) => setF((p) => ({ ...p, branch_id: v === "all" ? "" : v }))}
-              >
-                <SelectTrigger className="h-9 text-sm w-44 bg-muted/10">
-                  <SelectValue placeholder="Branch" />
-                </SelectTrigger>
-                <SelectContent>
-                  {!isBranchManager && <SelectItem value="all">All Branches</SelectItem>}
-                  {filteredBranches.map((b: any) => (
-                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={f.batch_id}
-                onValueChange={(v) => setF((p) => ({ ...p, batch_id: v === "all" ? "" : v }))}
-              >
-                <SelectTrigger className="h-9 text-sm w-44 bg-muted/10">
-                  <SelectValue placeholder="Batch" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Batches</SelectItem>
-                  {batches?.map((b: any) => (
-                    <SelectItem key={b.id} value={b.id}>
-                      {b.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs text-muted-foreground">Search</Label>
+                <Input
+                  placeholder="Search Student"
+                  className="h-9 text-sm w-52 bg-muted/10"
+                  value={f.search}
+                  onChange={(e) => setF((p) => ({ ...p, search: e.target.value }))}
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs text-muted-foreground">Branch</Label>
+                <Select
+                  value={f.branch_id}
+                  onValueChange={(v) => setF((p) => ({ ...p, branch_id: v === "all" ? "" : v }))}
+                >
+                  <SelectTrigger className="h-9 text-sm w-44 bg-muted/10">
+                    <SelectValue placeholder="Branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {!isBranchManager && <SelectItem value="all">All Branches</SelectItem>}
+                    {filteredBranches.map((b: any) => (
+                      <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs text-muted-foreground">Batch</Label>
+                <Select
+                  value={f.batch_id}
+                  onValueChange={(v) => setF((p) => ({ ...p, batch_id: v === "all" ? "" : v }))}
+                >
+                  <SelectTrigger className="h-9 text-sm w-44 bg-muted/10">
+                    <SelectValue placeholder="Batch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Batches</SelectItem>
+                    {batches?.map((b: any) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </>
           )}
-          <Input
-            type="date"
-            className="h-9 text-sm w-40"
-            value={f.date}
-            onChange={(e) => setF((p) => ({ ...p, date: e.target.value }))}
-          />
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-muted-foreground">Date</Label>
+            <Input
+              type="date"
+              className="h-9 text-sm w-40"
+              value={f.date}
+              onChange={(e) => setF((p) => ({ ...p, date: e.target.value }))}
+            />
+          </div>
           {!isParentOrStudent && (
-            <Select
-              value={f.status}
-              onValueChange={(v) => setF((p) => ({ ...p, status: v === "all" ? "" : v }))}
-            >
-              <SelectTrigger className="h-9 text-sm w-36">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="present">Present</SelectItem>
-                <SelectItem value="absent">Absent</SelectItem>
-                <SelectItem value="late">Late</SelectItem>
-                <SelectItem value="half_day">Half Day</SelectItem>
-                <SelectItem value="on_leave">On Leave</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs text-muted-foreground">Status</Label>
+              <Select
+                value={f.status}
+                onValueChange={(v) => setF((p) => ({ ...p, status: v === "all" ? "" : v }))}
+              >
+                <SelectTrigger className="h-9 text-sm w-36">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="present">Present</SelectItem>
+                  <SelectItem value="absent">Absent</SelectItem>
+                  <SelectItem value="late">Late</SelectItem>
+                  <SelectItem value="half_day">Half Day</SelectItem>
+                  <SelectItem value="on_leave">On Leave</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           )}
           <Button
             onClick={fetch}
