@@ -80,6 +80,22 @@ export default function StudentPersonalHistoryTab({ dropdowns }: { dropdowns?: a
     }
   };
 
+  const formatTime = (timeStr: string) => {
+    if (!timeStr) return "—";
+    try {
+      const d = new Date(timeStr);
+      if (isNaN(d.getTime())) return timeStr;
+      return d.toLocaleTimeString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+    } catch {
+      return timeStr;
+    }
+  };
+
   const clear = () => setF((prev) => ({ ...prev, date: "", status: "" }));
 
   return (
@@ -169,8 +185,8 @@ export default function StudentPersonalHistoryTab({ dropdowns }: { dropdowns?: a
                   </thead>
                   <tbody>
                     {studentData.day_wise_attendance.map((day: any, idx: number) => {
-                      const checkIn = studentData.check_in_history?.find((e: any) => e.date === day.date);
-                      const checkOut = studentData.check_out_history?.find((e: any) => e.date === day.date);
+                      const checkIn = studentData.check_in_history?.find((e: any) => e.id === day.id) || studentData.check_in_history?.find((e: any) => e.date === day.date);
+                      const checkOut = studentData.check_out_history?.find((e: any) => e.id === day.id) || studentData.check_out_history?.find((e: any) => e.date === day.date);
                       return (
                         <motion.tr 
                           key={idx} 
@@ -186,10 +202,10 @@ export default function StudentPersonalHistoryTab({ dropdowns }: { dropdowns?: a
                             </Badge>
                           </td>
                           <td className="px-6 py-3 text-muted-foreground font-mono">
-                            {checkIn ? (checkIn.check_in_time || checkIn.time || "—") : "—"}
+                            {day.checked_in_at ? formatTime(day.checked_in_at) : (checkIn ? formatTime(checkIn.check_in_time || checkIn.time) : "—")}
                           </td>
                           <td className="px-6 py-3 text-muted-foreground font-mono">
-                            {checkOut ? (checkOut.check_out_time || checkOut.time || "—") : "—"}
+                            {day.checked_out_at ? formatTime(day.checked_out_at) : (checkOut ? formatTime(checkOut.check_out_time || checkOut.time) : "—")}
                           </td>
                         </motion.tr>
                       ); 

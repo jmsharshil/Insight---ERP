@@ -512,8 +512,19 @@ export default function FeesPage() {
         fetchRefunds(debouncedRefStudentName, refStatus);
       },
       getError: (err: any) => {
-        const msg =
-          err?.response?.data?.message || err?.message || "Failed to create refund request";
+        let msg = err?.response?.data?.message || err?.message || "Failed to create refund request";
+        const errObj = err?.response?.data?.errors;
+        if (errObj && typeof errObj === "object") {
+          const firstKey = Object.keys(errObj)[0];
+          if (firstKey) {
+            const firstErr = errObj[firstKey as keyof typeof errObj];
+            if (Array.isArray(firstErr) && firstErr.length > 0) {
+              msg = firstErr[0];
+            } else if (typeof firstErr === "string") {
+              msg = firstErr;
+            }
+          }
+        }
         toast.error(msg);
       },
     });
