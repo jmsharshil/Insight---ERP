@@ -43,7 +43,8 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
     if (current) current += ", " + chunk;
     else current = chunk;
 
-    if (/:\s*-?\d/.test(chunk)) {
+    // Check if the chunk ends with a deduction amount (e.g. ": -16500.00")
+    if (/:\s*-?\d+(\.\d+)?\s*$/.test(chunk)) {
       parts.push(current);
       current = "";
     }
@@ -62,13 +63,13 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Deduction Note</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto">
             <div className="text-sm bg-muted/30 p-4 rounded-md border border-border/50 min-h-[100px]">
-              <ul className="list-disc pl-4 space-y-2">
+              <ul className="list-disc pl-4 space-y-3">
                 {parts.map((part, idx) => (
                   <li key={idx} className="leading-relaxed">
                     {part}

@@ -874,7 +874,7 @@ export default function StudentAdmissionForm() {
                       Percentage (%)
                     </Label>
                     <Input
-                      type="number" min="0"
+                      type="number" min="0" max="100"
                       step="0.01"
                       value={formData.tenth_percentage}
                       onChange={(e) => handleChange("tenth_percentage", e.target.value)}
@@ -887,7 +887,7 @@ export default function StudentAdmissionForm() {
                       Percentile
                     </Label>
                     <Input
-                      type="number" min="0"
+                      type="number" min="0" max="100"
                       step="0.01"
                       value={formData.tenth_percentile}
                       onChange={(e) => handleChange("tenth_percentile", e.target.value)}
@@ -950,7 +950,7 @@ export default function StudentAdmissionForm() {
                       Percentage (%)
                     </Label>
                     <Input
-                      type="number" min="0"
+                      type="number" min="0" max="100"
                       step="0.01"
                       value={formData.twelfth_percentage}
                       onChange={(e) => handleChange("twelfth_percentage", e.target.value)}
@@ -963,7 +963,7 @@ export default function StudentAdmissionForm() {
                       Percentile
                     </Label>
                     <Input
-                      type="number" min="0"
+                      type="number" min="0" max="100"
                       step="0.01"
                       value={formData.twelfth_percentile}
                       onChange={(e) => handleChange("twelfth_percentile", e.target.value)}

@@ -87,7 +87,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   paper_checker: {
     id: "paper_checker", label: "Paper Checker", description: "Evaluation-only role",
     color: "bg-yellow-100", textColor: "text-yellow-800",
-    modules: ["attendance","exams","notifications","payroll","settings"],
+    modules: ["exams","notifications","payroll","settings"],
     canDelete: false, canExport: false,
   },
   accountant: {

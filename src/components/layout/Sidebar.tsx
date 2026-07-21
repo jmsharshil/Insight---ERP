@@ -68,7 +68,7 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
   
   // Force add attendance for all staff roles so they can view their My Attendance tab
   if (user && !["student", "parents"].includes(user.role) && !rawModules.includes("attendance")) {
-    rawModules = [...rawModules, "attendance"];
+    rawModules = [...rawModules];
   }
 
   const modules = rawModules.includes("notifications") ? rawModules : [...rawModules, "notifications"];
