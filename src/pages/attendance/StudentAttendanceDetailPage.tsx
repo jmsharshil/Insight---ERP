@@ -109,6 +109,22 @@ export default function StudentAttendanceDetailPage() {
     }
   };
 
+  const formatTime = (timeStr: string) => {
+    if (!timeStr) return "—";
+    try {
+      const d = new Date(timeStr);
+      if (isNaN(d.getTime())) return timeStr;
+      return d.toLocaleTimeString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+    } catch {
+      return timeStr;
+    }
+  };
+
   if (selectedStudentLoading) {
     return (
       <div className="mx-auto space-y-4">
@@ -338,21 +354,21 @@ export default function StudentAttendanceDetailPage() {
                         </thead>
                         <tbody>
                           {selectedStudent.day_wise_attendance.map((day: any, idx: number) => {
-                            const checkIn = selectedStudent.check_in_history?.find((e: any) => e.date === day.date);
-                            const checkOut = selectedStudent.check_out_history?.find((e: any) => e.date === day.date);
+                            const checkIn = selectedStudent.check_in_history?.find((e: any) => e.id === day.id);
+                            const checkOut = selectedStudent.check_out_history?.find((e: any) => e.id === day.id);
                             return (
                               <tr key={idx} className="border-b border-border/40 last:border-0 hover:bg-muted/10">
                                 <td className="py-2.5 font-medium font-mono">{formatDate(day.date)}</td>
                                 <td className="py-2.5">
                                   <Badge variant="outline" className={`text-[10px] font-semibold capitalize ${getStatusBadge(day.status)}`}>
-                                    {day.status}
+                                    {day.status_display || day.status}
                                   </Badge>
                                 </td>
                                 <td className="py-2.5 text-muted-foreground font-mono">
-                                  {checkIn ? (checkIn.check_in_time || checkIn.time || "—") : "—"}
+                                  {day.checked_in_at ? formatTime(day.checked_in_at) : (checkIn ? formatTime(checkIn.check_in_time || checkIn.time) : "—")}
                                 </td>
                                 <td className="py-2.5 text-muted-foreground font-mono">
-                                  {checkOut ? (checkOut.check_out_time || checkOut.time || "—") : "—"}
+                                  {day.checked_out_at ? formatTime(day.checked_out_at) : (checkOut ? formatTime(checkOut.check_out_time || checkOut.time) : "—")}
                                 </td>
                               </tr>
                             );
@@ -383,7 +399,7 @@ export default function StudentAttendanceDetailPage() {
                             <div className="text-[10px] text-muted-foreground">Check-in</div>
                           </div>
                           <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200 font-mono">
-                            {entry.check_in_time || entry.time || "—"}
+                            {formatTime(entry.check_in_time || entry.time)}
                           </Badge>
                         </div>
                       ))}
@@ -394,7 +410,7 @@ export default function StudentAttendanceDetailPage() {
                             <div className="text-[10px] text-muted-foreground">Check-out</div>
                           </div>
                           <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200 font-mono">
-                            {exit.check_out_time || exit.time || "—"}
+                            {formatTime(exit.check_out_time || exit.time)}
                           </Badge>
                         </div>
                       ))}

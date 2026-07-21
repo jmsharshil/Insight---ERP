@@ -98,6 +98,8 @@ export default function StudentPersonalHistoryTab({ dropdowns }: { dropdowns?: a
 
   const clear = () => setF((prev) => ({ ...prev, date: "", status: "" }));
 
+  const records = Array.isArray(studentData) ? studentData : (studentData?.day_wise_attendance || studentData?.data || []);
+
   return (
     <div className="space-y-4">
       {/* Filters */}
@@ -168,11 +170,11 @@ export default function StudentPersonalHistoryTab({ dropdowns }: { dropdowns?: a
               <CalendarIcon className="w-4 h-4 text-primary" /> Attendance History
             </h3>
             <span className="text-xs text-muted-foreground font-medium">
-              Showing {studentData?.day_wise_attendance?.length || 0} records
+              Showing {records.length} records
             </span>
           </div>
           <div className="p-0">
-            {studentData?.day_wise_attendance && studentData.day_wise_attendance.length > 0 ? (
+            {records.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-muted/40 border-b border-border">
@@ -184,9 +186,9 @@ export default function StudentPersonalHistoryTab({ dropdowns }: { dropdowns?: a
                     </tr>
                   </thead>
                   <tbody>
-                    {studentData.day_wise_attendance.map((day: any, idx: number) => {
-                      const checkIn = studentData.check_in_history?.find((e: any) => e.id === day.id) || studentData.check_in_history?.find((e: any) => e.date === day.date);
-                      const checkOut = studentData.check_out_history?.find((e: any) => e.id === day.id) || studentData.check_out_history?.find((e: any) => e.date === day.date);
+                    {records.map((day: any, idx: number) => {
+                      const checkIn = !Array.isArray(studentData) ? studentData?.check_in_history?.find((e: any) => e.id === day.id) : null;
+                      const checkOut = !Array.isArray(studentData) ? studentData?.check_out_history?.find((e: any) => e.id === day.id) : null;
                       return (
                         <motion.tr 
                           key={idx} 
@@ -198,7 +200,7 @@ export default function StudentPersonalHistoryTab({ dropdowns }: { dropdowns?: a
                           <td className="px-6 py-3 font-medium font-mono">{formatDate(day.date)}</td>
                           <td className="px-6 py-3">
                             <Badge variant="outline" className={`text-xs font-semibold capitalize ${getStatusBadge(day.status)}`}>
-                              {day.status}
+                              {day.status_display || day.status}
                             </Badge>
                           </td>
                           <td className="px-6 py-3 text-muted-foreground font-mono">
