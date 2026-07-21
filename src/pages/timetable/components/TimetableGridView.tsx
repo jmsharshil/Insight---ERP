@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Plus, List, LayoutGrid, User, MapPin, BookOpen, CalendarDays, ChevronLeft, ChevronRight, Clock, Layers, GripVertical, Copy, ChevronsUpDown, Check } from "lucide-react";
+import { useDispatch } from "react-redux";
+import { Plus, List, LayoutGrid, User, MapPin, BookOpen, CalendarDays, ChevronLeft, ChevronRight, Clock, Layers, GripVertical, Copy, ChevronsUpDown, Check, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -7,6 +8,9 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { TimetableSlot } from "@/redux/slices/timetableNewSlice";
+import { timetableActions } from "@/redux/actions";
+import { useToast } from "@/hooks/useToast";
+import type { AppDispatch } from "@/store";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -144,6 +148,31 @@ export default function TimetableGridView({
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [weekOffset, setWeekOffset] = useState(0);
   const [showExtraSlots, setShowExtraSlots] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  
+  const dispatch = useDispatch<AppDispatch>();
+  const toast = useToast();
+
+  const handlePublish = () => {
+    if (!selectedBatchId) {
+      toast.error("Please select a batch first");
+      return;
+    }
+
+    dispatch({
+      type: timetableActions.PUBLISH_TIMETABLE,
+      method: "POST",
+      endPoint: "/api/v1/timetable/publish/",
+      body: { batch_id: selectedBatchId },
+      auth: true,
+      setLoading: (v: boolean) => setIsPublishing(v),
+      getResponse: (res: any) => {
+        if (res?.success) toast.success("Time Table Published successfully");
+        else toast.error("Failed to publish timetable");
+      },
+      getError: (err: any) => toast.error(err?.response?.data?.message || "Error publishing timetable"),
+    } as any);
+  };
 
   // ── Drag & Drop state ──────────────────────────────────────────────────────
   const [draggingSlot, setDraggingSlot] = useState<TimetableSlot | null>(null);
@@ -224,6 +253,8 @@ export default function TimetableGridView({
           showWeekNav={false}
           showExtraSlots={showExtraSlots}
           onToggleExtraSlots={setShowExtraSlots}
+          onPublish={handlePublish}
+          isPublishing={isPublishing}
         />
         <div className="bg-white rounded-xl border border-border overflow-hidden shadow-sm">
           <table className="w-full text-sm">
@@ -284,6 +315,8 @@ export default function TimetableGridView({
         showWeekNav={true}
         showExtraSlots={showExtraSlots}
         onToggleExtraSlots={setShowExtraSlots}
+        onPublish={handlePublish}
+        isPublishing={isPublishing}
       />
 
       {/* Grid Table — Days as Rows, Slots as Columns */}
@@ -509,7 +542,7 @@ export default function TimetableGridView({
 function GridHeader({
   batches, selectedBatchId, onBatchChange, viewMode, onViewModeChange,
   weekLabel, onPrevWeek, onNextWeek, onToday, showWeekNav,
-  showExtraSlots, onToggleExtraSlots,
+  showExtraSlots, onToggleExtraSlots, onPublish, isPublishing,
 }: {
   batches:           { id: string; name: string }[];
   selectedBatchId:   string;
@@ -523,6 +556,8 @@ function GridHeader({
   showWeekNav:       boolean;
   showExtraSlots:    boolean;
   onToggleExtraSlots: (v: boolean) => void;
+  onPublish:         () => void;
+  isPublishing:      boolean;
 }) {
   const [open, setOpen] = useState(false);
   const selectedBatch = batches.find((b) => b.id === selectedBatchId);
@@ -554,7 +589,7 @@ function GridHeader({
                   variant="outline"
                   role="combobox"
                   aria-expanded={open}
-                  className="w-[300px] justify-between h-9 text-sm rounded-xl font-medium"
+                  className="w-[400px] justify-between h-9 text-sm rounded-xl font-medium"
                 >
                   {selectedBatch ? selectedBatch.name : "Select batch..."}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -635,6 +670,14 @@ function GridHeader({
             </button>
           </div> */}
         </div>
+      <Button 
+        className="cursor-pointer" 
+        onClick={onPublish}
+        disabled={isPublishing}
+      >
+        {isPublishing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+        Publish Time Table
+      </Button>
       </div>
     </div>
   );
