@@ -15,4 +15,5 @@ export function* watchTimetableNewSaga() {
   yield takeLatest(timetableActions.GET_FACULTY_VIEW,  genericSaga);
   yield takeLatest(timetableActions.GET_STUDENT_VIEW,  genericSaga);
   yield takeLatest(timetableActions.DUPLICATE_SLOT,    genericSaga);
+  yield takeLatest(timetableActions.PUBLISH_TIMETABLE, genericSaga);
 }

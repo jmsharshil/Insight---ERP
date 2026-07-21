@@ -117,7 +117,8 @@ export const API = {
     UPDATE: (id: string | number) => `/api/v1/subjects/${id}/`,
     DELETE: (id: string | number) => `/api/v1/subjects/${id}/`,
     QUESTIONS: (subjectId: string | number) => `/api/v1/subjects/${subjectId}/questions/`,
-    QUESTION_DETAIL: (subjectId: string | number, questionId: string | number) => `/api/v1/subjects/${subjectId}/questions/${questionId}/`,
+    QUESTION_DETAIL: (subjectId: string | number, questionId: string | number) =>
+      `/api/v1/subjects/${subjectId}/questions/${questionId}/`,
   },
 
   /** Chapters endpoints */
@@ -195,26 +196,28 @@ export const API = {
     SEAT_DETAIL: (examId: string, seatId: string) => `/api/v1/exams/${examId}/seating/${seatId}/`,
     DISTRIBUTE_ANSWER_KEY: (examId: string) => `/api/v1/exams/${examId}/answer-key/distribute/`,
     ANSWER_KEY_PUBLIC: (examId: string) => `/api/v1/answer-key/${examId}/`,
-    MALPRACTICE: (examId: string) => `/api/v1/exams/${examId}/malpractice/`,
+    MALPRACTICE: (examId: string) => `/api/v1/exams/${examId}/screen-events/`,
     MALPRACTICE_DETAIL: (examId: string, rId: string) =>
       `/api/v1/exams/${examId}/malpractice/${rId}/`,
     SCHEDULE: (examId: string) => `/api/v1/exams/${examId}/schedule/`,
     PAPERS: (examId: string) => `/api/v1/exams/${examId}/papers/`,
     PAPER_DETAIL: (examId: string, marksheetId: string) =>
       `/api/v1/exams/${examId}/papers/${marksheetId}/`,
-    PAPER_MARKS: (examId: string, marksheetId: string) => 
+    PAPER_MARKS: (examId: string, marksheetId: string) =>
       `/api/v1/exams/${examId}/papers/${marksheetId}/marks/`,
     PAPER_QUERY: (examId: string, marksheetId: string) =>
       `/api/v1/exams/${examId}/papers/${marksheetId}/query/`,
-    RESOLVE_QUERY: (examId: string, queryId: string) => 
+    RESOLVE_QUERY: (examId: string, queryId: string) =>
       `/api/v1/exams/${examId}/queries/${queryId}/resolve/`,
     CHECKER_STATUS: (examId: string) => `/api/v1/exams/${examId}/checker-status/`,
     RESULTS: (examId: string) => `/api/v1/exams/${examId}/results/`,
     PUBLISH_RESULTS: (examId: string) => `/api/v1/exams/${examId}/results/publish/`,
-    RESULT_DETAIL: (examId: string, resultId: string) => `/api/v1/exams/${examId}/results/${resultId}/`,
+    RESULT_DETAIL: (examId: string, resultId: string) =>
+      `/api/v1/exams/${examId}/results/${resultId}/`,
     CREATE_RECHECK_REQUEST: (examId: string) => `/api/v1/exams/${examId}/results/recheck-request/`,
     RECHECK_REQUESTS: (examId: string) => `/api/v1/exams/${examId}/recheck-requests/`,
-    RECHECK_REQUEST_ACTION: (examId: string, requestId: string) => `/api/v1/exams/${examId}/recheck-requests/${requestId}/`,
+    RECHECK_REQUEST_ACTION: (examId: string, requestId: string) =>
+      `/api/v1/exams/${examId}/recheck-requests/${requestId}/`,
   },
 
   /** Fees endpoints */

@@ -56,9 +56,14 @@ export default function PapersTab({ examId }: PapersTabProps) {
   // Query State
   const [queryTarget, setQueryTarget] = useState<any | null>(null);
   const [queryLoading, setQueryLoading] = useState(false);
-  const [queryForm, setQueryForm] = useState({
+  const [queryForm, setQueryForm] = useState<{
+    query_type: string;
+    description: string;
+    evidence: File | null;
+  }>({
     query_type: "",
-    description: ""
+    description: "",
+    evidence: null
   });
 
   const [viewQueriesTarget, setViewQueriesTarget] = useState<any | null>(null);
@@ -247,14 +252,17 @@ export default function PapersTab({ examId }: PapersTabProps) {
     }
     
     setQueryLoading(true);
+    const formData = new FormData();
+    formData.append("query_type", queryForm.query_type);
+    if (queryForm.description) formData.append("description", queryForm.description);
+    if (queryForm.evidence) formData.append("evidence", queryForm.evidence);
+
     dispatch({
       type: examActions.RAISE_PAPER_QUERY,
       method: "POST",
       endPoint: API.EXAMS.PAPER_QUERY(examId, queryTarget.id),
-      body: {
-        query_type: queryForm.query_type,
-        description: queryForm.description
-      },
+      body: formData,
+      isFormData: true,
       auth: true,
       getResponse: (res: any) => {
         if (res?.success) {
@@ -599,7 +607,7 @@ export default function PapersTab({ examId }: PapersTabProps) {
                           className="w-7 h-7"
                           onClick={() => {
                             setQueryTarget(paper);
-                            setQueryForm({ query_type: "", description: "" });
+                            setQueryForm({ query_type: "", description: "", evidence: null });
                           }}
                           title="Raise Query"
                         >
@@ -805,6 +813,15 @@ export default function PapersTab({ examId }: PapersTabProps) {
                 placeholder="Describe the issue in detail..."
               />
             </div>
+
+            <div>
+              <Label className="text-xs font-semibold">Evidence (Optional)</Label>
+              <Input
+                type="file"
+                onChange={(e) => setQueryForm({ ...queryForm, evidence: e.target.files?.[0] || null })}
+                className="mt-1 text-sm h-9"
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setQueryTarget(null)} disabled={queryLoading}>
@@ -852,6 +869,19 @@ export default function PapersTab({ examId }: PapersTabProps) {
                     {q.description && (
                       <div className="text-sm bg-white p-3 rounded-md border border-border/50">
                         {q.description}
+                      </div>
+                    )}
+
+                    {q.evidence_url && (
+                      <div className="mt-2 text-sm">
+                        <a 
+                          href={q.evidence_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline flex items-center gap-1 font-medium"
+                        >
+                          <FileText className="w-3.5 h-3.5" /> View Evidence
+                        </a>
                       </div>
                     )}
 
