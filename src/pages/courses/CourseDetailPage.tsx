@@ -556,11 +556,11 @@ export default function CourseDetailPage() {
                   <BookOpen className="w-5 h-5 text-primary" />
                   Syllabus Subjects ({selectedCourse.subjects?.length || 0})
                 </CardTitle>
-                {canEdit && (
+                {/* {canEdit && (
                   <Button size="sm" onClick={openAddSubjectModal} className="h-8">
                     <Plus className="w-4 h-4 mr-1" /> Add Subject
                   </Button>
-                )}
+                )} */}
               </CardHeader>
               <CardContent>
                 {selectedCourse.subjects && selectedCourse.subjects.length > 0 ? (

@@ -49,13 +49,18 @@ export function CreateRefundDialog({
     return verifiedPayments.find((p) => p.id === paymentId);
   }, [verifiedPayments, paymentId]);
 
+  const maxRefundable = useMemo(() => {
+    if (!selectedPayment) return 0;
+    return Number(selectedPayment.amount) * 0.9;
+  }, [selectedPayment]);
+
   useEffect(() => {
     if (selectedPayment) {
-      setAmount(String(selectedPayment.amount));
+      setAmount(maxRefundable.toFixed(2));
     } else {
       setAmount("");
     }
-  }, [selectedPayment]);
+  }, [selectedPayment, maxRefundable]);
 
   useEffect(() => {
     if (open) {
@@ -110,14 +115,14 @@ export function CreateRefundDialog({
           {selectedPayment && (
             <div>
               <Label htmlFor="refund-amount">
-                Refund Amount * (Max: {formatCurrency(Number(selectedPayment.amount))})
+                Refund Amount * (Max 90%: {formatCurrency(maxRefundable)})
               </Label>
               <Input
                 id="refund-amount"
                 type="number"
                 step="0.01"
                 min="0.01"
-                max={selectedPayment.amount}
+                max={maxRefundable}
                 className="mt-1 font-mono"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
@@ -151,7 +156,7 @@ export function CreateRefundDialog({
               !amount ||
               !reason.trim() ||
               Number(amount) <= 0 ||
-              (selectedPayment && Number(amount) > Number(selectedPayment.amount))
+              (selectedPayment && Number(amount) > maxRefundable)
             }
             className="bg-primary hover:bg-primary-dark text-primary-foreground font-semibold"
           >

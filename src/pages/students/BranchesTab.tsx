@@ -240,6 +240,8 @@ export default function BranchesTab() {
 
   const handleRowClick = (branch: any) => {
     setSelectedBranch(branch);
+    setIsAdding(false);
+    setIsEditing(false);
     setIsSheetOpen(true);
     dispatch({
       type: branchAction.GET_BRANCH_STUDENTS,
@@ -617,7 +619,6 @@ export default function BranchesTab() {
           setIsSheetOpen(open);
           if (!open) {
             setSelectedBranch(null);
-            setBranchStudents([]);
             setIsEditing(false);
             setIsAdding(false);
             setLogoFile(null);
