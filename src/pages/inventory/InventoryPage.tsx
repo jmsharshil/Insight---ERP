@@ -8,9 +8,9 @@ import AllocationsTab from "./tabs/AllocationsTab";
 import ForecastTab    from "./tabs/ForecastTab";
 
 const TABS = [
+  { value: "categories",  label: "Categories" },
   { value: "items",       label: "Items" },
   { value: "allocations", label: "Allocations" },
-  { value: "categories",  label: "Categories" },
   { value: "forecast",    label: "Forecast" },
 ];
 
@@ -23,7 +23,7 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-5">
-      <Tabs defaultValue="items">
+      <Tabs defaultValue="categories">
         <TabsList className="flex-wrap gap-1 h-auto p-1">
           {TABS.map(tab => (
             <TabsTrigger key={tab.value} value={tab.value} className="text-sm">
