@@ -70,7 +70,7 @@ export default function LoginPage() {
 
         const accessibleModules = res.user.accessible_modules || ROLES[res.user.role as keyof typeof ROLES]?.modules || [];
         const firstModule = accessibleModules[0];
-        const defaultPath = firstModule ? NAV_ITEMS[firstModule as keyof typeof NAV_ITEMS]?.path || "/crm" : "/crm";
+        const defaultPath = firstModule ? NAV_ITEMS[firstModule as keyof typeof NAV_ITEMS]?.path || "/dashboard" : "/dashboard";
         navigate(defaultPath);
       },
       getError: (err: any) => {

@@ -29,6 +29,8 @@ import {
   Pencil,
   Trash2,
   MoreVertical,
+  Eye,
+  FileText,
 } from "lucide-react";
 
 import ReportsTab from "./tabs/ReportsTab";
@@ -1822,6 +1824,48 @@ function PaymentsHistoryTable({ data, studentFees }: { data: any[]; studentFees:
             {label?.replace("_", " ")}
           </span>
         );
+      },
+    },
+    {
+      key: "payment_proof",
+      header: "Proof",
+      render: (r) => {
+        if (r.payment_proof) {
+          return (
+            <a
+              href={r.payment_proof}
+              target="_blank"
+              rel="noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              View
+            </a>
+          );
+        }
+        return <span className="text-xs text-muted-foreground">—</span>;
+      },
+    },
+    {
+      key: "payment_document",
+      header: "Document",
+      render: (r) => {
+        if (r.payment_document) {
+          return (
+            <a
+              href={r.payment_document}
+              target="_blank"
+              rel="noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              View
+            </a>
+          );
+        }
+        return <span className="text-xs text-muted-foreground">—</span>;
       },
     },
     { key: "payment_date", header: "Date", render: (r) => formatDate(r.payment_date) },

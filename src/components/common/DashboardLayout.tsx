@@ -38,9 +38,9 @@ export default function DashboardLayout({ pageTitle, stats, children }: Dashboar
         <h1 className="font-heading font-bold text-2xl md:text-3xl text-text-primary tracking-tight">
           {greeting()}, {user?.name.split(" ")[0]} 👋
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Here's what's happening today at <span className="font-medium text-text-primary">{user?.branch}</span>.
-        </p>
+        {/* <p className="text-sm text-muted-foreground mt-1">
+          Here's what's happening today at <span className="font-medium text-text-primary">{user?.branch_name}</span>.
+        </p> */}
       </motion.div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

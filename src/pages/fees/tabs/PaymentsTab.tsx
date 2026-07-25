@@ -1,4 +1,4 @@
-import { MoreVertical, Eye, ImageIcon } from "lucide-react";
+import { MoreVertical, Eye, ImageIcon, FileText } from "lucide-react";
 import DataTable, { type DataTableColumn } from "@/components/common/DataTable";
 import { FeeTableSkeleton } from "@/components/common/Skeletons";
 import { Button } from "@/components/ui/button";
@@ -164,6 +164,27 @@ function PaymentsTable({
               className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
             >
               <Eye className="w-3.5 h-3.5" />
+              View
+            </a>
+          );
+        }
+        return <span className="text-xs text-muted-foreground">—</span>;
+      },
+    },
+    {
+      key: "payment_document",
+      header: "Document",
+      render: (r) => {
+        if (r.payment_document) {
+          return (
+            <a
+              href={r.payment_document}
+              target="_blank"
+              rel="noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              <FileText className="w-3.5 h-3.5" />
               View
             </a>
           );
