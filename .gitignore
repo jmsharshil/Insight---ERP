@@ -19,6 +19,7 @@ dist-ssr
 
 #folders
 /InsightDists
+/Tests
 
 # Wrangler / Cloudflare
 .wrangler/
