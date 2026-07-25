@@ -69,9 +69,9 @@ export default function LoginPage() {
         toast.success(`Welcome back, ${res.user.name}! 🤝`);
 
         const accessibleModules = res.user.accessible_modules || ROLES[res.user.role as keyof typeof ROLES]?.modules || [];
-        const firstModule = accessibleModules[0];
-        const defaultPath = firstModule ? NAV_ITEMS[firstModule as keyof typeof NAV_ITEMS]?.path || "/dashboard" : "/dashboard";
-        navigate(defaultPath);
+        
+        // Always redirect to dashboard for all roles
+        navigate("/dashboard");
       },
       getError: (err: any) => {
         const errorMsg = err?.response?.data?.message || err?.response?.data?.error || err?.message || "Login failed. Please check your credentials.";
