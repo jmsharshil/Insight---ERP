@@ -63,7 +63,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   student: {
     id: "student", label: "Student", description: "Enrolled student — mobile app user",
     color: "bg-green-100", textColor: "text-green-800",
-    modules: ["timetable","attendance","courses_batches","exams","fees","leave","chat","notifications","settings"],
+    modules: ["dashboard", "timetable","attendance","courses_batches","exams","fees","leave","chat","notifications","settings"],
     canDelete: false, canExport: false,
   },
   parents: {

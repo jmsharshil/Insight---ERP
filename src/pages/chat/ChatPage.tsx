@@ -1,5 +1,5 @@
 import EmptyState from "@/components/common/EmptyState";
-import { ChatSkeleton } from "@/components/common/Skeletons";
+import { ChatSkeleton, ChatPageSkeleton } from "@/components/common/Skeletons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -791,6 +791,14 @@ export default function ChatPage() {
   const isFaculty = user?.role === "faculty";
   const isStudent = user?.role === "student";
 
+  if (loading) {
+    return (
+      <div>
+        <ChatPageSkeleton />
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="grid md:grid-cols-[280px_1fr] gap-4 h-[85vh]">
@@ -798,12 +806,18 @@ export default function ChatPage() {
         <div className="rounded-xl border border-border bg-card flex flex-col overflow-hidden">
           <div className="p-3 border-b border-border space-y-2">
             <Input placeholder="Search conversations" value={search} onChange={e => setSearch(e.target.value)} />
-            <Button size="sm" className="w-full"
-              disabled={isStudent}
-              title={isStudent ? "Chat creation not available for students" : ""}
-              onClick={() => setIsModalOpen(true)}>
-              + New Chat
-            </Button>
+            {(user?.role === "super_admin" ||
+              user?.role === "branch_manager") && (
+              <Button
+                size="sm"
+                onClick={() => setIsModalOpen(true)}
+                className="w-full"
+                disabled={isStudent}
+                title={isStudent ? "Chat creation not available for students" : ""}
+              >
+                + New Chat
+              </Button>
+            )}
           </div>
           <div className="flex-1 overflow-y-auto scrollbar-hidden ">
             {channels.length === 0 ? <EmptyState icon={MessageSquare} title="No conversations" /> : channels.map((c) => (
@@ -877,9 +891,17 @@ export default function ChatPage() {
                       <div className="text-xs text-muted-foreground">{active.type === "group" ? "Group" : "Direct Message"}</div>
                     )}
                   </div>
-                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={() => setShowDetails(true)} aria-label="Room details">
-                    <Info className="w-5 h-5" />
-                  </Button>
+                  {(user?.role === "super_admin" || user?.role === "branch_manager") && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowDetails(true)}
+                      aria-label="Room details"
+                    >
+                      <Info className="w-5 h-5" />
+                    </Button>
+                  )}
                 </div>
 
                 {/* ── Messages ───────────────────────────────────────────── */}
@@ -1196,9 +1218,19 @@ export default function ChatPage() {
                 <p className="text-sm text-muted-foreground max-w-[280px]">
                   Select a conversation from the left to start chatting.
                 </p>
-                <Button size="sm" variant="outline" onClick={() => setIsModalOpen(true)} className="mt-2" disabled={isStudent} title={isStudent ? "Chat creation not available for students" : ""}>
-                  + New Chat
-                </Button>
+                {(user?.role === "super_admin" ||
+                  user?.role === "branch_manager") && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setIsModalOpen(true)}
+                    className="mt-2"
+                    disabled={isStudent}
+                    title={isStudent ? "Chat creation not available for students" : ""}
+                  >
+                    + New Chat
+                  </Button>
+                )}
               </div>
             </div>
           )}
