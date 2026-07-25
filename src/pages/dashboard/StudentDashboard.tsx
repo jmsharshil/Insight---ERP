@@ -3,6 +3,7 @@ import SectionCard from "@/components/common/SectionCard";
 import { ReportsSkeleton } from "@/components/common/Skeletons";
 import { axiosRequest } from "@/service/axiosRequest";
 import { BookOpen, Calendar, Percent, Wallet, CheckCircle, XCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -32,6 +33,21 @@ interface UpcomingExam {
   exam_type: string;
 }
 
+interface PendingInstallment {
+  id: string;
+  amount: number;
+  due_date: string;
+  plan__student_fee__fee_structure__name: string;
+}
+
+interface Notification {
+  id: string;
+  title: string;
+  body: string;
+  is_read: boolean;
+  created_at: string;
+}
+
 interface DashboardData {
   kpis: {
     attendance_rate: number;
@@ -45,6 +61,7 @@ interface DashboardData {
   fee_details: {
     due_count: number;
     next_due_date: string | null;
+    pending_installments?: PendingInstallment[];
   };
   charts: {
     my_performance: {
@@ -52,6 +69,8 @@ interface DashboardData {
       scores: number[];
     };
   };
+  unread_notifications?: number;
+  recent_notifications?: Notification[];
 }
 
 export default function StudentDashboard() {
@@ -296,6 +315,50 @@ export default function StudentDashboard() {
           ) : (
             <div className="flex h-48 items-center justify-center bg-muted/20 rounded-lg">
               <p className="text-sm text-muted-foreground">No upcoming exams.</p>
+            </div>
+          )}
+        </SectionCard>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mt-6">
+        {/* Pending Installments */}
+        <SectionCard title="Pending Fee Installments">
+          {data.fee_details?.pending_installments && data.fee_details.pending_installments.length > 0 ? (
+            <div className="overflow-x-auto mt-4">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-muted-foreground uppercase bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-3 rounded-tl-lg">Fee Structure</th>
+                    <th className="px-4 py-3">Due Date</th>
+                    <th className="px-4 py-3 text-right rounded-tr-lg">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.fee_details.pending_installments.slice(0, 5).map((inst) => (
+                    <tr key={inst.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
+                      <td className="px-4 py-3 font-medium text-foreground truncate max-w-[200px]" title={inst.plan__student_fee__fee_structure__name}>
+                        {inst.plan__student_fee__fee_structure__name}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className="text-destructive font-medium bg-destructive/10 px-2 py-1 rounded">
+                          {new Date(inst.due_date).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold font-heading">
+                        ₹{inst.amount}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="flex h-48 items-center justify-center bg-muted/20 rounded-lg mt-4">
+              <p className="text-sm text-muted-foreground">No pending installments.</p>
             </div>
           )}
         </SectionCard>
