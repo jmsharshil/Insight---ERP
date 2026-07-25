@@ -43,11 +43,23 @@ export interface SeatAssignment {
 
 export interface MalpracticeReport {
   id: string;
-  student_id: string;
+  student_id?: string;
   student_name?: string;
-  description: string;
-  severity: "minor" | "major" | "disqualified";
-  created_at: string;
+  session_id?: string;
+  event_type?: string;
+  event_type_display?: string;
+  action_taken?: string;
+  action_taken_display?: string;
+  occurred_at?: string;
+  // Old fields for backward compatibility/fallback
+  student?: string;
+  reported_by?: string;
+  reported_by_name?: string;
+  description?: string;
+  severity?: string;
+  severity_display?: string;
+  reported_at?: string;
+  created_at?: string;
 }
 
 interface ExamState {

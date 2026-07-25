@@ -187,11 +187,11 @@ export default function BatchesTab({
               >
                 <div className="p-5 space-y-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h4 className="font-semibold text-lg text-text-primary group-hover:text-primary transition-colors">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-semibold text-lg text-text-primary group-hover:text-primary transition-colors break-all">
                         {b.name}
                       </h4>
-                      <p className="text-xs text-muted-foreground mt-0.5">{courseName}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 break-words">{courseName}</p>
                     </div>
                     <span
                       className={cn(
@@ -205,30 +205,28 @@ export default function BatchesTab({
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 pt-2 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <BookOpen className="w-3.5 h-3.5 text-primary shrink-0" />
-                      <span className="truncate">Code: {b.batch_code}</span>
+                  <div className="flex flex-col gap-3 pt-2 text-xs text-muted-foreground">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="flex items-start gap-1.5 min-w-0">
+                        <BookOpen className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                        <span className="break-words leading-tight">Code: {b.batch_code}</span>
+                      </div>
+                      <div className="flex items-start gap-1.5 min-w-0">
+                        <Users className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                        <span className="break-words leading-tight">{b.max_students} Max Students</span>
+                      </div>
+                      <div className="flex items-start gap-1.5 min-w-0">
+                        <Calendar className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                        <span className="break-words leading-tight capitalize">{b.batch_attempt} Attempt</span>
+                      </div>
+                      <div className="flex items-start gap-1.5 min-w-0">
+                        <MapPin className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                        <span className="break-words leading-tight">{b.branch_name || b.branch || "N/A"}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <Users className="w-3.5 h-3.5 text-primary shrink-0" />
-                      <span className="truncate">{b.max_students} Max Students</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
-                      <span className="truncate capitalize">{b.batch_attempt} Attempt</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
-                      <span className="truncate">{b.branch_name || b.branch || "N/A"}</span>
-                    </div>
-                    {/* <div className="flex items-center gap-1.5 col-span-2 min-w-0">
-                      <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
-                      <span className="truncate">Timing: {b.timing}</span>
-                    </div> */}
-                    <div className="col-span-2 pt-1 border-t border-border/50 text-[10px] text-muted-foreground flex justify-between">
-                      <span>Start: {b.start_date}</span>
-                      <span>End: {b.end_date}</span>
+                    <div className="pt-2 border-t border-border/50 text-[10px] text-muted-foreground flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2">
+                      <span className="break-words">Start: {b.start_date}</span>
+                      <span className="break-words">End: {b.end_date}</span>
                     </div>
                   </div>
                 </div>
@@ -284,8 +282,7 @@ export default function BatchesTab({
           <Users className="w-12 h-12 text-muted-foreground opacity-50 mb-3" />
           <h3 className="font-semibold text-lg text-text-primary">No Batches Found</h3>
           <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-            No batches match your query or filters. Click "Add Batch" to register a new student
-            batch.
+            No batches match your query or filters.
           </p>
         </div>
       )}

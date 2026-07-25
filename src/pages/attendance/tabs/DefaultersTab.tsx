@@ -100,7 +100,7 @@ export default function DefaultersTab({ dropdowns }: { dropdowns?: any }) {
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">Attendance Below (%)</Label>
           <Input
-            type="number"
+            type="number" min="0"
             placeholder="75"
             className="h-9 text-sm w-28"
             value={filters.attendance_percentage_below}
@@ -112,7 +112,7 @@ export default function DefaultersTab({ dropdowns }: { dropdowns?: any }) {
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">Min Violations</Label>
           <Input
-            type="number"
+            type="number" min="0"
             placeholder="1"
             className="h-9 text-sm w-28"
             value={filters.min_violations}

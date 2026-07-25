@@ -8,7 +8,13 @@ import { Users, CheckCircle, GraduationCap, Trophy, BarChart2 } from "lucide-rea
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
+import ModulePlaceholder from "@/pages/ModulePlaceholder";
+
 export default function SummaryTab() {
+  return <ModulePlaceholder title="Results Summary" />;
+}
+
+export function SummaryTabOld() {
   const { user } = useAuth();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -139,20 +145,24 @@ export default function SummaryTab() {
                     const name = s.exam__subject__name || s.subject_name || "Unknown";
                     return {
                       name: name.length > 12 ? name.substring(0, 12) + "..." : name,
+                      fullName: name,
                       passPct: s.pass_pct ? Number(s.pass_pct.toFixed(2)) : 0,
                       avgMarks: s.avg_marks ? Number(s.avg_marks.toFixed(2)) : 0,
                     };
                    })}
-                  margin={{ top: 10, right: 10, left: 0, bottom: 40 }}
+                  margin={{ top: 10, right: 10, left: 0, bottom: 60 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                   <XAxis
                     dataKey="name" 
-                    tick={{ fontSize: 12, fill: "#6b7280" }} 
+                    tick={{ fontSize: 11, fill: "#6b7280" }} 
                     angle={-45}
                     textAnchor="end" 
                     axisLine={false} 
                     tickLine={false} 
+                    interval={0}
+                    height={70}
+                    tickMargin={10}
                   />
                   <YAxis 
                     tick={{ fontSize: 12, fill: "#6b7280" }} 
@@ -162,6 +172,12 @@ export default function SummaryTab() {
                   <Tooltip 
                     cursor={{ fill: '#f3f4f6' }}
                     contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    labelFormatter={(label, payload) => {
+                      if (payload && payload.length > 0) {
+                        return payload[0].payload.fullName || label;
+                      }
+                      return label;
+                    }}
                   />
                   <Legend wrapperStyle={{ paddingTop: '20px' }} />
                   <Bar dataKey="passPct" name="Pass %" fill="#22c55e" radius={[4, 4, 0, 0]} maxBarSize={40} />
@@ -187,20 +203,24 @@ export default function SummaryTab() {
                     const name = f.exam__faculty__user__name || f.faculty_name || "Unknown";
                     return {
                       name: name.length > 12 ? name.substring(0, 12) + "..." : name,
+                      fullName: name,
                       passPct: f.pass_pct ? Number(f.pass_pct.toFixed(2)) : 0,
                       avgMarks: f.avg_marks ? Number(f.avg_marks.toFixed(2)) : 0,
                     };
                   })}
-                  margin={{ top: 10, right: 10, left: 0, bottom: 40 }}
+                  margin={{ top: 10, right: 10, left: 0, bottom: 60 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                   <XAxis 
                     dataKey="name" 
-                    tick={{ fontSize: 12, fill: "#6b7280" }} 
+                    tick={{ fontSize: 11, fill: "#6b7280" }} 
                     angle={-45} 
                     textAnchor="end" 
                     axisLine={false} 
                     tickLine={false} 
+                    interval={0}
+                    height={70}
+                    tickMargin={10}
                   />
                   <YAxis 
                     tick={{ fontSize: 12, fill: "#6b7280" }} 
@@ -210,6 +230,12 @@ export default function SummaryTab() {
                   <Tooltip 
                     cursor={{ fill: '#f3f4f6' }}
                     contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    labelFormatter={(label, payload) => {
+                      if (payload && payload.length > 0) {
+                        return payload[0].payload.fullName || label;
+                      }
+                      return label;
+                    }}
                   />
                   <Legend wrapperStyle={{ paddingTop: '20px' }} />
                   <Bar dataKey="passPct" name="Pass %" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40} />

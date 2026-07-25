@@ -208,12 +208,12 @@ export default function SlotForm({
   // Filter chapters by selected subject
   const filteredChapters = selectedSubject
     ? chapters.filter(c => !c.subject || c.subject === selectedSubject)
-    : chapters;
+    : [];
 
   // Filter papers by selected subject
   const filteredPapers = selectedSubject
     ? papers.filter(p => p.subject === selectedSubject)
-    : papers;
+    : [];
 
   // Auto-fill start/end time when slot_code changes
   const slotCode = watch("slot_code");
@@ -298,7 +298,7 @@ export default function SlotForm({
         const selectedNames = selectedIds.map(id => examinersList.find(f => f.id === id)?.name || id);
 
         return (
-          <Popover>
+          <Popover modal={true}>
             <PopoverTrigger asChild>
               <Button variant="outline" role="combobox" className="w-full justify-between font-normal text-sm min-h-[36px] h-auto p-2">
                 {selectedNames.length > 0 ? (
@@ -314,7 +314,7 @@ export default function SlotForm({
             <PopoverContent className="w-[400px] p-0" align="start">
               <Command>
                 <CommandInput placeholder="Search faculty..." />
-                <CommandList>
+                <CommandList className="max-h-[200px] overflow-y-auto">
                   <CommandEmpty>No faculty found.</CommandEmpty>
                   <CommandGroup>
                     {examinersList.map((fac) => (
@@ -343,7 +343,7 @@ export default function SlotForm({
         const selectedNames = selectedIds.map(id => paperCheckersList.find(f => f.id === id)?.name || id);
 
         return (
-          <Popover>
+          <Popover modal={true}>
             <PopoverTrigger asChild>
               <Button variant="outline" role="combobox" className="w-full justify-between font-normal text-sm min-h-[36px] h-auto p-2">
                 {selectedNames.length > 0 ? (
@@ -359,7 +359,7 @@ export default function SlotForm({
             <PopoverContent className="w-[400px] p-0" align="start">
               <Command>
                 <CommandInput placeholder="Search faculty..." />
-                <CommandList>
+                <CommandList className="max-h-[200px] overflow-y-auto">
                   <CommandEmpty>No faculty found.</CommandEmpty>
                   <CommandGroup>
                     {paperCheckersList.map((fac) => (
@@ -545,14 +545,17 @@ export default function SlotForm({
               const selectedNames = selectedIds.map(id => filteredChapters.find(c => c.id === id)?.name || id);
 
               return (
-                <Popover>
+                <Popover modal={true}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       role="combobox"
                       className="w-full justify-between font-normal text-sm min-h-[36px] h-auto p-2"
+                      disabled={!selectedSubject}
                     >
-                      {selectedNames.length > 0 ? (
+                      {!selectedSubject ? (
+                        <span className="text-muted-foreground">Please select a subject first</span>
+                      ) : selectedNames.length > 0 ? (
                         <div className="flex flex-wrap gap-1.5 text-left">
                           {selectedNames.map((name, i) => (
                             <Badge key={i} variant="secondary" className="text-xs font-medium bg-[#FFF3E0] text-[#FB8C00] hover:bg-[#FFE0B2]">
@@ -569,7 +572,7 @@ export default function SlotForm({
                   <PopoverContent className="w-[400px] p-0" align="start">
                     <Command>
                       <CommandInput placeholder="Search chapters..." />
-                      <CommandList>
+                      <CommandList className="max-h-[200px] overflow-y-auto">
                         <CommandEmpty>No chapters found.</CommandEmpty>
                         <CommandGroup>
                           {filteredChapters.map((chapter) => (
@@ -653,7 +656,7 @@ export default function SlotForm({
               <Input type="number" {...register("exam_total_marks")} placeholder={(watch("exam_mode") === "online" && watch("exam_type") === "mcq") ? "Auto-calculated" : "100"} className="h-9 text-sm" disabled={(watch("exam_mode") === "online" && watch("exam_type") === "mcq")} />
             </Field>
 
-            <Field label="Pass Marks" required={needsExam} error={errors.exam_pass_marks?.message}>
+            <Field label="Passing Marks" required={needsExam} error={errors.exam_pass_marks?.message}>
               <Input type="number" {...register("exam_pass_marks")} placeholder="35" className="h-9 text-sm" />
             </Field>
 
@@ -678,10 +681,12 @@ export default function SlotForm({
                 const selectedNames = selectedIds.map(id => filteredPapers.find(p => p.id === id)?.name || id);
 
                 return (
-                  <Popover>
+                  <Popover modal={true}>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" role="combobox" className="w-full justify-between font-normal text-sm min-h-[36px] h-auto p-2">
-                        {selectedNames.length > 0 ? (
+                      <Button variant="outline" role="combobox" className="w-full justify-between font-normal text-sm min-h-[36px] h-auto p-2" disabled={!selectedSubject}>
+                        {!selectedSubject ? (
+                          <span className="text-muted-foreground">Please select a subject first</span>
+                        ) : selectedNames.length > 0 ? (
                           <div className="flex flex-wrap gap-1.5 text-left">
                             {selectedNames.map((name, i) => (
                               <Badge key={i} variant="secondary" className="text-xs font-medium bg-[#F3E5F5] text-[#8E24AA] hover:bg-[#E1BEE7]">{name}</Badge>
@@ -694,7 +699,7 @@ export default function SlotForm({
                     <PopoverContent className="w-[400px] p-0" align="start">
                       <Command>
                         <CommandInput placeholder="Search papers..." />
-                        <CommandList>
+                        <CommandList className="max-h-[200px] overflow-y-auto">
                           <CommandEmpty>No papers found for this subject.</CommandEmpty>
                           <CommandGroup>
                             {filteredPapers.map((paper) => (

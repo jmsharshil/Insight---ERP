@@ -129,6 +129,7 @@ export default function LevelDetailPage() {
     set_name: "",
     file: null as File | null,
     answer_key: null as File | null,
+    no_of_questions: 0,
   });
 
   const [subjectForm, setSubjectForm] = useState({
@@ -373,10 +374,11 @@ export default function LevelDetailPage() {
         set_name: paper.set_name || "",
         file: null,
         answer_key: null,
+        no_of_questions: paper.no_of_questions || 0,
       });
     } else {
       setEditingPaper(null);
-      setPaperForm({ set_name: "", file: null, answer_key: null });
+      setPaperForm({ set_name: "", file: null, answer_key: null, no_of_questions: 0 });
     }
     setPaperModalOpen(true);
   };
@@ -388,6 +390,7 @@ export default function LevelDetailPage() {
 
     const formData = new FormData();
     formData.append("set_name", paperForm.set_name.trim());
+    formData.append("no_of_questions", paperForm.no_of_questions.toString());
     if (paperForm.file) formData.append("file", paperForm.file);
     if (paperForm.answer_key) formData.append("answer_key", paperForm.answer_key);
 
@@ -749,6 +752,11 @@ export default function LevelDetailPage() {
                                             <span className="font-semibold text-text-primary text-base">
                                               {paper.set_name}
                                             </span>
+                                            {paper.no_of_questions > 0 && (
+                                              <Badge variant="outline" className="text-xs py-0 h-5 text-muted-foreground bg-muted/20">
+                                                {paper.no_of_questions} Qs
+                                              </Badge>
+                                            )}
                                           </div>
                                           <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground mt-2">
                                             {paper.file && (
@@ -959,11 +967,15 @@ export default function LevelDetailPage() {
               <Input id="paper-name" placeholder="e.g. Set A, Morning Shift" value={paperForm.set_name} onChange={(e) => setPaperForm({ ...paperForm, set_name: e.target.value })} />
             </div>
             <div className="space-y-1">
+              <Label htmlFor="paper-no-of-questions">No. of Questions</Label>
+              <Input id="paper-no-of-questions" type="number" min="0" value={paperForm.no_of_questions} onChange={(e) => setPaperForm({ ...paperForm, no_of_questions: Number(e.target.value) })} />
+            </div>
+            <div className="space-y-1">
               <Label htmlFor="paper-file">Question Paper (PDF/Doc) {editingPaper ? <span className="text-xs text-muted-foreground ml-2">(Leave blank to keep current)</span> : <span className="text-destructive">*</span>}</Label>
               <Input id="paper-file" type="file" onChange={(e) => setPaperForm({ ...paperForm, file: e.target.files?.[0] || null })} />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="paper-answer-key">Answer Key (Optional) {editingPaper ? <span className="text-xs text-muted-foreground ml-2">(Leave blank to keep current)</span> : ""}</Label>
+              <Label htmlFor="paper-answer-key">Answer Key (PDF/Doc) {editingPaper ? <span className="text-xs text-muted-foreground ml-2">(Leave blank to keep current)</span> : <span className="text-destructive">*</span>}</Label>
               <Input id="paper-answer-key" type="file" onChange={(e) => setPaperForm({ ...paperForm, answer_key: e.target.files?.[0] || null })} />
             </div>
           </div>

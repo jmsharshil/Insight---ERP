@@ -463,11 +463,11 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
       </p>
 
       {examsLoading ? <TableSkeleton rows={5} columns={7} /> : (
-        <div className="bg-white rounded-xl border border-border overflow-hidden shadow-sm">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-xl border border-border overflow-x-auto shadow-sm">
+          <table className="w-full text-sm whitespace-nowrap">
             <thead className="bg-muted/40 border-b border-border">
               <tr>
-                {["Title", "Mode", "Type", "Marks", "Pass Marks", "Result Release", "Status", "Date", "Slot", "Classroom", "Subject / Batch", ""].map(h => (
+                {["Title", "Mode", "Type", "Marks", "Passing Marks", "Result Release", "Status", "Date", "Slot", "Classroom", "Subject / Batch", ""].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
@@ -585,11 +585,11 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs font-semibold">Total Marks</Label>
-                <Input type="number" value={editForm.total_marks} onChange={e => setEditForm(f => ({ ...f, total_marks: e.target.value }))} className="h-9 text-sm mt-1" />
+                <Input type="number" min={0} value={editForm.total_marks} onChange={e => setEditForm(f => ({ ...f, total_marks: e.target.value }))} className="h-9 text-sm mt-1" />
               </div>
               <div>
                 <Label className="text-xs font-semibold">Pass Marks</Label>
-                <Input type="number" value={editForm.pass_marks} onChange={e => setEditForm(f => ({ ...f, pass_marks: e.target.value }))} className="h-9 text-sm mt-1" />
+                <Input type="number" min={0} value={editForm.pass_marks} onChange={e => setEditForm(f => ({ ...f, pass_marks: e.target.value }))} className="h-9 text-sm mt-1" />
               </div>
             </div>
 
@@ -647,7 +647,14 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
                         className="mt-0.5"
                       />
                       <div className="flex flex-col">
-                        <span className="text-sm font-medium leading-none">{p.set_name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium leading-none">{p.set_name}</span>
+                          {p.no_of_questions > 0 && (
+                            <Badge variant="outline" className="text-[10px] py-0 h-4 text-muted-foreground bg-muted/20">
+                              {p.no_of_questions} Qs
+                            </Badge>
+                          )}
+                        </div>
                         <span className="text-xs text-muted-foreground mt-1">Subject: {p.subject_name || p.subject || "—"}</span>
                       </div>
                     </label>

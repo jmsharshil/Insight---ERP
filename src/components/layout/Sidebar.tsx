@@ -20,7 +20,7 @@ const COLLAPSED_W = 70;
 
 /* ─── tooltip style (reused) ─────────────────────── */
 const tooltipClass =
-  "bg-grayDark text-white border border-white/10 shadow-xl shadow-black/30 text-xs font-medium px-3 py-1.5 rounded-lg";
+  "bg-gray-dark text-white border border-white/10 shadow-xl shadow-black/30 text-xs font-medium px-3 py-1.5 rounded-lg";
 
 /* ─── component ──────────────────────────────────── */
 export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
@@ -64,7 +64,14 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
   // expanded when: mobile, pinned open, or hovered
   const expanded = mobile || pinned || hovered;
   const role = user ? ROLES[user.role as keyof typeof ROLES] : null;
-  const modules = user?.accessible_modules || role?.modules || [];
+  let rawModules = user?.accessible_modules || role?.modules || [];
+  
+  // Force add attendance for all staff roles so they can view their My Attendance tab
+  if (user && !["student", "parents"].includes(user.role) && !rawModules.includes("attendance")) {
+    rawModules = [...rawModules, "attendance"];
+  }
+
+  const modules = rawModules.includes("notifications") ? rawModules : [...rawModules, "notifications"];
   const items = modules.map((m) => ({ id: m, ...NAV_ITEMS[m] })).filter((item) => item.label);
 
   return (
@@ -138,7 +145,7 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
                   {pinned ? <Pin className="w-4 h-4" /> : <PinOff className="w-4 h-4" />}
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right" sideOffset={8} className={tooltipClass}>
+              <TooltipContent side="bottom" sideOffset={8} className={tooltipClass}>
                 {pinned ? "Unpin sidebar" : "Pin sidebar open"}
               </TooltipContent>
             </Tooltip>

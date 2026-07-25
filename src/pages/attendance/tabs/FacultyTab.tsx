@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/useToast";
 import { useAuth } from "@/hooks/useAuth";
 import { TableSkeleton } from "@/components/common/Skeletons";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -84,57 +85,72 @@ export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-xl border border-border p-4 flex flex-wrap gap-3">
-        <Input
-          placeholder="Search Employee"
-          className="h-9 text-sm w-52 bg-muted/10"
-          value={f.search}
-          onChange={(e) => setF((p) => ({ ...p, search: e.target.value }))}
-        />
-        <Select
-          value={f.branch_id}
-          onValueChange={(v) => setF((p) => ({ ...p, branch_id: v === "all" ? "" : v }))}
-        >
-          <SelectTrigger className="h-9 text-sm w-44 bg-muted/10">
-            <SelectValue placeholder="Branch" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Branches</SelectItem>
-            {branches.map((b: any) => (
-              <SelectItem key={b.id} value={b.id}>
-                {b.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={f.status}
-          onValueChange={(v) => setF((p) => ({ ...p, status: v === "all" ? "" : v }))}
-        >
-          <SelectTrigger className="h-9 text-sm w-36 bg-muted/10">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="present">Present</SelectItem>
-            <SelectItem value="absent">Absent</SelectItem>
-            <SelectItem value="late">Late</SelectItem>
-            <SelectItem value="half_day">Half Day</SelectItem>
-            <SelectItem value="leave">Leave</SelectItem>
-          </SelectContent>
-        </Select>
-        <Input
-          type="date"
-          className="h-9 text-sm w-36"
-          value={f.from_date}
-          onChange={(e) => setF((p) => ({ ...p, from_date: e.target.value }))}
-        />
-        <Input
-          type="date"
-          className="h-9 text-sm w-36"
-          value={f.to_date}
-          onChange={(e) => setF((p) => ({ ...p, to_date: e.target.value }))}
-        />
+      <div className="bg-white rounded-xl border border-border p-4 flex flex-wrap gap-3 items-end">
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs text-muted-foreground">Search</Label>
+          <Input
+            placeholder="Search Employee"
+            className="h-9 text-sm w-52 bg-muted/10"
+            value={f.search}
+            onChange={(e) => setF((p) => ({ ...p, search: e.target.value }))}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs text-muted-foreground">Branch</Label>
+          <Select
+            value={f.branch_id}
+            onValueChange={(v) => setF((p) => ({ ...p, branch_id: v === "all" ? "" : v }))}
+          >
+            <SelectTrigger className="h-9 text-sm w-44 bg-muted/10">
+              <SelectValue placeholder="Branch" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Branches</SelectItem>
+              {branches.map((b: any) => (
+                <SelectItem key={b.id} value={b.id}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs text-muted-foreground">Status</Label>
+          <Select
+            value={f.status}
+            onValueChange={(v) => setF((p) => ({ ...p, status: v === "all" ? "" : v }))}
+          >
+            <SelectTrigger className="h-9 text-sm w-36 bg-muted/10">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="present">Present</SelectItem>
+              <SelectItem value="absent">Absent</SelectItem>
+              <SelectItem value="late">Late</SelectItem>
+              <SelectItem value="half_day">Half Day</SelectItem>
+              <SelectItem value="leave">Leave</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs text-muted-foreground">From Date</Label>
+          <Input
+            type="date"
+            className="h-9 text-sm w-36"
+            value={f.from_date}
+            onChange={(e) => setF((p) => ({ ...p, from_date: e.target.value }))}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs text-muted-foreground">To Date</Label>
+          <Input
+            type="date"
+            className="h-9 text-sm w-36"
+            value={f.to_date}
+            onChange={(e) => setF((p) => ({ ...p, to_date: e.target.value }))}
+          />
+        </div>
         <Button
           onClick={fetchFaculty}
           className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm"

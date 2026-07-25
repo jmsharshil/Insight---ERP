@@ -161,7 +161,7 @@ export default function BalancesTab() {
             )}
             <div>
               <Label className="text-xs mb-1 block">Year</Label>
-              <Input type="number" value={lookupYear} onChange={e => setLookupYear(e.target.value)}
+              <Input type="number" min="0" value={lookupYear} onChange={e => setLookupYear(e.target.value)}
                 className="h-9 text-sm w-24" />
             </div>
             <Button onClick={handleLookup} disabled={viewedUserBalanceLoading || !lookupUserId.trim()}

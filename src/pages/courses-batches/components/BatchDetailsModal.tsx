@@ -418,7 +418,7 @@ export default function BatchDetailsSheet({
                 </Label>
                 <Input
                   id="batch-max-students"
-                  type="number"
+                  type="number" min="0"
                   value={batchForm.max_students}
                   onChange={(e) =>
                     setBatchForm({ ...batchForm, max_students: Number(e.target.value) })

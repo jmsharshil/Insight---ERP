@@ -279,7 +279,7 @@ export default function FacultyDetailSheet({
                     <div className="space-y-1 col-span-2">
                       <Label>Salary</Label>
                       <Input
-                        type="number"
+                        type="number" min="0"
                         value={editForm.salary}
                         onChange={(e) =>
                           setEditForm((f) => ({
@@ -296,7 +296,7 @@ export default function FacultyDetailSheet({
                       <div className="space-y-1">
                         <Label>Hourly Rate</Label>
                         <Input
-                          type="number"
+                          type="number" min="0"
                           value={editForm.hourly_rate}
                           onChange={(e) =>
                             setEditForm((f) => ({
@@ -309,7 +309,7 @@ export default function FacultyDetailSheet({
                       <div className="space-y-1">
                         <Label>Session Hours</Label>
                         <Input
-                          type="number"
+                          type="number" min="0"
                           value={editForm.session_hours}
                           onChange={(e) =>
                             setEditForm((f) => ({

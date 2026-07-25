@@ -56,7 +56,13 @@ interface ReportsTabProps {
   COLORS: string[];
 }
 
-export default function ReportsTab({
+import ModulePlaceholder from "@/pages/ModulePlaceholder";
+
+export default function ReportsTab() {
+  return <ModulePlaceholder title="Fees Reports" />;
+}
+
+export function ReportsTabOld({
   reportLoading,
   reportMonth,
   reportYear,
@@ -138,7 +144,7 @@ export default function ReportsTab({
           <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl -mr-6 -mt-6" />
           <div className="flex justify-between items-start mb-3">
             <span className="text-xs text-muted-foreground font-semibold tracking-wide uppercase">
-              Total Billed
+              Total Receivable
             </span>
             <span className="p-2 bg-blue-500/10 text-blue-500 rounded-lg">
               <Wallet className="w-4 h-4" />

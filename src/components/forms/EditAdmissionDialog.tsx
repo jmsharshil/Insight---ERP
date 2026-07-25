@@ -588,7 +588,7 @@ export default function EditAdmissionDialog({
                     <div className="space-y-1.5">
                       <Label className="text-xs font-semibold text-text-primary">Percentage (%)</Label>
                       <Input
-                        type="number"
+                        type="number" min="0"
                         step="0.01"
                         value={editForm.tenth_percentage}
                         onChange={(e) => handleEditFormChange("tenth_percentage", e.target.value)}
@@ -598,7 +598,7 @@ export default function EditAdmissionDialog({
                     <div className="space-y-1.5">
                       <Label className="text-xs font-semibold text-text-primary">Percentile</Label>
                       <Input
-                        type="number"
+                        type="number" min="0"
                         step="0.01"
                         value={editForm.tenth_percentile}
                         onChange={(e) => handleEditFormChange("tenth_percentile", e.target.value)}
@@ -647,7 +647,7 @@ export default function EditAdmissionDialog({
                     <div className="space-y-1.5">
                       <Label className="text-xs font-semibold text-text-primary">Percentage (%)</Label>
                       <Input
-                        type="number"
+                        type="number" min="0"
                         step="0.01"
                         value={editForm.twelfth_percentage}
                         onChange={(e) => handleEditFormChange("twelfth_percentage", e.target.value)}
@@ -657,7 +657,7 @@ export default function EditAdmissionDialog({
                     <div className="space-y-1.5">
                       <Label className="text-xs font-semibold text-text-primary">Percentile</Label>
                       <Input
-                        type="number"
+                        type="number" min="0"
                         step="0.01"
                         value={editForm.twelfth_percentile}
                         onChange={(e) => handleEditFormChange("twelfth_percentile", e.target.value)}
