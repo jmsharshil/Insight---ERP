@@ -131,6 +131,51 @@ export function ChatSkeleton() {
   );
 }
 
+export function ChatPageSkeleton() {
+  return (
+    <div className="grid md:grid-cols-[280px_1fr] gap-4 h-[85vh] animate-in fade-in duration-300">
+      {/* Sidebar Skeleton */}
+      <div className="rounded-xl border border-border bg-card flex flex-col overflow-hidden">
+        <div className="p-3 border-b border-border space-y-2">
+          <Skeleton height={36} className="rounded-md" />
+          <Skeleton height={32} className="rounded-md" />
+        </div>
+        <div className="flex-1 p-3 space-y-4 overflow-hidden">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <Skeleton circle width={36} height={36} />
+              <div className="flex-1">
+                <Skeleton width="60%" height={14} className="mb-1.5" />
+                <Skeleton width="80%" height={12} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Chat Thread Skeleton */}
+      <div className="rounded-xl border border-border bg-card flex flex-col overflow-hidden">
+        <div className="p-3 border-b border-border flex items-center gap-3">
+          <Skeleton circle width={36} height={36} />
+          <div className="flex-1">
+            <Skeleton width={120} height={16} className="mb-1" />
+            <Skeleton width={80} height={12} />
+          </div>
+        </div>
+        <div className="flex-1 bg-[#efeae2] dark:bg-[#0b141a] flex flex-col justify-end overflow-hidden">
+          <ChatSkeleton />
+        </div>
+        <div className="p-3 border-t border-border flex items-center gap-2">
+          <Skeleton circle width={40} height={40} className="shrink-0" />
+          <Skeleton height={40} className="flex-1 rounded-md" />
+          <Skeleton width={40} height={40} className="shrink-0 rounded-md" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 /* ---------- Fee-related Skeletons ---------- */
 
 export function ReportsSkeleton() {

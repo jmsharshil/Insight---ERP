@@ -37,6 +37,12 @@ const DASHBOARDS: Partial<Record<RoleId, React.ComponentType>> = {
 import ModulePlaceholder from "@/pages/ModulePlaceholder";
 
 export default function DashboardRouter() {
+  const { user } = useAuth();
+
+  if (user?.role === "student") {
+    return <StudentDashboard />;
+  }
+
   return <ModulePlaceholder title="Dashboard" />;
 }
 

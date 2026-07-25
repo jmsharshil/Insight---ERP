@@ -66,9 +66,14 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
   const role = user ? ROLES[user.role as keyof typeof ROLES] : null;
   let rawModules = user?.accessible_modules || role?.modules || [];
   
+  // Force dashboard for all roles (override backend module list if needed)
+  if (!rawModules.includes("dashboard")) {
+    rawModules = ["dashboard", ...rawModules];
+  }
+
   // Force add attendance for all staff roles so they can view their My Attendance tab
   if (user && !["student", "parents"].includes(user.role) && !rawModules.includes("attendance")) {
-    rawModules = [...rawModules];
+    rawModules = [...rawModules, "attendance"];
   }
 
   const modules = rawModules.includes("notifications") ? rawModules : [...rawModules, "notifications"];
