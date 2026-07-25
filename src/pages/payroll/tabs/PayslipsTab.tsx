@@ -63,19 +63,60 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] ">
           <DialogHeader>
             <DialogTitle>Deduction Note</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto">
-            <div className="text-sm bg-muted/30 p-4 rounded-md border border-border/50 min-h-[100px]">
-              <ul className="list-disc pl-4 space-y-3">
-                {parts.map((part, idx) => (
-                  <li key={idx} className="leading-relaxed">
+          <div className="py-4 max-h-[70vh] overflow-y-auto">
+            <div className="space-y-3">
+              {parts.map((part, idx) => {
+                const match = part.match(/^(.*?):\s*(-?\d+(\.\d+)?)\s*$/);
+                if (match) {
+                  const text = match[1];
+                  const amount = match[2];
+                  
+                  let title = text;
+                  let dates: string[] = [];
+                  if (text.startsWith("Absent on ")) {
+                    title = "Absence Deductions";
+                    dates = text.replace("Absent on ", "").split(/,\s*/);
+                  }
+                  
+                  const parsedAmount = Math.abs(Number(amount));
+                  
+                  return (
+                    <div key={idx} className="bg-white p-4 rounded-lg border border-border shadow-sm">
+                      <div className="flex justify-between items-start gap-4">
+                        <div>
+                          <h4 className="font-medium text-sm text-foreground">{title}</h4>
+                          {dates.length > 0 && (
+                            <p className="text-xs text-muted-foreground mt-0.5 mb-3">
+                              {dates.length} day{dates.length > 1 ? 's' : ''} absent
+                            </p>
+                          )}
+                        </div>
+                        <span className="font-mono text-sm text-red-600 font-medium shrink-0 bg-red-50 px-2 py-1 rounded-md border border-red-100">
+                          - ₹{parsedAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      {dates.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                          {dates.map(d => (
+                            <Badge key={d} variant="outline" className="text-[11px] font-normal bg-slate-50 text-slate-600 border-slate-200">
+                              {d}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+                return (
+                  <div key={idx} className="bg-white p-4 rounded-lg border border-border shadow-sm text-sm text-muted-foreground">
                     {part}
-                  </li>
-                ))}
-              </ul>
+                  </div>
+                );
+              })}
             </div>
           </div>
           <DialogFooter>

@@ -361,7 +361,7 @@ export default function ApplicationsTab() {
       type: leaveActions.REJECT_LEAVE,
       method: "POST",
       endPoint: isStudentLeave ? API.LEAVE.STUDENT_REJECT(rejectTarget.id) : API.LEAVE.REJECT(rejectTarget.id),
-      body: { reason: rejectReason },
+      body: { rejection_reason: rejectReason },
       auth: true,
       setLoading: (v: boolean) => setRejectLoading(v),
       getResponse: (res: any) => { toast.success(res?.message || "Leave rejected."); setRejectTarget(null); setRejectReason(""); fetchApplications(); },
