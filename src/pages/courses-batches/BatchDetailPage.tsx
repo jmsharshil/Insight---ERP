@@ -191,12 +191,12 @@ export default function BatchDetailPage() {
           const data = res?.data ?? res;
           setBatch(data);
           setBatchForm({
-            course: data.course || "",
+            course: String(data.course || ""),
             name: data.name || "",
             batch_code: data.batch_code || "",
             group_module: data.group_module || "module_1",
             batch_attempt: data.batch_attempt || "june",
-            branch: data.branch || "",
+            branch: String(data.branch || ""),
             start_date: data.start_date || "",
             end_date: data.end_date || "",
             max_students: data.max_students || 50,
@@ -454,7 +454,7 @@ export default function BatchDetailPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {courses.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
+                      <SelectItem key={c.id} value={String(c.id)}>
                         {c.name}
                       </SelectItem>
                     ))}

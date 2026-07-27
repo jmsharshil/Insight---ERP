@@ -227,6 +227,7 @@ export const API = {
     STUDENT_FEES_LIST: "/api/v1/student-fees/",
     STUDENT_FEES_DETAIL: (studentId: string | number) => `/api/v1/fees/student/${studentId}/`,
     STUDENT_FEES_SUMMARY: "/api/v1/student-fees/summary/",
+    MY_FEES: "/api/v1/fees/my-fees/",
     REPORT: (month?: number | string, year?: number | string) => {
       const base = "/api/v1/fees/report/";
       if (!month || !year) return base;

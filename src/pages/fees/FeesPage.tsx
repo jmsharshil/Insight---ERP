@@ -320,6 +320,11 @@ export default function FeesPage() {
   const [createRefundOpen, setCreateRefundOpen] = useState(false);
   const [createRefundLoading, setCreateRefundLoading] = useState(false);
 
+  // My-fees (student self-service) states
+  const [myFeesData, setMyFeesData] = useState<any>(null);
+  const [myFeesLoading, setMyFeesLoading] = useState(false);
+  const [myFeesFetched, setMyFeesFetched] = useState(false);
+
   const fetchInstallments = useCallback(
     (studentName?: string, status?: string) => {
       let url: string = API.INSTALLMENTS.LIST;
@@ -386,21 +391,16 @@ export default function FeesPage() {
   }, [refStudentName]);
 
   useEffect(() => {
-    if (
-      activeTab === "installments" ||
-      role === "student" ||
-      role === "parent" ||
-      role === "parents"
-    ) {
+    if (activeTab === "installments" && !isStudentLike) {
       fetchInstallments(debouncedInstStudentName, instStatus);
     }
-  }, [activeTab, role, fetchInstallments, debouncedInstStudentName, instStatus]);
+  }, [activeTab, isStudentLike, fetchInstallments, debouncedInstStudentName, instStatus]);
 
   useEffect(() => {
-    if (activeTab === "payments" || role === "student" || role === "parent" || role === "parents") {
+    if (activeTab === "payments" && !isStudentLike) {
       fetchPayments(debouncedPayStudentName, payStatus);
     }
-  }, [activeTab, role, fetchPayments, debouncedPayStudentName, payStatus]);
+  }, [activeTab, isStudentLike, fetchPayments, debouncedPayStudentName, payStatus]);
 
   useEffect(() => {
     if (createRefundOpen) {
@@ -411,10 +411,8 @@ export default function FeesPage() {
   useEffect(() => {
     if (
       (activeTab === "structures" || 
-       activeTab === "student-fees" || 
-       role === "student" || 
-       role === "parent" || 
-       role === "parents") && 
+       activeTab === "student-fees") && 
+      !isStudentLike &&
       !feeStructuresFetched
     ) {
       setFeeStructuresFetched(true);
@@ -438,13 +436,13 @@ export default function FeesPage() {
         },
       });
     }
-  }, [dispatch, activeTab, feeStructuresFetched, role]);
+  }, [dispatch, activeTab, isStudentLike, feeStructuresFetched]);
 
   useEffect(() => {
-    if (activeTab === "student-fees" || role === "student" || role === "parent" || role === "parents") {
+    if (activeTab === "student-fees" && !isStudentLike) {
       fetchStudentFees(debouncedSfStudentName, sfStatus);
     }
-  }, [fetchStudentFees, debouncedSfStudentName, sfStatus, activeTab, role]);
+  }, [fetchStudentFees, debouncedSfStudentName, sfStatus, activeTab, isStudentLike]);
 
   const fetchRefunds = useCallback(
     (studentName?: string, status?: string) => {
@@ -476,10 +474,10 @@ export default function FeesPage() {
   );
 
   useEffect(() => {
-    if (activeTab === "refunds" || role === "student" || role === "parent" || role === "parents") {
+    if (activeTab === "refunds" && !isStudentLike) {
       fetchRefunds(debouncedRefStudentName, refStatus);
     }
-  }, [activeTab, role, fetchRefunds, debouncedRefStudentName, refStatus]);
+  }, [activeTab, isStudentLike, fetchRefunds, debouncedRefStudentName, refStatus]);
 
   function handleUpdateRefundStatus(id: string, status: "completed" | "rejected", payload?: any) {
     dispatch({
@@ -873,6 +871,33 @@ export default function FeesPage() {
     }
   }, [isStudentLike, user?.linked_students, dispatch]);
 
+  // Fetch my-fees data from unified student endpoint
+  const fetchMyFees = useCallback(() => {
+    dispatch({
+      type: feesActions.GET_MY_FEES,
+      method: "GET",
+      endPoint: API.FEES.MY_FEES,
+      auth: true,
+      setLoading: setMyFeesLoading,
+      getResponse: (res: any) => {
+        const data = res?.data ?? res;
+        setMyFeesData(data);
+        setMyFeesFetched(true);
+      },
+      getError: (err: any) => {
+        setMyFeesFetched(true);
+        const msg = err?.response?.data?.message || err?.message || "Failed to load your fee details";
+        toast.error(msg);
+      },
+    });
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (isStudentLike && !myFeesFetched) {
+      fetchMyFees();
+    }
+  }, [isStudentLike, myFeesFetched, fetchMyFees]);
+
   // Filter fee structures for the student's course/batch
   const studentFeeStructures = useMemo(() => {
     if (!isStudentLike || !studentDetail || !feeStructure) return [];
@@ -907,15 +932,26 @@ export default function FeesPage() {
     ? studentDetail?.id || selectedLinkedStudentId || user?.linked_students?.[0] || user?.id || ""
     : "";
 
+  // Derive student fee data exclusively from my-fees API response
   const myStudentFees = useMemo(() => {
-    if (!studentId) return [];
-    return studentFees.filter((sf) => String(sf.student) === String(studentId));
-  }, [studentFees, studentId]);
+    return myFeesData?.fees ?? [];
+  }, [myFeesData]);
 
   const myPayments = useMemo(() => {
-    if (!studentId) return [];
-    return payments.filter((p) => String(p.student) === String(studentId));
-  }, [payments, studentId]);
+    return myFeesData?.payments ?? [];
+  }, [myFeesData]);
+
+  const myInstallments = useMemo(() => {
+    return myFeesData?.installments ?? [];
+  }, [myFeesData]);
+
+  const myRefunds = useMemo(() => {
+    return myFeesData?.refunds ?? [];
+  }, [myFeesData]);
+
+  const myFeesSummary = useMemo(() => {
+    return myFeesData?.summary ?? null;
+  }, [myFeesData]);
 
   function handleRecordPayment(payload: any) {
     dispatch({
@@ -991,20 +1027,23 @@ export default function FeesPage() {
     return (
       <StudentFeesView
         studentFees={myStudentFees}
-        installments={installments}
+        installments={myInstallments}
         uploadOpen={uploadOpen}
         setUploadOpen={setUploadOpen}
         studentDetail={studentDetail}
-        studentDetailLoading={studentDetailLoading}
+        studentDetailLoading={studentDetailLoading || myFeesLoading}
         feeStructures={studentFeeStructures}
         onSubmitPayment={handleRecordPayment}
         paymentHistory={myPayments}
-        paymentHistoryLoading={paymentsLoading}
+        paymentHistoryLoading={myFeesLoading}
         bankAccounts={bankAccounts}
         selectedLinkedStudentId={selectedLinkedStudentId}
         setSelectedLinkedStudentId={setSelectedLinkedStudentId}
         linkedStudents={user?.linked_students || []}
         students={students}
+        refunds={myRefunds}
+        summary={myFeesSummary}
+        onRefreshFees={fetchMyFees}
       />
     );
 
@@ -1483,8 +1522,11 @@ function StudentFeesView({
   setSelectedLinkedStudentId,
   linkedStudents,
   students,
+  refunds = [],
+  summary = null,
+  onRefreshFees,
 }: {
-  studentFees: StudentFee[];
+  studentFees: any[];
   installments: any[];
   uploadOpen: boolean;
   setUploadOpen: (b: boolean) => void;
@@ -1499,6 +1541,9 @@ function StudentFeesView({
   setSelectedLinkedStudentId: (id: string) => void;
   linkedStudents: string[];
   students: any[];
+  refunds?: any[];
+  summary?: any;
+  onRefreshFees?: () => void;
 }) {
   const toast = useToast();
   const { user } = useAuth();
@@ -1509,10 +1554,11 @@ function StudentFeesView({
   const courseName = studentDetail?.course_name || studentDetail?.course || "";
   const batchName = studentDetail?.current_batch_name || studentDetail?.batch_name || "";
 
-  // Calculate fee totals from assigned studentFees
-  const totalFee = studentFees.reduce((sum, sf) => sum + Number(sf.total_amount || 0), 0);
-  const paidAmount = studentFees.reduce((sum, sf) => sum + Number(sf.amount_paid || 0), 0);
-  const outstanding = studentFees.reduce((sum, sf) => sum + Number(sf.amount_due || 0), 0);
+  // Use summary from my-fees API if available, otherwise calculate from studentFees
+  const totalFee = summary ? Number(summary.total_billed || 0) : studentFees.reduce((sum, sf) => sum + Number(sf.total_amount || 0), 0);
+  const totalDiscount = summary ? Number(summary.total_discount || 0) : studentFees.reduce((sum, sf) => sum + Number(sf.discount || 0), 0);
+  const paidAmount = summary ? Number(summary.total_paid || 0) : studentFees.reduce((sum, sf) => sum + Number(sf.amount_paid || 0), 0);
+  const outstanding = summary ? Number(summary.total_due || 0) : studentFees.reduce((sum, sf) => sum + Number(sf.amount_due || 0), 0);
 
   if (studentDetailLoading) {
     return <StudentDetailSkeleton />;
@@ -1564,11 +1610,19 @@ function StudentFeesView({
             {batchName ? ` — ${batchName}` : ""}
           </p>
         )}
-        <div className="grid grid-cols-3 gap-4 mt-3">
+        <div className="grid grid-cols-4 gap-4 mt-3">
           <div>
             <p className="text-xs opacity-80">Total Billed</p>
             <p className="text-xl font-heading font-bold">{formatCurrency(totalFee)}</p>
           </div>
+          {totalDiscount > 0 && (
+            <div>
+              <p className="text-xs opacity-80">Discount</p>
+              <p className="text-xl font-heading font-bold text-green-400">
+                -{formatCurrency(totalDiscount)}
+              </p>
+            </div>
+          )}
           <div>
             <p className="text-xs opacity-80">Total Paid</p>
             <p className="text-xl font-heading font-bold text-primary">
@@ -1589,7 +1643,7 @@ function StudentFeesView({
         <div className="mb-4">
           <h3 className="font-heading font-semibold mb-2">My Fee Allocations</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {studentFees.map((sf) => (
+            {studentFees.map((sf: any) => (
               <motion.div
                 key={sf.id}
                 initial={{ opacity: 0, y: 8 }}
@@ -1597,9 +1651,16 @@ function StudentFeesView({
                 className="rounded-xl bg-card border border-border p-4"
               >
                 <div className="flex justify-between items-start mb-2">
-                  <h4 className="font-heading font-semibold text-sm">
-                    {sf.fee_name || sf.id}
-                  </h4>
+                  <div>
+                    <h4 className="font-heading font-semibold text-sm">
+                      {sf.fee_name || sf.id}
+                    </h4>
+                    {(sf.course_name || sf.batch_name) && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {sf.course_name}{sf.batch_name ? ` — ${sf.batch_name}` : ""}
+                      </p>
+                    )}
+                  </div>
                   <span
                     className={cn(
                       "px-2 py-0.5 rounded-full text-xs font-semibold border capitalize",
@@ -1607,10 +1668,12 @@ function StudentFeesView({
                         ? "bg-green-500/10 text-green-500 border-green-500/20"
                         : sf.status === "partially_paid"
                           ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-                          : "bg-red-500/10 text-red-500 border-red-500/20",
+                          : sf.status === "approval_pending"
+                            ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                            : "bg-red-500/10 text-red-500 border-red-500/20",
                     )}
                   >
-                    {sf.status?.replace("_", " ") || "unpaid"}
+                    {sf.status_display || sf.status?.replace(/_/g, " ") || "unpaid"}
                   </span>
                 </div>
                 <div className="mt-3 space-y-1 text-sm">
@@ -1620,7 +1683,7 @@ function StudentFeesView({
                   </div>
                   {Number(sf.discount) > 0 && (
                     <div className="flex justify-between text-green-600">
-                      <span>Discount ({sf.discount_reason || "Scholarship"})</span>
+                      <span>Discount</span>
                       <span>-{formatCurrency(Number(sf.discount))}</span>
                     </div>
                   )}
@@ -1638,9 +1701,72 @@ function StudentFeesView({
                   </div>
                   <div className="flex justify-between text-xs text-muted-foreground mt-1.5">
                     <span>Due Date</span>
-                    <span>{formatDate(sf.due_date)}</span>
+                    <span>{sf.due_date ? formatDate(sf.due_date) : "—"}</span>
                   </div>
                 </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Installment Plans */}
+      {installments.length > 0 && (
+        <div className="mb-4">
+          <h3 className="font-heading font-semibold mb-2 mt-6">Installment Plans</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {installments.map((inst: any) => (
+              <motion.div
+                key={inst.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-xl bg-card border border-border p-4"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="font-heading font-semibold text-sm">
+                    {inst.student_name || "Installment Plan"}
+                  </h4>
+                  <span
+                    className={cn(
+                      "px-2 py-0.5 rounded-full text-xs font-semibold border capitalize",
+                      inst.status === "approved"
+                        ? "bg-green-500/10 text-green-500 border-green-500/20"
+                        : inst.status === "rejected"
+                          ? "bg-red-500/10 text-red-500 border-red-500/20"
+                          : "bg-amber-500/10 text-amber-500 border-amber-500/20",
+                    )}
+                  >
+                    {inst.status_display || inst.status?.replace(/_/g, " ") || "pending"}
+                  </span>
+                </div>
+                {inst.items && inst.items.length > 0 && (
+                  <div className="mt-2 space-y-1.5">
+                    {inst.items.map((item: any, idx: number) => (
+                      <div key={item.id || idx} className="flex justify-between items-center text-sm bg-muted/30 rounded-lg px-3 py-1.5">
+                        <div>
+                          <span className="text-muted-foreground">Installment {idx + 1}</span>
+                          <span className="text-xs text-muted-foreground ml-2">
+                            Due: {item.due_date ? formatDate(item.due_date) : "—"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{formatCurrency(Number(item.amount))}</span>
+                          {item.is_paid ? (
+                            <CheckCircle2 className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <Clock className="w-4 h-4 text-amber-500" />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {inst.rejection_reason && (
+                  <p className="text-xs text-red-500 mt-2">Reason: {inst.rejection_reason}</p>
+                )}
+                <p className="text-xs text-muted-foreground mt-2">
+                  Created: {formatDate(inst.created_at)}
+                </p>
               </motion.div>
             ))}
           </div>
@@ -1656,6 +1782,45 @@ function StudentFeesView({
         </div>
       ) : (
         <PaymentsHistoryTable data={paymentHistory} studentFees={studentFees} />
+      )}
+
+      {/* Refunds Section */}
+      {refunds.length > 0 && (
+        <div className="mb-4">
+          <h3 className="font-heading font-semibold mb-2 mt-6">Refunds</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {refunds.map((ref: any) => (
+              <motion.div
+                key={ref.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-xl bg-card border border-border p-4"
+              >
+                <div className="flex justify-between items-start">
+                  <span className="font-medium text-sm">{formatCurrency(Number(ref.amount))}</span>
+                  <span
+                    className={cn(
+                      "px-2 py-0.5 rounded-full text-xs font-semibold border capitalize",
+                      ref.status === "completed"
+                        ? "bg-green-500/10 text-green-500 border-green-500/20"
+                        : ref.status === "rejected"
+                          ? "bg-red-500/10 text-red-500 border-red-500/20"
+                          : "bg-amber-500/10 text-amber-500 border-amber-500/20",
+                    )}
+                  >
+                    {ref.status_display || ref.status?.replace(/_/g, " ") || "pending"}
+                  </span>
+                </div>
+                {ref.reason && (
+                  <p className="text-xs text-muted-foreground mt-1">Reason: {ref.reason}</p>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formatDate(ref.created_at)}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
       )}
 
       <RecordPaymentDialog

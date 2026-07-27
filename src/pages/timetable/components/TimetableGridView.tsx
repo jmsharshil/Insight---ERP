@@ -335,7 +335,7 @@ export default function TimetableGridView({
                     className="px-4 py-4 text-center border-b-2 border-r border-border bg-gradient-to-b from-muted/40 to-muted/20 last:border-r-0"
                     style={{ width: `calc((100% - 160px) / ${arr.length})` }}>
                     <div className="text-base font-extrabold text-foreground tracking-wide">{slot.code}</div>
-                    <div className="text-xs text-muted-foreground mt-1 font-mono font-medium">
+                    <div className="text-md font-bold text-muted-foreground mt-1 font-mono">
                       {slot.start} – {slot.end}
                     </div>
                   </th>
