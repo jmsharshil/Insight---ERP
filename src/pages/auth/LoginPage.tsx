@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/useToast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "@/components/ui/input-otp";
 import { useDispatch, useSelector } from "react-redux";
 import { authActions } from "@/redux/actions";
 import { setCredentials, setAuthLoading } from "@/redux/slices/authSlice";
@@ -44,6 +45,10 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false);
   const [shake, setShake] = useState(false);
 
+  const [isOtpMode, setIsOtpMode] = useState(false);
+  const [otpEmail, setOtpEmail] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+
   const {
     register, handleSubmit, formState: { errors }, reset, setValue,
   } = useForm<FormData>({ resolver: zodResolver(schema) });
@@ -58,20 +63,23 @@ export default function LoginPage() {
       auth: false,
       setLoading: (val: boolean) => dispatch(setAuthLoading(val)),
       getResponse: (res: LoginResponse) => {
-        // Store complete auth session data professionally
-        localStorage.setItem("Insight_Login_Data", JSON.stringify(res));
+        if (res.otp_required) {
+          setIsOtpMode(true);
+          setOtpEmail(res.email || data.email);
+          toast.success(res.message || "OTP sent successfully.");
+        } else {
+          // Store complete auth session data professionally
+          localStorage.setItem("Insight_Login_Data", JSON.stringify(res));
 
-        dispatch(setCredentials({
-          user: res.user,
-          accessToken: res.access,
-          refreshToken: res.refresh,
-        }));
-        toast.success(`Welcome back, ${res.user.name}! 🤝`);
-
-        const accessibleModules = res.user.accessible_modules || ROLES[res.user.role as keyof typeof ROLES]?.modules || [];
-        
-        // Always redirect to dashboard for all roles
-        navigate("/dashboard");
+          dispatch(setCredentials({
+            user: res.user!,
+            accessToken: res.access!,
+            refreshToken: res.refresh!,
+          }));
+          toast.success(`Welcome back, ${res.user!.name}! 🤝`);
+          
+          navigate("/dashboard");
+        }
       },
       getError: (err: any) => {
         const errorMsg = err?.response?.data?.message || err?.response?.data?.error || err?.message || "Login failed. Please check your credentials.";
@@ -84,6 +92,99 @@ export default function LoginPage() {
     setValue("email", email);
     setValue("password", "111111");
   };
+
+  const handleVerifyOtp = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode || otpCode.trim().length < 4) {
+      toast.error("Please enter a valid OTP code.");
+      return;
+    }
+
+    dispatch({
+      type: authActions.LOGIN,
+      method: "POST",
+      endPoint: "/api/auth/login/verify-otp/",
+      body: { email: otpEmail, otp: otpCode },
+      auth: false,
+      setLoading: (val: boolean) => dispatch(setAuthLoading(val)),
+      getResponse: (res: LoginResponse) => {
+        localStorage.setItem("Insight_Login_Data", JSON.stringify(res));
+
+        dispatch(setCredentials({
+          user: res.user!,
+          accessToken: res.access!,
+          refreshToken: res.refresh!,
+        }));
+        toast.success(`Welcome back, ${res.user!.name}! 🤝`);
+        navigate("/dashboard");
+      },
+      getError: (err: any) => {
+        const errorMsg = err?.response?.data?.message || err?.response?.data?.error || err?.message || "Invalid OTP. Please try again.";
+        toast.error(errorMsg);
+      },
+    });
+  };
+
+  if (isOtpMode) {
+    return (
+      <InsightFormLayout>
+        <div className="rounded-2xl bg-card shadow-2xl border border-black/5 p-7 sm:p-9">
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold text-text-primary font-heading tracking-tight mb-2">
+              Verification Required
+            </h1>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              We've sent a one-time password to your email/WhatsApp.
+              <br />
+              <span className="font-medium text-primary-dark">{otpEmail}</span>
+            </p>
+          </div>
+          <form onSubmit={handleVerifyOtp} className="space-y-5">
+            <div className="space-y-1.5 flex flex-col items-center text-center">
+              <Label htmlFor="otpCode" className="self-start text-sm font-medium mb-1">Enter 6-digit Code</Label>
+              <InputOTP maxLength={6} value={otpCode} onChange={(val) => setOtpCode(val)}>
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} className="w-10 h-12 text-lg" />
+                  <InputOTPSlot index={1} className="w-10 h-12 text-lg" />
+                  <InputOTPSlot index={2} className="w-10 h-12 text-lg" />
+                </InputOTPGroup>
+                <InputOTPSeparator />
+                <InputOTPGroup>
+                  <InputOTPSlot index={3} className="w-10 h-12 text-lg" />
+                  <InputOTPSlot index={4} className="w-10 h-12 text-lg" />
+                  <InputOTPSlot index={5} className="w-10 h-12 text-lg" />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-11 bg-primary text-primary-foreground font-semibold hover:bg-primary-dark transition-colors group"
+            >
+              {isLoading ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verifying...</>
+              ) : (
+                <>Verify OTP <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" /></>
+              )}
+            </Button>
+          </form>
+          <div className="mt-6 text-center text-sm text-muted-foreground">
+            Didn't receive the code?{" "}
+            <button
+              type="button"
+              className="text-primary-dark font-medium hover:underline"
+              onClick={() => {
+                setIsOtpMode(false);
+                setOtpCode("");
+              }}
+            >
+              Go Back
+            </button>
+          </div>
+        </div>
+      </InsightFormLayout>
+    );
+  }
 
   return (
     <InsightFormLayout>

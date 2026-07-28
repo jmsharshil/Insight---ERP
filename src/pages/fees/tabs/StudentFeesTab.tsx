@@ -9,6 +9,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format, parseISO } from "date-fns";
+import { Calendar as CalendarIcon, X } from "lucide-react";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import { type StudentFee, type FeesStructure } from "@/redux/slices/feesSlice";
 
@@ -20,6 +24,13 @@ interface StudentFeesTabProps {
   setSfStudentName: (val: string) => void;
   sfStatus: string;
   setSfStatus: (val: string) => void;
+  sfBatch: string;
+  setSfBatch: (val: string) => void;
+  sfDateFrom: string;
+  setSfDateFrom: (val: string) => void;
+  sfDateTo: string;
+  setSfDateTo: (val: string) => void;
+  batchesList: any[];
   handleViewOverview: (studentId: string) => void;
   loading?: boolean;
 }
@@ -32,6 +43,13 @@ export default function StudentFeesTab({
   setSfStudentName,
   sfStatus,
   setSfStatus,
+  sfBatch,
+  setSfBatch,
+  sfDateFrom,
+  setSfDateFrom,
+  sfDateTo,
+  setSfDateTo,
+  batchesList,
   handleViewOverview,
   loading,
 }: StudentFeesTabProps) {
@@ -49,13 +67,89 @@ export default function StudentFeesTab({
               Apply filters to find specific student fee records.
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-wrap">
             <Input
               placeholder="Search student name..."
               value={sfStudentName}
               onChange={(e) => setSfStudentName(e.target.value)}
               className="w-full sm:w-48 h-9"
             />
+            <Select value={sfBatch} onValueChange={setSfBatch}>
+              <SelectTrigger className="w-full sm:w-32 h-9">
+                <SelectValue placeholder="All Batches" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Batches</SelectItem>
+                {(Array.isArray(batchesList) ? batchesList : []).map((batch) => (
+                  <SelectItem key={batch.id || batch.value} value={String(batch.id || batch.value)}>
+                    {batch.name || batch.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex items-center gap-2 w-full sm:w-auto bg-card rounded-md border shadow-sm p-1">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "h-7 px-2 text-xs font-normal justify-start w-[110px]",
+                      !sfDateFrom && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-1.5 h-3.5 w-3.5 shrink-0" />
+                    {sfDateFrom ? format(parseISO(sfDateFrom), "dd MMM yyyy") : <span>From Date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={sfDateFrom ? parseISO(sfDateFrom) : undefined}
+                    onSelect={(date) => setSfDateFrom(date ? format(date, "yyyy-MM-dd") : "")}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              
+              <span className="text-muted-foreground text-[10px] uppercase font-semibold">to</span>
+              
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "h-7 px-2 text-xs font-normal justify-start w-[110px]",
+                      !sfDateTo && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-1.5 h-3.5 w-3.5 shrink-0" />
+                    {sfDateTo ? format(parseISO(sfDateTo), "dd MMM yyyy") : <span>To Date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={sfDateTo ? parseISO(sfDateTo) : undefined}
+                    onSelect={(date) => setSfDateTo(date ? format(date, "yyyy-MM-dd") : "")}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+
+              {(sfDateFrom || sfDateTo) && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                  onClick={() => {
+                    setSfDateFrom("");
+                    setSfDateTo("");
+                  }}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
             <Select value={sfStatus} onValueChange={setSfStatus}>
               <SelectTrigger className="w-full sm:w-40 h-9">
                 <SelectValue placeholder="All Statuses" />

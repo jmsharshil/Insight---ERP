@@ -459,7 +459,7 @@ export default function StudentAdmissionDetailedPage() {
                 />
                 <Row
                   label="Reference"
-                  value={admission.reference?.replace(/_/g, " ").toUpperCase() || "—"}
+                  value={admission.reference_name || admission.reference_display || admission.reference?.replace(/_/g, " ").toUpperCase() || "—"}
                 />
                 <Row label="Consent Given" value={admission.consent ? "Yes" : "No"} />
                 <div className="pt-2">

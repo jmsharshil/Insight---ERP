@@ -261,6 +261,7 @@ export default function StudentAdmissionForm() {
     twelfth_percentage: "",
     twelfth_percentile: "",
     reference: "google",
+    reference_name: "",
     inquiry_date: new Date().toISOString().split("T")[0],
     location: "",
     consent: true,
@@ -315,6 +316,12 @@ export default function StudentAdmissionForm() {
 
     // Append text fields
     Object.entries(formData).forEach(([key, value]) => {
+      if (key === "reference_name") {
+        if (value) {
+          payload.append(key, String(value));
+        }
+        return;
+      }
       if (
         key === "tenth_percentage" ||
         key === "tenth_percentile" ||
@@ -322,6 +329,8 @@ export default function StudentAdmissionForm() {
         key === "twelfth_percentile"
       ) {
         if (value) payload.append(key, String(parseFloat(value as string)));
+      } else if (key === "reference") {
+        payload.append(key, String(value));
       } else {
         payload.append(key, String(value));
       }
@@ -986,6 +995,21 @@ export default function StudentAdmissionForm() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {formData.reference === "other" && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                    Please specify <span style={{ color: T.error }}>*</span>
+                  </Label>
+                  <Input
+                    required
+                    value={formData.reference_name}
+                    onChange={(e) => handleChange("reference_name", e.target.value)}
+                    className="h-10 sm:h-11 text-sm bg-white"
+                    placeholder="e.g. From a friend"
+                  />
+                </div>
+              )}
 
               <div className="space-y-1.5">
                 <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>

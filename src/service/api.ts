@@ -97,7 +97,7 @@ export const API = {
   },
 
   /** Batches endpoints */
-  BATCHES: {
+BATCHES: {
     LIST: "/api/v1/batches/",
     CREATE: "/api/v1/batches/",
     DETAIL: (id: string | number) => `/api/v1/batches/${id}/`,
