@@ -5,3 +5,13 @@
 
 export type { APILead } from "@/redux/slices/crmSlice";
 export type { LeadStatus } from "@/constants/dummy/crm";
+
+export interface LeadTransferRequest {
+  id: string | number;
+  lead_id: string | number;
+  lead_name?: string;
+  requested_by?: string; // name of the telecaller
+  reason: string;
+  status: "pending" | "approved" | "rejected";
+  created_at: string;
+}

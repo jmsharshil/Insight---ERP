@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight, Eye, MoreHorizontal, RefreshCw, UserCheck } from "lucide-react";
+import { ChevronRight, Eye, MoreHorizontal, RefreshCw, UserCheck, ArrowRightLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,6 +14,7 @@ import { LEAD_STATUS_META, COURSE_LABELS, type LeadStatus } from "@/constants/du
 import { APILead } from "@/types/crm";
 import { formatDate, cn } from "@/lib/utils";
 import AssignLeadDialog from "./AssignLeadDialog";
+import TransferRequestDialog from "./TransferRequestDialog";
 import { useAuth } from "@/hooks/useAuth";
 
 interface LeadsTableProps {
@@ -29,6 +30,7 @@ export default function LeadsTable({ leads, onView, onChangeStage, onAssignSucce
   const canReassign = ["sales_senior_executive", "branch_manager", "super_admin"].includes(user?.role || "");
 
   const [assignLead, setAssignLead] = useState<APILead | null>(null);
+  const [transferLead, setTransferLead] = useState<APILead | null>(null);
 
   const cols: DataTableColumn<APILead>[] = [
     {
@@ -136,6 +138,17 @@ export default function LeadsTable({ leads, onView, onChangeStage, onAssignSucce
             <Eye className="w-3.5 h-3.5" />
           </Button>
 
+          {user?.role === "tele_caller" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1 h-8"
+              onClick={() => setTransferLead(r)}
+              title="Request Transfer to Counsellor"
+            >
+              <ArrowRightLeft className="w-3.5 h-3.5" />
+            </Button>
+          )}
 
           {onChangeStage && (
             <DropdownMenu>
@@ -184,6 +197,18 @@ export default function LeadsTable({ leads, onView, onChangeStage, onAssignSucce
         onSuccess={(lead, assignedToName) => {
           setAssignLead(null);
           if (onAssignSuccess) onAssignSuccess(lead, assignedToName);
+        }}
+      />
+
+      {/* Transfer Request Dialog */}
+      <TransferRequestDialog
+        lead={transferLead}
+        open={!!transferLead}
+        onOpenChange={(open) => {
+          if (!open) setTransferLead(null);
+        }}
+        onSuccess={() => {
+          setTransferLead(null);
         }}
       />
     </>

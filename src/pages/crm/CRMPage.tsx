@@ -67,6 +67,7 @@ import LeadsTable from "./components/LeadsTable";
 import AnalyticsTab from "./components/AnalyticsTab";
 import KanbanBoard from "./components/KanbanBoard";
 import LeadDetailSheet from "./components/LeadDetailSheet";
+import TransferRequestsTab from "./components/TransferRequestsTab";
 
 /* ─── Stage config ───────────────────────────────────────────── */
 
@@ -96,6 +97,10 @@ export default function CRMPage() {
   const toast = useToast();
   const dispatch = useDispatch<AppDispatch>();
   const { analytics, leads, leadsLoading } = useSelector((state: RootState) => state.crm);
+
+  const canReviewTransfers = ["super_admin", "branch_manager", "sales_senior_executive"].includes(
+    user?.role || ""
+  );
 
   const filteredLeads = useMemo(() => {
     if (!user || user.role === "super_admin" || !user.branch) return leads;
@@ -370,6 +375,9 @@ export default function CRMPage() {
           <TabsTrigger value="table">Table</TabsTrigger>
           <TabsTrigger value="pipeline">Kanban Board</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          {canReviewTransfers && (
+            <TabsTrigger value="transfer-requests">Transfer Requests</TabsTrigger>
+          )}
         </TabsList>
 
         {/* Table View */}
@@ -410,6 +418,13 @@ export default function CRMPage() {
         <TabsContent value="analytics">
           <AnalyticsTab analytics={analytics} />
         </TabsContent>
+
+        {/* Transfer Requests */}
+        {canReviewTransfers && (
+          <TabsContent value="transfer-requests">
+            <TransferRequestsTab />
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* ─── Lead Detail Sheet ───────────────────────────────── */}
