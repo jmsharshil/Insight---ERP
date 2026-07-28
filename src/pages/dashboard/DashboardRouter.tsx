@@ -43,6 +43,10 @@ export default function DashboardRouter() {
     return <StudentDashboard />;
   }
 
+  if (user?.role === "parents") {
+    return <ParentDashboard />;
+  }
+
   return <ModulePlaceholder title="Dashboard" />;
 }
 

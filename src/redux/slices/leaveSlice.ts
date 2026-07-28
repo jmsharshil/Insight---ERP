@@ -60,6 +60,8 @@ export interface LeaveApplication {
   proof_document_url?: string | null;
   supporting_document_url?: string | null;
   is_auto_generated?: boolean;
+  applied_by_role?: string;
+  user_role?: string;
   status: "approval_pending" | "approved" | "rejected" | "cancelled" | "pending";
   status_display: string;
   is_first_approval_done?: boolean;

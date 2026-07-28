@@ -88,7 +88,7 @@ export default function LoginPage() {
   return (
     <InsightFormLayout>
       <div className={`${shake ? "animate-shake" : ""}`}>
-        <div className="rounded-2xl bg-card shadow-2xl border border-white/10 p-7 sm:p-9">
+        <div className="rounded-2xl bg-card shadow-2xl border border-black/5 p-7 sm:p-9">
           <div className="flex items-center gap-2 text-xs font-medium text-primary-dark mb-2">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
             Secure Sign-In
