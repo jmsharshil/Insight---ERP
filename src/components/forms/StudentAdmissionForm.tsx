@@ -261,6 +261,7 @@ export default function StudentAdmissionForm() {
     twelfth_percentage: "",
     twelfth_percentile: "",
     reference: "google",
+    reference_name: "",
     inquiry_date: new Date().toISOString().split("T")[0],
     location: "",
     consent: true,
@@ -315,6 +316,12 @@ export default function StudentAdmissionForm() {
 
     // Append text fields
     Object.entries(formData).forEach(([key, value]) => {
+      if (key === "reference_name") {
+        if (value) {
+          payload.append(key, String(value));
+        }
+        return;
+      }
       if (
         key === "tenth_percentage" ||
         key === "tenth_percentile" ||
@@ -322,6 +329,8 @@ export default function StudentAdmissionForm() {
         key === "twelfth_percentile"
       ) {
         if (value) payload.append(key, String(parseFloat(value as string)));
+      } else if (key === "reference") {
+        payload.append(key, String(value));
       } else {
         payload.append(key, String(value));
       }
@@ -497,24 +506,7 @@ export default function StudentAdmissionForm() {
           {/*  ACADEMIC PREFERENCES                                  */}
           {/* ════════════════════════════════════════════════════════ */}
           <SectionCard icon={GraduationCap} title="Academic Preferences">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-              <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                  Form Type
-                </Label>
-                <Select
-                  value={formData.form_type}
-                  onValueChange={(val) => handleChange("form_type", val)}
-                >
-                  <SelectTrigger className="h-10 sm:h-11 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="registration">Registration</SelectItem>
-                    <SelectItem value="admission">Admission</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               <div className="space-y-1.5">
                 <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
                   Course <span style={{ color: T.error }}>*</span>
@@ -664,9 +656,9 @@ export default function StudentAdmissionForm() {
                   <SelectContent>
                     <SelectItem value="gen">General</SelectItem>
                     <SelectItem value="obc">OBC</SelectItem>
-                    <SelectItem value="sc">SC</SelectItem>
-                    <SelectItem value="st">ST</SelectItem>
-                    <SelectItem value="ews">EWS</SelectItem>
+                    <SelectItem value="sc_st">SC / ST</SelectItem>
+                    {/* <SelectItem value="st">ST</SelectItem> */}
+                    {/* <SelectItem value="ews">EWS</SelectItem> */}
                   </SelectContent>
                 </Select>
               </div>
@@ -996,12 +988,28 @@ export default function StudentAdmissionForm() {
                     <SelectItem value="google">Google</SelectItem>
                     <SelectItem value="existing">Existing Student</SelectItem>
                     <SelectItem value="offline_ad">Offline Ad</SelectItem>
-                    <SelectItem value="social_media">Social Media</SelectItem>
+                    <SelectItem value="social_media">Social Media - Instagram / Whatsapp</SelectItem>
                     <SelectItem value="seminar">Seminar</SelectItem>
                     <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="other">Others</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
+              {formData.reference === "other" && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                    Please specify <span style={{ color: T.error }}>*</span>
+                  </Label>
+                  <Input
+                    required
+                    value={formData.reference_name}
+                    onChange={(e) => handleChange("reference_name", e.target.value)}
+                    className="h-10 sm:h-11 text-sm bg-white"
+                    placeholder="e.g. From a friend"
+                  />
+                </div>
+              )}
 
               <div className="space-y-1.5">
                 <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>

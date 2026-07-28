@@ -126,12 +126,14 @@ export default function StudentDashboard() {
       value: `${data.kpis.attendance_rate}%`,
       icon: Percent,
       trendType: data.kpis.attendance_rate >= 75 ? "up" : "down",
+      link: "/attendance",
     },
     {
       title: "Avg Score",
       value: `${data.kpis.avg_score}%`,
       icon: BookOpen,
       trendType: "neutral",
+      link: "/exams",
     },
     {
       title: "Fees Due",
@@ -139,12 +141,14 @@ export default function StudentDashboard() {
       icon: Wallet,
       trend: data.fee_details.due_count > 0 ? `${data.fee_details.due_count} pending` : "No dues",
       trendType: data.kpis.fees_due > 0 ? "warning" : "up",
+      link: "/fees",
     },
     {
       title: "Upcoming Exams",
       value: data.kpis.upcoming_exams_count.toString(),
       icon: Calendar,
       trendType: data.kpis.upcoming_exams_count > 0 ? "neutral" : "up",
+      link: "/exams",
     },
   ];
 
@@ -196,7 +200,7 @@ export default function StudentDashboard() {
         {/* Timetable */}
         <SectionCard title="Upcoming Classes">
           {data.timetable?.length > 0 ? (
-            <ul className="space-y-3 mt-4 h-64 overflow-y-auto pr-2 custom-scrollbar">
+            <ul className="space-y-3 mt-4 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
               {data.timetable.map((c, i) => {
                 const [start] = c.time.split("-");
                 return (
@@ -320,7 +324,7 @@ export default function StudentDashboard() {
         </SectionCard>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mt-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         {/* Pending Installments */}
         <SectionCard title="Pending Fee Installments">
           {data.fee_details?.pending_installments && data.fee_details.pending_installments.length > 0 ? (
@@ -359,6 +363,39 @@ export default function StudentDashboard() {
           ) : (
             <div className="flex h-48 items-center justify-center bg-muted/20 rounded-lg mt-4">
               <p className="text-sm text-muted-foreground">No pending installments.</p>
+            </div>
+          )}
+        </SectionCard>
+
+        {/* Recent Notifications */}
+        <SectionCard title="Recent Notifications">
+          {data.recent_notifications && data.recent_notifications.length > 0 ? (
+            <ul className="space-y-3 mt-4 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+              {data.recent_notifications.map((notif) => (
+                <li key={notif.id} className="flex items-start gap-4 p-3 rounded-lg border border-border bg-card shadow-sm hover:shadow-md transition-shadow">
+                  <div className={cn("w-2 h-2 mt-1.5 rounded-full shrink-0", "bg-primary")} />
+                  <div className="flex-1 min-w-0">
+                    <p className={cn("text-sm truncate", "font-medium text-foreground")} title={notif.title}>
+                      {notif.title}
+                    </p>
+                    <p className="text-xs text-foreground mt-1 line-clamp-2" title={notif.body}>
+                      {notif.body}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-2">
+                      {new Date(notif.created_at).toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="flex h-48 items-center justify-center bg-muted/20 rounded-lg mt-4">
+              <p className="text-sm text-muted-foreground">No recent notifications.</p>
             </div>
           )}
         </SectionCard>

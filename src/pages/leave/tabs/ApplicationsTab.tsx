@@ -496,6 +496,11 @@ export default function ApplicationsTab() {
   };
 
   const filtered = applications.filter((a) => {
+    const applicantRole = a.applied_by_role || a.user_role;
+    if (role === "admin_senior_executive" && applicantRole === "branch_manager") {
+      return false;
+    }
+
     if (!search) return true;
     return (
       (a.applied_by_name || a.student_name)?.toLowerCase().includes(search.toLowerCase()) ||
@@ -648,7 +653,13 @@ export default function ApplicationsTab() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((app, i) => (
+                filtered.map((app, i) => {
+                  const applicantRole = app.applied_by_role || app.user_role;
+                  const isOwnLeave = app.applied_by === user?.id;
+                  const isBranchManagerLeave = applicantRole === "branch_manager";
+                  const canApproveThis = canApprove && !isOwnLeave && (!isBranchManagerLeave || role === "super_admin");
+
+                  return (
                   <motion.tr
                     key={app.id}
                     initial={{ opacity: 0, y: 6 }}
@@ -694,7 +705,7 @@ export default function ApplicationsTab() {
                     {/* STOP propagation so row click doesn't fire from button clicks */}
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1">
-                        {canApprove &&
+                        {canApproveThis &&
                           (app.status === "approval_pending" || app.status === "pending") && (
                             <Button
                               variant="ghost"
@@ -706,7 +717,7 @@ export default function ApplicationsTab() {
                               <CheckCircle2 className="w-4 h-4" />
                             </Button>
                           )}
-                        {canApprove &&
+                        {canApproveThis &&
                           (app.status === "approval_pending" || app.status === "pending") && (
                             <Button
                               variant="ghost"
@@ -762,7 +773,8 @@ export default function ApplicationsTab() {
                       </div>
                     </td>
                   </motion.tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>

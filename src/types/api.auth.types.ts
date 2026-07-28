@@ -22,9 +22,13 @@ export interface AuthUser {
 
 export interface LoginResponse {
   message: string;
-  access: string;
-  refresh: string;
-  user: AuthUser;
+  otp_required?: boolean;
+  email?: string;
+  organization?: string;
+  organization_name?: string;
+  access?: string;
+  refresh?: string;
+  user?: AuthUser;
 }
 
 export interface AuthState {

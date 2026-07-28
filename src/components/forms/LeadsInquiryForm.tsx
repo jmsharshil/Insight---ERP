@@ -155,6 +155,7 @@ export default function LeadsInquiryForm() {
     twelfth_percentage: "",
     twelfth_percentile: "",
     reference: "google",
+    reference_name: "",
     inquiry_date: new Date().toISOString().split("T")[0],
     location: "",
     consent: true,
@@ -254,6 +255,7 @@ export default function LeadsInquiryForm() {
           ? parseFloat(inquiryData.twelfth_percentile)
           : null,
         reference: inquiryData.reference,
+        reference_name: inquiryData.reference === "other" ? inquiryData.reference_name : "",
         inquiry_date: inquiryData.inquiry_date,
         location: inquiryData.location,
         consent: inquiryData.consent,
@@ -915,9 +917,25 @@ export default function LeadsInquiryForm() {
                         <SelectItem value="social_media">Social Media</SelectItem>
                         <SelectItem value="seminar">Seminar</SelectItem>
                         <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="other">Others</SelectItem>
+
                       </SelectContent>
                     </Select>
                   </div>
+                  {inquiryData.reference === "other" && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                        Please specify <span style={{ color: T.error }}>*</span>
+                      </Label>
+                      <Input
+                        required
+                        value={inquiryData.reference_name}
+                        onChange={(e) => handleInquiryChange("reference_name", e.target.value)}
+                        className="h-10 sm:h-11 text-sm bg-white"
+                        placeholder="e.g. From a friend"
+                      />
+                    </div>
+                  )}
 
                   <div className="space-y-1.5">
                     <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>

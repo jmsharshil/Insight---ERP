@@ -12,6 +12,7 @@ export interface StatItem {
   icon: LucideIcon;
   trend?: string;
   trendType?: "up" | "down" | "neutral" | "warning";
+  link?: string;
 }
 
 interface DashboardLayoutProps {

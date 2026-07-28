@@ -73,7 +73,7 @@ function BrandCarousel({ compact = false }: { compact?: boolean }) {
           {SLIDES.map((s, i) => (
             <div key={i} className="relative min-w-0 flex-[0_0_100%]">
               <div
-                className={`w-full bg-sidebar ${
+                className={`w-full bg-black ${
                   compact ? "aspect-[16/9]" : "aspect-[1280/553]"
                 }`}
               >
@@ -85,7 +85,7 @@ function BrandCarousel({ compact = false }: { compact?: boolean }) {
                 />
               </div>
               <div
-                className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-sidebar/95 via-sidebar/60 to-transparent ${
+                className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent ${
                   compact ? "p-3" : "p-4 sm:p-5"
                 }`}
               >
@@ -134,14 +134,14 @@ interface InsightFormLayoutProps {
 
 export default function InsightFormLayout({ children }: InsightFormLayoutProps) {
   return (
-    <div className="min-h-screen w-full bg-sidebar relative overflow-hidden">
+    <div className="min-h-screen w-full bg-gradient-to-b from-white to-primary-dark relative overflow-hidden">
       {/* Decorative background */}
       <div className="pointer-events-none absolute inset-0">
         <div
-          className="absolute inset-0 opacity-[0.035]"
+          className="absolute inset-0 opacity-[0.06]"
           style={{
             backgroundImage:
-              "linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px)",
+              "linear-gradient(rgba(0,0,0,1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,1) 1px, transparent 1px)",
             backgroundSize: "44px 44px",
           }}
         />
@@ -149,7 +149,7 @@ export default function InsightFormLayout({ children }: InsightFormLayoutProps) 
 
       <div className="relative z-10 min-h-screen grid lg:grid-cols-[1.15fr_1fr] gap-0">
         {/* ─── LEFT — Branding + Carousel (desktop only) ─── */}
-        <div className="hidden lg:flex flex-col px-10 xl:px-16 py-10 text-white">
+        <div className="hidden lg:flex flex-col px-10 xl:px-16 py-10 text-foreground">
           {/* Brand header */}
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -169,14 +169,14 @@ export default function InsightFormLayout({ children }: InsightFormLayoutProps) 
             transition={{ duration: 0.6, delay: 0.1 }}
             className="mt-10 max-w-xl"
           >
-            <div className="inline-flex items-center gap-2 rounded-full bg-primary/15 border border-primary/30 px-3 py-1 text-xs font-medium text-primary">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/50 border border-white/60 px-3 py-1 text-xs font-medium text-primary-dark shadow-sm">
               <Sparkles className="h-3.5 w-3.5" /> Gujarat's No.1 CS Institute · Since 2012
             </div>
-            <h1 className="mt-4 font-heading font-bold text-4xl xl:text-5xl leading-[1.1] tracking-tight">
-              Where <span className="text-primary">Toppers</span> are
+            <h1 className="mt-4 font-heading font-bold text-4xl xl:text-5xl leading-[1.1] tracking-tight text-black">
+              Where <span className="text-primary-dark">Toppers</span> are
               <br /> Built, Not Born.
             </h1>
-            <p className="mt-4 text-white/70 text-base max-w-md">
+            <p className="mt-4 text-black/70 text-base max-w-md">
               Exclusively coaching Company Secretary aspirants with live classes,
               one-to-one doubt solving, and a proven record of All India Rankers.
             </p>
@@ -202,13 +202,13 @@ export default function InsightFormLayout({ children }: InsightFormLayoutProps) 
             className="w-full max-w-md"
           >
             {/* Mobile brand header */}
-            <div className="lg:hidden mb-5 flex items-center justify-center gap-3 text-white">
+            <div className="lg:hidden mb-5 flex items-center justify-center gap-3 text-black">
               <div className="rounded-xl bg-white p-2 shadow-lg">
                 <img src={logo} alt="Insight Institute" className="h-9 w-auto" />
               </div>
               <div>
                 <p className="font-heading font-bold text-lg leading-tight">Insight Institute</p>
-                <p className="text-[10px] text-white/60 tracking-wider uppercase">Exclusively for CS</p>
+                <p className="text-[10px] text-black/60 tracking-wider uppercase">Exclusively for CS</p>
               </div>
             </div>
 
@@ -221,10 +221,10 @@ export default function InsightFormLayout({ children }: InsightFormLayoutProps) 
             >
               <BrandCarousel compact />
               {/* Mobile trust pills — horizontal row */}
-              <div className="mt-3 flex items-center justify-center gap-3 text-white/60">
+              <div className="mt-3 flex items-center justify-center gap-3 text-black/70">
                 {TRUST_PILLS_DATA.map((p) => (
                   <div key={p.label} className="flex items-center gap-1.5">
-                    <p.icon className="h-3 w-3 text-primary/80" />
+                    <p.icon className="h-3 w-3 text-primary-dark" />
                     <span className="text-[9px] font-medium">{p.label}</span>
                   </div>
                 ))}
@@ -239,21 +239,21 @@ export default function InsightFormLayout({ children }: InsightFormLayoutProps) 
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
-              className="mt-6 grid grid-cols-3 gap-2 sm:gap-3 text-white"
+              className="mt-6 grid grid-cols-3 gap-2 sm:gap-3 text-black"
             >
               {HIGHLIGHTS.map((h) => (
                 <div
                   key={h.title}
-                  className="rounded-xl bg-white/5 backdrop-blur border border-white/10 p-3 sm:p-4"
+                  className="rounded-xl bg-white/40 backdrop-blur border border-white/50 shadow-sm p-3 sm:p-4"
                 >
-                  <h.icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary mb-1.5 sm:mb-2" />
+                  <h.icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary-dark mb-1.5 sm:mb-2" />
                   <p className="font-heading font-semibold text-[11px] sm:text-sm">{h.title}</p>
-                  <p className="text-[9px] sm:text-xs text-white/60 mt-0.5 leading-snug">{h.text}</p>
+                  <p className="text-[9px] sm:text-xs text-black/70 mt-0.5 leading-snug">{h.text}</p>
                 </div>
               ))}
             </motion.div>
 
-            <p className="mt-6 text-center text-xs text-white/50">
+            <p className="mt-6 text-center text-xs text-black/50">
               © {new Date().getFullYear()} Insight Institute of Professional Studies · Exclusively for CS since 2012
             </p>
           </motion.div>
