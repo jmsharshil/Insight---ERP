@@ -103,7 +103,7 @@ import {
 } from "@/constants/dummy/fees";
 import { DUMMY_STUDENTS } from "@/constants/dummy/students";
 import { useDispatch, useSelector } from "react-redux";
-import { feesActions, courseAction, studentActions } from "@/redux/actions";
+import { feesActions, courseAction, studentActions, dropdownActions } from "@/redux/actions";
 import {
   setFeeStructure,
   addFeeStructure,
@@ -134,6 +134,10 @@ export default function FeesPage() {
   const [sfStudentName, setSfStudentName] = useState("");
   const [debouncedSfStudentName, setDebouncedSfStudentName] = useState("");
   const [sfStatus, setSfStatus] = useState("all");
+  const [sfBatch, setSfBatch] = useState("all");
+  const [sfDateFrom, setSfDateFrom] = useState("");
+  const [sfDateTo, setSfDateTo] = useState("");
+  const [batchesList, setBatchesList] = useState<any[]>([]);
 
   const [payStudentName, setPayStudentName] = useState("");
   const [debouncedPayStudentName, setDebouncedPayStudentName] = useState("");
@@ -143,7 +147,36 @@ export default function FeesPage() {
   const [debouncedInstStudentName, setDebouncedInstStudentName] = useState("");
   const [instStatus, setInstStatus] = useState("all");
 
-  // Debounce hook effects
+  // Fetch Batches
+  useEffect(() => {
+    dispatch({
+      type: dropdownActions.GET_DROPDOWN,
+      method: "GET",
+      endPoint: `/api/v1/batches/dropdowns/`,
+      auth: true,
+      getResponse: (res: any) => {
+        let rawData: any[] = [];
+        if (res?.data?.batches && Array.isArray(res.data.batches)) {
+          rawData = res.data.batches;
+        } else if (res?.batches && Array.isArray(res.batches)) {
+          rawData = res.batches;
+        } else if (Array.isArray(res?.data)) {
+          rawData = res.data;
+        } else if (res?.data && typeof res.data === 'object' && Array.isArray(res.data.data)) {
+          rawData = res.data.data;
+        } else if (Array.isArray(res?.results)) {
+          rawData = res.results;
+        } else if (Array.isArray(res)) {
+          rawData = res;
+        }
+        setBatchesList(rawData);
+      },
+      getError: (err: any) => {
+        console.error("Failed to fetch batches dropdown", err);
+      },
+    });
+  }, [dispatch]);
+
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSfStudentName(sfStudentName);
@@ -204,11 +237,14 @@ export default function FeesPage() {
 
 
   const fetchStudentFees = useCallback(
-    (studentName?: string, status?: string) => {
+    (studentName?: string, status?: string, batch?: string, dateFrom?: string, dateTo?: string) => {
       let url: string = API.FEES.STUDENT_FEES_LIST;
       const params = new URLSearchParams();
       if (studentName?.trim()) params.append("search", studentName.trim());
       if (status && status !== "all") params.append("status", status);
+      if (batch && batch !== "all") params.append("batch_id", batch);
+      if (dateFrom) params.append("from_date", dateFrom);
+      if (dateTo) params.append("to_date", dateTo);
 
       const queryString = params.toString();
       if (queryString) {
@@ -440,9 +476,9 @@ export default function FeesPage() {
 
   useEffect(() => {
     if (activeTab === "student-fees" && !isStudentLike) {
-      fetchStudentFees(debouncedSfStudentName, sfStatus);
+      fetchStudentFees(debouncedSfStudentName, sfStatus, sfBatch, sfDateFrom, sfDateTo);
     }
-  }, [fetchStudentFees, debouncedSfStudentName, sfStatus, activeTab, isStudentLike]);
+  }, [fetchStudentFees, debouncedSfStudentName, sfStatus, sfBatch, sfDateFrom, sfDateTo, activeTab, isStudentLike]);
 
   const fetchRefunds = useCallback(
     (studentName?: string, status?: string) => {
@@ -1244,6 +1280,13 @@ export default function FeesPage() {
             setSfStudentName={setSfStudentName}
             sfStatus={sfStatus}
             setSfStatus={setSfStatus}
+            sfBatch={sfBatch}
+            setSfBatch={setSfBatch}
+            sfDateFrom={sfDateFrom}
+            setSfDateFrom={setSfDateFrom}
+            sfDateTo={sfDateTo}
+            setSfDateTo={setSfDateTo}
+            batchesList={batchesList}
             filteredStudentFees={filteredStudentFees}
             students={students}
             feeStructure={feeStructure}

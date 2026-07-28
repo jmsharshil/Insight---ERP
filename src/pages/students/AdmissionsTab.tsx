@@ -7,6 +7,7 @@ import { RootState, AppDispatch } from "@/store";
 import { API } from "@/service/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
+import { useDropdown } from "@/hooks/useDropdown";
 
 import DataTable, { type DataTableColumn } from "@/components/common/DataTable";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MoreHorizontal } from "lucide-react";
 import type { AdmissionRecord } from "@/redux/slices/admissionSlice";
 import { TableSkeleton } from "@/components/common/Skeletons";
@@ -27,7 +29,34 @@ export default function AdmissionsTab() {
   const { admissions, loading: admissionsLoading } = useSelector((state: RootState) => state.admissions);
   const [rejectState, setRejectState] = useState<{ id: string | number; reason: string } | null>(null);
 
+  const [filterBatch, setFilterBatch] = useState<string>("all");
+  const [filterBranch, setFilterBranch] = useState<string>("all");
+
+  const { options: branches, fetchOptions: fetchBranches } = useDropdown("branches", false);
+
+  useEffect(() => {
+    fetchBranches();
+  }, [fetchBranches]);
+
   const isSuperAdmin = user?.role === "super_admin";
+
+  const buildEndPoint = () => {
+    let url = API.ADMISSIONS.LIST;
+    const params = new URLSearchParams();
+
+    if (user && user.role === "branch_manager" && user.branch) {
+      params.append("branch", user.branch);
+    } else if (isSuperAdmin && filterBranch !== "all") {
+      params.append("branch", filterBranch);
+    }
+
+    if (filterBatch !== "all") {
+      params.append("batch_attempt", filterBatch);
+    }
+
+    const queryString = params.toString();
+    return queryString ? `${url}?${queryString}` : url;
+  };
 
   const filteredAdmissions = useMemo(() => {
     if (!user || user.role === "super_admin") return admissions;
@@ -54,14 +83,10 @@ export default function AdmissionsTab() {
   }, [admissions, user]);
 
   useEffect(() => {
-    const endPoint = user && user.role === "branch_manager" && user.branch
-      ? `${API.ADMISSIONS.LIST}${API.ADMISSIONS.LIST.includes('?') ? '&' : '?'}branch_id=${user.branch}`
-      : API.ADMISSIONS.LIST;
-
     dispatch({
       type: admissionActions.GET_ADMISSIONS,
       method: "GET",
-      endPoint: endPoint,
+      endPoint: buildEndPoint(),
       auth: true,
       setLoading: (val: boolean) => dispatch(setAdmissionsLoading(val)),
       getResponse: (res: any) => {
@@ -78,7 +103,7 @@ export default function AdmissionsTab() {
         toast.error(msg);
       },
     });
-  }, [dispatch, toast]);
+  }, [dispatch, toast, user, isSuperAdmin, filterBranch, filterBatch]);
 
   const admissionCols: DataTableColumn<AdmissionRecord>[] = [
     { key: "id", header: "ID", className: "font-mono text-xs w-16" },
@@ -110,14 +135,10 @@ export default function AdmissionsTab() {
                     setLoading: (val: boolean) => dispatch(setAdmissionsLoading(val)),
                     getResponse: () => {
                       toast.success("Admission approved successfully!");
-                      const endPoint = user && user.role === "branch_manager" && user.branch
-                        ? `${API.ADMISSIONS.LIST}${API.ADMISSIONS.LIST.includes('?') ? '&' : '?'}branch_id=${user.branch}`
-                        : API.ADMISSIONS.LIST;
-
                       dispatch({
                         type: admissionActions.GET_ADMISSIONS,
                         method: "GET",
-                        endPoint: endPoint,
+                        endPoint: buildEndPoint(),
                         auth: true,
                         setLoading: (val: boolean) => dispatch(setAdmissionsLoading(val)),
                         getResponse: (res: any) => {
@@ -159,6 +180,40 @@ export default function AdmissionsTab() {
 
   return (
     <div className="mt-0">
+      <div className="flex flex-col sm:flex-row gap-4 mb-4">
+        {isSuperAdmin && (
+          <div className="w-full sm:w-64 space-y-1">
+            <Label className="text-xs">Branch</Label>
+            <Select value={filterBranch} onValueChange={setFilterBranch}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="All Branches" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Branches</SelectItem>
+                {branches.map((b) => (
+                  <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        <div className="w-full sm:w-64 space-y-1">
+          <Label className="text-xs">Batch Attempt</Label>
+          <Select value={filterBatch} onValueChange={setFilterBatch}>
+            <SelectTrigger className="h-9">
+              <SelectValue placeholder="All Batches" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Batches</SelectItem>
+              <SelectItem value="june">June</SelectItem>
+              <SelectItem value="oct">October</SelectItem>
+              <SelectItem value="dec">December</SelectItem>
+              <SelectItem value="feb">February</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       <DataTable 
         columns={admissionCols} 
         data={filteredAdmissions} 
@@ -184,14 +239,10 @@ export default function AdmissionsTab() {
             setLoading: (val: boolean) => dispatch(setAdmissionsLoading(val)),
             getResponse: () => {
               toast.success("Admission rejected.");
-              const endPoint = user && user.role === "branch_manager" && user.branch
-                ? `${API.ADMISSIONS.LIST}${API.ADMISSIONS.LIST.includes('?') ? '&' : '?'}branch_id=${user.branch}`
-                : API.ADMISSIONS.LIST;
-
               dispatch({
                 type: admissionActions.GET_ADMISSIONS,
                 method: "GET",
-                endPoint: endPoint,
+                endPoint: buildEndPoint(),
                 auth: true,
                 setLoading: (val: boolean) => dispatch(setAdmissionsLoading(val)),
                 getResponse: (res: any) => {

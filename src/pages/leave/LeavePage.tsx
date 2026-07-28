@@ -9,6 +9,7 @@ import PoliciesTab     from "./tabs/PoliciesTab";
 import HolidaysTab     from "./tabs/HolidaysTab";
 import BalancesTab     from "./tabs/BalancesTab";
 import LateEntriesTab  from "./tabs/LateEntriesTab";
+import AnalyticsTab    from "./tabs/AnalyticsTab";
 
 // ── Role-based tab config ────────────────────────────────────────────────────
 const TAB_CONFIG = [
@@ -21,6 +22,11 @@ const TAB_CONFIG = [
     value: "policies",
     label: "Policies",
     roles: ["super_admin", "branch_manager"],
+  },
+  {
+    value: "analytics",
+    label: "Analytics",
+    roles: ["super_admin", "branch_manager", "admin_senior_executive"],
   },
   {
     value: "holidays",
@@ -90,6 +96,11 @@ export default function LeavePage() {
         {/* Late Entries */}
         <TabsContent value="late_entries" className="mt-4">
           <LateEntriesTab />
+        </TabsContent>
+
+        {/* Analytics */}
+        <TabsContent value="analytics" className="mt-4">
+          <AnalyticsTab />
         </TabsContent>
       </Tabs>
     </div>
