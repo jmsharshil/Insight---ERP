@@ -71,6 +71,23 @@ interface DashboardData {
   };
   unread_notifications?: number;
   recent_notifications?: Notification[];
+  leave?: {
+    pending_count: number;
+    recent_leaves: {
+      id: string;
+      leave_type: string;
+      from_date: string;
+      to_date: string;
+      status: string;
+      reason: string;
+      parent_consulted: boolean;
+      parent_signature_date: string | null;
+      created_at: string;
+      status_display: string;
+    }[];
+    balances: any[];
+    type: string;
+  };
 }
 
 export default function ParentDashboard() {
@@ -160,7 +177,64 @@ export default function ParentDashboard() {
 
   return (
     <DashboardLayout pageTitle="Parent Dashboard" stats={stats}>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">        
+        {/* Recent Leaves */}
+        <SectionCard title="Recent Leaves">
+          {data.leave?.recent_leaves && data.leave.recent_leaves.length > 0 ? (
+            <div className="overflow-x-auto mt-4">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-muted-foreground uppercase bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-3 rounded-tl-lg">Type</th>
+                    <th className="px-4 py-3">Dates</th>
+                    <th className="px-4 py-3 text-right rounded-tr-lg">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.leave.recent_leaves.slice(0, 5).map((leave) => (
+                    <tr key={leave.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
+                      <td className="px-4 py-3 font-medium text-foreground capitalize">
+                        {leave.leave_type}
+                        {leave.reason && (
+                           <div className="text-xs text-muted-foreground truncate max-w-[150px]" title={leave.reason}>{leave.reason}</div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className="text-xs">
+                          {new Date(leave.from_date).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric'
+                          })} 
+                          {leave.from_date !== leave.to_date && ` - ${new Date(leave.to_date).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric'
+                          })}`}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <span className={cn(
+                          "inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold border",
+                          leave.status === "approved" ? "text-emerald-600 bg-emerald-50 border-emerald-200" :
+                          leave.status === "rejected" ? "text-red-600 bg-red-50 border-red-200" :
+                          "text-amber-600 bg-amber-50 border-amber-200"
+                        )}>
+                          {leave.status_display || leave.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="flex h-48 items-center justify-center bg-muted/20 rounded-lg mt-4">
+              <p className="text-sm text-muted-foreground">No recent leaves.</p>
+            </div>
+          )}
+        </SectionCard>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         {/* Performance Chart */}
         <SectionCard title="Child's Performance (Recent Exams)">
           <div className="h-64 w-full mt-4">

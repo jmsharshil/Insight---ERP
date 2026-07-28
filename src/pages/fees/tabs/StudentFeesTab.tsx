@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import DataTable from "@/components/common/DataTable";
 import { FeeTableSkeleton } from "@/components/common/Skeletons";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,42 @@ export default function StudentFeesTab({
   handleViewOverview,
   loading,
 }: StudentFeesTabProps) {
+  const [localSfStudentName, setLocalSfStudentName] = useState(sfStudentName);
+  const [localSfStatus, setLocalSfStatus] = useState(sfStatus || "all");
+  const [localSfBatch, setLocalSfBatch] = useState(sfBatch || "all");
+  const [localSfDateFrom, setLocalSfDateFrom] = useState(sfDateFrom);
+  const [localSfDateTo, setLocalSfDateTo] = useState(sfDateTo);
+
+  useEffect(() => {
+    setLocalSfStudentName(sfStudentName);
+    setLocalSfStatus(sfStatus || "all");
+    setLocalSfBatch(sfBatch || "all");
+    setLocalSfDateFrom(sfDateFrom);
+    setLocalSfDateTo(sfDateTo);
+  }, [sfStudentName, sfStatus, sfBatch, sfDateFrom, sfDateTo]);
+
+  const handleApply = () => {
+    setSfStudentName(localSfStudentName);
+    setSfStatus(localSfStatus);
+    setSfBatch(localSfBatch);
+    setSfDateFrom(localSfDateFrom);
+    setSfDateTo(localSfDateTo);
+  };
+
+  const handleClear = () => {
+    setLocalSfStudentName("");
+    setLocalSfStatus("all");
+    setLocalSfBatch("all");
+    setLocalSfDateFrom("");
+    setLocalSfDateTo("");
+    
+    setSfStudentName("");
+    setSfStatus("all");
+    setSfBatch("all");
+    setSfDateFrom("");
+    setSfDateTo("");
+  };
+
   if (loading) {
     return <FeeTableSkeleton columns={8} rows={6} />;
   }
@@ -70,11 +107,11 @@ export default function StudentFeesTab({
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-wrap">
             <Input
               placeholder="Search student name..."
-              value={sfStudentName}
-              onChange={(e) => setSfStudentName(e.target.value)}
+              value={localSfStudentName}
+              onChange={(e) => setLocalSfStudentName(e.target.value)}
               className="w-full sm:w-48 h-9"
             />
-            <Select value={sfBatch} onValueChange={setSfBatch}>
+            <Select value={localSfBatch} onValueChange={setLocalSfBatch}>
               <SelectTrigger className="w-full sm:w-32 h-9">
                 <SelectValue placeholder="All Batches" />
               </SelectTrigger>
@@ -94,18 +131,18 @@ export default function StudentFeesTab({
                     variant="ghost"
                     className={cn(
                       "h-7 px-2 text-xs font-normal justify-start w-[110px]",
-                      !sfDateFrom && "text-muted-foreground"
+                      !localSfDateFrom && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-1.5 h-3.5 w-3.5 shrink-0" />
-                    {sfDateFrom ? format(parseISO(sfDateFrom), "dd MMM yyyy") : <span>From Date</span>}
+                    {localSfDateFrom ? format(parseISO(localSfDateFrom), "dd MMM yyyy") : <span>From Date</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={sfDateFrom ? parseISO(sfDateFrom) : undefined}
-                    onSelect={(date) => setSfDateFrom(date ? format(date, "yyyy-MM-dd") : "")}
+                    selected={localSfDateFrom ? parseISO(localSfDateFrom) : undefined}
+                    onSelect={(date) => setLocalSfDateFrom(date ? format(date, "yyyy-MM-dd") : "")}
                     initialFocus
                   />
                 </PopoverContent>
@@ -119,38 +156,38 @@ export default function StudentFeesTab({
                     variant="ghost"
                     className={cn(
                       "h-7 px-2 text-xs font-normal justify-start w-[110px]",
-                      !sfDateTo && "text-muted-foreground"
+                      !localSfDateTo && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-1.5 h-3.5 w-3.5 shrink-0" />
-                    {sfDateTo ? format(parseISO(sfDateTo), "dd MMM yyyy") : <span>To Date</span>}
+                    {localSfDateTo ? format(parseISO(localSfDateTo), "dd MMM yyyy") : <span>To Date</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={sfDateTo ? parseISO(sfDateTo) : undefined}
-                    onSelect={(date) => setSfDateTo(date ? format(date, "yyyy-MM-dd") : "")}
+                    selected={localSfDateTo ? parseISO(localSfDateTo) : undefined}
+                    onSelect={(date) => setLocalSfDateTo(date ? format(date, "yyyy-MM-dd") : "")}
                     initialFocus
                   />
                 </PopoverContent>
               </Popover>
 
-              {(sfDateFrom || sfDateTo) && (
+              {(localSfDateFrom || localSfDateTo) && (
                 <Button 
                   variant="ghost" 
                   size="icon" 
                   className="h-7 w-7 text-muted-foreground hover:text-destructive"
                   onClick={() => {
-                    setSfDateFrom("");
-                    setSfDateTo("");
+                    setLocalSfDateFrom("");
+                    setLocalSfDateTo("");
                   }}
                 >
                   <X className="h-3.5 w-3.5" />
                 </Button>
               )}
             </div>
-            <Select value={sfStatus} onValueChange={setSfStatus}>
+            <Select value={localSfStatus} onValueChange={setLocalSfStatus}>
               <SelectTrigger className="w-full sm:w-40 h-9">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
@@ -162,6 +199,19 @@ export default function StudentFeesTab({
                 <SelectItem value="approval_pending">Approval Pending</SelectItem>
               </SelectContent>
             </Select>
+            <Button 
+              onClick={handleApply} 
+              className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm"
+            >
+              Apply Filters
+            </Button>
+            <Button 
+              variant="outline" 
+              className="h-9 text-sm" 
+              onClick={handleClear}
+            >
+              <X className="w-3 h-3 mr-1" /> Clear
+            </Button>
           </div>
         </div>
       </div>

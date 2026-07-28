@@ -70,6 +70,28 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
   const [search, setSearch]                 = useState("");
   const [examTypeFilter, setExamTypeFilter] = useState("");
   const [examModeFilter, setExamModeFilter] = useState("");
+  const [branchFilter, setBranchFilter]     = useState("");
+  const [batchFilter, setBatchFilter]       = useState("");
+  const [subjectFilter, setSubjectFilter]   = useState("");
+  const [dropdowns, setDropdowns]           = useState<any>({ branches: [], batches: [], subjects: [] });
+
+  useEffect(() => {
+    if (user && !["student", "parent", "parents"].includes(user.role ?? "")) {
+      const isBranchManager = user.role === "branch_manager" && user.branch;
+      const branchQuery = isBranchManager ? `?branch_id=${user.branch}` : "";
+      dispatch({
+        type: dropdownActions.GET_DROPDOWN,
+        method: "GET",
+        endPoint: `/api/v1/batches/dropdowns/${branchQuery}`,
+        auth: true,
+        getResponse: (res: any) => {
+          if (res?.data || res) {
+            setDropdowns((prev: any) => ({ ...prev, ...(res.data || res) }));
+          }
+        },
+      } as any);
+    }
+  }, [user, dispatch]);
   const [editOpen, setEditOpen]             = useState(false);
   const [editTarget, setEditTarget]         = useState<Exam | null>(null);
   const [editLoading, setEditLoading]       = useState(false);
@@ -374,10 +396,18 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
       }
       if (!isAssigned) return false;
     }
+    const eBranchId = typeof e.branch === "object" && e.branch !== null ? (e.branch as any).id : e.branch;
+    const eBatchId = typeof e.batch === "object" && e.batch !== null ? (e.batch as any).id || (e.batch as any).batch_id : e.batch;
+    const eSubjId = typeof e.subject === "object" && e.subject !== null ? (e.subject as any).id : e.subject;
+
     const matchSearch = !search || e.title?.toLowerCase().includes(search.toLowerCase());
     const matchType   = !examTypeFilter || e.exam_type === examTypeFilter;
     const matchMode   = !examModeFilter || e.exam_mode === examModeFilter;
-    return matchSearch && matchType && matchMode;
+    const matchBranch = !branchFilter || String(eBranchId) === String(branchFilter);
+    const matchBatch  = !batchFilter || String(eBatchId) === String(batchFilter);
+    const matchSubject = !subjectFilter || String(eSubjId) === String(subjectFilter);
+
+    return matchSearch && matchType && matchMode && matchBranch && matchBatch && matchSubject;
   });
 
 
@@ -412,8 +442,48 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
           />
         </div>
 
+        {!isStudent && !isParent && (
+          <>
+            <Select value={branchFilter || "all"} onValueChange={v => setBranchFilter(v === "all" ? "" : v)}>
+              <SelectTrigger className="w-[140px] h-9 text-sm bg-white">
+                <SelectValue placeholder="All Branches" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Branches</SelectItem>
+                {dropdowns.branches?.map((b: any) => (
+                  <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={batchFilter || "all"} onValueChange={v => setBatchFilter(v === "all" ? "" : v)}>
+              <SelectTrigger className="w-[140px] h-9 text-sm bg-white">
+                <SelectValue placeholder="All Batches" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Batches</SelectItem>
+                {dropdowns.batches?.filter((b: any) => !branchFilter || String(b.branch) === branchFilter || String(b.branch_id) === branchFilter).map((b: any) => (
+                  <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={subjectFilter || "all"} onValueChange={v => setSubjectFilter(v === "all" ? "" : v)}>
+              <SelectTrigger className="w-[140px] h-9 text-sm bg-white">
+                <SelectValue placeholder="All Subjects" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Subjects</SelectItem>
+                {dropdowns.subjects?.map((s: any) => (
+                  <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        )}
+
         <Select value={examModeFilter || "all"} onValueChange={v => setExamModeFilter(v === "all" ? "" : v)}>
-          <SelectTrigger className="w-[130px] h-9 text-sm">
+          <SelectTrigger className="w-[130px] h-9 text-sm bg-white">
             <SelectValue placeholder="All Modes" />
           </SelectTrigger>
           <SelectContent>
@@ -424,7 +494,7 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
         </Select>
 
         <Select value={examTypeFilter || "all"} onValueChange={v => setExamTypeFilter(v === "all" ? "" : v)}>
-          <SelectTrigger className="w-[130px] h-9 text-sm">
+          <SelectTrigger className="w-[130px] h-9 text-sm bg-white">
             <SelectValue placeholder="All Types" />
           </SelectTrigger>
           <SelectContent>
@@ -434,7 +504,7 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
           </SelectContent>
         </Select>
 
-        <Button variant="outline" className="h-9 text-sm gap-1.5" onClick={() => { setSearch(""); setExamTypeFilter(""); setExamModeFilter(""); }}>
+        <Button variant="outline" className="h-9 text-sm gap-1.5" onClick={() => { setSearch(""); setExamTypeFilter(""); setExamModeFilter(""); setBranchFilter(""); setBatchFilter(""); setSubjectFilter(""); }}>
           <X className="w-3.5 h-3.5" /> Clear
         </Button>
 
