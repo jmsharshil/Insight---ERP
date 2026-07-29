@@ -116,6 +116,7 @@ export default function SupportPage() {
             <DataTable 
               data={queries} 
               columns={columns} 
+              loading={loading}
             />
           </SectionCard>
         </TabsContent>
