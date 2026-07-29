@@ -97,13 +97,15 @@ export default function ReviewTransferDialog({
 
       setIsSubmitting(true);
       try {
-        const token = localStorage.getItem("access_token");
+        const loginDataRaw = localStorage.getItem("Insight_Login_Data");
+        const token = loginDataRaw ? JSON.parse(loginDataRaw)?.access : "";
         const body: any = { status };
         if (status === "approved" && selectedUser) {
           body.assigned_to = selectedUser.id;
         }
 
-        const res = await fetch(API.LEADS.TRANSFER_REQUEST_REVIEW(request.id), {
+        const baseUrl = import.meta.env.VITE_APP_BASE_URL || "";
+        const res = await fetch(`${baseUrl}${API.LEADS.TRANSFER_REQUEST_REVIEW(request.id)}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",

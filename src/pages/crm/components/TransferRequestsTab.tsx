@@ -18,8 +18,10 @@ export default function TransferRequestsTab() {
   const fetchRequests = useCallback(async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem("access_token");
-      const res = await fetch(API.LEADS.TRANSFER_REQUESTS, {
+      const loginDataRaw = localStorage.getItem("Insight_Login_Data");
+      const token = loginDataRaw ? JSON.parse(loginDataRaw)?.access : "";
+      const baseUrl = import.meta.env.VITE_APP_BASE_URL || "";
+      const res = await fetch(`${baseUrl}${API.LEADS.TRANSFER_REQUESTS}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -62,7 +64,7 @@ export default function TransferRequestsTab() {
       key: "requested_by",
       header: "Requested By",
       render: (r) => (
-        <span className="text-sm">{r.requested_by || "Unknown Telecaller"}</span>
+        <span className="text-sm">{r.requested_by_name || r.requested_by || "Unknown Telecaller"}</span>
       ),
     },
     {
