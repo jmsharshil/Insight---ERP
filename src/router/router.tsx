@@ -47,6 +47,8 @@ const SettingsPage = lazy(() => import("@/pages/settings/SettingsPage"));
 const UsersPage = lazy(() => import("@/pages/users/UsersPage"));
 const PayrollPage = lazy(() => import("@/pages/payroll/PayrollPage"));
 const ResultsPage = lazy(() => import("@/pages/results/ResultsPage"));
+const SupportPage = lazy(() => import("@/pages/support/SupportPage"));
+const SupportTicketDetailPage = lazy(() => import("@/pages/support/SupportTicketDetailPage"));
 
 /* ─── Helpers ───────────────────────────────────────────────── */
 
@@ -153,6 +155,8 @@ const router = createBrowserRouter([
     { module: "payroll", path: "/payroll", element: withSuspense(<PayrollPage />) },
     { module: "users", path: "/users", element: withSuspense(<UsersPage />) },
     { module: "results", path: "/results", element: withSuspense(<ResultsPage />) },
+    { module: "support", path: "/support", element: withSuspense(<SupportPage />) },
+    { module: "support", path: "/support/queries/:id", element: withSuspense(<SupportTicketDetailPage />) },
   ].map(({ module, path, element }) => ({
     element: <ProtectedRoute module={module as any} />,
     children: [

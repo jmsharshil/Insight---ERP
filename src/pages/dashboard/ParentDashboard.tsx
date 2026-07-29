@@ -23,6 +23,7 @@ interface ExamResult {
   percentage: number;
   is_pass: boolean;
   rank: number | null;
+  percentile?: number | null;
 }
 
 interface UpcomingExam {
@@ -50,10 +51,11 @@ interface Notification {
 
 interface DashboardData {
   kpis: {
-    attendance_rate: number;
+    attendance_rate: number | string;
+    exam_attendance?: number | string;
     fees_due: number;
     upcoming_exams_count: number;
-    avg_score: number;
+    avg_score: number | string;
   };
   upcoming_exams: UpcomingExam[];
   recent_results: ExamResult[];
@@ -137,17 +139,31 @@ export default function ParentDashboard() {
     );
   }
 
+  const parsePct = (val: string | number) => {
+    if (!val) return 0;
+    if (typeof val === 'number') return val;
+    const match = val.match(/([\d.]+)%/);
+    return match ? parseFloat(match[1]) : 0;
+  };
+
   const stats: StatItem[] = [
     {
-      title: "Attendance Rate",
-      value: `${data.kpis.attendance_rate}%`,
+      title: "Class Attendance",
+      value: `${data.kpis.attendance_rate}`.includes('%') ? data.kpis.attendance_rate : `${data.kpis.attendance_rate}%`,
       icon: Percent,
-      trendType: data.kpis.attendance_rate >= 75 ? "up" : "down",
+      trendType: parsePct(data.kpis.attendance_rate) >= 75 ? "up" : "down",
       link: "/attendance",
     },
     {
+      title: "Exam Attendance",
+      value: data.kpis.exam_attendance ? (`${data.kpis.exam_attendance}`.includes('%') ? data.kpis.exam_attendance : `${data.kpis.exam_attendance}%`) : "N/A",
+      icon: Percent,
+      trendType: data.kpis.exam_attendance ? (parsePct(data.kpis.exam_attendance) >= 75 ? "up" : "down") : "neutral",
+      link: "/exams",
+    },
+    {
       title: "Avg Score",
-      value: `${data.kpis.avg_score}%`,
+      value: `${data.kpis.avg_score}`.includes('%') ? data.kpis.avg_score : `${data.kpis.avg_score}%`,
       icon: BookOpen,
       trendType: "neutral",
       link: "/exams",
@@ -314,6 +330,7 @@ export default function ParentDashboard() {
                   <tr>
                     <th className="px-4 py-3 rounded-tl-lg">Exam</th>
                     <th className="px-4 py-3">Score</th>
+                    <th className="px-4 py-3">Percentile</th>
                     <th className="px-4 py-3 text-right rounded-tr-lg">Status</th>
                   </tr>
                 </thead>
@@ -331,6 +348,9 @@ export default function ParentDashboard() {
                             {res.percentage}%
                           </span>
                         </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {res.percentile != null ? res.percentile : "-"}
                       </td>
                       <td className="px-4 py-3 text-right">
                         {res.is_pass ? (

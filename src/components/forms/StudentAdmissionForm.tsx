@@ -231,7 +231,7 @@ export default function StudentAdmissionForm() {
   /* ─── Form state ──────────────────────────────────────────── */
   const [formData, setFormData] = useState({
     form_type: "admission",
-    course: "cs_executive",
+    course: "cseet",
     group_module: "module_1",
     batch_attempt: "june",
     first_name: "",
@@ -519,9 +519,9 @@ export default function StudentAdmissionForm() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="cseet">CSEET</SelectItem>
                     <SelectItem value="cs_executive">CS Executive</SelectItem>
                     <SelectItem value="cs_professional">CS Professional</SelectItem>
-                    <SelectItem value="cseet">CSEET</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

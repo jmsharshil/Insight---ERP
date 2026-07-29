@@ -23,6 +23,7 @@ interface ExamResult {
   percentage: number;
   is_pass: boolean;
   rank: number | null;
+  percentile?: number | null;
 }
 
 interface UpcomingExam {
@@ -50,10 +51,11 @@ interface Notification {
 
 interface DashboardData {
   kpis: {
-    attendance_rate: number;
+    attendance_rate: number | string;
+    exam_attendance?: number | string;
     fees_due: number;
     upcoming_exams_count: number;
-    avg_score: number;
+    avg_score: number | string;
   };
   upcoming_exams: UpcomingExam[];
   recent_results: ExamResult[];
@@ -71,6 +73,23 @@ interface DashboardData {
   };
   unread_notifications?: number;
   recent_notifications?: Notification[];
+  leave?: {
+    pending_count: number;
+    recent_leaves: {
+      id: string;
+      leave_type: string;
+      from_date: string;
+      to_date: string;
+      status: string;
+      reason: string;
+      parent_consulted: boolean;
+      parent_signature_date: string | null;
+      created_at: string;
+      status_display: string;
+    }[];
+    balances: any[];
+    type: string;
+  };
 }
 
 export default function StudentDashboard() {
@@ -120,17 +139,31 @@ export default function StudentDashboard() {
     );
   }
 
+  const parsePct = (val: string | number) => {
+    if (!val) return 0;
+    if (typeof val === 'number') return val;
+    const match = val.match(/([\d.]+)%/);
+    return match ? parseFloat(match[1]) : 0;
+  };
+
   const stats: StatItem[] = [
     {
-      title: "Attendance Rate",
-      value: `${data.kpis.attendance_rate}%`,
+      title: "Class Attendance",
+      value: `${data.kpis.attendance_rate}`.includes('%') ? data.kpis.attendance_rate : `${data.kpis.attendance_rate}%`,
       icon: Percent,
-      trendType: data.kpis.attendance_rate >= 75 ? "up" : "down",
+      trendType: parsePct(data.kpis.attendance_rate) >= 75 ? "up" : "down",
       link: "/attendance",
     },
     {
+      title: "Exam Attendance",
+      value: data.kpis.exam_attendance ? (`${data.kpis.exam_attendance}`.includes('%') ? data.kpis.exam_attendance : `${data.kpis.exam_attendance}%`) : "N/A",
+      icon: Percent,
+      trendType: data.kpis.exam_attendance ? (parsePct(data.kpis.exam_attendance) >= 75 ? "up" : "down") : "neutral",
+      link: "/exams",
+    },
+    {
       title: "Avg Score",
-      value: `${data.kpis.avg_score}%`,
+      value: `${data.kpis.avg_score}`.includes('%') ? data.kpis.avg_score : `${data.kpis.avg_score}%`,
       icon: BookOpen,
       trendType: "neutral",
       link: "/exams",
@@ -240,6 +273,7 @@ export default function StudentDashboard() {
                   <tr>
                     <th className="px-4 py-3 rounded-tl-lg">Exam</th>
                     <th className="px-4 py-3">Score</th>
+                    <th className="px-4 py-3">Percentile</th>
                     <th className="px-4 py-3 text-right rounded-tr-lg">Status</th>
                   </tr>
                 </thead>
@@ -257,6 +291,9 @@ export default function StudentDashboard() {
                             {res.percentage}%
                           </span>
                         </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {res.percentile != null ? res.percentile : "-"}
                       </td>
                       <td className="px-4 py-3 text-right">
                         {res.is_pass ? (
@@ -319,6 +356,63 @@ export default function StudentDashboard() {
           ) : (
             <div className="flex h-48 items-center justify-center bg-muted/20 rounded-lg">
               <p className="text-sm text-muted-foreground">No upcoming exams.</p>
+            </div>
+          )}
+        </SectionCard>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mt-6">        
+        {/* Recent Leaves */}
+        <SectionCard title="Recent Leaves">
+          {data.leave?.recent_leaves && data.leave.recent_leaves.length > 0 ? (
+            <div className="overflow-x-auto mt-4">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-muted-foreground uppercase bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-3 rounded-tl-lg">Type</th>
+                    <th className="px-4 py-3">Dates</th>
+                    <th className="px-4 py-3 text-right rounded-tr-lg">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.leave.recent_leaves.slice(0, 5).map((leave) => (
+                    <tr key={leave.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
+                      <td className="px-4 py-3 font-medium text-foreground capitalize">
+                        {leave.leave_type}
+                        {leave.reason && (
+                           <div className="text-xs text-muted-foreground truncate max-w-[150px]" title={leave.reason}>{leave.reason}</div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className="text-xs">
+                          {new Date(leave.from_date).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric'
+                          })} 
+                          {leave.from_date !== leave.to_date && ` - ${new Date(leave.to_date).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric'
+                          })}`}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <span className={cn(
+                          "inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold border",
+                          leave.status === "approved" ? "text-emerald-600 bg-emerald-50 border-emerald-200" :
+                          leave.status === "rejected" ? "text-red-600 bg-red-50 border-red-200" :
+                          "text-amber-600 bg-amber-50 border-amber-200"
+                        )}>
+                          {leave.status_display || leave.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="flex h-48 items-center justify-center bg-muted/20 rounded-lg mt-4">
+              <p className="text-sm text-muted-foreground">No recent leaves.</p>
             </div>
           )}
         </SectionCard>

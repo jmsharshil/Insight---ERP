@@ -131,7 +131,7 @@ export default function LeadsInquiryForm() {
 
   // ── Inquiry state
   const [inquiryData, setInquiryData] = useState({
-    course: "cs_executive",
+    course: "cseet",
     group_module: "full",
     batch_attempt: "june",
     first_name: "",
@@ -479,9 +479,9 @@ export default function LeadsInquiryForm() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="cseet">CSEET</SelectItem>
                       <SelectItem value="cs_executive">CS Executive</SelectItem>
                       <SelectItem value="cs_professional">CS Professional</SelectItem>
-                      <SelectItem value="cseet">CSEET</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -533,9 +533,9 @@ export default function LeadsInquiryForm() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="cseet">CSEET</SelectItem>
                         <SelectItem value="cs_executive">CS Executive</SelectItem>
                         <SelectItem value="cs_professional">CS Professional</SelectItem>
-                        <SelectItem value="cseet">CSEET</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

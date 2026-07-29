@@ -11,10 +11,6 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import ModulePlaceholder from "@/pages/ModulePlaceholder";
 
 export default function SummaryTab() {
-  return <ModulePlaceholder title="Results Summary" />;
-}
-
-export function SummaryTabOld() {
   const { user } = useAuth();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -246,6 +242,62 @@ export function SummaryTabOld() {
           ) : (
             <div className="h-80 w-full flex items-center justify-center border-2 border-dashed border-border rounded-lg">
               <p className="text-sm text-muted-foreground">No faculty data available.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Top Batches */}
+        <div className="bg-white p-5 rounded-xl border border-border shadow-sm flex flex-col">
+          <h3 className="font-heading font-semibold mb-4 text-sm">Top Batches (By Pass %)</h3>
+          {data.top_batches && data.top_batches.length > 0 ? (
+            <div className="w-full mt-4" style={{ height: 350 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={data.top_batches.map((b: any) => {
+                    const name = b.exam__batch__name || b.batch_name || "Unknown";
+                    return {
+                      name: name.length > 12 ? name.substring(0, 12) + "..." : name,
+                      fullName: name,
+                      passPct: b.pass_pct ? Number(b.pass_pct.toFixed(2)) : 0,
+                    };
+                  })}
+                  margin={{ top: 10, right: 10, left: 0, bottom: 60 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                  <XAxis 
+                    dataKey="name" 
+                    tick={{ fontSize: 11, fill: "#6b7280" }} 
+                    angle={-45} 
+                    textAnchor="end" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    interval={0}
+                    height={70}
+                    tickMargin={10}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 12, fill: "#6b7280" }} 
+                    axisLine={false} 
+                    tickLine={false} 
+                  />
+                  <Tooltip 
+                    cursor={{ fill: '#f3f4f6' }}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    labelFormatter={(label, payload) => {
+                      if (payload && payload.length > 0) {
+                        return payload[0].payload.fullName || label;
+                      }
+                      return label;
+                    }}
+                  />
+                  <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                  <Bar dataKey="passPct" name="Pass %" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-80 w-full flex items-center justify-center border-2 border-dashed border-border rounded-lg">
+              <p className="text-sm text-muted-foreground">No batch data available.</p>
             </div>
           )}
         </div>

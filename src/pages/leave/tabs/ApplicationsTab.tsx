@@ -705,7 +705,7 @@ export default function ApplicationsTab() {
                     {/* STOP propagation so row click doesn't fire from button clicks */}
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1">
-                        {canApproveThis &&
+                        {(canApproveThis || (app.status === "pending" && app.parent_consulted === false)) &&
                           (app.status === "approval_pending" || app.status === "pending") && (
                             <Button
                               variant="ghost"
@@ -717,7 +717,7 @@ export default function ApplicationsTab() {
                               <CheckCircle2 className="w-4 h-4" />
                             </Button>
                           )}
-                        {canApproveThis &&
+                        {(canApproveThis || (app.status === "pending" && app.parent_consulted === false)) &&
                           (app.status === "approval_pending" || app.status === "pending") && (
                             <Button
                               variant="ghost"

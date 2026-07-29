@@ -360,6 +360,7 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
                     <th className="px-4 py-3 font-medium">Roll No</th>
                     <th className="px-4 py-3 font-medium">Marks</th>
                     <th className="px-4 py-3 font-medium">%</th>
+                    <th className="px-4 py-3 font-medium">Percentile</th>
                     <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 font-medium">Rank</th>
                     {isAdmin && <th className="px-4 py-3 font-medium text-right">Actions</th>}
@@ -374,6 +375,7 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
                         {res.marks_obtained} / {res.total_marks}
                       </td>
                       <td className="px-4 py-3">{res.percentage}%</td>
+                      <td className="px-4 py-3">{res.percentile != null ? res.percentile : "-"}</td>
                       <td className="px-4 py-3">
                         {res.is_pass ? (
                           <Badge className="bg-green-100 text-green-700 border-green-200">Pass</Badge>
@@ -565,7 +567,7 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
               <h4 className="text-sm font-heading font-semibold text-blue-900 mb-3">Your Result</h4>
               {results.map((res: any) => (
                 <div key={res.id} className="mb-6">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white/60 p-4 rounded-lg border border-blue-100">
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-white/60 p-4 rounded-lg border border-blue-100">
                     <div className="flex flex-col">
                       <span className="text-xs text-muted-foreground uppercase tracking-wider">Marks Obtained</span>
                       <span className="font-bold text-lg">{res.marks_obtained} / {res.total_marks}</span>
@@ -573,6 +575,10 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
                     <div className="flex flex-col">
                       <span className="text-xs text-muted-foreground uppercase tracking-wider">Percentage</span>
                       <span className="font-bold text-lg">{res.percentage}%</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs text-muted-foreground uppercase tracking-wider">Percentile</span>
+                      <span className="font-bold text-lg">{res.percentile != null ? res.percentile : "-"}</span>
                     </div>
                     <div className="flex flex-col">
                       <span className="text-xs text-muted-foreground uppercase tracking-wider">Status</span>

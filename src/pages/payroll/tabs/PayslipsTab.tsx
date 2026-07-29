@@ -12,6 +12,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { payrollActions, dropdownActions } from "@/redux/actions";
 import { API } from "@/service/api";
+import { ROLES } from "@/constants/roles";
 import { setPayslips, setPayslipsLoading } from "@/redux/slices/payrollSlice";
 import type { PaySlip, PayrollRun } from "@/redux/slices/payrollSlice";
 import type { RootState, AppDispatch } from "@/store";
@@ -77,9 +78,10 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
                   
                   let title = text;
                   let dates: string[] = [];
-                  if (text.startsWith("Absent on ")) {
+                  const absenceMatch = text.match(/^Absent(?: \(\d+ days?\))? on (.*)/);
+                  if (absenceMatch) {
                     title = "Absence Deductions";
-                    dates = text.replace("Absent on ", "").split(/,\s*/);
+                    dates = absenceMatch[1].split(/,\s*/);
                   }
                   
                   const parsedAmount = Math.abs(Number(amount));
@@ -158,7 +160,7 @@ export default function PayslipsTab() {
   const { user } = useAuth();
   const { payslips, payslipsLoading, selectedRun } = useSelector((s: RootState) => s.payroll);
 
-  const [typeFilter, setTypeFilter] = useState("all");
+  const [roleFilter, setRoleFilter] = useState("all");
   const [adjustTarget, setAdjustTarget] = useState<PaySlip | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -172,7 +174,7 @@ export default function PayslipsTab() {
     dispatch({
       type: payrollActions.GET_PAYSLIPS,
       method: "GET",
-      endPoint: API.PAYROLL.PAYSLIPS(selectedRun.id),
+      endPoint: API.PAYROLL.PAYSLIPS(selectedRun.id) + (roleFilter !== "all" ? `?role=${roleFilter}` : ""),
       auth: true,
       setLoading: (v: boolean) => dispatch(setPayslipsLoading(v)),
       getResponse: (res: any) => {
@@ -182,7 +184,7 @@ export default function PayslipsTab() {
       getError: (err: any) =>
         toast.error(err?.response?.data?.message || "Failed to load payslips"),
     });
-  }, [selectedRun]);
+  }, [selectedRun, roleFilter]);
 
   const triggerAction = (type: "approve" | "disburse") => {
     if (!selectedRun) return;
@@ -212,11 +214,7 @@ export default function PayslipsTab() {
     });
   };
 
-  const filtered = payslips.filter((s) => {
-    if (typeFilter === "faculty") return !!s.faculty;
-    if (typeFilter === "staff") return !s.faculty;
-    return true;
-  });
+
 
   if (!selectedRun) {
     return (
@@ -284,17 +282,20 @@ export default function PayslipsTab() {
       {/* Type Filter */}
       <div className="flex items-center gap-3">
         <Label className="text-xs text-muted-foreground shrink-0">Show:</Label>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="h-8 text-xs w-36">
+        <Select value={roleFilter} onValueChange={setRoleFilter}>
+          <SelectTrigger className="h-8 text-xs w-48">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Employees</SelectItem>
-            <SelectItem value="faculty">Faculty Only</SelectItem>
-            <SelectItem value="staff">Staff Only</SelectItem>
+            <SelectItem value="all">All Roles</SelectItem>
+            {Object.values(ROLES).map((r) => (
+              <SelectItem key={r.id} value={r.id}>
+                {r.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
-        <span className="text-xs text-muted-foreground">{filtered.length} payslip(s)</span>
+        <span className="text-xs text-muted-foreground">{payslips.length} payslip(s)</span>
       </div>
 
       {payslipsLoading ? (
@@ -327,14 +328,14 @@ export default function PayslipsTab() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.length === 0 ? (
+                {payslips.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="text-center py-12 text-muted-foreground text-sm">
                       No payslips found.
                     </td>
                   </tr>
                 ) : (
-                  filtered.map((slip, i) => (
+                  payslips.map((slip, i) => (
                     <motion.tr
                       key={slip.id}
                       initial={{ opacity: 0, y: 5 }}

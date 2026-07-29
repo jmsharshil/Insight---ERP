@@ -10,6 +10,7 @@ export interface WSSendMessageEvent {
   file_name?: string;
   file_size?: number | null;
   target_user_ids?: string[];
+  reply_to_message_id?: string;
 }
 export interface WSTypingStartEvent {
   type: "typing_start";
@@ -382,8 +383,8 @@ export function useChatWebSocket(
 
   // ── Typed send methods ───────────────────────────────────────────────────
 
-  const sendMessage = useCallback((content: string, fileData?: { file_url: string, file_name: string, file_size: number | null }, targetUserIds?: string[]) => {
-    send({ type: "send_message", content, ...(fileData || {}), ...(targetUserIds && targetUserIds.length > 0 ? { target_user_ids: targetUserIds } : {}) });
+  const sendMessage = useCallback((content: string, fileData?: { file_url: string, file_name: string, file_size: number | null }, targetUserIds?: string[], reply_to_message_id?: string) => {
+    send({ type: "send_message", content, ...(fileData || {}), ...(targetUserIds && targetUserIds.length > 0 ? { target_user_ids: targetUserIds } : {}), ...(reply_to_message_id ? { reply_to_message_id } : {}) });
   }, [send]);
 
   const startTyping = useCallback(() => {

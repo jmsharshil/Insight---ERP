@@ -76,8 +76,9 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
     rawModules = [...rawModules, "attendance"];
   }
 
-  const modules = rawModules.includes("notifications") ? rawModules : [...rawModules, "notifications"];
-  const items = modules.map((m) => ({ id: m, ...NAV_ITEMS[m] })).filter((item) => item.label);
+  let modules = rawModules.includes("notifications") ? rawModules : [...rawModules, "notifications"];
+  modules = modules.includes("support") ? modules : [...modules, "support"];
+  const items = modules.map((m) => ({ id: m, ...NAV_ITEMS[m as import('@/types/role.types').ModuleId] })).filter((item) => item?.label);
 
   return (
     <aside
