@@ -5,16 +5,18 @@ import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 
 interface StatCardProps {
-  title: string;
+  title: React.ReactNode;
   value: string | number;
   icon: LucideIcon;
   trend?: string;
   trendType?: "up" | "down" | "neutral" | "warning";
   index?: number;
   link?: string;
+  iconClassName?: string;
+  iconBgClassName?: string;
 }
 
-export default function StatCard({ title, value, icon: Icon, trend, trendType = "neutral", index = 0, link }: StatCardProps) {
+export default function StatCard({ title, value, icon: Icon, trend, trendType = "neutral", index = 0, link, iconClassName, iconBgClassName }: StatCardProps) {
   const TrendIcon = trendType === "up" ? TrendingUp : trendType === "down" ? TrendingDown : Minus;
   const trendColor =
     trendType === "up" ? "text-success"
@@ -34,8 +36,8 @@ export default function StatCard({ title, value, icon: Icon, trend, trendType = 
           </div>
         )}
       </div>
-      <div className="shrink-0 rounded-lg bg-primary-light p-2.5">
-        <Icon className="w-5 h-5 text-primary-dark" />
+      <div className={cn("shrink-0 rounded-lg p-2.5", iconBgClassName || "bg-primary-light")}>
+        <Icon className={cn("w-5 h-5", iconClassName || "text-primary-dark")} />
       </div>
     </div>
   );

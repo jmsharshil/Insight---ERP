@@ -65,6 +65,14 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
   const expanded = mobile || pinned || hovered;
   const role = user ? ROLES[user.role as keyof typeof ROLES] : null;
   let rawModules = user?.accessible_modules || role?.modules || [];
+  if (typeof rawModules === "string") {
+    try {
+      rawModules = JSON.parse(rawModules);
+    } catch {
+      rawModules = (rawModules as string).split(",").map((s) => s.trim()).filter(Boolean);
+    }
+  }
+  if (!Array.isArray(rawModules)) rawModules = [];
   
   // Force dashboard for all roles (override backend module list if needed)
   if (!rawModules.includes("dashboard")) {

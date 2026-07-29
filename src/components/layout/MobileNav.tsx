@@ -9,8 +9,17 @@ export default function MobileNav() {
   if (!user) return null;
 
   const role = ROLES[user.role as keyof typeof ROLES];
-  const allModules = user.accessible_modules || role?.modules || [];
-  const modules = allModules.slice(0, 5);
+  let allModules = user.accessible_modules || role?.modules || [];
+  
+  if (typeof allModules === "string") {
+    try {
+      allModules = JSON.parse(allModules);
+    } catch {
+      allModules = (allModules as string).split(",").map((s) => s.trim()).filter(Boolean);
+    }
+  }
+  
+  const modules = Array.isArray(allModules) ? allModules.slice(0, 5) : [];
 
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-card border-t border-border flex items-stretch h-16">
