@@ -123,7 +123,7 @@ export function buildSlotPayload(values: SlotFormValues): Record<string, any> {
       title:               values.exam_title,
       exam_type:           values.exam_type,
       exam_mode:           values.exam_mode,
-      total_marks:         (values.exam_mode === "online" && values.exam_type === "mcq") ? undefined : Number(values.exam_total_marks),
+      total_marks:         Number(values.exam_total_marks),
       pass_marks:          Number(values.exam_pass_marks),
       instructions:        values.exam_instructions,
       result_release_mode: (values.exam_mode === "online" && values.exam_type === "mcq") ? "instant" : "manual",
@@ -136,11 +136,13 @@ export function buildSlotPayload(values: SlotFormValues): Record<string, any> {
   }
 
   if (values.session_type === "custom" && values.exam_title) {
+    base.examiners      = csvToArray(values.examiners);
+    base.paper_checkers = csvToArray(values.paper_checkers);
     base.exam_data = {
       title:               values.exam_title,
       exam_type:           values.exam_type,
       exam_mode:           values.exam_mode,
-      total_marks:         (values.exam_mode === "online" && values.exam_type === "mcq") ? undefined : Number(values.exam_total_marks),
+      total_marks:         Number(values.exam_total_marks),
       pass_marks:          Number(values.exam_pass_marks),
       instructions:        values.exam_instructions,
       result_release_mode: (values.exam_mode === "online" && values.exam_type === "mcq") ? "instant" : "manual",
@@ -199,10 +201,10 @@ export default function SlotForm({
   const isPrelim     = sessionType === "prelim";
   const isPractice   = sessionType === "practice";
   const isCustom     = sessionType === "custom";
-  const needsExam    = isClassTest || isPrelim;
+  const needsExam        = isClassTest || isPrelim;
   const needsChapters    = true; // chapters available for all session types
-  const needsExaminers   = isClassTest || isPrelim || isPractice;
-  const needsPaperCheck  = isClassTest || isPrelim;
+  const needsExaminers   = isClassTest || isPrelim || isPractice || isCustom;
+  const needsPaperCheck  = isClassTest || isPrelim || isCustom;
   const customExamOpt    = isCustom;
 
   // Filter chapters by selected subject
@@ -291,8 +293,8 @@ export default function SlotForm({
     </div>
   );
 
-  const ExaminersField = () => (
-    <Field label="Examiners" required error={errors.examiners?.message}>
+  const ExaminersField = ({ required = true }: { required?: boolean }) => (
+    <Field label="Examiners" required={required} error={errors.examiners?.message}>
       <Controller name="examiners" control={control} render={({ field }) => {
         const selectedIds = csvToArray(field.value);
         const selectedNames = selectedIds.map(id => examinersList.find(f => f.id === id)?.name || id);
@@ -336,8 +338,8 @@ export default function SlotForm({
     </Field>
   );
 
-  const PaperCheckersField = () => (
-    <Field label="Paper Checkers" required error={errors.paper_checkers?.message}>
+  const PaperCheckersField = ({ required = true }: { required?: boolean }) => (
+    <Field label="Paper Checkers" required={required} error={errors.paper_checkers?.message}>
       <Controller name="paper_checkers" control={control} render={({ field }) => {
         const selectedIds = csvToArray(field.value);
         const selectedNames = selectedIds.map(id => paperCheckersList.find(f => f.id === id)?.name || id);
@@ -622,15 +624,20 @@ export default function SlotForm({
             Exam Details {customExamOpt && <span className="font-normal normal-case text-[#8E24AA]/60">(optional for custom)</span>}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {needsExaminers && <ExaminersField />}
-            {needsPaperCheck && <PaperCheckersField />}
+            {needsExaminers && <ExaminersField required={needsExam || !!watch("exam_title")} />}
+            {needsPaperCheck && <PaperCheckersField required={needsExam || !!watch("exam_title")} />}
             <Field label="Exam Title" required={needsExam} error={errors.exam_title?.message}>
               <Input {...register("exam_title")} placeholder="e.g. Company Law — Ch 1 & 2 Test" className="h-9 text-sm" />
             </Field>
 
             <Field label="Exam Type" required={needsExam}>
               <Controller name="exam_type" control={control} render={({ field }) => (
-                <Select value={field.value || "mcq"} onValueChange={field.onChange}>
+                <Select value={field.value || "mcq"} onValueChange={(val) => {
+                  field.onChange(val);
+                  if (val === "subjective") {
+                    setValue("exam_mode", "offline", { shouldValidate: true });
+                  }
+                }}>
                   <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="mcq">MCQ</SelectItem>
@@ -652,8 +659,11 @@ export default function SlotForm({
               )} />
             </Field>
 
-            <Field label="Total Marks" required={needsExam && !(watch("exam_mode") === "online" && watch("exam_type") === "mcq")} error={errors.exam_total_marks?.message}>
-              <Input type="number" {...register("exam_total_marks")} placeholder={(watch("exam_mode") === "online" && watch("exam_type") === "mcq") ? "Auto-calculated" : "100"} className="h-9 text-sm" disabled={(watch("exam_mode") === "online" && watch("exam_type") === "mcq")} />
+            <Field label="Total Marks (Initial)" required={needsExam} error={errors.exam_total_marks?.message}>
+              <div className="relative">
+                <Input type="number" {...register("exam_total_marks")} placeholder="100" className="h-9 text-sm" />
+                <span className="absolute -bottom-4 left-0 text-[10px] text-muted-foreground whitespace-nowrap">Auto-syncs when questions are added</span>
+              </div>
             </Field>
 
             <Field label="Passing Marks" required={needsExam} error={errors.exam_pass_marks?.message}>
@@ -675,50 +685,7 @@ export default function SlotForm({
               }} />
             </Field>
 
-            <Field label="Select Papers (Optional)">
-              <Controller name="selected_papers" control={control} render={({ field }) => {
-                const selectedIds = csvToArray(field.value);
-                const selectedNames = selectedIds.map(id => filteredPapers.find(p => p.id === id)?.name || id);
-
-                return (
-                  <Popover modal={true}>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" role="combobox" className="w-full justify-between font-normal text-sm min-h-[36px] h-auto p-2" disabled={!selectedSubject}>
-                        {!selectedSubject ? (
-                          <span className="text-muted-foreground">Please select a subject first</span>
-                        ) : selectedNames.length > 0 ? (
-                          <div className="flex flex-wrap gap-1.5 text-left">
-                            {selectedNames.map((name, i) => (
-                              <Badge key={i} variant="secondary" className="text-xs font-medium bg-[#F3E5F5] text-[#8E24AA] hover:bg-[#E1BEE7]">{name}</Badge>
-                            ))}
-                          </div>
-                        ) : <span className="text-muted-foreground">Select papers...</span>}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[400px] p-0" align="start">
-                      <Command>
-                        <CommandInput placeholder="Search papers..." />
-                        <CommandList className="max-h-[200px] overflow-y-auto">
-                          <CommandEmpty>No papers found for this subject.</CommandEmpty>
-                          <CommandGroup>
-                            {filteredPapers.map((paper) => (
-                              <CommandItem key={paper.id} value={paper.name} onSelect={() => {
-                                const newIds = selectedIds.includes(paper.id) ? selectedIds.filter(id => id !== paper.id) : [...selectedIds, paper.id];
-                                field.onChange(newIds.join(", "));
-                              }}>
-                                <Check className={cn("mr-2 h-4 w-4", selectedIds.includes(paper.id) ? "opacity-100" : "opacity-0")} />
-                                {paper.name}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                );
-              }} />
-            </Field>
+              {/* X */}
           </div>
 
           <Field label="Instructions">

@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
-import { Eye, Trash2, Pencil, Search, X, RefreshCw, Info, Calendar } from "lucide-react";
+import { Eye, Trash2, Pencil, Search, X, RefreshCw, Info, Calendar, Award } from "lucide-react";
 import { examActions, studentActions, dropdownActions, subjectAction } from "@/redux/actions";
 import { API } from "@/service/api";
 import {
@@ -102,11 +102,15 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
     exam_type: "mcq", exam_mode: "offline", result_release_mode: "manual",
     selected_papers: [] as string[],
   });
+  const [graceTarget, setGraceTarget] = useState<Exam | null>(null);
+  const [graceLoading, setGraceLoading] = useState(false);
+  const [graceForm, setGraceForm] = useState({ grace_marks: "", grace_marks_note: "" });
 
   const [availablePapers, setAvailablePapers] = useState<any[]>([]);
   const [papersLoading, setPapersLoading] = useState(false);
 
   const isAdmin   = user && ["super_admin", "branch_manager", "admin"].includes(user.role ?? "");
+  const canAddGraceMarks = user && ["super_admin", "admin_senior_executive", "branch_manager"].includes(user.role ?? "");
   const isStudent = user?.role === "student";
   const isParent  = user?.role === "parent" || user?.role === "parents";
   const canEdit   = isAdmin;
@@ -294,6 +298,39 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
       },
       getError: (err: any) => toast.error(err?.response?.data?.message || "Failed to schedule exam"),
     });
+  };
+
+  const openGraceMarks = (exam: Exam) => {
+    setGraceTarget(exam);
+    setGraceForm({
+      grace_marks: exam.grace_marks ? String(exam.grace_marks) : "",
+      grace_marks_note: exam.grace_marks_note || "",
+    });
+  };
+
+  const submitGraceMarks = () => {
+    if (!graceTarget) return;
+    dispatch({
+      type: examActions.ADD_GRACE_MARKS,
+      method: "POST",
+      endPoint: `/api/v1/exams/${graceTarget.id}/grace-marks/`,
+      body: {
+        grace_marks: Number(graceForm.grace_marks),
+        grace_marks_note: graceForm.grace_marks_note,
+      },
+      auth: true,
+      setLoading: (v: boolean) => setGraceLoading(v),
+      getResponse: (res: any) => {
+        if (res?.success) {
+          toast.success(res.message || "Grace marks applied successfully.");
+          dispatch(updateExamInList({ ...graceTarget, grace_marks: Number(graceForm.grace_marks), grace_marks_note: graceForm.grace_marks_note }));
+          setGraceTarget(null);
+        } else {
+          toast.error("Failed to apply grace marks.");
+        }
+      },
+      getError: (err: any) => toast.error(err?.response?.data?.message || "Error applying grace marks"),
+    } as any);
   };
 
   const filtered = exams.filter(e => {
@@ -573,7 +610,19 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
                       {exam.exam_type || "—"}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-xs font-mono">{exam.total_marks}</td>
+                  <td className="px-4 py-3">
+                    <div className="text-xs font-mono">{exam.total_marks}</div>
+                    {exam.questions_count !== undefined && (
+                      <div className="text-[10px] text-muted-foreground mt-0.5">
+                        {exam.questions_count || (exam.selected_papers?.reduce((acc: number, p: any) => acc + (p.no_of_questions || 0), 0) || 0)} Qs
+                      </div>
+                    )}
+                    {!!exam.grace_marks && (
+                      <div className="text-[10px] text-orange-600 font-semibold mt-0.5">
+                        +{exam.grace_marks} Grace
+                      </div>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-xs font-mono">{exam.pass_marks}</td>
                   <td className="px-4 py-3">
                     <Badge className={`text-[10px] capitalize font-semibold ${RELEASE_BADGE[exam.result_release_mode] ?? "bg-gray-100 text-gray-700"}`}>
@@ -618,6 +667,11 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
                           <Calendar className="w-3.5 h-3.5 text-blue-500" />
                         </Button>
                       )}
+                      {canAddGraceMarks && (
+                        <Button variant="ghost" size="icon" className="w-7 h-7" title="Add Grace Marks" onClick={e => { e.stopPropagation(); openGraceMarks(exam); }}>
+                          <Award className="w-3.5 h-3.5 text-orange-500" />
+                        </Button>
+                      )}
                       <Button variant="ghost" size="icon" className="w-7 h-7" onClick={e => { e.stopPropagation(); onSelectExam(exam); }}>
                         <Eye className="w-3.5 h-3.5" />
                       </Button>
@@ -654,8 +708,11 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs font-semibold">Total Marks</Label>
-                <Input type="number" min={0} value={editForm.total_marks} onChange={e => setEditForm(f => ({ ...f, total_marks: e.target.value }))} className="h-9 text-sm mt-1" />
+                <div className="flex items-center gap-1">
+                  <Label className="text-xs font-semibold">Total Marks</Label>
+                  <span className="text-[10px] text-muted-foreground">(Auto-syncs with Qs)</span>
+                </div>
+                <Input type="number" min={0} value={editForm.total_marks} onChange={e => setEditForm(f => ({ ...f, total_marks: e.target.value }))} className="h-9 text-sm mt-1 bg-muted cursor-not-allowed" disabled />
               </div>
               <div>
                 <Label className="text-xs font-semibold">Pass Marks</Label>
@@ -742,6 +799,35 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
             <Button variant="outline" onClick={() => setEditOpen(false)} disabled={editLoading}>Cancel</Button>
             <Button onClick={handleUpdate} disabled={editLoading} className="bg-primary hover:bg-primary/90 text-primary-foreground">
               {editLoading ? "Saving…" : "Update Exam"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Grace Marks Dialog */}
+      <Dialog open={!!graceTarget} onOpenChange={o => { if (!o) setGraceTarget(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading">Apply Grace Marks</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label className="text-xs font-semibold">Grace Marks *</Label>
+              <Input type="number" min={0} value={graceForm.grace_marks} onChange={e => setGraceForm(f => ({ ...f, grace_marks: e.target.value }))} className="h-9 text-sm mt-1" placeholder="e.g. 5" />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold">Reason / Note *</Label>
+              <Textarea value={graceForm.grace_marks_note} onChange={e => setGraceForm(f => ({ ...f, grace_marks_note: e.target.value }))} className="text-sm resize-none mt-1" placeholder="Reason for grace marks" />
+            </div>
+            <div className="rounded-lg border border-orange-200 bg-orange-50 px-4 py-2.5 flex items-start gap-2 mt-2">
+              <Info className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+              <span className="text-xs text-orange-700">Applying grace marks will automatically recalculate student results and re-rank them. Final marks are capped at total marks.</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGraceTarget(null)} disabled={graceLoading}>Cancel</Button>
+            <Button onClick={submitGraceMarks} disabled={graceLoading || !graceForm.grace_marks || !graceForm.grace_marks_note} className="bg-orange-500 hover:bg-orange-600 text-white">
+              {graceLoading ? "Applying..." : "Apply Grace Marks"}
             </Button>
           </DialogFooter>
         </DialogContent>

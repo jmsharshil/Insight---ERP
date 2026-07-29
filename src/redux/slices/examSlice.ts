@@ -19,6 +19,10 @@ export interface Exam {
   faculty_name?: string | null;
   selected_papers?: any[];
   created_at?: string;
+  questions_count?: number;
+  grace_marks?: number;
+  grace_marks_note?: string;
+  answer_key?: string | null;
   [key: string]: any;
 }
 
