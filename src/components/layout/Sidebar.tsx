@@ -65,6 +65,14 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
   const expanded = mobile || pinned || hovered;
   const role = user ? ROLES[user.role as keyof typeof ROLES] : null;
   let rawModules = user?.accessible_modules || role?.modules || [];
+  if (typeof rawModules === "string") {
+    try {
+      rawModules = JSON.parse(rawModules);
+    } catch {
+      rawModules = (rawModules as string).split(",").map((s) => s.trim()).filter(Boolean);
+    }
+  }
+  if (!Array.isArray(rawModules)) rawModules = [];
   
   // Force dashboard for all roles (override backend module list if needed)
   if (!rawModules.includes("dashboard")) {
@@ -76,8 +84,9 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
     rawModules = [...rawModules, "attendance"];
   }
 
-  const modules = rawModules.includes("notifications") ? rawModules : [...rawModules, "notifications"];
-  const items = modules.map((m) => ({ id: m, ...NAV_ITEMS[m] })).filter((item) => item.label);
+  let modules = rawModules.includes("notifications") ? rawModules : [...rawModules, "notifications"];
+  modules = modules.includes("support") ? modules : [...modules, "support"];
+  const items = modules.map((m) => ({ id: m, ...NAV_ITEMS[m as import('@/types/role.types').ModuleId] })).filter((item) => item?.label);
 
   return (
     <aside

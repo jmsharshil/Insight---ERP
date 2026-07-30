@@ -121,6 +121,7 @@ const ALL_MODULES = [
   { id: "payroll", label: "Payroll" },
   { id: "settings", label: "Settings" },
   { id: "users", label: "Users" },
+  { id: "support", label: "Support" },
 ];
 
 /* ─── Column definitions ────────────────────────────────────── */

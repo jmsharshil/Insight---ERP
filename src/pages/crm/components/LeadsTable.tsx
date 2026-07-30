@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight, Eye, MoreHorizontal, RefreshCw, UserCheck } from "lucide-react";
+import { ChevronRight, Eye, MoreHorizontal, RefreshCw, UserCheck, ArrowRightLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,6 +14,7 @@ import { LEAD_STATUS_META, COURSE_LABELS, type LeadStatus } from "@/constants/du
 import { APILead } from "@/types/crm";
 import { formatDate, cn } from "@/lib/utils";
 import AssignLeadDialog from "./AssignLeadDialog";
+import TransferRequestDialog from "./TransferRequestDialog";
 import { useAuth } from "@/hooks/useAuth";
 
 interface LeadsTableProps {
@@ -29,6 +30,7 @@ export default function LeadsTable({ leads, onView, onChangeStage, onAssignSucce
   const canReassign = ["sales_senior_executive", "branch_manager", "super_admin"].includes(user?.role || "");
 
   const [assignLead, setAssignLead] = useState<APILead | null>(null);
+  const [transferLead, setTransferLead] = useState<APILead | null>(null);
 
   const cols: DataTableColumn<APILead>[] = [
     {
@@ -64,16 +66,29 @@ export default function LeadsTable({ leads, onView, onChangeStage, onAssignSucce
       render: (r) => {
         const meta = LEAD_STATUS_META[r.current_stage as LeadStatus];
         if (!meta) return r.current_stage;
+        
+        let temperatureTag = null;
+        if (r.current_stage === "interested") {
+          temperatureTag = <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 uppercase tracking-wider">🔥 Hot</span>;
+        } else if (["visit", "visited", "follow_up"].includes(r.current_stage)) {
+          temperatureTag = <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider">🌡️ Warm</span>;
+        } else if (r.current_stage === "lost") {
+          temperatureTag = <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 uppercase tracking-wider">🧊 Cold</span>;
+        }
+
         return (
-          <span
-            className={cn(
-              "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
-              meta.bg,
-              meta.color,
-            )}
-          >
-            {meta.label}
-          </span>
+          <div className="flex items-center">
+            <span
+              className={cn(
+                "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
+                meta.bg,
+                meta.color,
+              )}
+            >
+              {meta.label}
+            </span>
+            {temperatureTag}
+          </div>
         );
       },
     },
@@ -136,6 +151,18 @@ export default function LeadsTable({ leads, onView, onChangeStage, onAssignSucce
             <Eye className="w-3.5 h-3.5" />
           </Button>
 
+          {user?.role === "tele_caller" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1 h-8 text-xs px-2.5"
+              onClick={() => setTransferLead(r)}
+              title="Request Transfer to Counsellor"
+            >
+              <ArrowRightLeft className="w-3 h-3" />
+              Transfer
+            </Button>
+          )}
 
           {onChangeStage && (
             <DropdownMenu>
@@ -184,6 +211,18 @@ export default function LeadsTable({ leads, onView, onChangeStage, onAssignSucce
         onSuccess={(lead, assignedToName) => {
           setAssignLead(null);
           if (onAssignSuccess) onAssignSuccess(lead, assignedToName);
+        }}
+      />
+
+      {/* Transfer Request Dialog */}
+      <TransferRequestDialog
+        lead={transferLead}
+        open={!!transferLead}
+        onOpenChange={(open) => {
+          if (!open) setTransferLead(null);
+        }}
+        onSuccess={() => {
+          setTransferLead(null);
         }}
       />
     </>

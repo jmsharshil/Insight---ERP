@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
-import { Search, RefreshCw, Filter, CheckCircle2, XCircle, Pencil, Trash2, Users, FileText, Clock, AlertCircle, MessageSquare } from "lucide-react";
+import { Search, RefreshCw, Filter, CheckCircle2, XCircle, Pencil, Trash2, Users, FileText, Clock, AlertCircle, MessageSquare, Info } from "lucide-react";
 import { format } from "date-fns";
 
 import { examActions } from "@/redux/actions";
@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { useAuth } from "@/hooks/useAuth";
+import type { RootState } from "@/store";
 
 interface PapersTabProps {
   examId: string;
@@ -27,6 +28,8 @@ export default function PapersTab({ examId }: PapersTabProps) {
   const toast = useToast();
   const { user } = useAuth();
   const isSuperAdmin = user?.role === "super_admin";
+  const { exams, selectedExam } = useSelector((s: RootState) => s.exams);
+  const currentExam = selectedExam?.id === examId ? selectedExam : exams.find((e: any) => e.id === examId);
 
   const [papers, setPapers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -676,6 +679,18 @@ export default function PapersTab({ examId }: PapersTabProps) {
                 </div>
               </div>
             </div>
+
+            {currentExam?.grace_marks ? (
+              <div className="bg-blue-50/50 border border-blue-200 rounded-lg p-3 flex gap-2 text-sm text-blue-800">
+                <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold">Grace Marks Policy:</span> {currentExam.grace_marks} marks
+                  {currentExam.grace_marks_note && (
+                    <p className="text-xs text-blue-600/80 mt-0.5">{currentExam.grace_marks_note}</p>
+                  )}
+                </div>
+              </div>
+            ) : null}
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">

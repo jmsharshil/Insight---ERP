@@ -36,7 +36,7 @@ import {
   Paperclip,
   Pencil,
   Send,
-  Trash2, X
+  Trash2, X, Reply
 } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import CreateChatModal from "./CreateChatModal";
@@ -98,6 +98,7 @@ export default function ChatPage() {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [editingMessage, setEditingMessage] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+  const [replyToMessage, setReplyToMessage] = useState<ChatMessage | null>(null);
 
   // Typing debounce refs
   const lastTypingSentRef = useRef<number>(0);
@@ -129,6 +130,7 @@ export default function ChatPage() {
     setTargetUsers([]);
     setShowMentionPopover(false);
     setMentionQuery("");
+    setReplyToMessage(null);
   }, [activeId]);
 
   // ── Fetch faculty participants for group rooms (for @mention) ──────────────
@@ -572,7 +574,7 @@ export default function ChatPage() {
           file_url: data.file_url,
           file_name: data.file_name,
           file_size: data.file_size
-        }, targetUsers.map(u => u.id));
+        }, targetUsers.map(u => u.id), replyToMessage?.id);
 
         // Clean up temp tracking after timeout
         setTimeout(() => {
@@ -582,6 +584,7 @@ export default function ChatPage() {
         setDraft("");
         setTargetUsers([]);
         setSelectedFile(null);
+        setReplyToMessage(null);
       } catch (err: any) {
         console.error("Upload error", err);
         toast.error(err?.response?.data?.message || "Failed to upload file");
@@ -617,8 +620,9 @@ export default function ChatPage() {
     setMessages(prev => ({ ...prev, [activeId]: [...(prev[activeId] || []), m] }));
 
     // Send via WebSocket for real-time delivery
-    wsSendMessage(content, undefined, targetUsers.map(u => u.id));
+    wsSendMessage(content, undefined, targetUsers.map(u => u.id), replyToMessage?.id);
     setTargetUsers([]);
+    setReplyToMessage(null);
 
     // Fallback: if WS doesn't echo back in 8 seconds, remove from pending
     setTimeout(() => {
@@ -952,7 +956,10 @@ export default function ChatPage() {
                                 <div className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 font-medium mb-1">
                                   <Lock className="w-2.5 h-2.5" />
                                   <span>
-                                    {own ? `Private to ${m.targets!.map(t => t.full_name).join(", ")}` : `Private from ${m.senderName}`}
+                                    {own 
+                                      ? `Private to ${m.targets!.map(t => t.id === user?.id ? "you" : t.full_name).join(", ")}` 
+                                      : `Private from ${m.senderName} to ${m.targets!.map(t => t.id === user?.id ? "you" : t.full_name).join(", ")}`
+                                    }
                                   </span>
                                 </div>
                               )}
@@ -1037,27 +1044,49 @@ export default function ChatPage() {
                                           ? <CheckCheck className="w-[14px] h-[14px] opacity-70" />
                                           : <Check className="w-[14px] h-[14px] opacity-70" />
                                     )}
+                                    {!m.isDeleted && !isEditing && !m.id.startsWith("temp-") && (
+                                      <button 
+                                        onClick={() => {
+                                          setReplyToMessage(m);
+                                          if (m.senderId !== user?.id) {
+                                            // Auto-target the sender when replying
+                                            setTargetUsers(prev => {
+                                              if (prev.some(u => u.id === m.senderId)) return prev;
+                                              return [...prev, { id: m.senderId, full_name: m.senderName }];
+                                            });
+                                          }
+                                        }}
+                                        className="ml-1.5 opacity-60 hover:opacity-100 hover:text-primary transition-opacity p-0.5 rounded-sm"
+                                        title="Reply"
+                                      >
+                                        <Reply className="w-[14px] h-[14px]" />
+                                      </button>
+                                    )}
                                   </div>
                                 </>
                               )}
 
-                              {/* Hover action buttons for own messages */}
+                              {/* Hover action buttons (Edit/Delete) */}
                               {own && !m.isDeleted && !isEditing && !m.id.startsWith("temp-") && (
-                                <div className="absolute -top-3 right-1 hidden group-hover:flex items-center gap-0.5 bg-card border border-border rounded-lg shadow-sm px-1 py-0.5">
-                                  <button
-                                    onClick={() => handleStartEdit(m)}
-                                    className="p-1 rounded hover:bg-muted/60 transition-colors"
-                                    title="Edit message"
-                                  >
-                                    <Pencil className="w-3 h-3 text-muted-foreground" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDelete(m.id)}
-                                    className="p-1 rounded hover:bg-destructive/10 transition-colors"
-                                    title="Delete message"
-                                  >
-                                    <Trash2 className="w-3 h-3 text-destructive" />
-                                  </button>
+                                <div className={`absolute -top-3 hidden group-hover:flex items-center gap-0.5 bg-card border border-border rounded-lg shadow-sm px-1 py-0.5 right-1`}>
+                                  {own && (
+                                    <>
+                                      <button
+                                        onClick={() => handleStartEdit(m)}
+                                        className="p-1 rounded hover:bg-muted/60 transition-colors"
+                                        title="Edit message"
+                                      >
+                                        <Pencil className="w-3 h-3 text-muted-foreground" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDelete(m.id)}
+                                        className="p-1 rounded hover:bg-destructive/10 transition-colors"
+                                        title="Delete message"
+                                      >
+                                        <Trash2 className="w-3 h-3 text-destructive" />
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -1105,6 +1134,19 @@ export default function ChatPage() {
 
                 {/* ── Input area ─────────────────────────────────────────── */}
                 <div className="p-3 border-t border-border flex flex-col gap-2">
+                  {/* Reply banner */}
+                  {replyToMessage && (
+                    <div className="flex items-center justify-between p-2.5 bg-muted/50 rounded-lg border border-border text-sm">
+                      <div className="flex flex-col truncate pr-4 border-l-2 border-primary pl-3">
+                        <span className="font-semibold text-primary text-xs">Replying to {replyToMessage.senderName}</span>
+                        <span className="text-muted-foreground truncate">{replyToMessage.content || (replyToMessage.fileUrl ? "Attachment" : "Message")}</span>
+                      </div>
+                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive shrink-0" onClick={() => setReplyToMessage(null)}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+
                   {/* Target user chips */}
                   {targetUsers.length > 0 && (
                     <div className="flex flex-wrap gap-2">
@@ -1190,8 +1232,8 @@ export default function ChatPage() {
                       )}
                     </AnimatePresence>
 
-                    <input type="file" className="hidden" ref={fileInputRef} onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} />
-                    <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} aria-label="Attach file" className={selectedFile ? "text-primary bg-primary/10" : ""}>
+                    <input type="file" className="hidden" ref={fileInputRef} onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} disabled={isFaculty && !replyToMessage} />
+                    <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} aria-label="Attach file" className={selectedFile ? "text-primary bg-primary/10" : ""} disabled={isFaculty && !replyToMessage}>
                       <Paperclip className="w-5 h-5" />
                     </Button>
                     <Textarea ref={textareaRef} value={draft} onChange={e => handleDraftChange(e.target.value)}
@@ -1199,9 +1241,10 @@ export default function ChatPage() {
                         if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
                         if (e.key === "Escape" && showMentionPopover) { setShowMentionPopover(false); }
                       }}
-                      placeholder={targetUsers.length > 0 ? `Private message to ${targetUsers.length} selected...` : selectedFile ? "Add a caption..." : active?.type === "group" ? "Type a message... (@ to mention faculty private msg)" : "Type a message..."}
+                      disabled={isFaculty && !replyToMessage}
+                      placeholder={isFaculty && !replyToMessage ? "Select a message to reply (Faculty can only reply)" : targetUsers.length > 0 ? `Private message to ${targetUsers.length} selected...` : selectedFile ? "Add a caption..." : active?.type === "group" ? "Type a message... (@ to mention faculty private msg)" : "Type a message..."}
                       rows={1} className="resize-none min-h-10 py-2.5 bg-surface" />
-                    <Button onClick={send} disabled={(!draft.trim() && !selectedFile) || isUploading} aria-label="Send" className="h-10 px-4">
+                    <Button onClick={send} disabled={(!draft.trim() && !selectedFile) || isUploading || (isFaculty && !replyToMessage)} aria-label="Send" className="h-10 px-4">
                       {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </Button>
                   </div>

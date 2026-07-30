@@ -5,6 +5,9 @@ import StatCard from "@/components/common/StatCard";
 import { useAuth } from "@/hooks/useAuth";
 import { useUI } from "@/hooks/useUI";
 import { greeting } from "@/lib/utils";
+import { NotificationPopup } from "./NotificationPopup";
+
+import { useLocation } from "react-router-dom";
 
 export interface StatItem {
   title: string;
@@ -24,6 +27,7 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ pageTitle, stats, children }: DashboardLayoutProps) {
   const { user } = useAuth();
   const { setPageTitle } = useUI();
+  const location = useLocation();
 
   useEffect(() => {
     setPageTitle(pageTitle);
@@ -44,13 +48,15 @@ export default function DashboardLayout({ pageTitle, stats, children }: Dashboar
         </p> */}
       </motion.div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {stats.map((s, i) => (
           <StatCard key={s.title} {...s} index={i} />
         ))}
       </div>
 
       {children}
+      
+      {location.pathname === "/dashboard" && <NotificationPopup />}
     </div>
   );
 }

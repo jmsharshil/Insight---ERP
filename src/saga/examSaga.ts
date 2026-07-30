@@ -34,4 +34,6 @@ export function* watchExamSaga() {
   yield takeLatest(examActions.GET_RECHECK_REQUESTS, genericSaga);
   yield takeLatest(examActions.RECHECK_REQUEST_ACTION, genericSaga);
   yield takeLatest(examActions.IMPORT_QUESTIONS, genericSaga);
+  yield takeLatest(examActions.ADD_GRACE_MARKS, genericSaga);
+  yield takeLatest(examActions.UPLOAD_MATERIALS, genericSaga);
 }

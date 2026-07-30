@@ -46,12 +46,18 @@ export default function BalancesTab() {
     dispatch({
       type: dropdownActions.GET_DROPDOWN,
       method: "GET",
-      endPoint: "/api/v1/batches/dropdowns/",
+      endPoint: API.USERS.LIST,
       auth: true,
       getResponse: (res: any) => {
-        const data = res?.data || res;
-        if (data?.staff)     setStaffList(data.staff);
-        if (data?.employees) setStaffList(data.employees);
+        const raw = res?.data?.results || res?.results || res?.data || res || [];
+        const users = Array.isArray(raw) ? raw : [];
+        const filtered = users.filter((u: any) => 
+          !["super_admin", "student", "parent", "parents"].includes(u.role)
+        );
+        setStaffList(filtered.map((u: any) => ({
+          id: u.id,
+          name: u.full_name || u.name || `${u.first_name || ""} ${u.last_name || ""}`.trim() || u.username || u.email
+        })));
       },
       getError: () => {},
     });
@@ -140,25 +146,21 @@ export default function BalancesTab() {
         <div className="border border-border rounded-lg p-4 space-y-4">
           <h3 className="text-sm font-semibold">Look Up Staff Balance</h3>
           <div className="flex items-end gap-3 flex-wrap">
-{staffList.length > 0 ? (
-              <div>
-                <Label className="text-xs mb-1 block">Staff Member</Label>
-                <Select value={lookupUserId} onValueChange={setLookupUserId}>
-                  <SelectTrigger className="h-9 text-sm w-64">
-                    <SelectValue placeholder="Select staff member" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {staffList.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : (
-              <div>
-                <Label className="text-xs mb-1 block">Staff User UUID</Label>
-                <Input value={lookupUserId} onChange={e => setLookupUserId(e.target.value)}
-                  placeholder="user-uuid" className="h-9 text-sm font-mono w-72" />
-              </div>
-            )}
+            <div>
+              <Label className="text-xs mb-1 block">Staff Member</Label>
+              <Select value={lookupUserId} onValueChange={setLookupUserId}>
+                <SelectTrigger className="h-9 text-sm w-64 bg-white">
+                  <SelectValue placeholder="Select staff member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {staffList.length > 0 ? (
+                    staffList.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)
+                  ) : (
+                    <div className="text-xs text-muted-foreground p-2 text-center">Loading...</div>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <Label className="text-xs mb-1 block">Year</Label>
               <Input type="number" min="0" value={lookupYear} onChange={e => setLookupYear(e.target.value)}

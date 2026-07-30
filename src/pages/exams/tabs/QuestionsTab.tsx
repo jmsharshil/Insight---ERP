@@ -1,10 +1,10 @@
 import { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
-import { Plus, Trash2, Pencil, CheckCircle2, Circle, X, FileText, Database, Search } from "lucide-react";
+import { Plus, Trash2, Pencil, CheckCircle2, Circle, X, FileText, Database, Search, Upload } from "lucide-react";
 import { examActions, subjectAction } from "@/redux/actions";
 import { API } from "@/service/api";
-import { setQuestions, setQuestionsLoading, updateQuestion, removeQuestion } from "@/redux/slices/examSlice";
+import { setQuestions, setQuestionsLoading, updateQuestion, removeQuestion, updateExamInList } from "@/redux/slices/examSlice";
 import type { Question } from "@/redux/slices/examSlice";
 import type { RootState } from "@/store";
 import { useToast } from "@/hooks/useToast";
@@ -75,6 +75,10 @@ export default function QuestionsTab({ examId }: QuestionsTabProps) {
   const [selectedBankQuestionIds, setSelectedBankQuestionIds] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadForm, setUploadForm] = useState<{ answer_key: File | null; question_paper: File | null; no_of_questions: string }>({ answer_key: null, question_paper: null, no_of_questions: "" });
 
   const canManage = user && ["super_admin", "branch_manager", "admin", "faculty"].includes(user.role ?? "");
   const isPaperBased = currentExam?.exam_mode === "offline" || (currentExam?.exam_mode === "online" && currentExam?.exam_type === "subjective");
@@ -364,6 +368,49 @@ export default function QuestionsTab({ examId }: QuestionsTabProps) {
     });
   };
 
+  const handleUploadMaterials = () => {
+    if (!uploadForm.answer_key && !uploadForm.question_paper) {
+      toast.error("Please select at least one file to upload.");
+      return;
+    }
+    const formData = new FormData();
+    if (uploadForm.answer_key) formData.append("answer_key", uploadForm.answer_key);
+    if (uploadForm.question_paper) formData.append("question_paper", uploadForm.question_paper);
+    if (uploadForm.no_of_questions) formData.append("no_of_questions", uploadForm.no_of_questions);
+
+    dispatch({
+      type: examActions.UPLOAD_MATERIALS,
+      method: "POST",
+      endPoint: `/api/v1/exams/${examId}/upload-materials/`,
+      body: formData,
+      auth: true,
+      setLoading: (v: boolean) => setUploadLoading(v),
+      getResponse: (res: any) => {
+        if (res?.success) {
+          toast.success(res.message || "Materials uploaded successfully.");
+          setUploadOpen(false);
+          setUploadForm({ answer_key: null, question_paper: null, no_of_questions: "" });
+          
+          dispatch({
+            type: examActions.GET_EXAM_DETAIL,
+            method: "GET",
+            endPoint: API.EXAMS.DETAIL(examId),
+            auth: true,
+            getResponse: (detailRes: any) => {
+              const data = detailRes?.data || detailRes;
+              if (data && data.id) {
+                dispatch(updateExamInList(data));
+              }
+            }
+          });
+        } else {
+          toast.error("Failed to upload materials.");
+        }
+      },
+      getError: (err: any) => toast.error(err?.response?.data?.message || "Failed to upload materials"),
+    } as any);
+  };
+
   return (
     <div className="space-y-4">
       {!isPaperBased && (
@@ -384,11 +431,25 @@ export default function QuestionsTab({ examId }: QuestionsTabProps) {
         </div>
       )}
 
-      {currentExam?.selected_papers && currentExam.selected_papers.length > 0 && (
+      {isPaperBased && (
+        <div className="flex items-center justify-between bg-muted/20 p-4 rounded-xl border border-border">
+          <div>
+            <Label className="text-xs font-bold text-foreground">Paper-based / Subjective Exam</Label>
+            <p className="text-xs text-muted-foreground mt-1">This exam doesn't require digital questions. You can upload physical materials instead.</p>
+          </div>
+          {canManage && (
+            <Button onClick={() => setUploadOpen(true)} className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm gap-1.5">
+              <Upload className="w-3.5 h-3.5" /> Upload Materials
+            </Button>
+          )}
+        </div>
+      )}
+
+      {((currentExam?.selected_papers?.length ?? 0) > 0 || currentExam?.answer_key) && (
         <div className="bg-blue-50/50 border border-blue-200 p-4 rounded-xl space-y-3 mb-4">
-          <Label className="text-xs font-bold text-blue-800 uppercase tracking-wider block">Attached Question Papers</Label>
+          <Label className="text-xs font-bold text-blue-800 uppercase tracking-wider block">Attached Exam Materials</Label>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {currentExam.selected_papers.map((paper: any) => {
+            {currentExam?.selected_papers?.map((paper: any) => {
               const p = typeof paper === "string" ? { id: paper, set_name: `Paper ${paper.substring(0, 5)}...`, file: "#" } : paper;
               const fileUrl = p.file || p.file_url || "#";
               return (
@@ -409,6 +470,23 @@ export default function QuestionsTab({ examId }: QuestionsTabProps) {
                 </a>
               );
             })}
+            
+            {currentExam?.answer_key && (
+              <a
+                href={currentExam.answer_key}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-3 p-3 bg-white rounded border border-green-200 hover:border-green-300 transition-colors shadow-sm"
+              >
+                <div className="w-8 h-8 rounded bg-green-100 flex items-center justify-center shrink-0">
+                  <FileText className="w-4 h-4 text-green-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-green-900 truncate">Answer Key</p>
+                  <p className="text-[10px] text-green-600/70 truncate">View Document</p>
+                </div>
+              </a>
+            )}
           </div>
         </div>
       )}
@@ -924,6 +1002,37 @@ export default function QuestionsTab({ examId }: QuestionsTabProps) {
             <Button variant="outline" onClick={() => setImportOpen(false)} disabled={importing}>Cancel</Button>
             <Button onClick={handleImport} disabled={importing || selectedBankQuestionIds.length === 0} className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[120px]">
               {importing ? "Importing…" : `Import ${selectedBankQuestionIds.length} Question(s)`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload Materials Dialog */}
+      <Dialog open={uploadOpen} onOpenChange={o => { setUploadOpen(o); if (!o) setUploadForm({ answer_key: null, question_paper: null, no_of_questions: "" }); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading">Upload Exam Materials</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label className="text-xs font-semibold">Question Paper</Label>
+              <Input type="file" onChange={e => setUploadForm(prev => ({ ...prev, question_paper: e.target.files?.[0] || null }))} className="text-sm mt-1" />
+              <p className="text-[10px] text-muted-foreground mt-1">Auto-creates a SubjectPaper and links it. Exam must have a subject assigned.</p>
+            </div>
+            <div>
+              <Label className="text-xs font-semibold">Answer Key</Label>
+              <Input type="file" onChange={e => setUploadForm(prev => ({ ...prev, answer_key: e.target.files?.[0] || null }))} className="text-sm mt-1" />
+              <p className="text-[10px] text-muted-foreground mt-1">Visible to students for 24h after result publishing.</p>
+            </div>
+            <div>
+              <Label className="text-xs font-semibold">Number of Questions (Optional)</Label>
+              <Input type="number" min={0} value={uploadForm.no_of_questions} onChange={e => setUploadForm(prev => ({ ...prev, no_of_questions: e.target.value }))} className="text-sm mt-1" placeholder="e.g. 10" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUploadOpen(false)} disabled={uploadLoading}>Cancel</Button>
+            <Button onClick={handleUploadMaterials} disabled={uploadLoading || (!uploadForm.answer_key && !uploadForm.question_paper)} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+              {uploadLoading ? "Uploading…" : "Upload"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -185,7 +185,7 @@ export default function AttendancePage() {
           {!hideMainTabs && <TabsTrigger value="history">History</TabsTrigger>}
           {!isParentOrStudent && !hideMainTabs && <TabsTrigger value="faculty">Staff</TabsTrigger>}
           {!isParentOrStudent && !hideMainTabs && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
-          {!isParentOrStudent && !hideMainTabs && <TabsTrigger value="defaulters">Defaulters</TabsTrigger>}
+          {/* {!isParentOrStudent && !hideMainTabs && <TabsTrigger value="defaulters">Defaulters</TabsTrigger>} */}
           {showViolations && <TabsTrigger value="violations">Violations</TabsTrigger>}
         </TabsList>
 

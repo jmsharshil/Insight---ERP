@@ -39,12 +39,28 @@ import ModulePlaceholder from "@/pages/ModulePlaceholder";
 export default function DashboardRouter() {
   const { user } = useAuth();
 
-  if (user?.role === "student") {
-    return <StudentDashboard />;
-  }
+  // if (!user) return null;
 
-  if (user?.role === "parents") {
-    return <ParentDashboard />;
+  // if (user.role === "student") {
+  //   return <StudentDashboard />;
+  // }
+
+  // if (user.role === "parents") {
+  //   return <ParentDashboard />;
+  // }
+  
+  // if (user.role === "super_admin") {
+  //   return <SuperAdminDashboard />;
+  // }
+  
+  // if (user.role === "faculty") {
+  //   // We render SuperAdminDashboard because we implemented the faculty layout there
+  //   return <SuperAdminDashboard />;
+  // }
+
+  const Dashboard = DASHBOARDS[user?.role as RoleId];
+  if (Dashboard) {
+    return <Dashboard />;
   }
 
   return <ModulePlaceholder title="Dashboard" />;
