@@ -365,30 +365,41 @@ export default function CRMPage() {
         <StatCard title="Total Leads" value={stats.total} icon={Users} />
         <StatCard title="New" value={stats.new} icon={UserPlus} />
         <StatCard title="Contacted" value={stats.contacted} icon={Phone} />
-        <StatCard 
-          title={<span className="flex items-center gap-1.5">Interested <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 uppercase tracking-wider leading-none">Cold</span></span>} 
-          value={stats.interested} 
-          icon={TrendingUp} 
-          iconBgClassName="bg-blue-100" 
-          iconClassName="text-blue-700" 
+        <StatCard
+          title={<span className="flex items-center gap-1.5">Interested <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 uppercase tracking-wider leading-none">🔥 Hot</span></span>}
+          value={stats.interested}
+          icon={TrendingUp}
+          iconBgClassName="bg-red-100"
+          iconClassName="text-red-700"
         />
-        <StatCard 
-          title={<span className="flex items-center gap-1.5">Visit <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider leading-none">Warm</span></span>} 
-          value={stats.visit} 
-          icon={MapPin} 
-          iconBgClassName="bg-amber-100" 
-          iconClassName="text-amber-700" 
+        <StatCard
+          title={<span className="flex items-center gap-1.5">Visit <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider leading-none">🌡️ Warm</span></span>}
+          value={stats.visit}
+          icon={MapPin}
+          iconBgClassName="bg-amber-100"
+          iconClassName="text-amber-700"
         />
-        <StatCard 
-          title={<span className="flex items-center gap-1.5">Visited <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 uppercase tracking-wider leading-none">Hot</span></span>} 
-          value={stats.visited} 
-          icon={CheckCircle2} 
-          iconBgClassName="bg-red-100" 
-          iconClassName="text-red-700" 
+        <StatCard
+          title={<span className="flex items-center gap-1.5">Visited <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider leading-none">🌡️ Warm</span></span>}
+          value={stats.visited}
+          icon={CheckCircle2}
+          iconBgClassName="bg-amber-100"
+          iconClassName="text-amber-700"
         />
-        <StatCard title="Follow Up" value={stats.follow_up} icon={Clock} />
+        <StatCard
+          title={<span className="flex items-center gap-1.5">Follow Up <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider leading-none">🌡️ Warm</span></span>}
+          value={stats.follow_up}
+          icon={Clock}
+          iconBgClassName="bg-amber-100"
+          iconClassName="text-amber-700"
+        />
         <StatCard title="Converted" value={stats.converted} icon={CheckCircle2} trendType="up" />
-        <StatCard title="Lost" value={stats.lost} icon={XCircle} trendType="down" />
+        <StatCard
+          title={<span className="flex items-center gap-1.5">Lost <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 uppercase tracking-wider leading-none">🧊 Cold</span></span>}
+          value={stats.lost}
+          icon={XCircle}
+          trendType="down"
+        />
       </div>
 
       {/* ─── Tabs ────────────────────────────────────────────── */}

@@ -123,6 +123,15 @@ export default function KanbanBoard({ leads, leadsLoading, stages, onDragEnd, on
                     style={{ backgroundColor: colors.accent }}
                   />
                   <span className="font-heading font-semibold text-sm">{meta?.label || stage}</span>
+                  {stage === "interested" && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 uppercase tracking-wider leading-none">🔥 Hot</span>
+                  )}
+                  {["visit", "visited", "follow_up"].includes(stage) && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider leading-none">🌡️ Warm</span>
+                  )}
+                  {stage === "lost" && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 uppercase tracking-wider leading-none">🧊 Cold</span>
+                  )}
                 </div>
                 <span
                   className="text-xs font-bold px-2 py-0.5 rounded-full"

@@ -138,7 +138,7 @@ export default function ReviewTransferDialog({
             Review Transfer Request
           </DialogTitle>
           <DialogDescription>
-            {request?.requested_by} requested to transfer{" "}
+            {request?.requested_by_name} requested to transfer{" "}
             <span className="font-semibold text-foreground">
               {request?.lead_name || `Lead #${request?.lead_id}`}
             </span>{" "}
