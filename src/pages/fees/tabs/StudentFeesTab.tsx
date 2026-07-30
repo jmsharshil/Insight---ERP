@@ -124,7 +124,7 @@ export default function StudentFeesTab({
                 ))}
               </SelectContent>
             </Select>
-            <div className="flex items-center gap-2 w-full sm:w-auto bg-card rounded-md border shadow-sm p-1">
+            {/* <div className="flex items-center gap-2 w-full sm:w-auto bg-card rounded-md border shadow-sm p-1">
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -186,7 +186,7 @@ export default function StudentFeesTab({
                   <X className="h-3.5 w-3.5" />
                 </Button>
               )}
-            </div>
+            </div> */}
             <Select value={localSfStatus} onValueChange={setLocalSfStatus}>
               <SelectTrigger className="w-full sm:w-40 h-9">
                 <SelectValue placeholder="All Statuses" />
