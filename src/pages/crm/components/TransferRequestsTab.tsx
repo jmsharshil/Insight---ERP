@@ -68,6 +68,18 @@ export default function TransferRequestsTab() {
       ),
     },
     {
+      key: "assigned_to_name" as keyof LeadTransferRequest,
+      header: "Transfer To",
+      render: (r) =>
+        r.assigned_to_name ? (
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+            {r.assigned_to_name}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        ),
+    },
+    {
       key: "reason",
       header: "Reason",
       render: (r) => (

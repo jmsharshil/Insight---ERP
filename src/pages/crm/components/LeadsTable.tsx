@@ -69,11 +69,11 @@ export default function LeadsTable({ leads, onView, onChangeStage, onAssignSucce
         
         let temperatureTag = null;
         if (r.current_stage === "interested") {
-          temperatureTag = <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 uppercase tracking-wider">Cold</span>;
-        } else if (r.current_stage === "visit") {
-          temperatureTag = <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider">Warm</span>;
-        } else if (r.current_stage === "visited") {
-          temperatureTag = <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 uppercase tracking-wider">Hot</span>;
+          temperatureTag = <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 uppercase tracking-wider">🔥 Hot</span>;
+        } else if (["visit", "visited", "follow_up"].includes(r.current_stage)) {
+          temperatureTag = <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider">🌡️ Warm</span>;
+        } else if (r.current_stage === "lost") {
+          temperatureTag = <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 uppercase tracking-wider">🧊 Cold</span>;
         }
 
         return (
