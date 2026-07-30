@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Plus, Trash2, Pencil, CheckCircle2, Circle, X, FileText, Database, Search, Upload } from "lucide-react";
 import { examActions, subjectAction } from "@/redux/actions";
 import { API } from "@/service/api";
-import { setQuestions, setQuestionsLoading, updateQuestion, removeQuestion } from "@/redux/slices/examSlice";
+import { setQuestions, setQuestionsLoading, updateQuestion, removeQuestion, updateExamInList } from "@/redux/slices/examSlice";
 import type { Question } from "@/redux/slices/examSlice";
 import type { RootState } from "@/store";
 import { useToast } from "@/hooks/useToast";
@@ -390,6 +390,19 @@ export default function QuestionsTab({ examId }: QuestionsTabProps) {
           toast.success(res.message || "Materials uploaded successfully.");
           setUploadOpen(false);
           setUploadForm({ answer_key: null, question_paper: null, no_of_questions: "" });
+          
+          dispatch({
+            type: examActions.GET_EXAM_DETAIL,
+            method: "GET",
+            endPoint: API.EXAMS.DETAIL(examId),
+            auth: true,
+            getResponse: (detailRes: any) => {
+              const data = detailRes?.data || detailRes;
+              if (data && data.id) {
+                dispatch(updateExamInList(data));
+              }
+            }
+          });
         } else {
           toast.error("Failed to upload materials.");
         }

@@ -90,7 +90,7 @@ export function NotificationPopup() {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden flex flex-col shadow-xl gap-0 rounded-xl">
+      <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden flex flex-col shadow-xl gap-0 rounded-xl">
         <VisuallyHidden>
           <DialogTitle>Unread Notifications</DialogTitle>
         </VisuallyHidden>
@@ -107,13 +107,12 @@ export function NotificationPopup() {
           </div>
         </div>
 
-        <ScrollArea className="flex-1 max-h-[60vh] bg-background">
-          <div className="p-2 space-y-1">
+        <div className="flex-1 max-h-[60vh] overflow-y-auto bg-background p-2 space-y-1 custom-scrollbar">
             {notifications.map((notif) => (
               <div 
                 key={notif.id}
                 onClick={() => handleNotificationClick(notif.route)}
-                className={`flex gap-3 p-2.5 rounded-lg transition-colors ${notif.route ? 'cursor-pointer hover:bg-muted/60' : ''}`}
+                className={`flex gap-3 p-3 rounded-lg transition-colors ${notif.route ? 'cursor-pointer hover:bg-muted/60' : 'hover:bg-muted/40'}`}
               >
                 <div className="flex-shrink-0 mt-0.5">
                   <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
@@ -122,24 +121,23 @@ export function NotificationPopup() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start gap-2">
-                    <h4 className="font-medium text-sm truncate">{notif.title}</h4>
-                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                    <h4 className="font-medium text-sm text-foreground">{notif.title}</h4>
+                    <span className="text-[10px] text-muted-foreground whitespace-nowrap pt-0.5">
                       {format(new Date(notif.created_at), "MMM d, HH:mm")}
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5 leading-snug">
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed whitespace-normal break-words">
                     {notif.body}
                   </p>
                   {notif.data?.is_targeted && (
-                    <Badge variant="outline" className="mt-1.5 text-[9px] uppercase tracking-wider bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800 px-1.5 py-0">
+                    <Badge variant="outline" className="mt-2 text-[9px] uppercase tracking-wider bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800 px-1.5 py-0">
                       Targeted
                     </Badge>
                   )}
                 </div>
               </div>
             ))}
-          </div>
-        </ScrollArea>
+        </div>
 
         <div className="p-3 border-t border-border bg-muted/20 shrink-0">
           <Button variant="outline" size="sm" onClick={() => handleClose(false)} className="w-full text-xs font-medium">

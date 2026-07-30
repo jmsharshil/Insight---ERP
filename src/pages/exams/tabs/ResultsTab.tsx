@@ -283,7 +283,7 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
       </motion.div>
 
       {/* Answer Key Distribution — admin/faculty only */}
-      {canDistribute && (
+      {/* {canDistribute && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -313,7 +313,7 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
             </Button>
           </div>
         </motion.div>
-      )}
+      )} */}
 
       {/* Admin / Faculty / Paper Checker Results List */}
       {(isAdmin || isFaculty || isPaperChecker) && (

@@ -649,7 +649,7 @@ export default function SlotForm({
 
             <Field label="Exam Mode" required={needsExam}>
               <Controller name="exam_mode" control={control} render={({ field }) => (
-                <Select value={field.value || "offline"} onValueChange={field.onChange}>
+                <Select value={field.value || "offline"} onValueChange={field.onChange} disabled={watch("exam_type") === "subjective"}>
                   <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="offline">Offline</SelectItem>
