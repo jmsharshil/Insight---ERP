@@ -13,6 +13,7 @@ import SummaryTab from "./tabs/SummaryTab";
 import SubjectWiseTab from "./tabs/SubjectWiseTab";
 import FacultyWiseTab from "./tabs/FacultyWiseTab";
 import BatchWiseTab from "./tabs/BatchWiseTab";
+import DelayFlowTab from "./tabs/DelayFlowTab";
 
 export default function ResultsPage() {
   const { setPageTitle } = useUI();
@@ -84,6 +85,12 @@ export default function ResultsPage() {
               >
                 Batch-Wise Results
               </TabsTrigger>
+              <TabsTrigger
+                value="delay-flow"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2 text-sm font-medium disabled:opacity-40"
+              >
+                Delay Flow
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -101,6 +108,10 @@ export default function ResultsPage() {
 
           <TabsContent value="batch-wise" className="mt-0 outline-none">
             <BatchWiseTab />
+          </TabsContent>
+
+          <TabsContent value="delay-flow" className="mt-0 outline-none">
+            <DelayFlowTab />
           </TabsContent>
         </Tabs>
       </motion.div>
