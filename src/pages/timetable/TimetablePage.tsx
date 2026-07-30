@@ -11,6 +11,13 @@ import { useToast } from "@/hooks/useToast";
 import { dropdownActions, subjectAction, batchAction, ClassroomAction, studentActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import type { AppDispatch, RootState } from "@/store";
+import { Button } from "@/components/ui/button";
+import { Download, Loader2, CalendarIcon } from "lucide-react";
+import { downloadExcel } from "@/lib/exportUtils";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
 // ── Tab Components ────────────────────────────────────────────────────────────
 import SlotsTab           from "./tabs/SlotsTab";
@@ -32,6 +39,8 @@ const DAY_TO_NUM: Record<string, string> = {
 
 type TabValue = typeof TABS[number]["value"];
 
+import { Input } from "@/components/ui/input";
+
 export default function TimetablePage() {
   const { setPageTitle } = useUI();
   const { user } = useAuth();
@@ -43,6 +52,47 @@ export default function TimetablePage() {
   const { students } = useSelector((state: RootState) => state.students);
   const [selectedLinkedStudentId, setSelectedLinkedStudentId] = useState<string | null>(null);
   const [studentDetail, setStudentDetail] = useState<any>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [slotFilters, setSlotFilters] = useState<Record<string, any>>({});
+  const [exportDateFrom, setExportDateFrom] = useState<Date>();
+  const [exportDateTo, setExportDateTo] = useState<Date>();
+
+  const handleExport = async () => {
+    if (!slotFilters.batch_id) {
+      toast.error("Please select a batch from the filters before exporting.");
+      return;
+    }
+    
+    setIsExporting(true);
+    try {
+      const payload: Record<string, any> = {
+        branch_id: user?.branch || "",
+        batch: slotFilters.batch_id || "",
+        faculty_id: slotFilters.faculty_id || "",
+        course_id: slotFilters.course_id || "",
+        session_type: slotFilters.session_type || "",
+        subject_id: slotFilters.subject_id || "",
+        day_of_week: slotFilters.day_of_week || "",
+        date_from: exportDateFrom ? format(exportDateFrom, "yyyy-MM-dd") : slotFilters.date_from || "",
+        date_to: exportDateTo ? format(exportDateTo, "yyyy-MM-dd") : slotFilters.date_to || "",
+      };
+
+      // Remove empty string fields to prevent "" is not a valid choice errors
+      Object.keys(payload).forEach((key) => {
+        if (payload[key] === "") {
+          delete payload[key];
+        }
+      });
+
+      await downloadExcel("/api/v1/timetable/export/", payload, "timetable.xlsx", "GET");
+      toast.success("Timetable exported successfully");
+    } catch (err) {
+      console.log(err)
+      toast.error("Failed to export timetable");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   useEffect(() => {
     if (user?.linked_students && user.linked_students.length > 0 && !selectedLinkedStudentId) {
@@ -228,23 +278,76 @@ export default function TimetablePage() {
         title="Timetable"
         subtitle="Manage and view schedules, exams, and classes."
         actions={
-          isStudent && user?.linked_students && user.linked_students.length > 1 ? (
-            <Select value={selectedLinkedStudentId || ""} onValueChange={setSelectedLinkedStudentId}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Select Student" />
-              </SelectTrigger>
-              <SelectContent>
-                {user.linked_students.map((id) => {
-                  const stu = students?.find((s: any) => s.id === id);
-                  return (
-                    <SelectItem key={id} value={id}>
-                      {stu ? stu.full_name || stu.first_name : `Student (${id.slice(0, 4)})`}
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          ) : undefined
+          <div className="flex items-center gap-2">
+            {isStudent && user?.linked_students && user.linked_students.length > 1 && (
+              <Select value={selectedLinkedStudentId || ""} onValueChange={setSelectedLinkedStudentId}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Select Student" />
+                </SelectTrigger>
+                <SelectContent>
+                  {user.linked_students.map((id) => {
+                    const stu = students?.find((s: any) => s.id === id);
+                    return (
+                      <SelectItem key={id} value={id}>
+                        {stu ? stu.full_name || stu.first_name : `Student (${id.slice(0, 4)})`}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            )}
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "h-9 w-[135px] justify-start text-left font-medium text-xs px-3 shadow-sm",
+                      !exportDateFrom && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                    {exportDateFrom ? format(exportDateFrom, "MMM d, yyyy") : "From Date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={exportDateFrom}
+                    onSelect={setExportDateFrom}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "h-9 w-[135px] justify-start text-left font-medium text-xs px-3 shadow-sm",
+                      !exportDateTo && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                    {exportDateTo ? format(exportDateTo, "MMM d, yyyy") : "To Date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={exportDateTo}
+                    onSelect={setExportDateTo}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <Button variant="outline" onClick={handleExport} disabled={isExporting} className="shadow-sm">
+              {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+              Export Excel
+            </Button>
+          </div>
         }
       />
 
@@ -270,6 +373,7 @@ export default function TimetablePage() {
                paperCheckersList={paperCheckersList}
                defaultView="grid"
                studentDetail={studentDetail}
+               onFiltersChange={setSlotFilters}
             />
           </TabsContent>
 
@@ -285,6 +389,7 @@ export default function TimetablePage() {
               paperCheckersList={paperCheckersList}
               defaultView="list"
               studentDetail={studentDetail}
+              onFiltersChange={setSlotFilters}
             />
           </TabsContent>
 

@@ -1,28 +1,67 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
+import type { RootState } from "@/store";
 import { axiosRequest } from "@/service/axiosRequest";
 import SectionCard from "@/components/common/SectionCard";
 import { format } from "date-fns";
-import { Check, Clock, AlertTriangle, Calendar, User, Search, FileSearch } from "lucide-react";
+import { Check, Clock, AlertTriangle, Calendar, User, Search, FileSearch, FilterX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import EmptyState from "@/components/common/EmptyState";
 import { ReportsSkeleton } from "@/components/common/Skeletons";
 
 export default function DelayFlowTab() {
+  const { batches } = useSelector((state: RootState) => state.dropdowns);
+  
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Filters
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const [delayStatus, setDelayStatus] = useState<string>("all");
+  const [batchId, setBatchId] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [examStatus, setExamStatus] = useState<string>("all");
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [search]);
+
+  const clearFilters = () => {
+    setSearch("");
+    setDelayStatus("all");
+    setBatchId("all");
+    setDateFrom("");
+    setDateTo("");
+    setExamStatus("all");
+  };
 
   useEffect(() => {
     const fetchDelayFlow = async () => {
+      setLoading(true);
       try {
         const raw = localStorage.getItem("Insight_Login_Data");
         const token = raw ? JSON.parse(raw)?.access : "";
         const baseUrl = import.meta.env.VITE_APP_BASE_URL || "";
         
+        const params = new URLSearchParams();
+        if (debouncedSearch) params.append("search", debouncedSearch);
+        if (delayStatus !== "all") params.append("delay_status", delayStatus);
+        if (batchId !== "all") params.append("batch_id", batchId);
+        if (dateFrom) params.append("date_from", dateFrom);
+        if (dateTo) params.append("date_to", dateTo);
+        if (examStatus !== "all") params.append("exam_status", examStatus);
+
         const res = await axiosRequest({
           method: "GET",
-          url: `${baseUrl}/api/v1/results/delay-flow/`,
+          url: `${baseUrl}/api/v1/results/delay-flow/?${params.toString()}`,
           headers: { Authorization: `Bearer ${token}` },
         });
         
@@ -34,17 +73,7 @@ export default function DelayFlowTab() {
       }
     };
     fetchDelayFlow();
-  }, []);
-
-  const filteredData = useMemo(() => {
-    const q = search.toLowerCase();
-    return data.filter((r: any) => 
-      r.subject?.toLowerCase().includes(q) || 
-      r.name_of_paper_checker?.toLowerCase().includes(q) ||
-      r.cs_level_batch?.toLowerCase().includes(q) ||
-      r.chapters?.toLowerCase().includes(q)
-    );
-  }, [data, search]);
+  }, [debouncedSearch, delayStatus, batchId, dateFrom, dateTo, examStatus]);
 
   const getStages = (row: any) => [
     { 
@@ -167,28 +196,90 @@ export default function DelayFlowTab() {
   return (
     <SectionCard title="Paper Checking Delay Tracking">
       <div className="flex flex-col gap-6">
-        {/* Search Header */}
-        <div className="flex items-center justify-between gap-4">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search by subject, checker, or batch..." 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 bg-muted/30"
-            />
+        {/* Filters Header */}
+        <div className="flex flex-col gap-4 bg-muted/20 p-4 rounded-xl border border-border">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input 
+                placeholder="Search by subject, checker..." 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 bg-white"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground">
+                <FilterX className="w-4 h-4 mr-2" />
+                Clear Filters
+              </Button>
+              <Badge variant="outline" className="px-3 py-1 font-medium bg-white">
+                Total Tracking: {data.length}
+              </Badge>
+            </div>
           </div>
-          <Badge variant="outline" className="px-3 py-1 font-medium bg-muted/20">
-            Total Tracking: {filteredData.length}
-          </Badge>
+          
+          <div className="flex flex-wrap items-center gap-3">
+            <Select value={delayStatus} onValueChange={setDelayStatus}>
+              <SelectTrigger className="w-[160px] h-9 bg-white text-xs font-medium">
+                <SelectValue placeholder="Delay Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="LATE">Late / Delayed</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={batchId} onValueChange={setBatchId}>
+              <SelectTrigger className="w-[180px] h-9 bg-white text-xs font-medium">
+                <SelectValue placeholder="Select Batch" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Batches</SelectItem>
+                {batches?.map((b: any) => (
+                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={examStatus} onValueChange={setExamStatus}>
+              <SelectTrigger className="w-[180px] h-9 bg-white text-xs font-medium">
+                <SelectValue placeholder="Exam Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Exam Statuses</SelectItem>
+                <SelectItem value="results_published">Results Published</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex items-center gap-1.5 bg-white border border-border rounded-md px-2 h-9 shadow-sm">
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">From</span>
+              <Input 
+                type="date" 
+                className="h-7 w-[110px] text-xs font-medium border-0 px-1 py-0 shadow-none focus-visible:ring-0" 
+                value={dateFrom} 
+                onChange={(e) => setDateFrom(e.target.value)} 
+              />
+            </div>
+            <div className="flex items-center gap-1.5 bg-white border border-border rounded-md px-2 h-9 shadow-sm">
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">To</span>
+              <Input 
+                type="date" 
+                className="h-7 w-[110px] text-xs font-medium border-0 px-1 py-0 shadow-none focus-visible:ring-0" 
+                value={dateTo} 
+                onChange={(e) => setDateTo(e.target.value)} 
+              />
+            </div>
+          </div>
         </div>
 
         {/* Data List */}
-        {filteredData.length === 0 ? (
+        {data.length === 0 ? (
           <EmptyState icon={FileSearch} title="No tracking data found" description="Try adjusting your search filters." />
         ) : (
           <div className="grid grid-cols-1 gap-5">
-            {filteredData.map((row: any) => (
+            {data.map((row: any) => (
               <div 
                 key={row.exam_id} 
                 className="bg-card border border-border shadow-sm rounded-xl p-5 hover:border-primary/30 hover:shadow-md transition-all group"
@@ -209,9 +300,9 @@ export default function DelayFlowTab() {
                     </div>
                     
                     <div>
-                      <h3 className="font-semibold text-lg text-foreground mt-1 line-clamp-1">{row.subject || "No Subject"}</h3>
+                      <h3 className="font-semibold text-lg text-foreground mt-1 line-clamp-1">{row.exam_name}</h3>
                       <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">
-                        Chapter: <span className="font-medium text-foreground">{row.chapters}</span>
+                        Subject: <span className="font-medium text-foreground">{row.subject}</span>
                       </p>
                     </div>
                     

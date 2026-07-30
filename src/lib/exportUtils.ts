@@ -55,8 +55,9 @@ export const downloadCsv = async (
 
 export const downloadExcel = async (
   endpoint: string,
-  params: Record<string, string | number> = {},
-  defaultFilename = "export.xlsx"
+  params: Record<string, string | number | boolean | null | undefined> = {},
+  defaultFilename = "export.xlsx",
+  method: "GET" | "POST" = "GET"
 ) => {
   try {
     const loginDataRaw = localStorage.getItem("Insight_Login_Data");
@@ -68,10 +69,10 @@ export const downloadExcel = async (
 
     const config = {
       baseURL: import.meta.env.VITE_APP_BASE_URL,
-      method: "GET",
+      method: method,
       url: endpoint,
-      params,
-      responseType: "text" as const,
+      [method === "GET" ? "params" : "data"]: params,
+      responseType: "blob" as const,
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     };
 
@@ -89,15 +90,25 @@ export const downloadExcel = async (
       filename = filename.replace(/\.[^/.]+$/, "") + ".xlsx";
     }
 
-    // Convert CSV text to an Excel workbook
-    const XLSX = await import("xlsx");
-    const workbook = XLSX.read(response.data, { type: "string" });
+    const contentType = typeof response.headers["content-type"] === "string" 
+      ? response.headers["content-type"].toLowerCase() 
+      : "";
+      
+    let finalBlob: Blob;
+
+    if (contentType.includes("csv") || contentType.includes("text")) {
+      // Convert CSV text to an Excel workbook
+      const textData = await (response.data as Blob).text();
+      const XLSX = await import("xlsx");
+      const workbook = XLSX.read(textData, { type: "string" });
+      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+      finalBlob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    } else {
+      // Backend returned native binary (e.g. XLSX)
+      finalBlob = new Blob([response.data], { type: contentType || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    }
     
-    // Generate buffer
-    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-    
-    const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    const url = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(finalBlob);
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
