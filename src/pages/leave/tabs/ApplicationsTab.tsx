@@ -876,7 +876,14 @@ export default function ApplicationsTab() {
                 <Input
                   type="date"
                   value={applyForm.from_date}
-                  onChange={(e) => setApplyForm((f) => ({ ...f, from_date: e.target.value }))}
+                  onChange={(e) => {
+                    const newFromDate = e.target.value;
+                    setApplyForm((f) => ({
+                      ...f,
+                      from_date: newFromDate,
+                      ...(newFromDate !== f.to_date && { is_half_day: false }),
+                    }));
+                  }}
                   className="h-9 text-sm"
                 />
               </div>
@@ -885,7 +892,14 @@ export default function ApplicationsTab() {
                 <Input
                   type="date"
                   value={applyForm.to_date}
-                  onChange={(e) => setApplyForm((f) => ({ ...f, to_date: e.target.value }))}
+                  onChange={(e) => {
+                    const newToDate = e.target.value;
+                    setApplyForm((f) => ({
+                      ...f,
+                      to_date: newToDate,
+                      ...(newToDate !== f.from_date && { is_half_day: false }),
+                    }));
+                  }}
                   className="h-9 text-sm"
                 />
               </div>
@@ -938,37 +952,39 @@ export default function ApplicationsTab() {
                 </div> */}
               </>
             ) : (
-              <>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="half_day"
-                    checked={applyForm.is_half_day}
-                    onChange={(e) => setApplyForm((f) => ({ ...f, is_half_day: e.target.checked }))}
-                    className="w-4 h-4 accent-primary"
-                  />
-                  <Label htmlFor="half_day" className="text-sm cursor-pointer">
-                    Half Day Leave
-                  </Label>
-                </div>
-                {applyForm.is_half_day && (
-                  <div>
-                    <Label className="text-xs mb-1 block">Session *</Label>
-                    <Select
-                      value={applyForm.half_day_session}
-                      onValueChange={(v) => setApplyForm((f) => ({ ...f, half_day_session: v }))}
-                    >
-                      <SelectTrigger className="h-9 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="morning">Morning</SelectItem>
-                        <SelectItem value="afternoon">Afternoon</SelectItem>
-                      </SelectContent>
-                    </Select>
+              (!applyForm.from_date || !applyForm.to_date || applyForm.from_date === applyForm.to_date) && (
+                <>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="half_day"
+                      checked={applyForm.is_half_day}
+                      onChange={(e) => setApplyForm((f) => ({ ...f, is_half_day: e.target.checked }))}
+                      className="w-4 h-4 accent-primary"
+                    />
+                    <Label htmlFor="half_day" className="text-sm cursor-pointer">
+                      Half Day Leave
+                    </Label>
                   </div>
-                )}
-              </>
+                  {applyForm.is_half_day && (
+                    <div>
+                      <Label className="text-xs mb-1 block">Session *</Label>
+                      <Select
+                        value={applyForm.half_day_session}
+                        onValueChange={(v) => setApplyForm((f) => ({ ...f, half_day_session: v }))}
+                      >
+                        <SelectTrigger className="h-9 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="morning">Morning</SelectItem>
+                          <SelectItem value="afternoon">Afternoon</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </>
+              )
             )}
             <div>
               <Label className="text-xs mb-1 block">Reason *</Label>
