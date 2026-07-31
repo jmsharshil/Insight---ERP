@@ -13,10 +13,38 @@ import EmptyState from "@/components/common/EmptyState";
 import { ReportsSkeleton } from "@/components/common/Skeletons";
 
 export default function DelayFlowTab() {
-  const { batches } = useSelector((state: RootState) => state.dropdowns);
+  const { user } = useSelector((state: RootState) => state.auth);
+  const [batches, setBatches] = useState<any[]>([]);
   
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBatches = async () => {
+      try {
+        const raw = localStorage.getItem("Insight_Login_Data");
+        const token = raw ? JSON.parse(raw)?.access : "";
+        const baseUrl = import.meta.env.VITE_APP_BASE_URL || "";
+        
+        let url = `${baseUrl}/api/v1/batches/dropdowns/`;
+        if (user && user.role === "branch_manager" && user.branch) {
+          url += `?branch_id=${user.branch}`;
+        }
+
+        const res = await axiosRequest({
+          method: "GET",
+          url,
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        
+        const respData = res.data?.data || res.data || {};
+        setBatches(Array.isArray(respData.batches) ? respData.batches : (Array.isArray(respData) ? respData : []));
+      } catch (err) {
+        console.error("Failed to fetch batches:", err);
+      }
+    };
+    fetchBatches();
+  }, [user]);
   
   // Filters
   const [search, setSearch] = useState("");
