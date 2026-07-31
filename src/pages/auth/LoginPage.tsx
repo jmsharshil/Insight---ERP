@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -24,6 +24,7 @@ import { DUMMY_USERS } from "@/constants/dummy/users";
 import { ROLES } from "@/constants/roles";
 import { NAV_ITEMS } from "@/constants/navigation";
 import InsightFormLayout from "@/components/auth/InsightFormLayout";
+import { useAuth } from "@/hooks/useAuth";
 
 const TRUST_PILLS = [
   { icon: Users, label: "20+ Skilled Tutors" },
@@ -53,6 +54,12 @@ export default function LoginPage() {
     register, handleSubmit, formState: { errors }, reset, setValue,
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
+  const { isAuthenticated } = useAuth();
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   const onSubmit = (data: FormData) => {
 
     dispatch({
@@ -63,6 +70,7 @@ export default function LoginPage() {
       auth: false,
       setLoading: (val: boolean) => dispatch(setAuthLoading(val)),
       getResponse: (res: LoginResponse) => {
+        console.log(res)
         if (res.otp_required) {
           setIsOtpMode(true);
           setOtpEmail(res.email || data.email);

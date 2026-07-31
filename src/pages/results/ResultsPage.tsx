@@ -46,10 +46,12 @@ export default function ResultsPage() {
         title="Results Analytics"
         subtitle="View and analyze organization wise exam performance."
         actions={
-          <Button variant="outline" onClick={handleExport} disabled={isExporting}>
-            {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-            Export Excel
-          </Button>
+          activeTab !== "delay-flow" && (
+            <Button variant="outline" onClick={handleExport} disabled={isExporting}>
+              {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+              Export Excel
+            </Button>
+          )
         }
       />
 

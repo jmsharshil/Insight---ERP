@@ -60,11 +60,12 @@ interface SlotsTabProps {
   paperCheckersList: { id: string; name: string; employee_id?: string }[];
   defaultView?:   "grid" | "list";
   studentDetail?: any;
+  onFiltersChange?: (filters: any) => void;
 }
 
 export default function SlotsTab({
   batches, subjects, facultyList, classrooms, chapters, papers,
-  examinersList, paperCheckersList, defaultView = "list", studentDetail
+  examinersList, paperCheckersList, defaultView = "list", studentDetail, onFiltersChange
 }: SlotsTabProps) {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
@@ -79,6 +80,15 @@ export default function SlotsTab({
   }, [facultyList, isFaculty, user]);
 
   const [filters, setFilters] = useState({ batch_id: "", day_of_week: "", faculty_id: "", subject_id: "", session_type: "" });
+  const [gridBatchId, setGridBatchId] = useState("");
+  
+  useEffect(() => {
+    onFiltersChange?.({
+      ...filters,
+      batch_id: defaultView === "grid" ? gridBatchId : filters.batch_id
+    });
+  }, [filters, gridBatchId, defaultView, onFiltersChange]);
+
   const [formOpen, setFormOpen] = useState(false);
   const [editingSlot, setEditingSlot] = useState<any>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -293,7 +303,7 @@ export default function SlotsTab({
               setEditingSlot(null);
               setFormPreFill({
                 session_type: isExtraSlot ? "custom" : "regular",
-                day_of_week: DAY_TO_NUM[day],
+                day_of_week: String(DAY_TO_NUM[day]),
                 slot_code: slotCode,
                 batch: batchId,
                 session_date: date,
@@ -313,6 +323,7 @@ export default function SlotsTab({
             onDuplicateSlot={(slotId, slotCode, dayOfWeek, dayLabel, date, sourceSlot) => {
               setDuplicateTarget({ slotId, slotCode, dayOfWeek, dayLabel, date, sourceSlot });
             }}
+            onActiveBatchChange={setGridBatchId}
           />
         )}
         

@@ -56,6 +56,7 @@ interface TimetableGridViewProps {
   onSlotClick?: (slot: TimetableSlot) => void;
   onDeleteSlot?:(slot: TimetableSlot) => void;
   onDuplicateSlot?: (slotId: string, targetSlotCode: string, targetDayOfWeek: number, targetDayLabel: string, targetDate: string, sourceSlot: TimetableSlot) => void;
+  onActiveBatchChange?: (batchId: string) => void;
 }
 
 const DAY_TO_NUM: Record<string, number> = {
@@ -142,7 +143,7 @@ function getTodayStr(): string {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function TimetableGridView({
-  slots, batches, canEdit, canDelete, onAddClick, onSlotClick, onDeleteSlot, onDuplicateSlot,
+  slots, batches, canEdit, canDelete, onAddClick, onSlotClick, onDeleteSlot, onDuplicateSlot, onActiveBatchChange,
 }: TimetableGridViewProps) {
   const [selectedBatchId, setSelectedBatchId] = useState(batches[0]?.id ?? "");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -215,6 +216,10 @@ export default function TimetableGridView({
       setSelectedBatchId(batches[0].id);
     }
   }, [batches, selectedBatchId]);
+
+  useEffect(() => {
+    onActiveBatchChange?.(selectedBatchId);
+  }, [selectedBatchId, onActiveBatchChange]);
 
   const selectedBatch = batches.find(b => b.id === selectedBatchId);
 

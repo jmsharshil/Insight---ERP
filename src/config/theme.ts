@@ -14,7 +14,7 @@ export const THEME = {
 
     // ── High-emphasis accents (use sparingly) ───────────────────────────
     navy: "#002147",          // reserved for hero banners ONLY (max 2-3 uses)
-    black: "#000000",         // body 0text & headings on white/light surfaces
+    black: "#000000",         // body text & headings on white/light surfaces
 
     // ── Surface & layout ────────────────────────────────────────────────
     surface: "#F4F5F5",       // page background (off-white)

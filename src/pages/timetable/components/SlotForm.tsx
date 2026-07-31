@@ -81,6 +81,22 @@ const schema = z.object({
   exam_instructions:        z.string().optional(),
   exam_result_release_mode: z.enum(["instant", "manual"]).optional(),
   selected_papers:          z.string().optional(), // comma-sep UUIDs
+}).superRefine((data, ctx) => {
+  if (data.session_type === "regular") {
+    if (!data.slot_code) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["slot_code"], message: "Slot Code is required" });
+    }
+    if (!data.day_of_week) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["day_of_week"], message: "Day of Week is required" });
+    }
+  } else {
+    if (!data.session_date) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["session_date"], message: "Date is required" });
+    }
+    if (!data.start_time) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["start_time"], message: "Start time is required" });
+    }
+  }
 });
 
 export type SlotFormValues = z.infer<typeof schema>;
@@ -230,7 +246,16 @@ export default function SlotForm({
   }, [slotCode, setValue]);
 
   const onFormSubmit = (values: SlotFormValues) => {
-    onSubmit(buildSlotPayload(values), values);
+    // Re-inject locked fields to ensure they are never stripped by react-hook-form
+    lockedFields.forEach((field) => {
+      if (defaultValues?.[field] !== undefined) {
+        (values as any)[field] = defaultValues[field];
+      }
+    });
+    console.log("Submitting form values:", values);
+    const payload = buildSlotPayload(values);
+    console.log("Built payload:", payload);
+    onSubmit(payload, values);
   };
 
   // ── Resolve display labels for locked fields ───────────────────────────────
@@ -239,8 +264,9 @@ export default function SlotForm({
   const getSlotLabel = (val?: string) => SLOT_CODES.find(s => s.value === val)?.label ?? val ?? "—";
 
   // ─── Locked Field Display ──────────────────────────────────────────────────
-  const LockedDisplay = ({ label, value }: { label: string; value: string }) => (
+  const LockedDisplay = ({ label, value, name, rawValue }: { label: string; value: string; name?: keyof SlotFormValues; rawValue?: any }) => (
     <div className="flex flex-col gap-1">
+      {name && <input type="hidden" {...register(name)} value={rawValue || ""} />}
       <Label className="text-xs text-muted-foreground flex items-center gap-1">
         {label}
         <Lock className="w-3 h-3 text-muted-foreground/50" />
@@ -350,7 +376,7 @@ export default function SlotForm({
       {/* ── Common Fields ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {isLocked("batch") ? (
-          <LockedDisplay label="Batch" value={getBatchName(defaultValues?.batch)} />
+          <LockedDisplay label="Batch" value={getBatchName(defaultValues?.batch)} name="batch" rawValue={defaultValues?.batch} />
         ) : (
           <Field label="Batch" required error={errors.batch?.message}>
             <Controller name="batch" control={control} render={({ field }) => (
@@ -410,7 +436,7 @@ export default function SlotForm({
           <div className="text-xs font-semibold text-[#1E88E5] uppercase tracking-wide">Regular Session Settings</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {isLocked("slot_code") ? (
-              <LockedDisplay label="Slot Code" value={getSlotLabel(defaultValues?.slot_code)} />
+              <LockedDisplay label="Slot Code" value={getSlotLabel(defaultValues?.slot_code)} name="slot_code" rawValue={defaultValues?.slot_code} />
             ) : (
               <Field label="Slot Code" required error={errors.slot_code?.message}>
                 <Controller name="slot_code" control={control} render={({ field }) => (
@@ -425,7 +451,7 @@ export default function SlotForm({
             )}
 
             {isLocked("day_of_week") ? (
-              <LockedDisplay label="Day of Week" value={getDayLabel(defaultValues?.day_of_week)} />
+              <LockedDisplay label="Day of Week" value={getDayLabel(String(defaultValues?.day_of_week))} name="day_of_week" rawValue={String(defaultValues?.day_of_week)} />
             ) : (
               <Field label="Day of Week" required error={errors.day_of_week?.message}>
                 <Controller name="day_of_week" control={control} render={({ field }) => (
