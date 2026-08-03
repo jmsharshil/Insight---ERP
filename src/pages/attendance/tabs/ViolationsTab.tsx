@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
-import { X, ShieldAlert } from "lucide-react";
+import { X, ShieldAlert, ChevronLeft, ChevronRight } from "lucide-react";
 import { attendanceActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import { setViolations, setViolationsLoading } from "@/redux/slices/attendanceSlice";
@@ -59,9 +59,17 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
 
   const [resolveModal, setResolveModal] = useState({ isOpen: false, violationId: "", note: "", submitting: false });
 
-  const fetchViolations = () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 50;
+
+  const totalPages = Math.max(1, Math.ceil(violationsCount / pageSize));
+
+  const fetchViolations = (page = currentPage, overrideFilters = f) => {
     const p = new URLSearchParams();
-    Object.entries(f).forEach(([k, v]) => { if (v) p.set(k, v); });
+    Object.entries(overrideFilters).forEach(([k, v]) => { if (v) p.set(k, v); });
+    p.set("page", page.toString());
+    p.set("page_size", pageSize.toString());
+
     dispatch({
       type: attendanceActions.GET_VIOLATIONS,
       method: "GET",
@@ -69,16 +77,32 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
       auth: true,
       setLoading: (v: boolean) => dispatch(setViolationsLoading(v)),
       getResponse: (res: any) => {
-        if (res?.success) dispatch(setViolations({ data: res.data, count: res.count ?? res.data.length }));
-        else toast.error("Failed to load violations.");
+        if (res?.success || res?.data) {
+          dispatch(setViolations({ data: res.data || res, count: res.count ?? res.data?.length ?? 0 }));
+        } else {
+          toast.error("Failed to load violations.");
+        }
       },
       getError: (err: any) => toast.error(err?.response?.data?.message || "Error"),
     });
   };
 
-  useEffect(() => { fetchViolations(); }, []);
+  useEffect(() => { 
+    fetchViolations(currentPage); 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
 
-  const clear = () => setF({ student_id: "", branch_id: (isBranchManager && user?.branch) ? user.branch : "", violation_type: "", is_resolved: "", date_from: "", date_to: "" });
+  const handleApply = () => {
+    if (currentPage === 1) fetchViolations(1, f);
+    else setCurrentPage(1);
+  };
+
+  const handleClear = () => {
+    const newF = { student_id: "", branch_id: (isBranchManager && user?.branch) ? user.branch : "", violation_type: "", is_resolved: "", date_from: "", date_to: "" };
+    setF(newF);
+    if (currentPage === 1) fetchViolations(1, newF);
+    else setCurrentPage(1);
+  };
 
   const handleResolveSubmit = () => {
     if (!resolveModal.note.trim()) {
@@ -152,8 +176,8 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
           <Label className="text-xs text-muted-foreground">To</Label>
           <Input type="date" className="h-9 text-sm w-40" value={f.date_to} onChange={e => setF(p => ({ ...p, date_to: e.target.value }))} />
         </div>
-        <Button onClick={fetchViolations} className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm">Apply</Button>
-        <Button variant="outline" className="h-9 text-sm" onClick={clear}><X className="w-3 h-3 mr-1" />Clear</Button>
+        <Button onClick={handleApply} className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm">Apply</Button>
+        <Button variant="outline" className="h-9 text-sm" onClick={handleClear}><X className="w-3 h-3 mr-1" />Clear</Button>
       </div>
 
       {violationsLoading ? <TableSkeleton columns={6} rows={6} className="mt-0" /> : (
@@ -231,6 +255,32 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
               ))}
             </tbody>
           </table>
+          
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/20">
+              <span className="text-sm text-muted-foreground">
+                Page {currentPage} of {totalPages}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
