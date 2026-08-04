@@ -12,11 +12,12 @@ interface StatCardProps {
   trendType?: "up" | "down" | "neutral" | "warning";
   index?: number;
   link?: string;
+  onClick?: () => void;
   iconClassName?: string;
   iconBgClassName?: string;
 }
 
-export default function StatCard({ title, value, icon: Icon, trend, trendType = "neutral", index = 0, link, iconClassName, iconBgClassName }: StatCardProps) {
+export default function StatCard({ title, value, icon: Icon, trend, trendType = "neutral", index = 0, link, onClick, iconClassName, iconBgClassName }: StatCardProps) {
   const TrendIcon = trendType === "up" ? TrendingUp : trendType === "down" ? TrendingDown : Minus;
   const trendColor =
     trendType === "up" ? "text-success"
@@ -42,19 +43,23 @@ export default function StatCard({ title, value, icon: Icon, trend, trendType = 
     </div>
   );
 
+
+  const isClickable = Boolean(link || onClick);
+
   const card = (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.07, ease: [0.25, 0.46, 0.45, 0.94] }}
       whileHover={{ y: -3, transition: { duration: 0.2 } }}
+      onClick={onClick}
       className={cn(
         "rounded-xl bg-card border border-border p-5 shadow-sm hover:shadow-md transition-shadow h-full flex flex-col",
-        link && "cursor-pointer group"
+        isClickable && "cursor-pointer group"
       )}
     >
       <div className="flex-1">{content}</div>
-      {link && (
+      {isClickable && (
         <div className="mt-3 flex items-center gap-1 text-xs font-medium text-primary opacity-60 group-hover:opacity-100 transition-opacity">
           <span>View details</span>
           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>

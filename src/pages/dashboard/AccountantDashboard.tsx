@@ -108,36 +108,42 @@ export default function AccountantDashboard() {
       value: data.kpis?.total_active_students || 0,
       icon: Users,
       trendType: "neutral",
+      link: "/students",
     },
     {
       title: "New Admissions",
       value: data.kpis?.new_admissions || 0,
       icon: UserPlus,
       trendType: (data.kpis?.new_admissions || 0) > 0 ? "up" : "neutral",
+      link: "/students",
     },
     {
       title: "Attendance Rate",
       value: data.kpis?.attendance_rate || "0%",
       icon: Percent,
       trendType: parsePct(data.kpis?.attendance_rate) >= 80 ? "up" : "down",
+      link: "/attendance",
     },
     {
       title: "Fee Collected",
       value: parseAmt(data.kpis?.fee_collected),
       icon: Wallet,
       trendType: "up",
+      link: "/fees",
     },
     {
       title: "Pending Fees",
       value: parseAmt(data.kpis?.pending_fees),
       icon: AlertCircle,
       trendType: "warning",
+      link: "/fees",
     },
     {
       title: "Open Leads",
       value: data.kpis?.open_leads || 0,
       icon: PhoneCall,
       trendType: "neutral",
+      link: "/crm",
     }
   ];
 

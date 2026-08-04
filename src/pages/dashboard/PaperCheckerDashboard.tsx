@@ -84,6 +84,7 @@ export default function PaperCheckerDashboard() {
       value: data.kpis?.attendance_rate || "0%",
       icon: CheckCircle2,
       trendType: parsePct(data.kpis?.attendance_rate) >= 80 ? "up" : "warning",
+      link: "/attendance",
     },
     {
       title: "Pending Tasks",

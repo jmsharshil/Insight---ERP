@@ -21,6 +21,7 @@ interface SuperAdminData {
     pending_fees: number;
     overdue_fees: number;
     open_leads: number;
+    admissions_other_ref: number;
   };
   exam_stats: {
     avg_exam_attendance_pct: number;
@@ -28,6 +29,13 @@ interface SuperAdminData {
     avg_result_percentage: number;
     total_exams_completed: number;
     total_published_results: number;
+    grade_distribution?: Record<string, { count: number; percentage: number; label: string }>;
+  };
+  result_delay_stats?: {
+    total: number;
+    on_time: number;
+    late: number;
+    pending: number;
   };
   attendance_trend: {
     dates: string[];
@@ -107,36 +115,49 @@ export default function SuperAdminDashboard() {
       value: data.kpis?.total_active_students || 0,
       icon: Users,
       trendType: "neutral",
+      link: "/students",
     },
     {
       title: "New Admissions",
       value: data.kpis?.new_admissions || 0,
       icon: UserPlus,
       trendType: (data.kpis?.new_admissions || 0) > 0 ? "up" : "neutral",
+      link: "/students",
+    },
+    {
+      title: "Admissions (Other Ref)",
+      value: data.kpis?.admissions_other_ref || 0,
+      icon: UserPlus,
+      trendType: (data.kpis?.admissions_other_ref || 0) > 0 ? "up" : "neutral",
+      link: "/students",
     },
     {
       title: "Attendance Rate",
       value: data.kpis?.attendance_rate || "0%",
       icon: Percent,
       trendType: parsePct(data.kpis?.attendance_rate) >= 80 ? "up" : "down",
+      link: "/attendance",
     },
     {
       title: "Fee Collected",
       value: `₹${(data.kpis?.fee_collected || 0).toLocaleString('en-IN')}`,
       icon: Wallet,
       trendType: "up",
+      link: "/fees",
     },
     {
       title: "Pending Fees",
       value: `₹${(data.kpis?.pending_fees || 0).toLocaleString('en-IN')}`,
       icon: AlertCircle,
       trendType: (data.kpis?.pending_fees || 0) > 0 ? "warning" : "neutral",
+      link: "/fees",
     },
     {
       title: "Open Leads",
       value: data.kpis?.open_leads || 0,
       icon: PhoneCall,
       trendType: "neutral",
+      link: "/crm",
     }
   ];
 
@@ -182,7 +203,6 @@ export default function SuperAdminDashboard() {
             </ResponsiveContainer>
           </div>
         </SectionCard>
-
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
@@ -258,6 +278,46 @@ export default function SuperAdminDashboard() {
           </div>
         </SectionCard>
 
+        <SectionCard title="Grade Distribution">
+          <div className="space-y-3 mt-4">
+            {data.exam_stats?.grade_distribution ? (
+              Object.values(data.exam_stats.grade_distribution).map((grade, idx) => (
+                <div key={idx} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                  <span className="text-sm font-medium text-muted-foreground">{grade.label}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground">{grade.percentage}%</span>
+                    <span className="bg-primary/10 text-primary font-semibold px-2.5 py-0.5 rounded-full text-xs">
+                      {grade.count}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-sm text-muted-foreground py-2">No grade distribution data available.</div>
+            )}
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Result Delay Stats">
+          <div className="space-y-4 mt-4">
+            <div className="flex justify-between items-center py-2 border-b border-border">
+              <span className="text-sm text-muted-foreground">Total Results</span>
+              <span className="font-semibold">{data.result_delay_stats?.total || 0}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-border">
+              <span className="text-sm text-muted-foreground">On Time</span>
+              <span className="font-semibold text-green-600">{data.result_delay_stats?.on_time || 0}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-border">
+              <span className="text-sm text-muted-foreground">Late</span>
+              <span className="font-semibold text-red-600">{data.result_delay_stats?.late || 0}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-border">
+              <span className="text-sm text-muted-foreground">Pending</span>
+              <span className="font-semibold text-yellow-600">{data.result_delay_stats?.pending || 0}</span>
+            </div>
+          </div>
+        </SectionCard>
       </div>
 
       <div className="mt-6">

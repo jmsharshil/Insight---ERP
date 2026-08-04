@@ -10,6 +10,7 @@ export interface UserRecord {
   role_display: string;
   is_active: boolean;
   branch: string | null;
+  branches?: string[];
   organization?: string;
   organization_name?: string;
   created_at: string;

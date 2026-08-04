@@ -103,24 +103,28 @@ export default function TelecallerDashboard() {
       value: data.kpis?.total_leads || 0,
       icon: Users,
       trendType: "neutral",
+      link: "/crm",
     },
     {
       title: "New Leads (This Month)",
       value: data.kpis?.new_leads_this_month || 0,
       icon: UserPlus,
       trendType: (data.kpis?.new_leads_this_month || 0) > 0 ? "up" : "neutral",
+      link: "/crm",
     },
     {
       title: "Conversion Rate",
       value: data.kpis?.conversion_rate || "0%",
       icon: Percent,
       trendType: parsePct(data.kpis?.conversion_rate) >= 10 ? "up" : "neutral",
+      link: "/crm",
     },
     {
       title: "Active Leads",
       value: data.kpis?.active_leads || 0,
       icon: PhoneCall,
       trendType: "neutral",
+      link: "/crm",
     }
   ];
 

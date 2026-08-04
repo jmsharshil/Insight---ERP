@@ -595,27 +595,31 @@ export default function PapersTab({ examId }: PapersTabProps) {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="w-7 h-7"
-                          onClick={() => openEdit(paper)}
-                          disabled={paper.is_absent}
-                        >
-                          <Pencil className="w-3.5 h-3.5 text-blue-500" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="w-7 h-7"
-                          onClick={() => {
-                            setQueryTarget(paper);
-                            setQueryForm({ query_type: "", description: "", evidence: null });
-                          }}
-                          title="Raise Query"
-                        >
-                          <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
-                        </Button>
+                        {!(currentExam?.exam_mode === "online" && currentExam?.exam_type === "mcq") && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="w-7 h-7"
+                              onClick={() => openEdit(paper)}
+                              disabled={paper.is_absent}
+                            >
+                              <Pencil className="w-3.5 h-3.5 text-blue-500" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="w-7 h-7"
+                              onClick={() => {
+                                setQueryTarget(paper);
+                                setQueryForm({ query_type: "", description: "", evidence: null });
+                              }}
+                              title="Raise Query"
+                            >
+                              <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                            </Button>
+                          </>
+                        )}
                         {paper.queries && paper.queries.length > 0 && (
                           <Button
                             variant="ghost"
@@ -692,59 +696,74 @@ export default function PapersTab({ examId }: PapersTabProps) {
               </div>
             ) : null}
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
-                    Question-wise Breakdown
-                  </Label>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Enter marks for each question. The total will be calculated automatically.
-                  </p>
+            {currentExam?.exam_mode === "offline" && currentExam?.exam_type === "mcq" ? (
+              <div className="bg-blue-50/50 border border-blue-200 rounded-xl p-4">
+                <Label className="text-xs font-semibold text-blue-800">Total Marks (Offline MCQ)</Label>
+                <p className="text-[11px] text-blue-700/80 mb-2">Enter the total marks obtained by the student.</p>
+                <Input
+                  type="number" min="0"
+                  step="0.01"
+                  value={editForm.marks_obtained}
+                  onChange={(e) => setEditForm({ ...editForm, marks_obtained: e.target.value })}
+                  className="h-10 text-sm max-w-[200px]"
+                  placeholder={`Max Marks: ${editTarget?.total_marks || "—"}`}
+                />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      Question-wise Breakdown
+                    </Label>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Enter marks for each question. The total will be calculated automatically.
+                    </p>
+                  </div>
+                  {(!editTarget?.no_of_questions || editTarget.no_of_questions === 0) && (
+                    <Button type="button" variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={() => setNumQuestions(n => n + 1)}>
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Add Question
+                    </Button>
+                  )}
                 </div>
-                {(!editTarget?.no_of_questions || editTarget.no_of_questions === 0) && (
-                  <Button type="button" variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={() => setNumQuestions(n => n + 1)}>
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Add Question
-                  </Button>
+
+                {numQuestions > 0 ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 gap-3 bg-muted/10 p-4 rounded-xl border border-border/50">
+                    {Array.from({ length: numQuestions }).map((_, idx) => {
+                      const qNum = idx + 1;
+                      return (
+                        <div key={qNum} className="space-y-1.5 bg-white p-2 rounded-lg border border-border/60 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
+                          <Label className="text-[10px] font-semibold text-muted-foreground text-center block uppercase tracking-wider">
+                            Q {qNum}
+                          </Label>
+                          <Input
+                            type="number" min="0"
+                            step="0.5"
+                            className="h-9 text-sm font-semibold px-2 text-center border-none shadow-none focus-visible:ring-0 bg-transparent"
+                            value={editForm.question_marks[qNum] || ""}
+                            placeholder="—"
+                            onChange={(e) => handleQuestionMarkChange(qNum, e.target.value)}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
+                    <Label className="text-xs font-semibold text-amber-800">Total Marks (Manual Override)</Label>
+                    <p className="text-[11px] text-amber-700/80 mb-2">No questions configured. Enter the total manually.</p>
+                    <Input
+                      type="number" min="0"
+                      step="0.01"
+                      value={editForm.marks_obtained}
+                      onChange={(e) => setEditForm({ ...editForm, marks_obtained: e.target.value })}
+                      className="h-10 text-sm max-w-[200px]"
+                      placeholder="e.g. 78.5"
+                    />
+                  </div>
                 )}
               </div>
-
-              {numQuestions > 0 ? (
-                <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 gap-3 bg-muted/10 p-4 rounded-xl border border-border/50">
-                  {Array.from({ length: numQuestions }).map((_, idx) => {
-                    const qNum = idx + 1;
-                    return (
-                      <div key={qNum} className="space-y-1.5 bg-white p-2 rounded-lg border border-border/60 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
-                        <Label className="text-[10px] font-semibold text-muted-foreground text-center block uppercase tracking-wider">
-                          Q {qNum}
-                        </Label>
-                        <Input
-                          type="number" min="0"
-                          step="0.5"
-                          className="h-9 text-sm font-semibold px-2 text-center border-none shadow-none focus-visible:ring-0 bg-transparent"
-                          value={editForm.question_marks[qNum] || ""}
-                          placeholder="—"
-                          onChange={(e) => handleQuestionMarkChange(qNum, e.target.value)}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
-                  <Label className="text-xs font-semibold text-amber-800">Total Marks (Manual Override)</Label>
-                  <p className="text-[11px] text-amber-700/80 mb-2">No questions configured. Enter the total manually.</p>
-                  <Input
-                    type="number" min="0"
-                    step="0.01"
-                    value={editForm.marks_obtained}
-                    onChange={(e) => setEditForm({ ...editForm, marks_obtained: e.target.value })}
-                    className="h-10 text-sm max-w-[200px]"
-                    placeholder="e.g. 78.5"
-                  />
-                </div>
-              )}
-            </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">

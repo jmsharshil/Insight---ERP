@@ -73,6 +73,8 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
   const [branchFilter, setBranchFilter]     = useState("");
   const [batchFilter, setBatchFilter]       = useState("");
   const [subjectFilter, setSubjectFilter]   = useState("");
+  const [statusFilter, setStatusFilter]     = useState("");
+  const [dateFilter, setDateFilter]         = useState("");
   const [dropdowns, setDropdowns]           = useState<any>({ branches: [], batches: [], subjects: [] });
 
   useEffect(() => {
@@ -163,14 +165,30 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
   const fetchExams = () => {
     let endPoint = API.EXAMS.LIST;
 
+    const params = new URLSearchParams();
+    if (search) params.append("search", search);
+    if (examModeFilter) params.append("exam_mode", examModeFilter);
+    if (examTypeFilter) params.append("exam_type", examTypeFilter);
+    if (statusFilter) params.append("status", statusFilter);
+    if (batchFilter) params.append("batch_id", batchFilter);
+    if (dateFilter) params.append("scheduled_date", dateFilter);
+    if (branchFilter) params.append("branch_id", branchFilter);
+    if (subjectFilter) params.append("subject_id", subjectFilter);
+
     if (user?.role === "faculty") {
       // Use the resolved Faculty Profile UUID passed from ExamsPage
       if (resolvedFacultyId) {
-        endPoint = `${API.EXAMS.LIST}?faculty=${resolvedFacultyId}&faculty_id=${resolvedFacultyId}`;
+        params.append("faculty", resolvedFacultyId);
+        params.append("faculty_id", resolvedFacultyId);
       }
       // else: no facultyId yet (still loading), fetch will retry via useEffect below
-    } else if (user?.role === "branch_manager" && user?.branch) {
-      endPoint = `${API.EXAMS.LIST}?branch_id=${user.branch}`;
+    } else if (user?.role === "branch_manager" && user?.branch && !branchFilter) {
+      params.append("branch_id", user.branch);
+    }
+
+    const queryString = params.toString();
+    if (queryString) {
+      endPoint = `${API.EXAMS.LIST}?${queryString}`;
     }
 
     dispatch({
@@ -433,18 +451,9 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
       }
       if (!isAssigned) return false;
     }
-    const eBranchId = typeof e.branch === "object" && e.branch !== null ? (e.branch as any).id : e.branch;
-    const eBatchId = typeof e.batch === "object" && e.batch !== null ? (e.batch as any).id || (e.batch as any).batch_id : e.batch;
-    const eSubjId = typeof e.subject === "object" && e.subject !== null ? (e.subject as any).id : e.subject;
-
-    const matchSearch = !search || e.title?.toLowerCase().includes(search.toLowerCase());
-    const matchType   = !examTypeFilter || e.exam_type === examTypeFilter;
-    const matchMode   = !examModeFilter || e.exam_mode === examModeFilter;
-    const matchBranch = !branchFilter || String(eBranchId) === String(branchFilter);
-    const matchBatch  = !batchFilter || String(eBatchId) === String(batchFilter);
-    const matchSubject = !subjectFilter || String(eSubjId) === String(subjectFilter);
-
-    return matchSearch && matchType && matchMode && matchBranch && matchBatch && matchSubject;
+    // Client-side filtering for form controls is removed so that
+    // filters only apply via the backend when 'Apply Filters' is clicked.
+    return true;
   });
 
 
@@ -462,7 +471,7 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
                 const stu = students?.find((s: any) => s.id === id);
                 return (
                   <SelectItem key={id} value={id}>
-                    {stu ? stu.full_name || stu.first_name : `Student (${id.slice(0, 4)})`}
+                    {stu ? stu.full_name || (stu as any).first_name : `Student (${id.slice(0, 4)})`}
                   </SelectItem>
                 );
               })}
@@ -487,8 +496,8 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Branches</SelectItem>
-                {dropdowns.branches?.map((b: any) => (
-                  <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
+                {(Array.isArray(dropdowns?.branches) ? dropdowns.branches : []).map((b: any) => (
+                  <SelectItem key={b.id} value={String(b.id)}>{b.name || b.branch_name || `Branch ${b.id}`}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -499,8 +508,10 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Batches</SelectItem>
-                {dropdowns.batches?.filter((b: any) => !branchFilter || String(b.branch) === branchFilter || String(b.branch_id) === branchFilter).map((b: any) => (
-                  <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
+                {(Array.isArray(dropdowns?.batches) ? dropdowns.batches : [])
+                  .filter((b: any) => !branchFilter || branchFilter === "all" || String(b.branch) === branchFilter || String(b.branch_id) === branchFilter)
+                  .map((b: any) => (
+                  <SelectItem key={b.id} value={String(b.id)}>{b.name || b.batch_name || `Batch ${b.id}`}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -511,8 +522,8 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Subjects</SelectItem>
-                {dropdowns.subjects?.map((s: any) => (
-                  <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                {(Array.isArray(dropdowns?.subjects) ? dropdowns.subjects : []).map((s: any) => (
+                  <SelectItem key={s.id} value={String(s.id)}>{s.name || s.subject_name || `Subject ${s.id}`}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -541,13 +552,40 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
           </SelectContent>
         </Select>
 
-        <Button variant="outline" className="h-9 text-sm gap-1.5" onClick={() => { setSearch(""); setExamTypeFilter(""); setExamModeFilter(""); setBranchFilter(""); setBatchFilter(""); setSubjectFilter(""); }}>
+        <Select value={statusFilter || "all"} onValueChange={v => setStatusFilter(v === "all" ? "" : v)}>
+          <SelectTrigger className="w-[130px] h-9 text-sm bg-white">
+            <SelectValue placeholder="All Statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="scheduled">Scheduled</SelectItem>
+            <SelectItem value="ongoing">Ongoing</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="results_published">Results Published</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Input
+          type="date"
+          className="w-[150px] h-9 text-sm bg-white"
+          value={dateFilter}
+          onChange={(e) => setDateFilter(e.target.value)}
+        />
+
+        <Button onClick={fetchExams} className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm px-4">
+          Apply Filters
+        </Button>
+
+        <Button variant="outline" className="h-9 text-sm gap-1.5" onClick={() => { 
+          setSearch(""); setExamTypeFilter(""); setExamModeFilter(""); setBranchFilter(""); setBatchFilter(""); setSubjectFilter(""); setStatusFilter(""); setDateFilter(""); 
+        }}>
           <X className="w-3.5 h-3.5" /> Clear
         </Button>
 
-        <Button variant="outline" className="h-9 text-sm gap-1.5" onClick={fetchExams}>
+        {/* <Button variant="outline" className="h-9 text-sm gap-1.5" onClick={fetchExams}>
           <RefreshCw className="w-3.5 h-3.5" /> Refresh
-        </Button>
+        </Button> */}
       </div>
 
       {/* Info banner for students/parents/faculty */}

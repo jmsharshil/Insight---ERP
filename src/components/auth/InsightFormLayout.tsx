@@ -74,7 +74,7 @@ function BrandCarousel({ compact = false }: { compact?: boolean }) {
             <div key={i} className="relative min-w-0 flex-[0_0_100%]">
               <div
                 className={`w-full bg-black ${
-                  compact ? "aspect-[16/9]" : "aspect-[1280/553]"
+                  compact ? "" : "aspect-[1280/553]"
                 }`}
               >
                 <img

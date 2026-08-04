@@ -245,6 +245,7 @@ export default function UsersPage() {
     email: "",
     phone: "",
     branch: "",
+    branches: [] as string[],
     role: "",
     salary_retention_percentage: "0",
     is_active: true,
@@ -337,6 +338,7 @@ export default function UsersPage() {
         email: selectedUser.email || "",
         phone: selectedUser.phone || "",
         branch: selectedUser.branch || "",
+        branches: selectedUser.branches || [],
         salary_retention_percentage:
           selectedUser.salary_retention_percentage !== undefined
             ? String(selectedUser.salary_retention_percentage)
@@ -446,6 +448,7 @@ export default function UsersPage() {
       email: "",
       phone: "",
       branch: "",
+      branches: [],
       role: "",
       salary_retention_percentage: "0",
       is_active: true,
@@ -485,7 +488,7 @@ export default function UsersPage() {
       phone: editForm.phone,
       name: editForm.name,
       role: editForm.role,
-      branch: editForm.branch,
+      branches: editForm.branches,
       salary_retention_percentage: editForm.salary_retention_percentage,
       is_active: editForm.is_active,
       employee_id: editForm.employee_id,
@@ -551,6 +554,7 @@ export default function UsersPage() {
       email: selectedUser.email || "",
       phone: selectedUser.phone || "",
       branch: selectedUser.branch || "",
+      branches: selectedUser.branches || [],
       role: selectedUser.role || "",
       salary_retention_percentage:
         selectedUser.salary_retention_percentage !== undefined
@@ -624,7 +628,9 @@ export default function UsersPage() {
     formData.append("phone", editForm.phone);
     formData.append("is_active", String(editForm.is_active));
     formData.append("salary_retention_percentage", editForm.salary_retention_percentage);
-    if (editForm.branch) formData.append("branch", editForm.branch);
+    // DRF expects branches as a list. Since this is multipart/form-data,
+    // append each branch ID separately.
+    editForm.branches.forEach((b: string) => formData.append("branches", b));
     if (profilePicFile) formData.append("profile_pic", profilePicFile);
 
     if (editForm.employee_id !== undefined) formData.append("employee_id", editForm.employee_id);
@@ -664,12 +670,8 @@ export default function UsersPage() {
         ...editForm.accessible_modules,
       ]),
     );
-    if (allModules.length > 0) {
-      allModules.forEach((mod) => formData.append("accessible_modules", mod));
-    } else {
-      // If we need to send empty array, DRF might expect an empty string for the key
-      formData.append("accessible_modules", "");
-    }
+    // Send accessible_modules correctly
+    allModules.forEach((m: string) => formData.append("accessible_modules", m));
 
     setUpdateLoading(true);
     dispatch({
@@ -977,9 +979,9 @@ export default function UsersPage() {
                     ) : (
                       <>
                         <h3 className="mt-4 text-xl font-semibold text-text-primary">
-                          {selectedUser.name}
+                          {selectedUser?.name}
                         </h3>
-                        <p className="text-sm text-muted-foreground">@{selectedUser.username}</p>
+                        <p className="text-sm text-muted-foreground">@{selectedUser?.username}</p>
                       </>
                     )}
                   </div>
@@ -1024,7 +1026,7 @@ export default function UsersPage() {
                       />
                     ) : (
                       <div className="text-sm font-medium text-text-primary pt-0.5">
-                        {selectedUser.name}
+                        {selectedUser?.name}
                       </div>
                     )}
                   </div>
@@ -1048,7 +1050,7 @@ export default function UsersPage() {
                       />
                     ) : (
                       <div className="text-sm font-medium text-text-primary pt-0.5">
-                        {selectedUser.email}
+                        {selectedUser?.email}
                       </div>
                     )}
                   </div>
@@ -1071,44 +1073,57 @@ export default function UsersPage() {
                       />
                     ) : (
                       <div className="text-sm font-medium text-text-primary pt-0.5">
-                        {selectedUser.phone || "N/A"}
+                        {selectedUser?.phone || "N/A"}
                       </div>
                     )}
                   </div>
 
-                  {/* Branch */}
-                  <div className="space-y-1">
+                  {/* Branches */}
+                  <div className="space-y-2">
                     <Label
-                      htmlFor="edit-branch"
                       className="text-xs text-muted-foreground uppercase tracking-wider font-semibold"
                     >
-                      Branch
+                      Branches
                     </Label>
                     {isEditing || isAdding ? (
-                      <Select
-                        value={editForm.branch}
-                        onValueChange={(val) => setEditForm((f) => ({ ...f, branch: val }))}
-                        disabled={branchLoading}
-                      >
-                        <SelectTrigger className="bg-background" id="edit-branch">
-                          <SelectValue
-                            placeholder={branchLoading ? "Loading branches..." : "Select a branch"}
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {branchOptions.map((b) => (
-                            <SelectItem key={b.value} value={String(b.value)}>
-                              {b.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="border border-input bg-background rounded-md p-2 max-h-40 overflow-y-auto space-y-2">
+                        {branchLoading ? (
+                          <div className="text-xs text-muted-foreground p-2">Loading branches...</div>
+                        ) : branchOptions.length === 0 ? (
+                          <div className="text-xs text-muted-foreground p-2">No branches available</div>
+                        ) : (
+                          branchOptions.map((b) => {
+                            const isChecked = editForm.branches.includes(String(b.value));
+                            return (
+                              <div key={b.value} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`branch-${b.value}`}
+                                  checked={isChecked}
+                                  onCheckedChange={(checked) => {
+                                    setEditForm(f => {
+                                      const newBranches = checked
+                                        ? [...f.branches, String(b.value)]
+                                        : f.branches.filter(v => v !== String(b.value));
+                                      return { ...f, branches: newBranches };
+                                    });
+                                  }}
+                                />
+                                <Label htmlFor={`branch-${b.value}`} className="text-sm font-medium">
+                                  {b.label}
+                                </Label>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
                     ) : (
-                      <div className="text-sm font-medium text-text-primary pt-0.5">
-                        {branchOptions.find((b) => String(b.value) === String(selectedUser.branch))
-                          ?.label ||
-                          selectedUser.branch ||
-                          "N/A"}
+                      <div className="text-sm font-medium text-text-primary pt-0.5 flex flex-wrap gap-1">
+                        {selectedUser?.branches && selectedUser?.branches.length > 0
+                          ? selectedUser?.branches.map((bId: string) => {
+                              const bLabel = branchOptions.find((o) => String(o.value) === String(bId))?.label || bId;
+                              return <span key={bId} className="inline-flex bg-muted/50 px-2 py-0.5 rounded-md text-xs">{bLabel}</span>;
+                            })
+                          : "N/A"}
                       </div>
                     )}
                   </div>
@@ -1120,7 +1135,7 @@ export default function UsersPage() {
                         Organization
                       </Label>
                       <div className="text-sm font-medium text-text-primary pt-0.5">
-                        {selectedUser.organization_name}
+                        {selectedUser?.organization_name}
                       </div>
                     </div>
                   )}

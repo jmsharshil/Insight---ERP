@@ -648,18 +648,20 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
           
           {isStudent && results.length > 0 && (
             <div className="pt-4 border-t border-blue-200">
+              {!(exam?.exam_mode === "online" && exam?.exam_type === "mcq") && (
                <div className="flex items-center justify-between">
                  <h4 className="text-sm font-heading font-semibold text-blue-900">Re-evaluation</h4>
-                 <Button
-                   variant="outline"
-                   size="sm"
-                   className="h-8 gap-1.5 text-blue-700 border-blue-300 hover:bg-blue-100"
-                   onClick={() => setRecheckModal(true)}
-                 >
-                   <HelpCircle className="w-3.5 h-3.5" />
-                   Request Recheck
-                 </Button>
+                   <Button
+                     variant="outline"
+                     size="sm"
+                     className="h-8 gap-1.5 text-blue-700 border-blue-300 hover:bg-blue-100"
+                     onClick={() => setRecheckModal(true)}
+                   >
+                     <HelpCircle className="w-3.5 h-3.5" />
+                     Request Recheck
+                   </Button>
                </div>
+              )}
                {recheckRequests.length > 0 && (
                  <div className="mt-3 space-y-2">
                    {recheckRequests.map((req: any) => (
