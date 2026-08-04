@@ -115,42 +115,49 @@ export default function SuperAdminDashboard() {
       value: data.kpis?.total_active_students || 0,
       icon: Users,
       trendType: "neutral",
+      link: "/students",
     },
     {
       title: "New Admissions",
       value: data.kpis?.new_admissions || 0,
       icon: UserPlus,
       trendType: (data.kpis?.new_admissions || 0) > 0 ? "up" : "neutral",
+      link: "/students",
     },
     {
       title: "Admissions (Other Ref)",
       value: data.kpis?.admissions_other_ref || 0,
       icon: UserPlus,
       trendType: (data.kpis?.admissions_other_ref || 0) > 0 ? "up" : "neutral",
+      link: "/students",
     },
     {
       title: "Attendance Rate",
       value: data.kpis?.attendance_rate || "0%",
       icon: Percent,
       trendType: parsePct(data.kpis?.attendance_rate) >= 80 ? "up" : "down",
+      link: "/attendance",
     },
     {
       title: "Fee Collected",
       value: `₹${(data.kpis?.fee_collected || 0).toLocaleString('en-IN')}`,
       icon: Wallet,
       trendType: "up",
+      link: "/fees",
     },
     {
       title: "Pending Fees",
       value: `₹${(data.kpis?.pending_fees || 0).toLocaleString('en-IN')}`,
       icon: AlertCircle,
       trendType: (data.kpis?.pending_fees || 0) > 0 ? "warning" : "neutral",
+      link: "/fees",
     },
     {
       title: "Open Leads",
       value: data.kpis?.open_leads || 0,
       icon: PhoneCall,
       trendType: "neutral",
+      link: "/crm",
     }
   ];
 

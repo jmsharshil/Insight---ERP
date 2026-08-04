@@ -338,7 +338,7 @@ export default function UsersPage() {
         email: selectedUser.email || "",
         phone: selectedUser.phone || "",
         branch: selectedUser.branch || "",
-        branches: selectedUser.branches || (selectedUser.branch ? [selectedUser.branch] : []),
+        branches: selectedUser.branches || [],
         salary_retention_percentage:
           selectedUser.salary_retention_percentage !== undefined
             ? String(selectedUser.salary_retention_percentage)
@@ -554,7 +554,7 @@ export default function UsersPage() {
       email: selectedUser.email || "",
       phone: selectedUser.phone || "",
       branch: selectedUser.branch || "",
-      branches: selectedUser.branches || (selectedUser.branch ? [selectedUser.branch] : []),
+      branches: selectedUser.branches || [],
       role: selectedUser.role || "",
       salary_retention_percentage:
         selectedUser.salary_retention_percentage !== undefined
@@ -629,8 +629,8 @@ export default function UsersPage() {
     formData.append("is_active", String(editForm.is_active));
     formData.append("salary_retention_percentage", editForm.salary_retention_percentage);
     // DRF expects branches as a list. Since this is multipart/form-data,
-    // send the complete array as a JSON string instead of repeated scalar values.
-    formData.append("branches", JSON.stringify(editForm.branches));
+    // append each branch ID separately.
+    editForm.branches.forEach((b: string) => formData.append("branches", b));
     if (profilePicFile) formData.append("profile_pic", profilePicFile);
 
     if (editForm.employee_id !== undefined) formData.append("employee_id", editForm.employee_id);
@@ -670,8 +670,8 @@ export default function UsersPage() {
         ...editForm.accessible_modules,
       ]),
     );
-    // Send accessible_modules as a JSON array for the same reason as branches.
-    formData.append("accessible_modules", JSON.stringify(allModules));
+    // Send accessible_modules correctly
+    allModules.forEach((m: string) => formData.append("accessible_modules", m));
 
     setUpdateLoading(true);
     dispatch({
@@ -979,9 +979,9 @@ export default function UsersPage() {
                     ) : (
                       <>
                         <h3 className="mt-4 text-xl font-semibold text-text-primary">
-                          {selectedUser.name}
+                          {selectedUser?.name}
                         </h3>
-                        <p className="text-sm text-muted-foreground">@{selectedUser.username}</p>
+                        <p className="text-sm text-muted-foreground">@{selectedUser?.username}</p>
                       </>
                     )}
                   </div>
@@ -1026,7 +1026,7 @@ export default function UsersPage() {
                       />
                     ) : (
                       <div className="text-sm font-medium text-text-primary pt-0.5">
-                        {selectedUser.name}
+                        {selectedUser?.name}
                       </div>
                     )}
                   </div>
@@ -1050,7 +1050,7 @@ export default function UsersPage() {
                       />
                     ) : (
                       <div className="text-sm font-medium text-text-primary pt-0.5">
-                        {selectedUser.email}
+                        {selectedUser?.email}
                       </div>
                     )}
                   </div>
@@ -1073,7 +1073,7 @@ export default function UsersPage() {
                       />
                     ) : (
                       <div className="text-sm font-medium text-text-primary pt-0.5">
-                        {selectedUser.phone || "N/A"}
+                        {selectedUser?.phone || "N/A"}
                       </div>
                     )}
                   </div>
@@ -1118,14 +1118,12 @@ export default function UsersPage() {
                       </div>
                     ) : (
                       <div className="text-sm font-medium text-text-primary pt-0.5 flex flex-wrap gap-1">
-                        {selectedUser.branches && selectedUser.branches.length > 0
-                          ? selectedUser.branches.map((bId: string) => {
+                        {selectedUser?.branches && selectedUser?.branches.length > 0
+                          ? selectedUser?.branches.map((bId: string) => {
                               const bLabel = branchOptions.find((o) => String(o.value) === String(bId))?.label || bId;
                               return <span key={bId} className="inline-flex bg-muted/50 px-2 py-0.5 rounded-md text-xs">{bLabel}</span>;
                             })
-                          : selectedUser.branch 
-                            ? <span className="inline-flex bg-muted/50 px-2 py-0.5 rounded-md text-xs">{branchOptions.find((o) => String(o.value) === String(selectedUser.branch))?.label || selectedUser.branch}</span>
-                            : "N/A"}
+                          : "N/A"}
                       </div>
                     )}
                   </div>
@@ -1137,7 +1135,7 @@ export default function UsersPage() {
                         Organization
                       </Label>
                       <div className="text-sm font-medium text-text-primary pt-0.5">
-                        {selectedUser.organization_name}
+                        {selectedUser?.organization_name}
                       </div>
                     </div>
                   )}

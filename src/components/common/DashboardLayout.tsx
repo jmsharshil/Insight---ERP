@@ -16,6 +16,7 @@ export interface StatItem {
   trend?: string;
   trendType?: "up" | "down" | "neutral" | "warning";
   link?: string;
+  onClick?: () => void;
 }
 
 interface DashboardLayoutProps {
