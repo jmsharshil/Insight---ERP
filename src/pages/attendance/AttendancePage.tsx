@@ -182,7 +182,7 @@ export default function AttendancePage() {
           {!hideMainTabs && <TabsTrigger value="students">Students</TabsTrigger>}
           {/* {!isParentOrStudent && !hideMainTabs && <TabsTrigger value="register">Student Register</TabsTrigger>} */}
           {/* {isAdmin && <TabsTrigger value="staff_register">Staff Register</TabsTrigger>} */}
-          {!hideMainTabs && <TabsTrigger value="history">History</TabsTrigger>}
+          {/* {!hideMainTabs && <TabsTrigger value="history">History</TabsTrigger>} */}
           {!isParentOrStudent && !hideMainTabs && <TabsTrigger value="faculty">Staff</TabsTrigger>}
           {!isParentOrStudent && !hideMainTabs && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
           {/* {!isParentOrStudent && !hideMainTabs && <TabsTrigger value="defaulters">Defaulters</TabsTrigger>} */}
@@ -219,7 +219,7 @@ export default function AttendancePage() {
           </TabsContent>
         )}
 
-        {!hideMainTabs && (
+        {/* {!hideMainTabs && (
           <TabsContent value="history" className="mt-4">
             {isParentOrStudent ? (
               <StudentPersonalHistoryTab dropdowns={dropdowns} />
@@ -227,7 +227,7 @@ export default function AttendancePage() {
               <HistoryTab dropdowns={dropdowns} />
             )}
           </TabsContent>
-        )}
+        )} */}
 
         {!isParentOrStudent && !hideMainTabs && (
           <TabsContent value="faculty" className="mt-4">

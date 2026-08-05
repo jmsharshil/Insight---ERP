@@ -32,7 +32,7 @@ export default function PayrollPage() {
   const [activeTab, setActiveTab] = useState(defaultTab);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isAdmin || isAccount) {
       dispatch({
         type: dropdownActions.GET_DROPDOWN,
         method: "GET",
@@ -47,7 +47,7 @@ export default function PayrollPage() {
         },
       } as any);
     }
-  }, [isAdmin, dispatch, toast]);
+  }, [isAdmin, isAccount, dispatch, toast]);
 
   const handleViewPayslips = (run: any) => {
     dispatch(setSelectedRun(run));
