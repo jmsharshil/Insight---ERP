@@ -3,44 +3,45 @@ import DashboardLayout, { StatItem } from "@/components/common/DashboardLayout";
 import SectionCard from "@/components/common/SectionCard";
 import DataTable from "@/components/common/DataTable";
 import { 
-  Users, UserPlus, Percent, Wallet, AlertCircle, PhoneCall 
+  Wallet, AlertCircle, Clock, CreditCard, RefreshCcw, Calendar 
 } from "lucide-react";
 import { axiosRequest } from "@/service/axiosRequest";
 import { ReportsSkeleton } from "@/components/common/Skeletons";
 import { 
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from "recharts";
 import { format } from "date-fns";
-import LeaveOverview from "./LeaveOverview";
 
 interface AccountantData {
   kpis: {
-    total_active_students: number;
-    new_admissions: number;
-    attendance_rate: string;
     fee_collected: number | string;
     pending_fees: number | string;
     overdue_fees: number | string;
-    open_leads: number;
-  };
-  attendance_trend: {
-    dates: string[];
-    rates: number[];
+    pending_payments: number;
+    pending_refunds: number;
+    pending_installments: number;
   };
   fee_collection_trend: {
     labels: string[];
     values: number[];
   };
-  lead_pipeline: { current_stage: string; count: number }[];
-  recent_activities: { title: string; body: string; created_at: string }[];
-  charts: {
-    attendance_by_batch: { batch: string; rate: number }[];
-    enrollment_by_course: { course: string; count: number }[];
-  };
+  recent_payments: {
+    id: string;
+    receipt_number: string;
+    amount: number;
+    mode: string;
+    date: string;
+    student_name: string;
+  }[];
+  recent_notifications: {
+    id: string;
+    title: string;
+    body: string;
+    is_read: boolean;
+    created_at: string;
+  }[];
   leave: any;
 }
-
-const COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1'];
 
 export default function AccountantDashboard() {
   const [data, setData] = useState<AccountantData | null>(null);
@@ -89,91 +90,81 @@ export default function AccountantDashboard() {
     );
   }
 
-  const parsePct = (val: string | number) => {
-    if (!val) return 0;
-    if (typeof val === 'number') return val;
-    const match = val.match(/([\d.]+)%/);
-    return match ? parseFloat(match[1]) : 0;
-  };
-  
-  const parseAmt = (val: string | number) => {
-    if (!val) return "₹0";
+  const parseAmtStr = (val: string | number) => {
+    if (!val && val !== 0) return "₹0";
     if (typeof val === 'number') return `₹${val.toLocaleString('en-IN')}`;
-    return `₹${val}`;
+    const match = val.match(/^([\d.]+)\s*(?:\((.*?)\))?$/);
+    if (match) {
+      const num = parseFloat(match[1]);
+      const formattedNum = `₹${num.toLocaleString('en-IN')}`;
+      if (match[2]) {
+         return `${formattedNum} (${match[2]})`;
+      }
+      return formattedNum;
+    }
+    return val.toString();
   };
 
   const stats: StatItem[] = [
     {
-      title: "Active Students",
-      value: data.kpis?.total_active_students || 0,
-      icon: Users,
-      trendType: "neutral",
-      link: "/students",
-    },
-    {
-      title: "New Admissions",
-      value: data.kpis?.new_admissions || 0,
-      icon: UserPlus,
-      trendType: (data.kpis?.new_admissions || 0) > 0 ? "up" : "neutral",
-      link: "/students",
-    },
-    {
-      title: "Attendance Rate",
-      value: data.kpis?.attendance_rate || "0%",
-      icon: Percent,
-      trendType: parsePct(data.kpis?.attendance_rate) >= 80 ? "up" : "down",
-      link: "/attendance",
-    },
-    {
       title: "Fee Collected",
-      value: parseAmt(data.kpis?.fee_collected),
+      value: parseAmtStr(data.kpis?.fee_collected),
       icon: Wallet,
       trendType: "up",
       link: "/fees",
     },
     {
       title: "Pending Fees",
-      value: parseAmt(data.kpis?.pending_fees),
-      icon: AlertCircle,
-      trendType: "warning",
+      value: parseAmtStr(data.kpis?.pending_fees),
+      icon: Clock,
+      trendType: "neutral",
       link: "/fees",
     },
     {
-      title: "Open Leads",
-      value: data.kpis?.open_leads || 0,
-      icon: PhoneCall,
+      title: "Overdue Fees",
+      value: parseAmtStr(data.kpis?.overdue_fees),
+      icon: AlertCircle,
+      trendType: Number(data.kpis?.overdue_fees) > 0 ? "down" : "neutral",
+      link: "/fees",
+    },
+    {
+      title: "Pending Payments",
+      value: data.kpis?.pending_payments || 0,
+      icon: CreditCard,
       trendType: "neutral",
-      link: "/crm",
-    }
+      link: "/fees",
+    },
+    {
+      title: "Pending Refunds",
+      value: data.kpis?.pending_refunds || 0,
+      icon: RefreshCcw,
+      trendType: "neutral",
+      link: "/fees",
+    },
   ];
-
-  const attendanceTrendData = data.attendance_trend?.dates?.map((date, idx) => ({
-    date: format(new Date(date), "dd MMM"),
-    rate: data.attendance_trend.rates[idx] || 0
-  })) || [];
 
   const feeTrendData = data.fee_collection_trend?.labels?.map((label, idx) => ({
     label,
     value: data.fee_collection_trend.values[idx] || 0
   })) || [];
 
-  const activityColumns = [
-    { header: "Activity", accessor: "title" as const, key: "title" },
-    { header: "Details", accessor: "body" as const, key: "body" },
-    { 
-      header: "Date", 
-      accessor: (row: any) => format(new Date(row.created_at), "dd MMM yyyy, HH:mm"),
-      key: "date"
-    }
+  const paymentColumns = [
+    { header: "Receipt No.", accessor: "receipt_number" as const, key: "receipt_number" },
+    { header: "Student", accessor: "student_name" as const, key: "student_name" },
+    { header: "Amount", render: (row: any) => `₹${row.amount.toLocaleString('en-IN')}`, key: "amount" },
+    { header: "Mode", render: (row: any) => <span className="capitalize">{row.mode}</span>, key: "mode" },
+    { header: "Date", accessor: (row: any) => format(new Date(row.date), "dd MMM yyyy"), key: "date" }
+  ];
+
+  const notificationColumns = [
+    { header: "Title", accessor: "title" as const, key: "title" },
+    { header: "Details", render: (row: any) => <span className="truncate max-w-[200px] block" title={row.body}>{row.body}</span>, key: "body" },
+    { header: "Date", accessor: (row: any) => format(new Date(row.created_at), "dd MMM, HH:mm"), key: "date" }
   ];
 
   return (
     <DashboardLayout pageTitle="Accountant Dashboard" stats={stats}>
-      
-      {/* Leave Overview */}
-      {data.leave && <LeaveOverview data={data.leave} />}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+      <div className="grid grid-cols-1 mt-6">
         <SectionCard title="Fee Collection Trend">
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -196,87 +187,20 @@ export default function AccountantDashboard() {
             </ResponsiveContainer>
           </div>
         </SectionCard>
-
-        <SectionCard title="Attendance Trend">
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={attendanceTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} tickFormatter={(val) => `${val}%`} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  formatter={(val: number) => [`${val}%`, "Attendance"]}
-                />
-                <Line type="monotone" dataKey="rate" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </SectionCard>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        {data.charts?.attendance_by_batch && (
-          <SectionCard title="Attendance by Batch">
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.charts.attendance_by_batch} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                  <XAxis dataKey="batch" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} dy={10} tickFormatter={(val) => val.length > 10 ? val.substring(0,10)+'...' : val} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} tickFormatter={(val) => `${val}%`} />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    cursor={{ fill: 'hsl(var(--muted))' }}
-                  />
-                  <Bar dataKey="rate" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Attendance %" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </SectionCard>
-        )}
-
-        {data.charts?.enrollment_by_course && (
-          <SectionCard title="Enrollment by Course">
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={data.charts.enrollment_by_course}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={90}
-                    paddingAngle={2}
-                    dataKey="count"
-                    nameKey="course"
-                  >
-                    {data.charts.enrollment_by_course.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex flex-wrap justify-center gap-4 mt-2">
-                {data.charts.enrollment_by_course.map((entry, index) => (
-                  <div key={entry.course} className="flex items-center gap-1.5 text-xs">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                    <span className="text-muted-foreground capitalize">{entry.course.replace(/_/g, ' ')}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </SectionCard>
-        )}
-      </div>
-
-      <div className="mt-6">
-        <SectionCard title="Recent Activities">
+        <SectionCard title="Recent Payments">
           <DataTable 
-            data={data.recent_activities || []} 
-            columns={activityColumns}
+            data={data.recent_payments || []} 
+          columns={paymentColumns}
+          />
+        </SectionCard>
+
+        <SectionCard title="Recent Notifications">
+          <DataTable 
+            data={data.recent_notifications || []} 
+            columns={notificationColumns}
           />
         </SectionCard>
       </div>

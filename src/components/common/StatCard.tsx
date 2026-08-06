@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
+import HoverValue from "./HoverValue";
 
 interface StatCardProps {
   title: React.ReactNode;
@@ -29,7 +30,9 @@ export default function StatCard({ title, value, icon: Icon, trend, trendType = 
     <div className="flex items-start justify-between gap-3">
       <div className="flex-1 min-w-0">
         <p className="text-sm text-muted-foreground font-medium truncate">{title}</p>
-        <p className="mt-2 text-2xl font-heading font-bold text-text-primary truncate">{value}</p>
+        <p className="mt-2 text-2xl font-heading font-bold text-text-primary truncate">
+          <HoverValue value={value} />
+        </p>
         {trend && (
           <div className={cn("mt-2 inline-flex items-center gap-1 text-xs font-medium", trendColor)}>
             <TrendIcon className="w-3.5 h-3.5 shrink-0" />

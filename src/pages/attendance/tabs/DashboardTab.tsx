@@ -27,13 +27,7 @@ const STAT_CARDS = (d: any) => [
   { label: "Active Violations", value: d.active_violations,                           icon: AlertTriangle, color: "bg-orange-50 text-orange-600" },
 ];
 
-import ModulePlaceholder from "@/pages/ModulePlaceholder";
-
-export default function DashboardTab() {
-  return <ModulePlaceholder title="Attendance Dashboard" />;
-}
-
-export function DashboardTabOld({ dropdowns }: { dropdowns?: any }) {
+export default function DashboardTab({ dropdowns }: { dropdowns?: any }) {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
   const { dashboard, dashboardLoading } = useSelector((s: RootState) => s.attendance);

@@ -162,7 +162,7 @@ export default function StudentDashboard() {
       link: "/exams",
     },
     {
-      title: "Avg Score",
+      title: "Avg Exam Score",
       value: `${data.kpis.avg_score}`.includes('%') ? data.kpis.avg_score : `${data.kpis.avg_score}%`,
       icon: BookOpen,
       trendType: "neutral",

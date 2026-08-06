@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import DashboardLayout from "@/components/common/DashboardLayout";
+
 import SectionCard from "@/components/common/SectionCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,11 +13,14 @@ import { axiosRequest } from "@/service/axiosRequest";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
+import { useUI } from "@/hooks/useUI";
+import { SupportTicketDetailSkeleton } from "@/components/common/Skeletons";
 
 export default function SupportTicketDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { setPageTitle } = useUI();
   
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -57,6 +60,14 @@ export default function SupportTicketDetailPage() {
   useEffect(() => {
     fetchTicket();
   }, [id]);
+
+  useEffect(() => {
+    if (data?.title) {
+      setPageTitle(`Ticket: ${data.title}`);
+    } else {
+      setPageTitle("Support Ticket");
+    }
+  }, [data?.title, setPageTitle]);
 
   useEffect(() => {
     if (forwardOpen && staffUsers.length === 0) {
@@ -165,18 +176,13 @@ export default function SupportTicketDetailPage() {
 
   if (loading || !data) {
     return (
-      <DashboardLayout pageTitle="Support Ticket" stats={[]}>
-        <div className="flex flex-col items-center justify-center h-[50vh]">
-          <Loader2 className="w-10 h-10 animate-spin text-primary" />
-          <p className="mt-4 text-muted-foreground">Loading ticket details...</p>
-        </div>
-      </DashboardLayout>
+      <SupportTicketDetailSkeleton />
     );
   }
 
   return (
-    <DashboardLayout pageTitle={`Ticket: ${data.title}`} stats={[]}>
-      <div className="mx-auto space-y-6 mt-6">
+    <>
+      <div className="mx-auto space-y-6">
         <div className="flex justify-between items-center mb-2 -ml-4">
           <Button variant="ghost" onClick={() => navigate("/support")}>
             <ArrowLeft className="w-4 h-4 mr-2" /> Back to Tickets
@@ -352,6 +358,6 @@ export default function SupportTicketDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardLayout>
+    </>
   );
 }

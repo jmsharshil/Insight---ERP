@@ -18,14 +18,7 @@ import { useUI } from "@/hooks/useUI";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import { useToast } from "@/hooks/useToast";
 import RoleBadge from "@/components/common/RoleBadge";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -152,42 +145,37 @@ export default function TopBar() {
 
           {/* Profile */}
           {user && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <motion.button
-                  whileHover={{ scale: 1.06 }}
-                  whileTap={{ scale: 0.96 }}
-                  className="relative rounded-full"
-                >
-                  <Avatar className="relative h-10 w-10 border-2 border-background">
-                    <AvatarImage
-                      src={
-                        user.profile_pic
-                          ? user.profile_pic.startsWith("http")
-                            ? user.profile_pic
-                            : import.meta.env.VITE_APP_BASE_URL + user.profile_pic
-                          : undefined
-                      }
-                      alt={user.name}
-                      className="object-cover"
-                    />
+            <motion.button
+              onClick={() => navigate("/settings")}
+              whileHover={{ scale: 1.06 }}
+              whileTap={{ scale: 0.96 }}
+              className="relative rounded-full"
+            >
+              <Avatar className="relative h-10 w-10 border-2 border-background">
+                <AvatarImage
+                  src={
+                    user.profile_pic
+                      ? user.profile_pic.startsWith("http")
+                        ? user.profile_pic
+                        : import.meta.env.VITE_APP_BASE_URL + user.profile_pic
+                      : undefined
+                  }
+                  alt={user.name}
+                  className="object-cover"
+                />
 
-                    <AvatarFallback className="bg-sidebar text-white text-xs font-bold">
-                      {user.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .slice(0, 2)
-                        .join("")}
-                    </AvatarFallback>
-                  </Avatar>
+                <AvatarFallback className="bg-sidebar text-white text-xs font-bold">
+                  {user.name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .slice(0, 2)
+                    .join("")}
+                </AvatarFallback>
+              </Avatar>
 
-                  {/* Online Dot */}
-                  <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-500 border-2 border-background" />
-                </motion.button>
-              </DropdownMenuTrigger>
-
-              {/* Existing Dropdown Content */}
-            </DropdownMenu>
+              {/* Online Dot */}
+              <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-500 border-2 border-background" />
+            </motion.button>
           )}
         </div>
       </header>

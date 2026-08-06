@@ -96,9 +96,8 @@ export default function SupportPage() {
   ];
 
   return (
-    <DashboardLayout pageTitle="Help & Support" stats={[]}>
-      
-      <Tabs defaultValue="tickets" className="mt-6 w-full">
+    <>
+      <Tabs defaultValue="tickets" className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="tickets">Support Tickets</TabsTrigger>
           <TabsTrigger value="faqs">FAQs & Contact</TabsTrigger>
@@ -182,6 +181,6 @@ export default function SupportPage() {
         onSuccess={fetchQueries} 
       />
       
-    </DashboardLayout>
+    </>
   );
 }

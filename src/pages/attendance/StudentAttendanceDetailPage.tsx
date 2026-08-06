@@ -163,6 +163,53 @@ export default function StudentAttendanceDetailPage() {
         </div>
       </div>
 
+      {/* Top Banner: Profile & Overview Summary */}
+      <div className="bg-white rounded-xl border border-border p-6 shadow-sm flex flex-col md:flex-row gap-6 items-center md:items-start justify-between">
+        <div className="flex items-center gap-5">
+          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-2xl shadow-sm border border-primary/20 shrink-0">
+            {selectedStudent.student_profile.name.slice(0, 2).toUpperCase()}
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-2xl font-bold text-foreground">{selectedStudent.student_profile.name}</h2>
+            <div className="text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
+              <span><span className="font-medium text-foreground">Admission:</span> {selectedStudent.student_profile.admission_number}</span>
+              {selectedStudent.student_profile.roll_number && (
+                <span><span className="font-medium text-foreground">Roll:</span> {selectedStudent.student_profile.roll_number}</span>
+              )}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Branch/Batch:</span> {selectedStudent.student_profile.branch_name}
+              {selectedStudent.student_profile.batch_name && ` / ${selectedStudent.student_profile.batch_name}`}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-6 items-center md:items-end">
+          <div className="flex flex-col items-center sm:items-end">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Overall Attendance</span>
+            <div className="text-4xl font-extrabold text-primary flex items-center gap-3">
+              {selectedStudent.attendance_percentage.toFixed(1)}%
+              <Badge className={`text-xs font-semibold px-2 py-0.5 ${pct(selectedStudent.attendance_percentage)}`}>
+                {selectedStudent.attendance_percentage >= 75 ? 'Excellent' : selectedStudent.attendance_percentage >= 50 ? 'Average' : 'Low'}
+              </Badge>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: "Present", value: selectedStudent.summary.present_count, color: "text-green-600", bg: "bg-green-50" },
+              { label: "Absent",  value: selectedStudent.summary.absent_count,  color: "text-red-600", bg: "bg-red-50" },
+              { label: "Late",    value: selectedStudent.summary.late_count,    color: "text-yellow-600", bg: "bg-yellow-50" },
+            ].map(item => (
+              <div key={item.label} className={`${item.bg} rounded-lg p-2 text-center border border-border/40 min-w-[70px]`}>
+                <div className={`text-xl font-extrabold ${item.color}`}>{item.value}</div>
+                <div className="text-[10px] uppercase font-semibold text-muted-foreground mt-0.5">{item.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Filter Card */}
       <div className="bg-white rounded-xl border border-border p-4 shadow-sm space-y-4">
         <div className="flex items-center justify-between border-b border-border/60 pb-2">
@@ -266,275 +313,270 @@ export default function StudentAttendanceDetailPage() {
         </div>
       </div>
 
-      {/* Layout: Main Panel & Sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Panel: Profile Summary Card */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white rounded-xl border border-border p-6 text-center relative overflow-hidden shadow-sm">
-            
-            <div className="mx-auto w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-2xl mb-4 shadow-sm border border-primary/20">
-              {selectedStudent.student_profile.name.slice(0, 2).toUpperCase()}
-            </div>
-            <h2 className="text-xl font-bold text-foreground mb-1">{selectedStudent.student_profile.name}</h2>
-            <p className="text-xs text-muted-foreground font-mono mb-4">
-              {selectedStudent.student_profile.roll_number ? `Roll: ${selectedStudent.student_profile.roll_number}` : 'No Roll Number'}
-            </p>
-            
-            <div className="grid grid-cols-2 gap-2 text-left text-xs bg-muted/30 rounded-lg p-3.5 mb-6">
-              <div>
-                <span className="text-muted-foreground block mb-0.5">Admission No</span>
-                <span className="font-semibold text-foreground font-mono">{selectedStudent.student_profile.admission_number}</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground block mb-0.5">Branch / Batch</span>
-                <span className="font-semibold text-foreground truncate block max-w-full font-medium">
-                  {selectedStudent.student_profile.branch_name} {selectedStudent.student_profile.batch_name ? `/ ${selectedStudent.student_profile.batch_name}` : ''}
-                </span>
-              </div>
-            </div>
+      {/* Full width tabs */}
+      <Tabs defaultValue="day_wise" className="w-full space-y-6">
+        <TabsList className="w-full flex justify-start border-b rounded-none h-auto p-0 bg-transparent gap-6 overflow-x-auto">
+          <TabsTrigger value="day_wise" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 py-3">
+            Day-wise Records
+          </TabsTrigger>
+          <TabsTrigger value="history" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 py-3">
+            Entry & Exit History
+          </TabsTrigger>
+          <TabsTrigger value="violations" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 py-3">
+            Violations
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 py-3">
+            Analytics
+          </TabsTrigger>
+        </TabsList>
 
-            <div className="border border-border/60 rounded-xl p-4 bg-gradient-to-b from-muted/10 to-muted/30">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Overall Attendance</span>
-              <div className="text-4xl font-extrabold text-primary mb-1">
-                {selectedStudent.attendance_percentage.toFixed(1)}%
-              </div>
-              <Badge className={`text-xs font-semibold px-2.5 py-0.5 ${pct(selectedStudent.attendance_percentage)}`}>
-                {selectedStudent.attendance_percentage >= 75 ? 'Excellent' : selectedStudent.attendance_percentage >= 50 ? 'Average' : 'Low Attendance'}
-              </Badge>
+        <TabsContent value="day_wise" className="mt-0">
+          <div className="bg-white rounded-xl border border-border overflow-hidden shadow-sm">
+            <div className="px-6 py-4 border-b border-border bg-muted/10 flex justify-between items-center">
+              <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+                <CalendarIcon className="w-4 h-4 text-primary" /> Day-wise Attendance Records
+              </h3>
+              <span className="text-sm text-muted-foreground font-medium">
+                Showing {selectedStudent.day_wise_attendance?.length || 0} records
+              </span>
             </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-border p-6 space-y-4 shadow-sm">
-            <h3 className="font-bold text-sm text-foreground">Attendance Metrics</h3>
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { label: "Present", value: selectedStudent.summary.present_count, color: "text-green-600", bg: "bg-green-50" },
-                { label: "Absent",  value: selectedStudent.summary.absent_count,  color: "text-red-600", bg: "bg-red-50" },
-                { label: "Late",    value: selectedStudent.summary.late_count,    color: "text-yellow-600", bg: "bg-yellow-50" },
-              ].map(item => (
-                <div key={item.label} className={`${item.bg} rounded-lg p-3 text-center border border-border/40`}>
-                  <div className={`text-2xl font-extrabold ${item.color}`}>{item.value}</div>
-                  <div className="text-[10px] uppercase font-semibold text-muted-foreground mt-0.5">{item.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Panel: Tabs for Table View & Analytics */}
-        <div className="lg:col-span-2 space-y-6">
-          <Tabs defaultValue="table" className="w-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="table">Table View</TabsTrigger>
-              <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="table" className="space-y-6 mt-0">
-              {/* Day-wise Attendance Records Table */}
-              <div className="bg-white rounded-xl border border-border overflow-hidden shadow-sm">
-                <div className="px-6 py-4 border-b border-border bg-muted/10 flex justify-between items-center">
-                  <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
-                    <CalendarIcon className="w-4 h-4 text-primary" /> Day-wise Attendance Records
-                  </h3>
-                  <span className="text-xs text-muted-foreground font-medium">
-                    Showing {selectedStudent.day_wise_attendance?.length || 0} records
-                  </span>
-                </div>
-                <div className="p-4 max-h-[350px] overflow-y-auto">
-                  {selectedStudent.day_wise_attendance && selectedStudent.day_wise_attendance.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="border-b border-border text-left font-medium text-muted-foreground pb-2">
-                            <th className="pb-2 font-semibold">Date</th>
-                            <th className="pb-2 font-semibold">Status</th>
-                            <th className="pb-2 font-semibold">Check-in Time</th>
-                            <th className="pb-2 font-semibold">Check-out Time</th>
+            <div className="p-4">
+              {selectedStudent.day_wise_attendance && selectedStudent.day_wise_attendance.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-left font-semibold text-muted-foreground pb-2">
+                        <th className="pb-3 px-2">Date</th>
+                        <th className="pb-3 px-2">Status</th>
+                        <th className="pb-3 px-2">Subject / Slot</th>
+                        <th className="pb-3 px-2">Check-in Time</th>
+                        <th className="pb-3 px-2">Check-out Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedStudent.day_wise_attendance.map((day, idx) => {
+                        const checkIn = selectedStudent.check_in_history?.find((e) => e.id === day.id);
+                        const checkOut = selectedStudent.check_out_history?.find((e) => e.id === day.id);
+                        return (
+                          <tr key={idx} className="border-b border-border/40 last:border-0 hover:bg-muted/10">
+                            <td className="py-3 px-2 font-medium font-mono">{formatDate(day.date)}</td>
+                            <td className="py-3 px-2">
+                              <Badge variant="outline" className={`text-xs font-semibold capitalize ${getStatusBadge(day.status)}`}>
+                                {day.status_display || day.status.replace(/_/g, " ")}
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-2">
+                              {day.timetable_slot ? (
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{day.timetable_slot.subject_name}</span>
+                                  <span className="text-xs text-muted-foreground font-mono">{day.timetable_slot.slot_code} ({day.timetable_slot.start_time} - {day.timetable_slot.end_time})</span>
+                                </div>
+                              ) : <span className="text-muted-foreground text-xs">—</span>}
+                            </td>
+                            <td className="py-3 px-2 text-muted-foreground font-mono font-medium">
+                              {day.checked_in_at ? formatTime(day.checked_in_at) : (checkIn ? formatTime(checkIn.check_in_time || checkIn.time) : "—")}
+                            </td>
+                            <td className="py-3 px-2 text-muted-foreground font-mono font-medium">
+                              {day.checked_out_at ? formatTime(day.checked_out_at) : (checkOut ? formatTime(checkOut.check_out_time || checkOut.time) : "—")}
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {selectedStudent.day_wise_attendance.map((day: any, idx: number) => {
-                            const checkIn = selectedStudent.check_in_history?.find((e: any) => e.id === day.id);
-                            const checkOut = selectedStudent.check_out_history?.find((e: any) => e.id === day.id);
-                            return (
-                              <tr key={idx} className="border-b border-border/40 last:border-0 hover:bg-muted/10">
-                                <td className="py-2.5 font-medium font-mono">{formatDate(day.date)}</td>
-                                <td className="py-2.5">
-                                  <Badge variant="outline" className={`text-[10px] font-semibold capitalize ${getStatusBadge(day.status)}`}>
-                                    {day.status_display || day.status}
-                                  </Badge>
-                                </td>
-                                <td className="py-2.5 text-muted-foreground font-mono">
-                                  {day.checked_in_at ? formatTime(day.checked_in_at) : (checkIn ? formatTime(checkIn.check_in_time || checkIn.time) : "—")}
-                                </td>
-                                <td className="py-2.5 text-muted-foreground font-mono">
-                                  {day.checked_out_at ? formatTime(day.checked_out_at) : (checkOut ? formatTime(checkOut.check_out_time || checkOut.time) : "—")}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="text-center py-12 text-sm text-muted-foreground">
-                      No day-wise attendance records found for the selected filter criteria.
-                    </div>
-                  )}
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
+              ) : (
+                <div className="text-center py-12 text-sm text-muted-foreground">
+                  No day-wise attendance records found for the selected filter criteria.
+                </div>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="history" className="mt-0 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-border bg-muted/10 flex justify-between items-center">
+              <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+                <CalendarIcon className="w-4 h-4 text-green-600" /> Check-in History
+              </h3>
+            </div>
+            <div className="p-4 max-h-[400px] overflow-y-auto">
+              {selectedStudent.check_in_history?.length > 0 ? (
+                <div className="space-y-3">
+                  {selectedStudent.check_in_history.map((entry, idx) => (
+                    <div key={`in-${idx}`} className="flex justify-between items-center text-sm border-b border-border/40 pb-3 last:border-0 last:pb-0">
+                      <div className="space-y-0.5">
+                        <div className="font-medium text-foreground">{formatDate(entry.date)}</div>
+                        {entry.timetable_slot && (
+                          <div className="text-xs text-muted-foreground">{entry.timetable_slot.subject_name} ({entry.timetable_slot.start_time} - {entry.timetable_slot.end_time})</div>
+                        )}
+                      </div>
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 font-mono font-bold">
+                        {formatTime(entry.check_in_time || entry.time)}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-10 text-sm text-muted-foreground">No check-in history found.</div>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-border bg-muted/10 flex justify-between items-center">
+              <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+                <CalendarIcon className="w-4 h-4 text-blue-600" /> Check-out History
+              </h3>
+            </div>
+            <div className="p-4 max-h-[400px] overflow-y-auto">
+              {selectedStudent.check_out_history?.length > 0 ? (
+                <div className="space-y-3">
+                  {selectedStudent.check_out_history.map((exit, idx) => (
+                    <div key={`out-${idx}`} className="flex justify-between items-center text-sm border-b border-border/40 pb-3 last:border-0 last:pb-0">
+                      <div className="space-y-0.5">
+                        <div className="font-medium text-foreground">{formatDate(exit.date)}</div>
+                        {exit.timetable_slot && (
+                          <div className="text-xs text-muted-foreground">{exit.timetable_slot.subject_name} ({exit.timetable_slot.start_time} - {exit.timetable_slot.end_time})</div>
+                        )}
+                      </div>
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 font-mono font-bold">
+                        {formatTime(exit.check_out_time || exit.time)}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-10 text-sm text-muted-foreground">No check-out history found.</div>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="violations" className="mt-0">
+          <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-border bg-muted/10 flex justify-between items-center">
+              <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-red-500" /> Active Violations
+              </h3>
+            </div>
+            <div className="p-4">
+              {selectedStudent.violations?.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {selectedStudent.violations.map((v, idx) => (
+                    <div key={idx} className={`rounded-xl p-4 border flex flex-col gap-2 ${v.is_resolved ? 'bg-green-50/50 border-green-100' : 'bg-red-50/50 border-red-100'}`}>
+                      <div className="flex justify-between items-start">
+                        <Badge className={`${v.is_resolved ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'} capitalize font-semibold`}>
+                          {v.violation_type?.replace(/_/g, " ") || v.type}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground font-medium">{formatDate(v.date)}</span>
+                      </div>
+                      <p className="text-sm text-foreground font-medium flex-1 mt-1">{v.description || "Unauthorized attendance event."}</p>
+                      
+                      <div className="mt-2 pt-2 border-t border-border/40 text-xs text-muted-foreground flex justify-between items-center">
+                         <span>Created: {formatDate(v.created_at)}</span>
+                         {v.is_resolved && v.resolution_details && (
+                           <span className="text-green-600 font-medium">Resolved by {v.resolution_details.resolved_by}</span>
+                         )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-sm text-muted-foreground border border-dashed border-border/50 rounded-xl">
+                  No violations found for this student.
+                </div>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="mt-0 space-y-6">
+          {/* Attendance Monthly Trend */}
+          <div className="bg-white rounded-xl border border-border p-6 shadow-sm">
+            <h3 className="font-bold text-sm text-foreground mb-6 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary" /> Attendance Monthly Trend
+            </h3>
+            {selectedStudent.monthly_trend?.length > 0 ? (
+              <div className="w-full">
+                <ResponsiveContainer width="100%" height={250}>
+                  <LineChart data={selectedStudent.monthly_trend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                    <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} tick={{ fontSize: 12 }} />
+                    <Tooltip formatter={(v) => `${Number(v).toFixed(1)}%`} />
+                    <Line type="monotone" dataKey="percentage" stroke="#F7A900" strokeWidth={3} dot={{ fill: "#F7A900", r: 4 }} activeDot={{ r: 6 }} />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Entry & Exit History */}
-                <div className="bg-white rounded-xl border border-border p-6 shadow-sm">
-                  <h3 className="font-bold text-sm text-foreground mb-4 flex items-center gap-2">
-                    <CalendarIcon className="w-4 h-4 text-primary" /> Entry & Exit History
-                  </h3>
-                  {selectedStudent.check_in_history?.length > 0 || selectedStudent.check_out_history?.length > 0 ? (
-                    <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-                      {selectedStudent.check_in_history?.map((entry: any, idx: number) => (
-                        <div key={`in-${idx}`} className="flex justify-between items-center text-xs border-b border-border/40 pb-2">
-                          <div className="space-y-0.5">
-                            <div className="font-medium text-foreground">{formatDate(entry.date) || "Today"}</div>
-                            <div className="text-[10px] text-muted-foreground">Check-in</div>
-                          </div>
-                          <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200 font-mono">
-                            {formatTime(entry.check_in_time || entry.time)}
-                          </Badge>
-                        </div>
-                      ))}
-                      {selectedStudent.check_out_history?.map((exit: any, idx: number) => (
-                        <div key={`out-${idx}`} className="flex justify-between items-center text-xs border-b border-border/40 pb-2">
-                          <div className="space-y-0.5">
-                            <div className="font-medium text-foreground">{formatDate(exit.date) || "Today"}</div>
-                            <div className="text-[10px] text-muted-foreground">Check-out</div>
-                          </div>
-                          <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200 font-mono">
-                            {formatTime(exit.check_out_time || exit.time)}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-10 text-xs text-muted-foreground border border-dashed border-border/50 rounded-lg">
-                      No check-in or check-out history.
-                    </div>
-                  )}
-                </div>
-
-                {/* Active Violations */}
-                <div className="bg-white rounded-xl border border-border p-6 shadow-sm">
-                  <h3 className="font-bold text-sm text-foreground mb-4 flex items-center gap-2">
-                    <ShieldAlert className="w-4 h-4 text-red-500" /> Active Violations
-                  </h3>
-                  {selectedStudent.violations?.length > 0 ? (
-                    <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-                      {selectedStudent.violations.map((v: any, idx: number) => (
-                        <div key={idx} className="bg-red-50/50 rounded-lg p-3 border border-red-100 flex flex-col gap-1 text-xs">
-                          <div className="flex justify-between items-center">
-                            <Badge className="bg-red-100 text-red-700 text-[10px] capitalize font-medium">{v.violation_type || v.type}</Badge>
-                            <span className="text-[10px] text-muted-foreground">{formatDate(v.date)}</span>
-                          </div>
-                          <p className="text-[11px] text-muted-foreground font-medium">{v.description || "Unauthorized attendance event."}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-10 text-xs text-muted-foreground border border-dashed border-border/50 rounded-lg">
-                      No violations found for this student.
-                    </div>
-                  )}
-                </div>
+            ) : (
+              <div className="text-center py-10 text-sm text-muted-foreground border-2 border-dashed border-border/50 rounded-xl">
+                No monthly trend data available.
               </div>
-            </TabsContent>
+            )}
+          </div>
 
-            <TabsContent value="analytics" className="space-y-6 mt-0">
-              {/* Attendance Monthly Trend */}
-              <div className="bg-white rounded-xl border border-border p-6 shadow-sm">
-                <h3 className="font-bold text-sm text-foreground mb-4 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-primary" /> Attendance Monthly Trend
-                </h3>
-                {selectedStudent.monthly_trend?.length > 0 ? (
-                  <div className="w-full">
-                    <ResponsiveContainer width="100%" height={200}>
-                      <LineChart data={selectedStudent.monthly_trend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                        <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} tick={{ fontSize: 11 }} />
-                        <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
-                        <Line type="monotone" dataKey="percentage" stroke="#F7A900" strokeWidth={2.5} dot={{ fill: "#F7A900", r: 4 }} activeDot={{ r: 6 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <div className="text-center py-10 text-sm text-muted-foreground border-2 border-dashed border-border/50 rounded-xl">
-                    No monthly trend data available.
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Subject-wise Analytics */}
-                <div className="bg-white rounded-xl border border-border p-6 shadow-sm">
-                  <h3 className="font-bold text-sm text-foreground mb-4 flex items-center gap-2">
-                    <BookOpen className="w-4 h-4 text-primary" /> Subject-wise Analytics
-                  </h3>
-                  {selectedStudent.subject_wise_attendance?.length > 0 ? (
-                    <div className="space-y-4">
-                      {selectedStudent.subject_wise_attendance.map((sub: any) => (
-                        <div key={sub.subject_id} className="space-y-1">
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="font-semibold text-foreground truncate max-w-[160px]">{sub.subject_name}</span>
-                            <span className="font-mono text-muted-foreground">{sub.percentage.toFixed(1)}%</span>
-                          </div>
-                          <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${sub.percentage >= 75 ? 'bg-green-500' : sub.percentage >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                              style={{ width: `${sub.percentage}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Subject-wise Analytics */}
+            <div className="bg-white rounded-xl border border-border p-6 shadow-sm">
+              <h3 className="font-bold text-sm text-foreground mb-6 flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-primary" /> Subject-wise Attendance
+              </h3>
+              {selectedStudent.subject_wise_attendance?.length > 0 ? (
+                <div className="space-y-5">
+                  {selectedStudent.subject_wise_attendance.map((sub) => (
+                    <div key={sub.subject_id} className="space-y-1.5">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="font-semibold text-foreground truncate max-w-[200px]">{sub.subject_name}</span>
+                        <span className="font-mono font-bold text-muted-foreground">{sub.percentage.toFixed(1)}%</span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${sub.percentage >= 75 ? 'bg-green-500' : sub.percentage >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                          style={{ width: `${sub.percentage}%` }}
+                        />
+                      </div>
                     </div>
-                  ) : (
-                    <div className="text-center py-8 text-xs text-muted-foreground border border-dashed border-border/50 rounded-lg">
-                      No subject-wise records found.
-                    </div>
-                  )}
+                  ))}
                 </div>
-
-                {/* Session-wise Attendance */}
-                <div className="bg-white rounded-xl border border-border p-6 shadow-sm">
-                  <h3 className="font-bold text-sm text-foreground mb-4 flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-primary" /> Session-wise Attendance
-                  </h3>
-                  {selectedStudent.session_wise_attendance?.length > 0 ? (
-                    <div className="space-y-4">
-                      {selectedStudent.session_wise_attendance.map((sess: any, idx: number) => (
-                        <div key={idx} className="space-y-1">
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="font-semibold text-foreground capitalize">{sess.session_name || sess.session}</span>
-                            <span className="font-mono text-muted-foreground">{sess.percentage?.toFixed(1) || 0}%</span>
-                          </div>
-                          <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-primary"
-                              style={{ width: `${sess.percentage || 0}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-xs text-muted-foreground border border-dashed border-border/50 rounded-lg">
-                      No session-wise records found.
-                    </div>
-                  )}
+              ) : (
+                <div className="text-center py-8 text-sm text-muted-foreground border border-dashed border-border/50 rounded-lg">
+                  No subject-wise records found.
                 </div>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
-      </div>
+              )}
+            </div>
+
+            {/* Session-wise Attendance */}
+            <div className="bg-white rounded-xl border border-border p-6 shadow-sm">
+              <h3 className="font-bold text-sm text-foreground mb-6 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-primary" /> Session-wise Attendance
+              </h3>
+              {selectedStudent.session_wise_attendance?.length > 0 ? (
+                <div className="space-y-5">
+                  {selectedStudent.session_wise_attendance.map((sess, idx) => (
+                    <div key={idx} className="space-y-1.5">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="font-semibold text-foreground capitalize">{sess.session_name || sess.session}</span>
+                        <span className="font-mono font-bold text-muted-foreground">{sess.percentage?.toFixed(1) || 0}%</span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${sess.percentage >= 75 ? 'bg-primary' : 'bg-primary/50'}`}
+                          style={{ width: `${sess.percentage || 0}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-sm text-muted-foreground border border-dashed border-border/50 rounded-lg">
+                  No session-wise records found.
+                </div>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
