@@ -526,3 +526,42 @@ export function NotificationsSkeleton() {
     </div>
   );
 }
+
+export function SupportTicketDetailSkeleton() {
+  return (
+    <div className="mx-auto space-y-6 animate-pulse">
+      <div className="flex justify-between items-center mb-2 -ml-4">
+        <Skeleton width={120} height={36} />
+      </div>
+      
+      <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
+        <Skeleton width={150} height={24} />
+        <div className="space-y-2 mt-4">
+          <Skeleton width="40%" height={16} />
+          <Skeleton width="80%" height={16} />
+          <Skeleton width="60%" height={16} />
+        </div>
+      </div>
+
+      <div className="space-y-4 mt-6">
+        <Skeleton width={200} height={24} />
+        <div className="rounded-xl border border-border bg-card p-5 shadow-sm space-y-4">
+           <div className="flex justify-between items-center">
+             <div className="flex gap-2 items-center"><Skeleton circle width={24} height={24} /><Skeleton width={150} height={20} /></div>
+             <Skeleton width={100} height={16} />
+           </div>
+           <Skeleton width="100%" height={16} count={2} />
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-5 shadow-sm space-y-4 mt-6">
+        <Skeleton width={150} height={24} />
+        <Skeleton width="100%" height={120} />
+        <div className="flex justify-between items-center mt-4">
+           <Skeleton width={120} height={36} />
+           <Skeleton width={100} height={36} />
+        </div>
+      </div>
+    </div>
+  );
+}

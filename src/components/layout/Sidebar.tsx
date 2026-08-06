@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { NavLink, useLocation } from "react-router-dom";
@@ -32,6 +32,18 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
 
   // pinned = user clicked the pin button (uses Redux state)
   const pinned = !mobile && !sidebarCollapsed;
+
+  // Keyboard shortcut to toggle sidebar (Ctrl+B / Cmd+B)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "b" && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+        toggleSidebarCollapse();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [toggleSidebarCollapse]);
 
   /* ── auto-hover collapse (only when NOT pinned, desktop only) ── */
   const [hovered, setHovered] = useState(false);
