@@ -91,9 +91,12 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
     rawModules = ["dashboard", ...rawModules];
   }
 
-  // Force add attendance for all staff roles so they can view their My Attendance tab
-  if (user && !["student", "parents"].includes(user.role) && !rawModules.includes("attendance")) {
-    rawModules = [...rawModules, "attendance"];
+  // Force add attendance and leave for all staff roles so they can view their My Attendance and My Leave tabs
+  if (user && !["student", "parents"].includes(user.role)) {
+    if (!rawModules.includes("attendance")) rawModules = [...rawModules, "attendance"];
+    if (!["exam_supervisor", "paper_checker", "security", "house_keeping"].includes(user.role) && !rawModules.includes("leave")) {
+      rawModules = [...rawModules, "leave"];
+    }
   }
 
   let modules = rawModules.includes("notifications") ? rawModules : [...rawModules, "notifications"];

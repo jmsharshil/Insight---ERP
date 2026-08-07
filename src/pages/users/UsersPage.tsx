@@ -934,13 +934,13 @@ export default function UsersPage() {
                           src={
                             profilePicPreview
                               ? profilePicPreview
-                              : selectedUser.profile_pic
-                                ? selectedUser.profile_pic.startsWith("http")
-                                  ? selectedUser.profile_pic
-                                  : import.meta.env.VITE_APP_BASE_URL + selectedUser.profile_pic
+                              : selectedUser?.profile_pic
+                                ? selectedUser?.profile_pic.startsWith("http")
+                                  ? selectedUser?.profile_pic
+                                  : import.meta.env.VITE_APP_BASE_URL + selectedUser?.profile_pic
                                 : undefined
                           }
-                          alt={selectedUser.name}
+                          alt={selectedUser?.name}
                           className="object-cover"
                         />
                         <AvatarFallback className="text-3xl bg-primary/10 text-primary-dark font-medium">

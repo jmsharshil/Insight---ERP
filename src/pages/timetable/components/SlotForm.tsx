@@ -124,6 +124,7 @@ export function buildSlotPayload(values: SlotFormValues): Record<string, any> {
     base.is_recurring = values.is_recurring ?? true;
     if (values.effective_from) base.effective_from = values.effective_from;
     if (values.effective_to)   base.effective_to   = values.effective_to;
+    if (values.session_date)   base.session_date   = values.session_date;
   } else {
     base.session_date = values.session_date;
     base.start_time   = values.start_time ? values.start_time + ":00" : undefined;
@@ -465,6 +466,9 @@ export default function SlotForm({
               </Field>
             )}
 
+            <Field label="Session Date" error={errors.session_date?.message}>
+              <Input type="date" {...register("session_date")} className="h-9 text-sm" />
+            </Field>
             <Field label="Effective From">
               <Input type="date" {...register("effective_from")} className="h-9 text-sm" />
             </Field>
