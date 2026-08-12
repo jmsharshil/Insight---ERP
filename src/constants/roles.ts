@@ -81,13 +81,13 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   exam_supervisor: {
     id: "exam_supervisor", label: "Exam Supervisor", description: "On-ground exam operations",
     color: "bg-orange-100", textColor: "text-orange-800",
-    modules: ["dashboard","attendance","exams","leave","notifications","payroll","settings","support"],
+    modules: ["dashboard","attendance","exams","notifications","payroll","settings","support"],
     canDelete: false, canExport: false,
   },
   paper_checker: {
     id: "paper_checker", label: "Paper Checker", description: "Evaluation-only role",
     color: "bg-yellow-100", textColor: "text-yellow-800",
-    modules: ["dashboard","exams","leave","notifications","payroll","settings","support"],
+    modules: ["dashboard","exams","notifications","payroll","settings","support"],
     canDelete: false, canExport: false,
   },
   accountant: {
@@ -99,13 +99,13 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   security: {
     id: "security", label: "Security", description: "Campus security personnel",
     color: "bg-slate-100", textColor: "text-slate-800",
-    modules: ["dashboard","attendance","leave","payroll","notifications","settings","support"],
+    modules: ["dashboard","attendance","payroll","notifications","settings","support"],
     canDelete: false, canExport: false,
   },
   house_keeping: {
     id: "house_keeping", label: "House Keeping", description: "Maintenance and house keeping staff",
     color: "bg-pink-100", textColor: "text-pink-800",
-    modules: ["dashboard","attendance","leave","payroll","notifications","settings","support"],
+    modules: ["dashboard","attendance","payroll","notifications","settings","support"],
     canDelete: false, canExport: false,
   },
 };

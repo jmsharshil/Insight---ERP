@@ -296,13 +296,15 @@ export default function AnalyticsTab({ dropdowns }: { dropdowns?: any }) {
           {batchWiseData?.length > 0 && (
             <div className="bg-white rounded-xl border border-border p-5">
               <h3 className="font-semibold text-sm mb-4 text-foreground">Batch Comparison</h3>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={batchWiseData} margin={{ top: 4, right: 16, left: 0, bottom: 40 }}>
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={batchWiseData} margin={{ top: 4, right: 16, left: 0, bottom: 100 }}>
                   <XAxis
                     dataKey="batch_name"
                     tick={{ fontSize: 11 }}
-                    angle={-30}
+                    angle={-45}
                     textAnchor="end"
+                    interval={0}
+                    height={140}
                   />
                   <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11 }} />
                   <Tooltip

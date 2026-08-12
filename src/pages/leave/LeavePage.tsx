@@ -14,9 +14,14 @@ import AnalyticsTab    from "./tabs/AnalyticsTab";
 // ── Role-based tab config ────────────────────────────────────────────────────
 const TAB_CONFIG = [
   {
+    value: "my_leaves",
+    label: "My Leaves",
+    roles: ["branch_manager", "admin_senior_executive", "faculty", "front_desk", "counsellor", "student", "parents"],
+  },
+  {
     value: "applications",
-    label: "Applications",
-    roles: ["super_admin", "branch_manager", "admin_senior_executive", "faculty", "front_desk", "counsellor", "student", "parents"],
+    label: "All Leaves",
+    roles: ["super_admin", "branch_manager", "admin_senior_executive"],
   },
   {
     value: "policies",
@@ -73,9 +78,14 @@ export default function LeavePage() {
           ))}
         </TabsList>
 
-        {/* Applications */}
+        {/* My Leaves */}
+        <TabsContent value="my_leaves" className="mt-4">
+          <ApplicationsTab mode="my_leaves" />
+        </TabsContent>
+
+        {/* All Leaves */}
         <TabsContent value="applications" className="mt-4">
-          <ApplicationsTab />
+          <ApplicationsTab mode="all_leaves" />
         </TabsContent>
 
         {/* Policies — super_admin / branch_manager only */}

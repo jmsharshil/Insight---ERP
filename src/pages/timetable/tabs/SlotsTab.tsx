@@ -546,7 +546,12 @@ export default function SlotsTab({
                     <td className="px-4 py-3 text-xs">{slot.classroom_name || "—"}</td>
                     <td className="px-4 py-3 text-xs font-mono">
                       {slot.session_type === "regular"
-                        ? <span>{DAY_MAP[String(slot.day_of_week)] ?? slot.day_label ?? "—"}{slot.slot_code ? ` · ${slot.slot_code}` : ""}</span>
+                        ? (
+                            <div className="flex flex-col">
+                              <span>{DAY_MAP[String(slot.day_of_week)] ?? slot.day_label ?? "—"}{slot.slot_code ? ` · ${slot.slot_code}` : ""}</span>
+                              {slot.session_date && <span className="text-muted-foreground text-[10px]">{slot.session_date}</span>}
+                            </div>
+                          )
                         : <span>{slot.session_date ?? "—"}</span>}
                     </td>
                     <td className="px-4 py-3 text-xs font-mono whitespace-nowrap">

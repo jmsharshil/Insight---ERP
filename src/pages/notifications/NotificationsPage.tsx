@@ -1,6 +1,6 @@
 import { useMemo, useEffect, useCallback, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, BellOff, CheckCheck, Loader2 } from "lucide-react";
+import { Bell, BellOff, CheckCheck, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store";
@@ -40,18 +40,23 @@ export default function NotificationsPage() {
   const { notifications, loading } = useSelector((state: RootState) => state.notifications);
   const { setPageTitle } = useUI();
   const [filter, setFilter] = useState<"all" | "unread" | "high">("all");
+  const [page, setPage] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrev, setHasPrev] = useState(false);
   const navigate = useNavigate();
   const toast = useToast();
   const dispatch = useDispatch<AppDispatch>();
 
-  const fetchNotifications = useCallback(() => {
+  const fetchNotifications = useCallback((currentPage: number) => {
     dispatch({
       type: notificationActions.GET_NOTIFICATIONS,
       method: "GET",
-      endPoint: `/api/auth/notifications/`,
+      endPoint: `/api/auth/notifications/?page=${currentPage}`,
       auth: true,
       setLoading: (val: boolean) => dispatch(setNotificationsLoading(val)),
       getResponse: (res: any) => {
+        setHasNext(!!res?.next);
+        setHasPrev(!!res?.previous);
         const apiData = res?.data || [];
         const mapped: AppNotification[] = apiData.map((n: any) => ({
           id: n.id,
@@ -78,8 +83,8 @@ export default function NotificationsPage() {
   }, [setPageTitle]);
 
   useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+    fetchNotifications(page);
+  }, [fetchNotifications, page]);
 
   const filtered = useMemo(() => notifications.filter(n =>
     filter === "all" ? true : filter === "unread" ? !n.isRead : n.priority === "high",
@@ -198,6 +203,31 @@ export default function NotificationsPage() {
               </div>
             </div>
           ))}
+
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
+            <span className="text-sm text-muted-foreground">
+              Page {page}
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={!hasPrev || loading}
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => p + 1)}
+                disabled={!hasNext || loading}
+              >
+                Next <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
