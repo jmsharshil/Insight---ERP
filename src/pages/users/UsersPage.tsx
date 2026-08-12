@@ -990,7 +990,7 @@ export default function UsersPage() {
                 {/* Form Fields (Unified for both View & Edit) */}
                 <div className="space-y-4">
                   {/* Username (Only when adding) */}
-                  {isAdding && (
+                  {/* {isAdding && (
                     <div className="space-y-1">
                       <Label
                         htmlFor="edit-username"
@@ -1006,7 +1006,7 @@ export default function UsersPage() {
                         className="bg-background"
                       />
                     </div>
-                  )}
+                  )} */}
 
                   {/* Name */}
                   <div className="space-y-1">

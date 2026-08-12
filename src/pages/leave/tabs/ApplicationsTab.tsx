@@ -195,7 +195,7 @@ function LeaveApplicationDetail({
   );
 }
 
-export default function ApplicationsTab() {
+export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_leaves" | "all_leaves" }) {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
   const { user } = useAuth();
@@ -358,7 +358,7 @@ export default function ApplicationsTab() {
       formData.append("is_half_day", String(applyForm.is_half_day));
       if (applyForm.is_half_day) formData.append("half_day_session", applyForm.half_day_session);
       if (applyForm.supporting_document) {
-        formData.append("is_capable_of_proof", true);
+        formData.append("is_capable_of_proof", "true");
         formData.append("supporting_document", applyForm.supporting_document);
       }
     }
@@ -496,6 +496,13 @@ export default function ApplicationsTab() {
   };
 
   const filtered = applications.filter((a) => {
+    if (mode === "my_leaves" && a.applied_by !== user?.id) {
+      return false;
+    }
+    if (mode === "all_leaves" && a.applied_by === user?.id) {
+      return false;
+    }
+
     const applicantRole = a.applied_by_role || a.user_role;
     if (role === "admin_senior_executive" && applicantRole === "branch_manager") {
       return false;
@@ -531,7 +538,7 @@ export default function ApplicationsTab() {
       )}
 
       {/* Tabs */}
-      {isAdmin && (
+      {isAdmin && mode === "all_leaves" && (
         <div className="flex bg-muted p-1 rounded-lg w-fit">
           <button
             onClick={() => setActiveTab("staff")}
@@ -729,7 +736,7 @@ export default function ApplicationsTab() {
                               <XCircle className="w-4 h-4" />
                             </Button>
                           )}
-                        {!isAdmin &&
+                        {isOwnLeave &&
                           (app.status === "approval_pending" || app.status === "pending") && (
                             <Button
                               variant="ghost"
@@ -743,7 +750,7 @@ export default function ApplicationsTab() {
                               <Pencil className="w-3.5 h-3.5" />
                             </Button>
                           )}
-                        {!isAdmin &&
+                        {isOwnLeave &&
                           (app.status === "approval_pending" || app.status === "pending") && (
                             <Button
                               variant="ghost"
