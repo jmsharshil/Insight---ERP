@@ -496,10 +496,19 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
   };
 
   const filtered = applications.filter((a) => {
-    if (mode === "my_leaves" && a.applied_by !== user?.id) {
-      return false;
+    const sId = typeof a.student === "string" ? a.student : ((a as any).student_id || (a.student as any)?.id);
+    const isMine =
+      a.applied_by === user?.id ||
+      (!!sId && sId === user?.id) ||
+      (!!sId && Array.isArray(user?.linked_students) && user.linked_students.includes(sId));
+
+    if (mode === "my_leaves") {
+      const isStudentOrParent = role === "student" || role === "parents";
+      if (!isStudentOrParent && !isMine) {
+        return false;
+      }
     }
-    if (mode === "all_leaves" && a.applied_by === user?.id) {
+    if (mode === "all_leaves" && isMine) {
       return false;
     }
 
@@ -664,7 +673,7 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
                   const applicantRole = app.applied_by_role || app.user_role;
                   const isOwnLeave = app.applied_by === user?.id;
                   const isBranchManagerLeave = applicantRole === "branch_manager";
-                  const canApproveThis = canApprove && !isOwnLeave && (!isBranchManagerLeave || role === "super_admin");
+                  const canApproveThis = canApprove && !isOwnLeave && (!isBranchManagerLeave || role === "super_admin") && !(role === "admin_senior_executive" && app.is_first_approval_done);
 
                   return (
                   <motion.tr

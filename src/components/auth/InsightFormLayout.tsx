@@ -134,7 +134,7 @@ interface InsightFormLayoutProps {
 
 export default function InsightFormLayout({ children }: InsightFormLayoutProps) {
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-white to-primary-dark relative overflow-hidden">
+    <div className="min-h-screen w-full bg-gradient-to-b from-primary-light to-primary-dark relative overflow-hidden">
       {/* Decorative background */}
       <div className="pointer-events-none absolute inset-0">
         <div

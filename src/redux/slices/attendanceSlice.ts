@@ -48,13 +48,14 @@ export interface StudentDetail {
   };
   attendance_percentage: number;
   summary: { present_count: number; absent_count: number; late_count: number };
-  check_in_history: { date: string; time: string; status: string }[];
-  check_out_history: { date: string; time: string }[];
+  check_in_history: { id?: string; date: string; time?: string; check_in_time?: string; status?: string; timetable_slot?: any }[];
+  check_out_history: { id?: string; date: string; time?: string; check_out_time?: string; timetable_slot?: any }[];
   violations: any[];
-  day_wise_attendance: { date: string; status: string }[];
+  recent_absences?: { date: string; formatted_date?: string; status: string }[];
+  day_wise_attendance: { id?: string; date: string; status: string; status_display?: string; timetable_slot?: any; checked_in_at?: string; checked_out_at?: string }[];
   monthly_trend: { month: string; percentage: number }[];
   subject_wise_attendance: { subject_id: string; subject_name: string; percentage: number }[];
-  session_wise_attendance: { session: string; percentage: number }[];
+  session_wise_attendance: { session: string; session_name?: string; percentage: number }[];
 }
 
 export interface HistoryRecord {
