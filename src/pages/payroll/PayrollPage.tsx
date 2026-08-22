@@ -22,7 +22,7 @@ export default function PayrollPage() {
   const role = user?.role ?? "";
   const [branches, setBranches] = useState<any[]>([]);
 
-  const isAdmin    = ["super_admin", "branch_manager"].includes(role);
+  const isAdmin    = ["super_admin"].includes(role);
   const isAccount  = ["accountant"].includes(role);
   const isFaculty  = ["faculty"].includes(role);
   const canPreviewSalary = ["faculty", "exam_supervisor"].includes(role);

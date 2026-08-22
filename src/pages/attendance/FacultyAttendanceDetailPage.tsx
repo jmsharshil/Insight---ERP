@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { ArrowLeft, CalendarIcon, TrendingUp, ShieldAlert } from "lucide-react";
+import { ArrowLeft, CalendarIcon, TrendingUp, ShieldAlert, MapPin } from "lucide-react";
 import { attendanceActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import {
@@ -91,7 +91,7 @@ export default function FacultyAttendanceDetailPage() {
   if (selectedFacultyLoading) {
     return (
       <div className="mx-auto space-y-4">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="h-9 text-sm">
+        <Button variant="ghost" onClick={() => navigate('/attendance', { state: { tab: 'faculty' } })} className="h-9 text-sm">
           <ArrowLeft className="w-4 h-4 mr-2" /> Back
         </Button>
         <TableSkeleton columns={2} rows={5} className="mt-4" />
@@ -103,7 +103,7 @@ export default function FacultyAttendanceDetailPage() {
     return (
       <div className="container mx-auto p-6 text-center py-20">
         <h3 className="text-lg font-semibold text-muted-foreground mb-4">No faculty data found</h3>
-        <Button variant="outline" onClick={() => navigate(-1)}>
+        <Button variant="outline" onClick={() => navigate('/attendance', { state: { tab: 'faculty' } })}>
           <ArrowLeft className="w-4 h-4 mr-2" /> Go Back
         </Button>
       </div>
@@ -128,13 +128,10 @@ export default function FacultyAttendanceDetailPage() {
         <Button
           variant="outline"
           className="h-9 text-sm border-border hover:bg-muted"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/attendance', { state: { tab: 'faculty' } })}
         >
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Faculty
         </Button>
-        <div className="text-sm text-muted-foreground">
-          Faculty ID: <span className="font-mono text-xs font-medium text-foreground">{faculty.id}</span>
-        </div>
       </div>
 
       {/* Top Banner: Profile & Overview Summary */}
@@ -220,6 +217,7 @@ export default function FacultyAttendanceDetailPage() {
                         <th className="pb-3 px-2">Subject / Slot</th>
                         <th className="pb-3 px-2">Check-in Time</th>
                         <th className="pb-3 px-2">Check-out Time</th>
+                        <th className="pb-3 px-2">Location</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -247,6 +245,24 @@ export default function FacultyAttendanceDetailPage() {
                             </td>
                             <td className="py-3 px-2 text-muted-foreground font-mono font-medium">
                               {day.checked_out_at ? formatTime(day.checked_out_at) : (checkOut ? formatTime(checkOut.time || checkOut.check_out_time) : "—")}
+                            </td>
+                            <td className="py-3 px-2">
+                              {day.location_details ? (
+                                <div className="flex flex-col gap-1.5 items-start">
+                                  <a 
+                                    href={`https://www.google.com/maps/search/?api=1&query=${day.location_details.latitude},${day.location_details.longitude}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:underline bg-blue-50 px-2 py-1 rounded-md transition-colors"
+                                  >
+                                    <MapPin className="w-3.5 h-3.5" />
+                                    <span className="text-xs font-medium">View on Map</span>
+                                  </a>
+                                  <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-4 min-h-0 ${day.location_details.location_verified ? 'text-green-600 bg-green-50 border-green-200' : 'text-red-600 bg-red-50 border-red-200'}`}>
+                                    {day.location_details.location_verified ? 'Verified Location' : 'Unverified Location'}
+                                  </Badge>
+                                </div>
+                              ) : <span className="text-muted-foreground text-xs">—</span>}
                             </td>
                           </tr>
                         );

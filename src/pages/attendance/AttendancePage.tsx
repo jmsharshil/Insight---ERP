@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
+import { useLocation } from "react-router-dom";
 import { batchAction, dropdownActions } from "@/redux/actions";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import PageHeader from "@/components/layout/PageHeader";
@@ -25,6 +26,7 @@ export default function AttendancePage() {
   const { setPageTitle } = useUI();
   const { user } = useAuth();
   const toast = useToast();
+  const location = useLocation();
   
   const [scanLoading, setScanLoading] = useState<"check_in" | "check_out" | null>(null);
   const [dropdowns, setDropdowns] = useState<any>({
@@ -126,6 +128,14 @@ export default function AttendancePage() {
   const isAdmin = user && ["super_admin", "admin", "branch_manager"].includes(user.role);
   const isEmployeeHistoryRole = user && !["super_admin", "student", "parents", "paper_checker"].includes(user.role);
   const defaultTab = isParentOrStudent ? "students" : hideMainTabs ? "my_history" : "dashboard";
+  
+  const [activeTab, setActiveTab] = useState<string>(location.state?.tab || defaultTab);
+
+  useEffect(() => {
+    if (!location.state?.tab) {
+      setActiveTab(defaultTab);
+    }
+  }, [defaultTab, location.state?.tab]);
 
   const handleScan = (type: "check_in" | "check_out") => {
     setScanLoading(type);
@@ -175,7 +185,7 @@ export default function AttendancePage() {
         )} */}
       </div>
 
-      <Tabs defaultValue={defaultTab} className="mt-2">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-2">
         <TabsList className="">
           {!isParentOrStudent && !hideMainTabs && <TabsTrigger value="dashboard">Dashboard</TabsTrigger>}
           {isEmployeeHistoryRole && <TabsTrigger value="my_history">My Attendance</TabsTrigger>}

@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useRole } from "@/hooks/useRole";
+import AutoLogoutHandler from "@/components/auth/AutoLogoutHandler";
 import type { ModuleId } from "@/types/role.types";
 
 interface ProtectedRouteProps {
@@ -20,5 +21,9 @@ export default function ProtectedRoute({ module }: ProtectedRouteProps) {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  return <Outlet />;
+  return (
+    <AutoLogoutHandler>
+      <Outlet />
+    </AutoLogoutHandler>
+  );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
-import { X, ShieldAlert, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, ShieldAlert, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { attendanceActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import { setViolations, setViolationsLoading } from "@/redux/slices/attendanceSlice";
@@ -16,11 +16,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const VIOLATION_BADGE: Record<string, string> = {
   absent:       "bg-red-100 text-red-700",
   late:         "bg-yellow-100 text-yellow-700",
   unauthorized: "bg-orange-100 text-orange-700",
+  missing_checkout: "bg-blue-100 text-blue-700",
 };
 
 export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
@@ -39,22 +41,44 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
     return true;
   }) || [];
 
+  const facultyList = dropdowns?.faculty?.filter((f: any) => {
+    if (isBranchManager && user?.branch) {
+      return !f.branch_id || f.branch_id === user.branch;
+    }
+    return true;
+  }) || [];
+
+  const [violationType, setViolationType] = useState<"student" | "employee">("student");
+
   const filteredViolations = useMemo(() => {
     if (!isBranchManager) return violations;
-    const validStudentIds = new Set(studentsList.map((s: any) => s.id));
-    return violations.filter((v: any) => {
-      const bId = typeof v.branch === "object" && v.branch !== null ? v.branch.id : (v.branch_id || v.branch);
-      if (bId) return bId === user?.branch;
-      
-      const sId = typeof v.student === 'string' ? v.student : (v.student_id || v.student?.id);
-      if (sId) return validStudentIds.has(sId);
-      
-      return false;
-    });
-  }, [violations, isBranchManager, user, studentsList]);
+    if (violationType === "student") {
+      const validStudentIds = new Set(studentsList.map((s: any) => s.id));
+      return violations.filter((v: any) => {
+        const bId = typeof v.branch === "object" && v.branch !== null ? v.branch.id : (v.branch_id || v.branch);
+        if (bId) return bId === user?.branch;
+        
+        const sId = typeof v.student === 'string' ? v.student : (v.student_id || v.student?.id);
+        if (sId) return validStudentIds.has(sId);
+        
+        return false;
+      });
+    } else {
+      const validFacultyIds = new Set(facultyList.map((f: any) => f.id));
+      return violations.filter((v: any) => {
+        const bId = typeof v.branch === "object" && v.branch !== null ? v.branch.id : (v.branch_id || v.branch);
+        if (bId) return bId === user?.branch;
+        
+        const eId = typeof v.user === 'string' ? v.user : (v.user_id || v.user?.id);
+        if (eId) return validFacultyIds.has(eId);
+        
+        return false;
+      });
+    }
+  }, [violations, isBranchManager, user, studentsList, facultyList, violationType]);
 
   const [f, setF] = useState({
-    student_id: "", branch_id: (isBranchManager && user?.branch) ? user.branch : "", violation_type: "", is_resolved: "", date_from: "", date_to: "",
+    student_id: "", employee_id: "", branch_id: (isBranchManager && user?.branch) ? user.branch : "", violation_type: "", is_resolved: "", date_from: "", date_to: "", search: "",
   });
 
   const [resolveModal, setResolveModal] = useState({ isOpen: false, violationId: "", note: "", submitting: false });
@@ -64,16 +88,18 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
 
   const totalPages = Math.max(1, Math.ceil(violationsCount / pageSize));
 
-  const fetchViolations = (page = currentPage, overrideFilters = f) => {
+  const fetchViolations = (page = currentPage, overrideFilters = f, type = violationType) => {
     const p = new URLSearchParams();
     Object.entries(overrideFilters).forEach(([k, v]) => { if (v) p.set(k, v); });
     p.set("page", page.toString());
     p.set("page_size", pageSize.toString());
 
+    const endpoint = type === "employee" ? API.ATTENDANCE.EMPLOYEE_VIOLATIONS : API.ATTENDANCE.VIOLATIONS;
+
     dispatch({
       type: attendanceActions.GET_VIOLATIONS,
       method: "GET",
-      endPoint: `${API.ATTENDANCE.VIOLATIONS}${p.toString() ? `?${p}` : ""}`,
+      endPoint: `${endpoint}${p.toString() ? `?${p}` : ""}`,
       auth: true,
       setLoading: (v: boolean) => dispatch(setViolationsLoading(v)),
       getResponse: (res: any) => {
@@ -88,19 +114,19 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
   };
 
   useEffect(() => { 
-    fetchViolations(currentPage); 
+    fetchViolations(currentPage, f, violationType); 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage]);
+  }, [currentPage, violationType]);
 
   const handleApply = () => {
-    if (currentPage === 1) fetchViolations(1, f);
+    if (currentPage === 1) fetchViolations(1, f, violationType);
     else setCurrentPage(1);
   };
 
   const handleClear = () => {
-    const newF = { student_id: "", branch_id: (isBranchManager && user?.branch) ? user.branch : "", violation_type: "", is_resolved: "", date_from: "", date_to: "" };
+    const newF = { student_id: "", employee_id: "", branch_id: (isBranchManager && user?.branch) ? user.branch : "", violation_type: "", is_resolved: "", date_from: "", date_to: "", search: "" };
     setF(newF);
-    if (currentPage === 1) fetchViolations(1, newF);
+    if (currentPage === 1) fetchViolations(1, newF, violationType);
     else setCurrentPage(1);
   };
 
@@ -123,7 +149,7 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
       getResponse: (res: any) => {
         toast.success("Violation resolved successfully.");
         setResolveModal({ isOpen: false, violationId: "", note: "", submitting: false });
-        fetchViolations();
+        fetchViolations(currentPage, f, violationType);
       },
       getError: (err: any) => {
         toast.error(err?.response?.data?.message || "Failed to resolve violation.");
@@ -134,8 +160,31 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
 
   return (
     <div className="space-y-4">
+      <Tabs value={violationType} onValueChange={(v: any) => {
+        setViolationType(v);
+        setCurrentPage(1);
+        setF(prev => ({ ...prev, student_id: "", employee_id: "", search: "" }));
+      }}>
+        <TabsList>
+          <TabsTrigger value="student">Student Violations</TabsTrigger>
+          <TabsTrigger value="employee">Employee Violations</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       <div className="bg-white rounded-xl border border-border p-4 flex flex-wrap gap-3 items-end">
-        {!isParentOrStudent && !isFaculty && (
+        <div className="flex flex-col gap-1 min-w-[200px]">
+          <Label className="text-xs text-muted-foreground">Search</Label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search name, roll no, description..."
+              className="pl-9 h-9 text-sm"
+              value={f.search}
+              onChange={e => setF(prev => ({ ...prev, search: e.target.value }))}
+            />
+          </div>
+        </div>
+        {!isParentOrStudent && !isFaculty && violationType === "student" && (
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-muted-foreground">Student</Label>
             <Select value={f.student_id} onValueChange={v => setF(p => ({ ...p, student_id: v === "all" ? "" : v }))}>
@@ -149,6 +198,20 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
             </Select>
           </div>
         )}
+        {!isParentOrStudent && !isFaculty && violationType === "employee" && (
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-muted-foreground">Employee</Label>
+            <Select value={f.employee_id} onValueChange={v => setF(p => ({ ...p, employee_id: v === "all" ? "" : v }))}>
+              <SelectTrigger className="h-9 text-sm w-44 bg-muted/10"><SelectValue placeholder="Select Employee" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Employees</SelectItem>
+                {facultyList.map((emp: any) => (
+                  <SelectItem key={emp.id} value={emp.id}>{emp.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <Select value={f.violation_type} onValueChange={v => setF(p => ({ ...p, violation_type: v === "all" ? "" : v }))}>
           <SelectTrigger className="h-9 text-sm w-36"><SelectValue placeholder="Type" /></SelectTrigger>
           <SelectContent>
@@ -156,6 +219,7 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
             <SelectItem value="absent">Absent</SelectItem>
             <SelectItem value="late">Late</SelectItem>
             <SelectItem value="unauthorized">Unauthorized</SelectItem>
+            {violationType === "employee" && <SelectItem value="missing_checkout">Missing Checkout</SelectItem>}
           </SelectContent>
         </Select>
         {!isParentOrStudent && (
@@ -192,7 +256,10 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
           <table className="w-full text-sm">
             <thead className="bg-muted/40">
               <tr>
-                {["Student", "Roll No.", "Violation Type", "Date", "Description", "Status", "Created At", "Actions"].map(h => {
+                {(violationType === "employee" 
+                  ? ["Employee", "Role", "Violation Type", "Date", "Description", "Status", "Created At", "Actions"] 
+                  : ["Student", "Roll No.", "Violation Type", "Date", "Description", "Status", "Created At", "Actions"]
+                ).map(h => {
                   const hasUnresolved = violations.some((v: any) => !v.is_resolved);
                   const showActions = !isParentOrStudent && hasUnresolved;
                   if (h === "Actions" && !showActions) return null;
@@ -211,15 +278,15 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-600 text-xs font-semibold">
-                        {v.student_name?.slice(0, 2).toUpperCase()}
+                        {(violationType === "employee" ? (v.user?.name || "E") : (v.student_name || "S"))?.slice(0, 2).toUpperCase()}
                       </div>
-                      <span className="font-medium text-foreground">{v.student_name}</span>
+                      <span className="font-medium text-foreground">{violationType === "employee" ? (v.user?.name || "Unknown") : (v.student_name || "Unknown")}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{v.roll_number}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{violationType === "employee" ? (v.user?.role || "-").replace(/_/g, " ") : (v.roll_number || "-")}</td>
                   <td className="px-4 py-3">
                     <Badge className={`text-xs capitalize ${VIOLATION_BADGE[v.violation_type] ?? "bg-gray-100 text-gray-700"}`}>
-                      {v.violation_type}
+                      {v.violation_type_display || v.violation_type}
                     </Badge>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs">{v.date}</td>

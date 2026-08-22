@@ -128,7 +128,7 @@ export default function StudentAttendanceDetailPage() {
   if (selectedStudentLoading) {
     return (
       <div className="mx-auto space-y-4">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="h-9 text-sm">
+        <Button variant="ghost" onClick={() => navigate('/attendance', { state: { tab: 'students' } })} className="h-9 text-sm">
           <ArrowLeft className="w-4 h-4 mr-2" /> Back
         </Button>
         <TableSkeleton columns={2} rows={5} className="mt-4" />
@@ -140,7 +140,7 @@ export default function StudentAttendanceDetailPage() {
     return (
       <div className="mx-auto text-center py-20">
         <h3 className="text-lg font-semibold text-muted-foreground mb-4">No student data found</h3>
-        <Button variant="outline" onClick={() => navigate(-1)}>
+        <Button variant="outline" onClick={() => navigate('/attendance', { state: { tab: 'students' } })}>
           <ArrowLeft className="w-4 h-4 mr-2" /> Go Back
         </Button>
       </div>
@@ -154,13 +154,10 @@ export default function StudentAttendanceDetailPage() {
         <Button
           variant="outline"
           className="h-9 text-sm border-border hover:bg-muted"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/attendance', { state: { tab: 'students' } })}
         >
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Students
         </Button>
-        <div className="text-sm text-muted-foreground">
-          Student ID: <span className="font-mono text-xs font-medium text-foreground">{selectedStudent.student_profile.id}</span>
-        </div>
       </div>
 
       {/* Top Banner: Profile & Overview Summary */}

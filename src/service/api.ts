@@ -160,6 +160,7 @@ BATCHES: {
     ANALYTICS: "/api/v1/attendance/analytics/",
     DEFAULTERS: "/api/v1/attendance/defaulters/",
     VIOLATIONS: "/api/v1/attendance/violations/",
+    EMPLOYEE_VIOLATIONS: "/api/v1/attendance/employee/violations/",
     BATCH_REGISTER: (batchId?: string) =>
       batchId && batchId !== "all"
         ? `/api/v1/attendance/batches/${batchId}/register/`
