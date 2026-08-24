@@ -32,10 +32,6 @@ export default function AutoLogoutHandler({ children }: { children: React.ReactN
     timerRef.current = setTimeout(() => {
       logout();
       toast.info("You have been logged out due to inactivity.");
-      // Force a hard refresh to the login page to fully clear out stale memory/state
-      setTimeout(() => {
-        window.location.href = "/login";
-      }, 500);
     }, INACTIVITY_TIME);
   }, [logout, toast]);
 
