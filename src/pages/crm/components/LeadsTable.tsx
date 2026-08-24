@@ -37,7 +37,7 @@ export default function LeadsTable({ leads, onView, onChangeStage, onAssignSucce
       key: "id",
       header: "ID",
       className: "font-mono text-xs",
-      render: (r) => `#${r.id}`,
+      render: (r) => `${r.id}`,
     },
     {
       key: "first_name",

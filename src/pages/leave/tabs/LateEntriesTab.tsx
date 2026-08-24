@@ -99,7 +99,7 @@ export default function LateEntriesTab() {
 
   const isSuperAdmin = user?.role === "super_admin";
   const [branches,  setBranches]  = useState<{ id: string; name: string; city: string }[]>([]);
-  const [staffList, setStaffList] = useState<{ id: string; name: string }[]>([]);
+  const [staffList, setStaffList] = useState<{ id: string; name: string; role?: string }[]>([]);
   const [selectedBranch, setSelectedBranch] = useState("");
 
   const [drawerOpen, setDrawerOpen]       = useState(false);
@@ -115,8 +115,26 @@ export default function LateEntriesTab() {
       getResponse: (res: any) => {
         const data = res?.data || res;
         if (data?.branches) setBranches(data.branches);
-        if (data?.staff)     setStaffList(data.staff);
-        if (data?.employees) setStaffList(data.employees);
+      },
+      getError: () => {},
+    });
+
+    dispatch({
+      type: dropdownActions.GET_DROPDOWN,
+      method: "GET",
+      endPoint: API.USERS.LIST,
+      auth: true,
+      getResponse: (res: any) => {
+        const raw = res?.data?.results || res?.results || res?.data || res || [];
+        const users = Array.isArray(raw) ? raw : [];
+        const filtered = users.filter((u: any) => 
+          !["super_admin", "student", "parent", "parents"].includes(u.role)
+        );
+        setStaffList(filtered.map((u: any) => ({
+          id: u.id,
+          name: u.full_name || u.name || `${u.first_name || ""} ${u.last_name || ""}`.trim() || u.username || u.email,
+          role: u.role
+        })));
       },
       getError: () => {},
     });
@@ -356,7 +374,18 @@ export default function LateEntriesTab() {
                 <Select value={form.user_id} onValueChange={v => setForm(f => ({ ...f, user_id: v }))}>
                   <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select staff member" /></SelectTrigger>
                   <SelectContent>
-                    {staffList.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    {staffList.map(s => (
+                      <SelectItem key={s.id} value={s.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{s.name}</span>
+                          {s.role && (
+                            <span className="text-[10px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded capitalize whitespace-nowrap">
+                              {s.role.replace(/_/g, ' ')}
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

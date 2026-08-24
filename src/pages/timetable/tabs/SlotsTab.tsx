@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
-import { Plus, Pencil, Trash2, X, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Search, Check, ChevronsUpDown } from "lucide-react";
 import {
   setSlots, setSlotsLoading,
   setSelectedSlot, setSelectedSlotLoading,
@@ -18,6 +18,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import SlotForm, { buildSlotPayload, type SlotFormValues } from "../components/SlotForm";
 import TimetableGridView from "../components/TimetableGridView";
@@ -61,6 +64,76 @@ interface SlotsTabProps {
   defaultView?:   "grid" | "list";
   studentDetail?: any;
   onFiltersChange?: (filters: any) => void;
+}
+
+function FilterCombobox({
+  items,
+  value,
+  onChange,
+  placeholder,
+  searchPlaceholder,
+  emptyText,
+  disabled
+}: {
+  items: { id: string; name: string }[];
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  searchPlaceholder: string;
+  emptyText: string;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const selectedItem = items.find((item) => item.id === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          disabled={disabled}
+          className="h-9 text-sm w-44 justify-between font-normal px-3"
+        >
+          {selectedItem ? (
+            <span className="truncate">{selectedItem.name}</span>
+          ) : (
+            <span className="text-muted-foreground">{placeholder}</span>
+          )}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[240px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder={searchPlaceholder} />
+          <CommandList className="max-h-[250px] overflow-y-auto">
+            <CommandEmpty>{emptyText}</CommandEmpty>
+            <CommandGroup>
+              {items.map((item) => (
+                <CommandItem
+                  key={item.id}
+                  value={item.name}
+                  onSelect={() => {
+                    onChange(item.id === value ? "" : item.id);
+                    setOpen(false);
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4 shrink-0",
+                      value === item.id ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {item.name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 export default function SlotsTab({
@@ -495,9 +568,30 @@ export default function SlotsTab({
             ))}
           </SelectContent>
         </Select>
-        <Input placeholder="Batch UUID"   className="h-9 text-sm w-40" value={filters.batch_id}   onChange={e => setFilters(f => ({ ...f, batch_id:   e.target.value }))} />
-        <Input placeholder="Faculty UUID" className="h-9 text-sm w-40" value={filters.faculty_id} onChange={e => setFilters(f => ({ ...f, faculty_id: e.target.value }))} />
-        <Input placeholder="Subject UUID" className="h-9 text-sm w-40" value={filters.subject_id} onChange={e => setFilters(f => ({ ...f, subject_id: e.target.value }))} />
+        <FilterCombobox
+          items={filteredBatches}
+          value={filters.batch_id}
+          onChange={(val) => setFilters(f => ({ ...f, batch_id: val }))}
+          placeholder="Select Batch"
+          searchPlaceholder="Search batches..."
+          emptyText="No batches found."
+        />
+        <FilterCombobox
+          items={facultyList.map(f => ({ id: f.id, name: f.employee_id ? `${f.name} (${f.employee_id})` : f.name }))}
+          value={filters.faculty_id}
+          onChange={(val) => setFilters(f => ({ ...f, faculty_id: val }))}
+          placeholder="Select Faculty"
+          searchPlaceholder="Search faculty..."
+          emptyText="No faculty found."
+        />
+        <FilterCombobox
+          items={subjects}
+          value={filters.subject_id}
+          onChange={(val) => setFilters(f => ({ ...f, subject_id: val }))}
+          placeholder="Select Subject"
+          searchPlaceholder="Search subjects..."
+          emptyText="No subjects found."
+        />
         <Button onClick={fetchSlots} className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm">Apply</Button>
         <Button variant="outline" className="h-9 text-sm" onClick={() => setFilters({ batch_id: "", day_of_week: "", faculty_id: "", subject_id: "", session_type: "" })}>
           <X className="w-3 h-3 mr-1" />Clear

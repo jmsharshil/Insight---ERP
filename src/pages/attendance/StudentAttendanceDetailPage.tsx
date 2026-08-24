@@ -159,7 +159,7 @@ export default function StudentAttendanceDetailPage() {
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Students
         </Button>
         <div className="text-sm text-muted-foreground">
-          Student ID: <span className="font-mono text-xs font-medium text-foreground">{selectedStudent.student_profile.id}</span>
+          Student : <span className="font-mono text-xs font-medium text-foreground">{selectedStudent.student_profile.name}</span>
         </div>
       </div>
 

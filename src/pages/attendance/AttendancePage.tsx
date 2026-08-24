@@ -61,26 +61,26 @@ export default function AttendancePage() {
       },
     });
 
-  //   // 2. Fetch students for dropdowns
-  //   dispatch({
-  //     type: dropdownActions.GET_DROPDOWN,
-  //     method: "GET",
-  //     endPoint: `/api/v1/students/${branchQuery}`,
-  //     auth: true,
-  //     getResponse: (res: any) => {
-  //       const list = res?.data?.results || res?.results || res?.data?.data || res?.data || res;
-  //       if (Array.isArray(list)) {
-  //         setDropdowns(prev => ({
-  //           ...prev,
-  //           students: list.map((item: any) => ({
-  //             id: item.id,
-  //             name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim(),
-  //             branch_id: item.branch || item.branch_id,
-  //           })),
-  //         }));
-  //       }
-  //     },
-  //   });
+    // 2. Fetch students for dropdowns
+    dispatch({
+      type: dropdownActions.GET_DROPDOWN,
+      method: "GET",
+      endPoint: `/api/v1/students/${branchQuery}`,
+      auth: true,
+      getResponse: (res: any) => {
+        const list = res?.data?.results || res?.results || res?.data?.data || res?.data || res;
+        if (Array.isArray(list)) {
+          setDropdowns(prev => ({
+            ...prev,
+            students: list.map((item: any) => ({
+              id: item.id,
+              name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim(),
+              branch_id: item.branch || item.branch_id,
+            })),
+          }));
+        }
+      },
+    });
 
   //   // 3. Fetch faculty for dropdowns
   //   dispatch({

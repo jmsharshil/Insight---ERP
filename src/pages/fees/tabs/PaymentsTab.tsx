@@ -109,7 +109,7 @@ function PaymentsTable({
   const cols: DataTableColumn<any>[] = [
     {
       key: "receipt_number",
-      header: "Receipt #",
+      header: "Receipt",
       className: "font-mono text-xs font-semibold",
       render: (r) => r.receipt_number || "—",
     },

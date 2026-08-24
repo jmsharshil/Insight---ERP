@@ -133,7 +133,7 @@ export default function FacultyAttendanceDetailPage() {
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Faculty
         </Button>
         <div className="text-sm text-muted-foreground">
-          Faculty ID: <span className="font-mono text-xs font-medium text-foreground">{faculty.id}</span>
+          Faculty : <span className="font-mono text-xs font-medium text-foreground">{faculty.name}</span>
         </div>
       </div>
 
