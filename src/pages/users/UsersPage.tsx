@@ -1322,6 +1322,46 @@ export default function UsersPage() {
                           </div>
                         )}
                       </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                          Work Start Time
+                        </Label>
+                        {isEditing ? (
+                          <Input
+                            type="time"
+                            value={editForm.work_start_time}
+                            onChange={(e) =>
+                              setEditForm((f) => ({ ...f, work_start_time: e.target.value }))
+                            }
+                            className="bg-background"
+                          />
+                        ) : (
+                          <div className="text-sm font-medium text-text-primary pt-0.5">
+                            {selectedUser?.work_start_time || "N/A"}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                          Work End Time
+                        </Label>
+                        {isEditing ? (
+                          <Input
+                            type="time"
+                            value={editForm.work_end_time}
+                            onChange={(e) =>
+                              setEditForm((f) => ({ ...f, work_end_time: e.target.value }))
+                            }
+                            className="bg-background"
+                          />
+                        ) : (
+                          <div className="text-sm font-medium text-text-primary pt-0.5">
+                            {selectedUser?.work_end_time || "N/A"}
+                          </div>
+                        )}
+                      </div>
                     </>
                   )}
 
@@ -1400,49 +1440,6 @@ export default function UsersPage() {
                         )}
                       </div>
 
-                      {!(isFaculty && editForm.employment_type === "visiting") && (
-                        <>
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                              Work Start Time
-                            </Label>
-                            {isEditing ? (
-                              <Input
-                                type="time"
-                                value={editForm.work_start_time}
-                                onChange={(e) =>
-                                  setEditForm((f) => ({ ...f, work_start_time: e.target.value }))
-                                }
-                                className="bg-background"
-                              />
-                            ) : (
-                              <div className="text-sm font-medium text-text-primary pt-0.5">
-                                {selectedUser?.work_start_time || "N/A"}
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                              Work End Time
-                            </Label>
-                            {isEditing ? (
-                              <Input
-                                type="time"
-                                value={editForm.work_end_time}
-                                onChange={(e) =>
-                                  setEditForm((f) => ({ ...f, work_end_time: e.target.value }))
-                                }
-                                className="bg-background"
-                              />
-                            ) : (
-                              <div className="text-sm font-medium text-text-primary pt-0.5">
-                                {selectedUser?.work_end_time || "N/A"}
-                              </div>
-                            )}
-                          </div>
-                        </>
-                      )}
 
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
