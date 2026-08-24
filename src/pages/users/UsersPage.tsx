@@ -542,7 +542,6 @@ export default function UsersPage() {
           err?.message ||
           "Failed to add user";
         toast.error(msg);
-        console.log("msg:", msg)
       },
     });
   };
