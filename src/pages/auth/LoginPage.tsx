@@ -38,6 +38,9 @@ const schema = z.object({
 });
 type FormData = z.infer<typeof schema>;
 
+type ViewMode = "login" | "verify-login-otp" | "forgot-password-email" | "forgot-password-reset";
+
+
 export default function LoginPage() {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
@@ -46,12 +49,16 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false);
   const [shake, setShake] = useState(false);
 
-  const [isOtpMode, setIsOtpMode] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("login");
   const [otpEmail, setOtpEmail] = useState("");
   const [otpCode, setOtpCode] = useState("");
 
+  const [fpNewPass, setFpNewPass] = useState("");
+  const [fpConfirmPass, setFpConfirmPass] = useState("");
+  const [showFpPass, setShowFpPass] = useState(false);
+
   const {
-    register, handleSubmit, formState: { errors }, reset, setValue,
+    register, handleSubmit, formState: { errors }, reset, setValue, getValues,
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
   const { isAuthenticated } = useAuth();
@@ -72,7 +79,7 @@ export default function LoginPage() {
       getResponse: (res: LoginResponse) => {
         console.log(res)
         if (res.otp_required) {
-          setIsOtpMode(true);
+          setViewMode("verify-login-otp");
           setOtpEmail(res.email || data.email);
           toast.success(res.message || "OTP sent successfully.");
         } else {
@@ -133,7 +140,68 @@ export default function LoginPage() {
     });
   };
 
-  if (isOtpMode) {
+  const handleForgotPasswordEmail = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpEmail || !/^\S+@\S+\.\S+$/.test(otpEmail)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+
+    dispatch({
+      type: authActions.LOGIN,
+      method: "POST",
+      endPoint: "/api/auth/forgot-password/",
+      body: { email: otpEmail },
+      auth: false,
+      setLoading: (val: boolean) => dispatch(setAuthLoading(val)),
+      getResponse: (res: any) => {
+        toast.success(res.message || "Verification code sent to your email.");
+        setViewMode("forgot-password-reset");
+      },
+      getError: (err: any) => {
+        const errorMsg = err?.response?.data?.message || err?.response?.data?.error || err?.message || "Failed to send verification code.";
+        toast.error(errorMsg);
+      },
+    });
+  };
+
+  const handleResetPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode || otpCode.trim().length < 4) {
+      toast.error("Please enter a valid OTP code.");
+      return;
+    }
+    if (fpNewPass.length < 6) {
+      toast.error("Password must be at least 6 characters.");
+      return;
+    }
+    if (fpNewPass !== fpConfirmPass) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+
+    dispatch({
+      type: authActions.LOGIN,
+      method: "POST",
+      endPoint: "/api/auth/reset-password/",
+      body: { email: otpEmail, otp: otpCode, password: fpNewPass, confirm_password: fpConfirmPass },
+      auth: false,
+      setLoading: (val: boolean) => dispatch(setAuthLoading(val)),
+      getResponse: (res: any) => {
+        toast.success(res.message || "Password reset successfully. Please log in.");
+        setViewMode("login");
+        setOtpCode("");
+        setFpNewPass("");
+        setFpConfirmPass("");
+      },
+      getError: (err: any) => {
+        const errorMsg = err?.response?.data?.message || err?.response?.data?.error || err?.message || "Failed to reset password.";
+        toast.error(errorMsg);
+      },
+    });
+  };
+
+  if (viewMode === "verify-login-otp") {
     return (
       <InsightFormLayout>
         <div className="rounded-2xl bg-card shadow-2xl border border-black/5 p-7 sm:p-9">
@@ -182,11 +250,178 @@ export default function LoginPage() {
               type="button"
               className="text-primary-dark font-medium hover:underline"
               onClick={() => {
-                setIsOtpMode(false);
+                setViewMode("login");
                 setOtpCode("");
               }}
             >
               Go Back
+            </button>
+          </div>
+        </div>
+      </InsightFormLayout>
+    );
+  }
+
+  if (viewMode === "forgot-password-email") {
+    return (
+      <InsightFormLayout>
+        <div className="rounded-2xl bg-card shadow-2xl border border-black/5 p-7 sm:p-9">
+          <div className="text-center mb-6">
+            <h2 className="font-heading font-bold text-2xl tracking-tight mb-2">
+              Forgot Password
+            </h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Enter your registered email address and we'll send you a verification code to reset your password.
+            </p>
+          </div>
+          <form onSubmit={handleForgotPasswordEmail} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="fp-email">Email address</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="fp-email"
+                  type="email"
+                  placeholder="you@insight.edu"
+                  className="pl-10 h-11"
+                  value={otpEmail}
+                  onChange={(e) => setOtpEmail(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-11 bg-primary text-primary-foreground font-semibold hover:bg-primary-dark transition-colors group mt-2"
+            >
+              {isLoading ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending...</>
+              ) : (
+                <>Send Code <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" /></>
+              )}
+            </Button>
+          </form>
+          <div className="mt-6 text-center text-sm text-muted-foreground">
+            Remember your password?{" "}
+            <button
+              type="button"
+              className="text-primary-dark font-medium hover:underline"
+              onClick={() => setViewMode("login")}
+            >
+              Log in
+            </button>
+          </div>
+        </div>
+      </InsightFormLayout>
+    );
+  }
+
+  if (viewMode === "forgot-password-reset") {
+    return (
+      <InsightFormLayout>
+        <div className="rounded-2xl bg-card shadow-2xl border border-black/5 p-7 sm:p-9">
+          <div className="text-center mb-6">
+            <h2 className="font-heading font-bold text-2xl tracking-tight mb-2">
+              Reset Password
+            </h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Enter the verification code sent to
+              <br />
+              <span className="font-medium text-primary-dark">{otpEmail}</span>
+            </p>
+          </div>
+          <form onSubmit={handleResetPassword} className="space-y-5">
+            <div className="space-y-1.5 flex flex-col items-center text-center">
+              <Label htmlFor="reset-otpCode" className="self-start text-sm font-medium mb-1">Verification Code</Label>
+              <InputOTP maxLength={6} value={otpCode} onChange={(val) => setOtpCode(val)}>
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} className="w-10 h-12 text-lg" />
+                  <InputOTPSlot index={1} className="w-10 h-12 text-lg" />
+                  <InputOTPSlot index={2} className="w-10 h-12 text-lg" />
+                </InputOTPGroup>
+                <InputOTPSeparator />
+                <InputOTPGroup>
+                  <InputOTPSlot index={3} className="w-10 h-12 text-lg" />
+                  <InputOTPSlot index={4} className="w-10 h-12 text-lg" />
+                  <InputOTPSlot index={5} className="w-10 h-12 text-lg" />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="fp-new-password">New Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="fp-new-password"
+                  type={showFpPass ? "text" : "password"}
+                  placeholder="••••••••"
+                  className="pl-10 pr-10 h-11"
+                  value={fpNewPass}
+                  onChange={(e) => setFpNewPass(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowFpPass((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-text-primary"
+                  aria-label="Toggle password"
+                >
+                  {showFpPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="fp-confirm-password">Confirm Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="fp-confirm-password"
+                  type={showFpPass ? "text" : "password"}
+                  placeholder="••••••••"
+                  className="pl-10 h-11"
+                  value={fpConfirmPass}
+                  onChange={(e) => setFpConfirmPass(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-11 bg-primary text-primary-foreground font-semibold hover:bg-primary-dark transition-colors group mt-2"
+            >
+              {isLoading ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Resetting...</>
+              ) : (
+                <>Reset Password <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" /></>
+              )}
+            </Button>
+          </form>
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between text-sm gap-2">
+            <div className="text-muted-foreground">
+              Didn't receive the code?{" "}
+              <button
+                type="button"
+                className="text-primary-dark font-medium hover:underline disabled:opacity-50"
+                disabled={isLoading}
+                onClick={handleForgotPasswordEmail}
+              >
+                Resend
+              </button>
+            </div>
+            <button
+              type="button"
+              className="text-primary-dark font-medium hover:underline"
+              onClick={() => {
+                setViewMode("forgot-password-email");
+                setOtpCode("");
+              }}
+            >
+              Change Email
             </button>
           </div>
         </div>
@@ -231,7 +466,10 @@ export default function LoginPage() {
                 <Label htmlFor="password">Password</Label>
                 <button
                   type="button"
-                  onClick={() => toast.info("Please contact your branch administrator.")}
+                  onClick={() => {
+                    setOtpEmail(getValues("email") || ""); // try to pre-fill email if typed
+                    setViewMode("forgot-password-email");
+                  }}
                   className="text-xs text-primary-dark hover:underline font-medium"
                 >
                   Forgot password?
