@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
-import { Plus, CheckCircle2, XCircle, Clock, FileText, Trash2, Pencil, Search } from "lucide-react";
+import { Plus, CheckCircle2, XCircle, Clock, FileText, Trash2, Pencil, Search, AlertCircle } from "lucide-react";
 import { leaveActions } from "@/redux/actions";
 import { dropdownActions } from "@/redux/actions";
 import { API } from "@/service/api";
@@ -153,7 +153,7 @@ function LeaveApplicationDetail({
         ) : (
           <>
             <div className="flex items-center gap-2 text-sm">
-              {item.is_first_approval_done ? (
+              {item.first_approved_at ? (
                 <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
               ) : (
                 <Clock className="w-4 h-4 text-yellow-500 shrink-0" />
@@ -496,10 +496,19 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
   };
 
   const filtered = applications.filter((a) => {
-    if (mode === "my_leaves" && a.applied_by !== user?.id) {
-      return false;
+    const sId = typeof a.student === "string" ? a.student : ((a as any).student_id || (a.student as any)?.id);
+    const isMine =
+      a.applied_by === user?.id ||
+      (!!sId && sId === user?.id) ||
+      (!!sId && Array.isArray(user?.linked_students) && user.linked_students.includes(sId));
+
+    if (mode === "my_leaves") {
+      const isStudentOrParent = role === "student" || role === "parents";
+      if (!isStudentOrParent && !isMine) {
+        return false;
+      }
     }
-    if (mode === "all_leaves" && a.applied_by === user?.id) {
+    if (mode === "all_leaves" && isMine) {
       return false;
     }
 
@@ -552,6 +561,16 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
           >
             Student Leaves
           </button>
+        </div>
+      )}
+
+      {/* Warning for staff members on My Leaves */}
+      {mode === "my_leaves" && role !== "student" && role !== "parents" && (
+        <div className="bg-orange-50 border border-orange-200 text-orange-800 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+          <p>
+            Leave applications for the upcoming week must be submitted before 12:00 PM on Friday of the preceding week.
+          </p>
         </div>
       )}
 
@@ -664,7 +683,7 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
                   const applicantRole = app.applied_by_role || app.user_role;
                   const isOwnLeave = app.applied_by === user?.id;
                   const isBranchManagerLeave = applicantRole === "branch_manager";
-                  const canApproveThis = canApprove && !isOwnLeave && (!isBranchManagerLeave || role === "super_admin");
+                  const canApproveThis = canApprove && !isOwnLeave && (!isBranchManagerLeave || role === "super_admin") && !(role === "admin_senior_executive" && app.is_first_approval_done);
 
                   return (
                   <motion.tr
@@ -689,7 +708,7 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
                     </td>
                     <td className="px-4 py-3">
                       {activeTab === "student" || role === "student" || role === "parents" ? (
-                        app.status === "approved" ? (
+                        app.status === "approved" || app.parent_consulted ? (
                           <span className="text-green-600 text-xs flex items-center gap-1">
                             <CheckCircle2 className="w-3 h-3" /> Done
                           </span>

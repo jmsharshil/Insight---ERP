@@ -107,16 +107,38 @@ export default function LateEntriesTab() {
   const [drawerLoading, setDrawerLoading] = useState(false);
 
   useEffect(() => {
+    // Fetch Branches
     dispatch({
       type: dropdownActions.GET_DROPDOWN,
       method: "GET",
-      endPoint: "/api/v1/batches/dropdowns/",
+      endPoint: "/api/v1/branches/",
       auth: true,
       getResponse: (res: any) => {
-        const data = res?.data || res;
-        if (data?.branches) setBranches(data.branches);
-        if (data?.staff)     setStaffList(data.staff);
-        if (data?.employees) setStaffList(data.employees);
+        const data = res?.data?.results || res?.results || res?.data || res;
+        if (Array.isArray(data)) {
+          setBranches(data);
+        }
+      },
+      getError: () => {},
+    });
+
+    // Fetch Staff Members
+    dispatch({
+      type: dropdownActions.GET_DROPDOWN,
+      method: "GET",
+      endPoint: API.USERS.LIST,
+      auth: true,
+      getResponse: (res: any) => {
+        const data = res?.data?.results || res?.results || res?.data || res;
+        if (Array.isArray(data)) {
+          const staff = data.filter((u: any) => u.role !== "student" && u.role !== "parents");
+          setStaffList(
+            staff.map((item: any) => ({
+              id: item.id,
+              name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim() || item.email,
+            }))
+          );
+        }
       },
       getError: () => {},
     });

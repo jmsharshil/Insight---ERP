@@ -490,7 +490,7 @@ export default function UsersPage() {
       role: editForm.role,
       branches: editForm.branches,
       salary_retention_percentage: editForm.salary_retention_percentage,
-      is_active: editForm.is_active,
+      is_active: false,
       employee_id: editForm.employee_id,
       qualification: editForm.qualification,
       specialization: editForm.specialization,

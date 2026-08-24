@@ -100,7 +100,7 @@ export default function StudentAttendanceDetailPage() {
     return "bg-gray-50 text-gray-700 border-gray-200";
   };
 
-  const formatDate = (dateStr: string) => {
+  const formatDate = (dateStr: string | undefined) => {
     if (!dateStr) return "—";
     try {
       return new Date(dateStr).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
@@ -109,7 +109,7 @@ export default function StudentAttendanceDetailPage() {
     }
   };
 
-  const formatTime = (timeStr: string) => {
+  const formatTime = (timeStr: string | undefined) => {
     if (!timeStr) return "—";
     try {
       const d = new Date(timeStr);
@@ -128,7 +128,7 @@ export default function StudentAttendanceDetailPage() {
   if (selectedStudentLoading) {
     return (
       <div className="mx-auto space-y-4">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="h-9 text-sm">
+        <Button variant="ghost" onClick={() => navigate('/attendance', { state: { tab: 'students' } })} className="h-9 text-sm">
           <ArrowLeft className="w-4 h-4 mr-2" /> Back
         </Button>
         <TableSkeleton columns={2} rows={5} className="mt-4" />
@@ -140,7 +140,7 @@ export default function StudentAttendanceDetailPage() {
     return (
       <div className="mx-auto text-center py-20">
         <h3 className="text-lg font-semibold text-muted-foreground mb-4">No student data found</h3>
-        <Button variant="outline" onClick={() => navigate(-1)}>
+        <Button variant="outline" onClick={() => navigate('/attendance', { state: { tab: 'students' } })}>
           <ArrowLeft className="w-4 h-4 mr-2" /> Go Back
         </Button>
       </div>
@@ -154,13 +154,10 @@ export default function StudentAttendanceDetailPage() {
         <Button
           variant="outline"
           className="h-9 text-sm border-border hover:bg-muted"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/attendance', { state: { tab: 'students' } })}
         >
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Students
         </Button>
-        <div className="text-sm text-muted-foreground">
-          Student ID: <span className="font-mono text-xs font-medium text-foreground">{selectedStudent.student_profile.id}</span>
-        </div>
       </div>
 
       {/* Top Banner: Profile & Overview Summary */}
@@ -325,6 +322,9 @@ export default function StudentAttendanceDetailPage() {
           <TabsTrigger value="violations" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 py-3">
             Violations
           </TabsTrigger>
+          <TabsTrigger value="recent_absences" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 py-3">
+            Recent Absences
+          </TabsTrigger>
           <TabsTrigger value="analytics" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 py-3">
             Analytics
           </TabsTrigger>
@@ -486,6 +486,34 @@ export default function StudentAttendanceDetailPage() {
               ) : (
                 <div className="text-center py-12 text-sm text-muted-foreground border border-dashed border-border/50 rounded-xl">
                   No violations found for this student.
+                </div>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="recent_absences" className="mt-0">
+          <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-border bg-muted/10 flex justify-between items-center">
+              <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-red-500" /> Recent Absences
+              </h3>
+            </div>
+            <div className="p-4 max-h-[400px] overflow-y-auto">
+              {(selectedStudent?.recent_absences?.length || 0) > 0 ? (
+                <div className="space-y-3">
+                  {selectedStudent?.recent_absences?.map((absence: any, idx: number) => (
+                    <div key={idx} className="flex justify-between items-center text-sm border-b border-border/40 pb-3 last:border-0 last:pb-0">
+                      <div className="font-medium text-foreground">{absence.formatted_date || formatDate(absence.date)}</div>
+                      <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 capitalize font-semibold">
+                        {absence.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-10 text-sm text-muted-foreground border border-dashed border-border/50 rounded-xl">
+                  No recent absences found.
                 </div>
               )}
             </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import PageHeader from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,8 +18,6 @@ import RoleBadge from "@/components/common/RoleBadge";
 import { CardSkeleton } from "@/components/common/Skeletons";
 import {
   Loader2,
-  Camera,
-  Upload,
   Shield,
   Building2,
   User as UserIcon,
@@ -54,16 +52,7 @@ export default function SettingsPage() {
   const loading = useAppSelector((state: any) => state.settings.loading);
   const error = useAppSelector((state: any) => state.settings.error);
 
-  // Form states
-  const [editForm, setEditForm] = useState({
-    name: "",
-    phone: "",
-    email: "",
-  });
-  const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
-  const [profilePicPreview, setProfilePicPreview] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // No editable form states needed
 
   // Password change states
   const [passwordForm, setPasswordForm] = useState({
@@ -122,76 +111,7 @@ export default function SettingsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sync state when profile is fetched
-  useEffect(() => {
-    if (profile) {
-      setEditForm({
-        name: profile.name || "",
-        email: profile.email || "",
-        phone: profile.phone || "",
-      });
-    }
-  }, [profile]);
-
-  const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setProfilePicFile(file);
-      const reader = new FileReader();
-      reader.onload = () => setProfilePicPreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSaveProfile = () => {
-    setSaving(true);
-    const formData = new FormData();
-    formData.append("name", editForm.name);
-    formData.append("email", editForm.email);
-    formData.append("phone", editForm.phone);
-    if (profilePicFile) {
-      formData.append("profile_pic", profilePicFile);
-    }
-
-    dispatch({
-      type: settingActions.UPDATE_SETTINGS,
-      method: "PUT",
-      endPoint: "/api/auth/me/",
-      body: formData,
-      auth: true,
-      setLoading: (val: boolean) => setSaving(val),
-      getResponse: (res: any) => {
-        const updated = res?.id ? res : res?.data;
-        if (updated) {
-          dispatch(setProfile(updated));
-          dispatch(
-            updateUser({
-              id: updated.id,
-              email: updated.email,
-              phone: updated.phone,
-              name: updated.name,
-              role: updated.role,
-              linked_students: updated.linked_students,
-              branch: updated.branch,
-              organization: updated.organization,
-              organization_name: updated.organization_name,
-              profile_pic: updated.profile_pic,
-            }),
-          );
-          toast.success("Profile updated successfully!");
-          setProfilePicFile(null);
-          setProfilePicPreview(null);
-        } else {
-          toast.success("Profile saved successfully.");
-          fetchSettings();
-        }
-      },
-      getError: (err: any) => {
-        const msg = err?.response?.data?.message || err?.message || "Failed to update profile";
-        toast.error(msg);
-      },
-    });
-  };
+  // Removed profile edit functions
 
   const handleChangePassword = () => {
     if (
@@ -251,13 +171,11 @@ export default function SettingsPage() {
     toast.success("Copied to clipboard!");
   };
 
-  const avatarUrl = profilePicPreview
-    ? profilePicPreview
-    : profile?.profile_pic
-      ? profile?.profile_pic?.startsWith("http")
-        ? profile?.profile_pic
-        : import.meta.env.VITE_APP_BASE_URL + profile?.profile_pic
-      : undefined;
+  const avatarUrl = profile?.profile_pic
+    ? profile?.profile_pic?.startsWith("http")
+      ? profile?.profile_pic
+      : import.meta.env.VITE_APP_BASE_URL + profile?.profile_pic
+    : undefined;
 
   const initials =
     profile?.name
@@ -349,104 +267,52 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle>Personal Information</CardTitle>
               <CardDescription>
-                Update your personal details and how others see you.
+                View your personal details and how others see you.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
-              {/* Picture Upload Area */}
+              {/* Profile Picture Display */}
               <div className="flex flex-col sm:flex-row items-center gap-4 pb-4 border-b border-border">
-                <div
-                  className="relative group cursor-pointer"
-                  onClick={() => fileInputRef.current?.click()}
-                >
+                <div className="relative">
                   <Avatar className="h-16 w-16 border-2 border-primary/20 shadow-sm">
-                    <AvatarImage src={avatarUrl} alt={editForm.name} className="object-cover" />
+                    <AvatarImage src={avatarUrl} alt={profile?.name || ""} className="object-cover" />
                     <AvatarFallback className="text-xl bg-primary/10 text-primary-dark font-semibold">
                       {initials}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Camera className="w-4 h-4 text-white" />
-                  </div>
                 </div>
                 <div className="text-center sm:text-left space-y-1">
                   <Label className="font-semibold text-sm block">Profile Picture</Label>
-                  <p className="text-xs text-muted-foreground">JPG, PNG or WebP images accepted.</p>
-                  <div className="flex gap-2 justify-center sm:justify-start">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="h-8 text-xs flex items-center gap-1"
-                    >
-                      <Upload className="w-3 h-3" />
-                      Upload Photo
-                    </Button>
-                    {profilePicPreview && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setProfilePicFile(null);
-                          setProfilePicPreview(null);
-                        }}
-                        className="h-8 text-xs text-destructive hover:bg-destructive/10"
-                      >
-                        Reset
-                      </Button>
-                    )}
-                  </div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleProfilePicChange}
-                  />
+                  <p className="text-xs text-muted-foreground">Your current profile picture.</p>
                 </div>
               </div>
 
-              {/* Input Fields */}
+              {/* Profile Details (Read-Only) */}
               <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="profile-name">Full Name</Label>
-                  <Input
-                    id="profile-name"
-                    value={editForm.name}
-                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                    placeholder="Enter your full name"
-                  />
+                <div className="space-y-1.5 p-3 rounded-lg bg-muted/30 border border-border">
+                  <span className="text-xs text-muted-foreground uppercase font-semibold tracking-wider block">
+                    Full Name
+                  </span>
+                  <span className="text-sm font-medium text-text-primary block">
+                    {profile?.name || "N/A"}
+                  </span>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="profile-email">Email Address</Label>
-                  <Input
-                    id="profile-email"
-                    value={editForm?.email || ""}
-                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                  />
+                <div className="space-y-1.5 p-3 rounded-lg bg-muted/30 border border-border">
+                  <span className="text-xs text-muted-foreground uppercase font-semibold tracking-wider block">
+                    Email Address
+                  </span>
+                  <span className="text-sm font-medium text-text-primary block break-all">
+                    {profile?.email || "N/A"}
+                  </span>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="profile-phone">Phone Number</Label>
-                  <Input
-                    id="profile-phone"
-                    value={editForm.phone}
-                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                    placeholder="Enter phone number"
-                  />
+                <div className="space-y-1.5 p-3 rounded-lg bg-muted/30 border border-border">
+                  <span className="text-xs text-muted-foreground uppercase font-semibold tracking-wider block">
+                    Phone Number
+                  </span>
+                  <span className="text-sm font-medium text-text-primary block">
+                    {profile?.phone || "N/A"}
+                  </span>
                 </div>
-              </div>
-
-              <div className="pt-2">
-                <Button
-                  onClick={handleSaveProfile}
-                  disabled={saving}
-                  className="bg-primary hover:bg-primary-dark"
-                >
-                  {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Save Profile Settings
-                </Button>
               </div>
             </CardContent>
           </Card>
