@@ -538,6 +538,7 @@ export default function UsersPage() {
         const msg =
           err?.response?.data?.message ||
           err?.response?.data?.error ||
+          err?.response?.data?.email ||
           err?.message ||
           "Failed to add user";
         toast.error(msg);
