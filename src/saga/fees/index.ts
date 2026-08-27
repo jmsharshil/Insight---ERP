@@ -27,4 +27,5 @@ export function* watchFeesSaga() {
     yield takeLatest(feesActions.CREATE_REFUND, genericSaga);
     yield takeLatest(feesActions.UPDATE_REFUND, genericSaga);
     yield takeLatest(feesActions.GET_MY_FEES, genericSaga);
+    yield takeLatest(feesActions.GENERATE_RAZORPAY_LINK, genericSaga);
 }

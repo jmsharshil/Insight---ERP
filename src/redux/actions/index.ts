@@ -169,6 +169,7 @@ export const feesActions = {
   GET_REFUNDS: "GET_REFUNDS",
   CREATE_REFUND: "CREATE_REFUND",
   UPDATE_REFUND: "UPDATE_REFUND",
+  GENERATE_RAZORPAY_LINK: "GENERATE_RAZORPAY_LINK",
 } as const;
 
 export const notificationActions = {

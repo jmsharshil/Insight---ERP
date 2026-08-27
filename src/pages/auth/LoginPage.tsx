@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -60,6 +60,14 @@ export default function LoginPage() {
   const {
     register, handleSubmit, formState: { errors }, reset, setValue, getValues,
   } = useForm<FormData>({ resolver: zodResolver(schema) });
+
+  useEffect(() => {
+    const autoLogoutEmail = sessionStorage.getItem("auto_logout_email");
+    if (autoLogoutEmail) {
+      setValue("email", autoLogoutEmail);
+      sessionStorage.removeItem("auto_logout_email");
+    }
+  }, [setValue]);
 
   const { isAuthenticated } = useAuth();
 
