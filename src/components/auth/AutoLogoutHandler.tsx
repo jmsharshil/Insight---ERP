@@ -11,7 +11,7 @@ const DEBOUNCE_TIME = 1000; // 1 second throttle for high-frequency events
  * mouse movements and scrolling.
  */
 export default function AutoLogoutHandler({ children }: { children: React.ReactNode }) {
-  const { logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
   const toast = useToast();
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -30,10 +30,13 @@ export default function AutoLogoutHandler({ children }: { children: React.ReactN
     }
     
     timerRef.current = setTimeout(() => {
+      if (user?.email) {
+        sessionStorage.setItem("auto_logout_email", user.email);
+      }
       logout();
       toast.info("You have been logged out due to inactivity.");
     }, INACTIVITY_TIME);
-  }, [logout, toast]);
+  }, [user, logout, toast]);
 
   useEffect(() => {
     // Only run the inactivity timer when the user is logged in

@@ -347,6 +347,9 @@ export default function FeesPage() {
   const [instTotalAmount, setInstTotalAmount] = useState<number>(0);
   const [instItems, setInstItems] = useState<{ amount: string; due_date: string }[]>([]);
 
+  // Razorpay Link
+  const [razorpayLinkOpen, setRazorpayLinkOpen] = useState(false);
+
   // Refund states
   const [refunds, setRefunds] = useState<any[]>([]);
   const [refundsLoading, setRefundsLoading] = useState(false);
@@ -1187,12 +1190,20 @@ export default function FeesPage() {
               <Plus className="w-4 h-4" /> Create Installment Plan
             </Button>
           ) : activeTab === "payments" && (isAccountant || isAdmin) ? (
-            <Button
-              onClick={() => setAdminRecordPaymentOpen(true)}
-              className="bg-primary hover:bg-primary-dark text-primary-foreground gap-1.5"
-            >
-              <Plus className="w-4 h-4" /> Create Payment
-            </Button>
+            <div className="flex gap-2 items-center">
+              <Button
+                onClick={() => setRazorpayLinkOpen(true)}
+                className="bg-primary hover:bg-primary-dark text-primary-foreground gap-1.5"
+              >
+                <Send className="w-4 h-4" /> Generate Payment Link
+              </Button>
+              <Button
+                onClick={() => setAdminRecordPaymentOpen(true)}
+                className="bg-primary hover:bg-primary-dark text-primary-foreground gap-1.5"
+              >
+                <Plus className="w-4 h-4" /> Create Payment
+              </Button>
+            </div>
           ) : activeTab === "bank-accounts" && (isAccountant || isAdmin) ? (
             <Button
               onClick={() => {
@@ -1543,6 +1554,11 @@ export default function FeesPage() {
         studentFees={studentFees}
         feeStructure={feeStructure}
         loading={createInstallmentLoading}
+      />
+
+      <RazorpayLinkDialog
+        open={razorpayLinkOpen}
+        onClose={() => setRazorpayLinkOpen(false)}
       />
     </div>
   );
@@ -2079,4 +2095,142 @@ function PaymentsHistoryTable({ data, studentFees }: { data: any[]; studentFees:
     { key: "payment_date", header: "Date", render: (r) => formatDate(r.payment_date) },
   ];
   return <DataTable columns={cols} data={data} />;
+}
+
+function RazorpayLinkDialog({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const dispatch = useDispatch<any>();
+  const toast = useToast();
+  const [loading, setLoading] = useState(false);
+  const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const payload = {
+      amount: Number(formData.get("amount")),
+      reference_id: formData.get("reference_id"),
+      customer_name: formData.get("customer_name"),
+      customer_email: formData.get("customer_email"),
+      customer_contact: formData.get("customer_contact"),
+      description: formData.get("description"),
+      bank_account_data: {
+        account_number: formData.get("account_number"),
+        name: formData.get("bank_name"),
+        ifsc: formData.get("ifsc"),
+      },
+    };
+
+    setLoading(true);
+    dispatch({
+      type: feesActions.GENERATE_RAZORPAY_LINK,
+      method: "POST",
+      endPoint: "/api/v1/razorpay/generate-direct-link/",
+      body: payload,
+      auth: true,
+      getResponse: (res: any) => {
+        setLoading(false);
+        toast.success(res?.message || "Payment link generated successfully.");
+        if (res?.data?.short_url || res?.short_url) {
+          setGeneratedLink(res?.data?.short_url || res?.short_url);
+        } else {
+          onClose();
+        }
+      },
+      getError: (err: any) => {
+        setLoading(false);
+        const msg =
+          err?.response?.data?.message || err?.message || "Failed to generate payment link";
+        toast.error(msg);
+      },
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Generate Razorpay Payment Link</DialogTitle>
+          <DialogDescription>
+            Create a direct payment link with specific customer and bank account details.
+          </DialogDescription>
+        </DialogHeader>
+
+        {generatedLink ? (
+          <div className="space-y-4 py-4">
+            <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+              <p className="text-sm text-green-700 font-medium mb-2">Link Generated Successfully!</p>
+              <a href={generatedLink} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all font-mono text-sm">
+                {generatedLink}
+              </a>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => { setGeneratedLink(null); onClose(); }}>Close</Button>
+            </DialogFooter>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Amount</Label>
+                <Input name="amount" type="number" required placeholder="e.g. 5000" />
+              </div>
+              <div className="space-y-2">
+                <Label>Reference ID</Label>
+                <Input name="reference_id" required placeholder="YOUR_CUSTOM_ID_123" />
+              </div>
+              <div className="space-y-2">
+                <Label>Customer Name</Label>
+                <Input name="customer_name" required placeholder="John Doe" />
+              </div>
+              <div className="space-y-2">
+                <Label>Customer Email</Label>
+                <Input name="customer_email" type="email" required placeholder="john@example.com" />
+              </div>
+              <div className="space-y-2">
+                <Label>Customer Contact</Label>
+                <Input name="customer_contact" required placeholder="9876543210" />
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Input name="description" required placeholder="Custom Fee Payment" />
+              </div>
+            </div>
+
+            <div className="border-t pt-4 mt-2">
+              <h4 className="font-medium text-sm mb-3">Bank Account Data</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Bank Name</Label>
+                  <Input name="bank_name" placeholder="John's Bank" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Account Number</Label>
+                  <Input name="account_number" placeholder="1234567890" />
+                </div>
+                <div className="space-y-2">
+                  <Label>IFSC Code</Label>
+                  <Input name="ifsc" placeholder="HDFC0001234" />
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="mt-6">
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? "Generating..." : "Generate Link"}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
 }
