@@ -7,6 +7,7 @@ export interface AppNotification {
   timestamp: string;
   isRead: boolean;
   priority: "high" | "normal";
+  notificationType: string;
   actionUrl?: string;
   data?: any;
 }

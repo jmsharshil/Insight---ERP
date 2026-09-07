@@ -12,6 +12,7 @@ import { NotificationsSkeleton } from "@/components/common/Skeletons";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/useToast";
 import { useUI } from "@/hooks/useUI";
 
@@ -36,6 +37,24 @@ function groupByDay(notifs: AppNotification[]) {
   }, {} as Record<string, AppNotification[]>);
 }
 
+const NOTIFICATION_TYPES = [
+  { value: "all", label: "All" },
+  { value: "system", label: "System" },
+  { value: "authentication", label: "Authentication" },
+  { value: "admission", label: "Admission" },
+  { value: "attendance", label: "Attendance" },
+  { value: "timetable", label: "Timetable" },
+  { value: "chat", label: "Chat" },
+  { value: "exam", label: "Exam" },
+  { value: "fees", label: "Fees" },
+  { value: "inventory", label: "Inventory" },
+  { value: "leads", label: "Leads" },
+  { value: "leave", label: "Leave" },
+  { value: "payroll", label: "Payroll" },
+  { value: "results", label: "Results" },
+  { value: "support", label: "Support" },
+];
+
 export default function NotificationsPage() {
   const { notifications, loading } = useSelector((state: RootState) => state.notifications);
   const { setPageTitle } = useUI();
@@ -47,11 +66,16 @@ export default function NotificationsPage() {
   const toast = useToast();
   const dispatch = useDispatch<AppDispatch>();
 
-  const fetchNotifications = useCallback((currentPage: number) => {
+  const fetchNotifications = useCallback((currentPage: number, typeFilter: string) => {
+    let endPoint = `/api/auth/notifications/?page=${currentPage}`;
+    if (typeFilter !== "all") {
+      endPoint += `&type=${typeFilter}`;
+    }
+
     dispatch({
       type: notificationActions.GET_NOTIFICATIONS,
       method: "GET",
-      endPoint: `/api/auth/notifications/?page=${currentPage}`,
+      endPoint,
       auth: true,
       setLoading: (val: boolean) => dispatch(setNotificationsLoading(val)),
       getResponse: (res: any) => {
@@ -65,6 +89,7 @@ export default function NotificationsPage() {
           timestamp: n.created_at,
           isRead: n.is_read,
           priority: n.data?.priority || "normal",
+          notificationType: n.notification_type || "system",
           actionUrl: n.data?.url || undefined,
           data: n.data
         }));
@@ -82,9 +107,11 @@ export default function NotificationsPage() {
     setPageTitle("Notifications"); // Set header name
   }, [setPageTitle]);
 
+  const [activeTab, setActiveTab] = useState("all");
+
   useEffect(() => {
-    fetchNotifications(page);
-  }, [fetchNotifications, page]);
+    fetchNotifications(page, activeTab);
+  }, [fetchNotifications, page, activeTab]);
 
   const filtered = useMemo(() => notifications.filter(n =>
     filter === "all" ? true : filter === "unread" ? !n.isRead : n.priority === "high",
@@ -145,64 +172,82 @@ export default function NotificationsPage() {
         }
       />
       
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setPage(1); }} className="w-full mt-6">
+        <TabsList className="mb-4 inline-flex flex-wrap h-auto justify-start gap-1 p-1 bg-transparent">
+          {NOTIFICATION_TYPES.map(t => (
+            <TabsTrigger key={t.value} value={t.value} className="capitalize data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-card hover:bg-muted">
+              {t.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
       {loading ? (
         <div className="mt-6">
           <NotificationsSkeleton />
         </div>
       ) : filtered.length === 0 ? (
         <div className="py-10">
-          <EmptyState icon={BellOff} title="You're all caught up! 🎉" description="No notifications to show." />
+          <EmptyState icon={BellOff} title="You're all caught up! 🎉" description={`No ${activeTab !== 'all' ? NOTIFICATION_TYPES.find(t => t.value === activeTab)?.label : ''} notifications to show.`} />
         </div>
       ) : (
         <div className="space-y-6">
           {["Today", "Yesterday", "Earlier"].map((day) => groups[day] && groups[day].length > 0 && (
-            <div key={day}>
-              <h3 className="font-heading font-semibold text-xs text-muted-foreground uppercase tracking-wider mb-3 px-1">{day}</h3>
-              <div className="space-y-2">
-                <AnimatePresence>
-                  {groups[day].map((n, i) => (
-                    <motion.div key={n.id}
-                      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ delay: i * 0.02, duration: 0.2 }}
-                      className={`w-full text-left rounded-lg border bg-card p-4 flex items-start gap-4 relative overflow-hidden group
-                        ${!n.isRead ? "border-l-4 border-l-primary bg-primary/5 shadow-sm" : "border-border shadow-sm"}
-                        ${n.priority === "high" ? "border-l-4 border-l-warning bg-warning/5" : ""}`}>
-                      
-                      <div className={`flex-shrink-0 rounded-full p-2.5 mt-0.5
-                        ${n.priority === "high" ? "bg-warning/15 text-warning" : !n.isRead ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
-                        <Bell className="w-4 h-4" />
-                      </div>
-                      
-                      <div className="flex-1 min-w-0 pr-6">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className={`font-semibold text-sm truncate ${!n.isRead ? "text-foreground" : "text-foreground/80"}`}>{n.title}</span>
-                          <span className="text-[11px] text-muted-foreground flex-shrink-0 ml-2 whitespace-nowrap">{relative(n.timestamp)}</span>
-                        </div>
-                        <p className={`text-sm leading-relaxed whitespace-pre-wrap ${!n.isRead ? "text-muted-foreground" : "text-muted-foreground/80"}`}>{n.body}</p>
+              <div key={day} className="mb-6">
+                <h3 className="font-heading font-semibold text-xs text-muted-foreground uppercase tracking-wider mb-3 px-1">{day}</h3>
+                <div className="space-y-2">
+                  <AnimatePresence>
+                    {groups[day].map((n, i) => (
+                      <motion.div key={n.id}
+                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ delay: i * 0.02, duration: 0.2 }}
+                        className={`w-full text-left rounded-lg border bg-card p-4 flex items-start gap-4 relative overflow-hidden group
+                          ${!n.isRead ? "border-l-4 border-l-primary bg-primary/5 shadow-sm" : "border-border shadow-sm"}
+                          ${n.priority === "high" ? "border-l-4 border-l-warning bg-warning/5" : ""}`}>
                         
-                        {(n.actionUrl || n.priority === "high") && (
-                          <div className="flex items-center gap-2 mt-3">
-                            {n.actionUrl && (
-                              <a href={n.actionUrl} className="inline-flex items-center">
-                                <Badge variant="secondary" className="text-[10px] px-2 py-0.5 hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">
-                                  View Details
+                        <div className={`flex-shrink-0 rounded-full p-2.5 mt-0.5
+                          ${n.priority === "high" ? "bg-warning/15 text-warning" : !n.isRead ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
+                          <Bell className="w-4 h-4" />
+                        </div>
+                        
+                        <div className="flex-1 min-w-0 pr-6">
+                          <div className="flex items-center justify-between mb-1.5 gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={`font-semibold text-sm truncate ${!n.isRead ? "text-foreground" : "text-foreground/80"}`}>{n.title}</span>
+                              {activeTab === 'all' && (
+                                <Badge variant="outline" className="text-[9px] font-semibold uppercase tracking-wider px-2 py-0 h-4 shrink-0 bg-primary/10 text-primary border-primary/20">
+                                  {NOTIFICATION_TYPES.find(t => t.value === (n.notificationType || "system"))?.label || n.notificationType}
                                 </Badge>
-                              </a>
-                            )}
-                            {n.priority === "high" && <Badge variant="outline" className="text-[10px] px-2 py-0.5 border-warning text-warning">Important</Badge>}
+                              )}
+                            </div>
+                            <span className="text-[11px] text-muted-foreground flex-shrink-0 whitespace-nowrap">{relative(n.timestamp)}</span>
                           </div>
-                        )}
-                      </div>
+                          <p className={`text-sm leading-relaxed whitespace-pre-wrap ${!n.isRead ? "text-muted-foreground" : "text-muted-foreground/80"}`}>{n.body}</p>
+                          
+                          {(n.actionUrl || n.priority === "high") && (
+                            <div className="flex items-center gap-2 mt-3">
+                              {n.actionUrl && (
+                                <a href={n.actionUrl} className="inline-flex items-center">
+                                  <Badge variant="secondary" className="text-[10px] px-2 py-0.5 hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">
+                                    View Details
+                                  </Badge>
+                                </a>
+                              )}
+                              {n.priority === "high" && <Badge variant="outline" className="text-[10px] px-2 py-0.5 border-warning text-warning">Important</Badge>}
+                            </div>
+                          )}
+                        </div>
 
-                      {!n.isRead && (
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary" />
-                      )}
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
+                        {!n.isRead && (
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary" />
+                        )}
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          }
 
           {/* Pagination Controls */}
           <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">

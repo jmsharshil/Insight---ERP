@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Bell, MessageSquare, AlertTriangle } from "lucide-react";
@@ -20,10 +20,29 @@ interface NotificationItem {
   data?: any;
 }
 
+const NOTIFICATION_TYPES = [
+  { value: "all", label: "All" },
+  { value: "system", label: "System" },
+  { value: "authentication", label: "Authentication" },
+  { value: "admission", label: "Admission" },
+  { value: "attendance", label: "Attendance" },
+  { value: "timetable", label: "Timetable" },
+  { value: "chat", label: "Chat" },
+  { value: "exam", label: "Exam" },
+  { value: "fees", label: "Fees" },
+  { value: "inventory", label: "Inventory" },
+  { value: "leads", label: "Leads" },
+  { value: "leave", label: "Leave" },
+  { value: "payroll", label: "Payroll" },
+  { value: "results", label: "Results" },
+  { value: "support", label: "Support" },
+];
+
 export function NotificationPopup() {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [totalUnread, setTotalUnread] = useState(0);
+  const [activeTab, setActiveTab] = useState("all");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -88,6 +107,11 @@ export function NotificationPopup() {
     }
   };
 
+  const tabFiltered = useMemo(() => {
+    if (activeTab === "all") return notifications;
+    return notifications.filter(n => (n.notification_type || "system") === activeTab);
+  }, [notifications, activeTab]);
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden flex flex-col shadow-xl gap-0 rounded-xl">
@@ -95,20 +119,34 @@ export function NotificationPopup() {
           <DialogTitle>Unread Notifications</DialogTitle>
         </VisuallyHidden>
 
-        <div className="bg-muted/40 p-4 border-b border-border flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="bg-primary/10 p-1.5 rounded-full">
-              <Bell className="w-4 h-4 text-primary" />
+        <div className="bg-muted/40 p-4 border-b border-border flex flex-col gap-3 shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="bg-primary/10 p-1.5 rounded-full">
+                <Bell className="w-4 h-4 text-primary" />
+              </div>
+              <h2 className="font-semibold text-sm">Notifications</h2>
+              <Badge variant="secondary" className="px-1.5 py-0 min-w-[20px] h-5 flex items-center justify-center text-[10px]">
+                {totalUnread > 99 ? '99+' : totalUnread} new
+              </Badge>
             </div>
-            <h2 className="font-semibold text-sm">Notifications</h2>
-            <Badge variant="secondary" className="px-1.5 py-0 min-w-[20px] h-5 flex items-center justify-center text-[10px]">
-              {totalUnread > 99 ? '99+' : totalUnread} new
-            </Badge>
+          </div>
+          <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-1">
+            {NOTIFICATION_TYPES.map(t => (
+              <button key={t.value} onClick={() => setActiveTab(t.value)} 
+              className={`text-xs px-3 py-1 rounded-full whitespace-nowrap capitalize transition-colors ${activeTab === t.value ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
+                {t.label}
+              </button>
+            ))}
           </div>
         </div>
 
         <div className="flex-1 max-h-[60vh] overflow-y-auto bg-background p-2 space-y-1 custom-scrollbar">
-            {notifications.map((notif) => (
+            {tabFiltered.length === 0 ? (
+               <div className="py-8 text-center text-sm text-muted-foreground">
+                 No {activeTab !== 'all' ? NOTIFICATION_TYPES.find(t => t.value === activeTab)?.label : ''} notifications
+               </div>
+            ) : tabFiltered.map((notif) => (
               <div 
                 key={notif.id}
                 onClick={() => handleNotificationClick(notif.route)}
@@ -121,8 +159,15 @@ export function NotificationPopup() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start gap-2">
-                    <h4 className="font-medium text-sm text-foreground">{notif.title}</h4>
-                    <span className="text-[10px] text-muted-foreground whitespace-nowrap pt-0.5">
+                    <div className="flex items-center gap-2 flex-wrap min-w-0">
+                      <h4 className="font-medium text-sm text-foreground truncate">{notif.title}</h4>
+                      {activeTab === 'all' && (
+                        <Badge variant="outline" className="text-[9px] font-semibold uppercase tracking-wider px-2 py-0 h-4 shrink-0 bg-primary/10 text-primary border-primary/20">
+                          {NOTIFICATION_TYPES.find(t => t.value === (notif.notification_type || "system"))?.label || notif.notification_type}
+                        </Badge>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-muted-foreground flex-shrink-0 whitespace-nowrap pt-0.5">
                       {format(new Date(notif.created_at), "MMM d, HH:mm")}
                     </span>
                   </div>

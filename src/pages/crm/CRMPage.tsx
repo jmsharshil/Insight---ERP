@@ -335,7 +335,7 @@ export default function CRMPage() {
           <div className="flex items-center gap-2">
             <Button
               onClick={() =>
-                window.open("https://insight.jmstech.co/insight/public/lead-inquiry-form", "_blank")
+                window.open("https://crm.insightinstitute.co/insight/public/lead-inquiry-form", "_blank")
               }
               variant="default"
               className="gap-2"
