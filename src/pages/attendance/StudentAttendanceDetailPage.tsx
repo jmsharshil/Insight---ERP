@@ -9,7 +9,7 @@ import {
 } from "@/redux/slices/attendanceSlice";
 import type { RootState, AppDispatch } from "@/store";
 import { useToast } from "@/hooks/useToast";
-import { TableSkeleton } from "@/components/common/Skeletons";
+import { TableSkeleton, AttendanceDetailSkeleton } from "@/components/common/Skeletons";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -127,11 +127,11 @@ export default function StudentAttendanceDetailPage() {
 
   if (selectedStudentLoading) {
     return (
-      <div className="mx-auto space-y-4">
+      <div className="mx-auto space-y-2">
         <Button variant="ghost" onClick={() => navigate('/attendance', { state: { tab: 'students' } })} className="h-9 text-sm">
           <ArrowLeft className="w-4 h-4 mr-2" /> Back
         </Button>
-        <TableSkeleton columns={2} rows={5} className="mt-4" />
+        <AttendanceDetailSkeleton />
       </div>
     );
   }
@@ -161,46 +161,71 @@ export default function StudentAttendanceDetailPage() {
       </div>
 
       {/* Top Banner: Profile & Overview Summary */}
-      <div className="bg-white rounded-xl border border-border p-6 shadow-sm flex flex-col md:flex-row gap-6 items-center md:items-start justify-between">
-        <div className="flex items-center gap-5">
-          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-2xl shadow-sm border border-primary/20 shrink-0">
+      <div className="relative overflow-hidden bg-white rounded-2xl border border-border p-6 sm:p-8 shadow-sm flex flex-col xl:flex-row gap-8 justify-between items-start xl:items-center">
+        {/* Subtle background decoration */}
+        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+        
+        {/* Profile Info */}
+        <div className="flex items-start sm:items-center gap-6 relative z-10 w-full xl:w-auto">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-primary/10 to-primary/30 flex items-center justify-center text-primary font-bold text-2xl sm:text-3xl shadow-inner border border-primary/20 shrink-0">
             {selectedStudent.student_profile.name.slice(0, 2).toUpperCase()}
           </div>
-          <div className="space-y-1">
-            <h2 className="text-2xl font-bold text-foreground">{selectedStudent.student_profile.name}</h2>
-            <div className="text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
-              <span><span className="font-medium text-foreground">Admission:</span> {selectedStudent.student_profile.admission_number}</span>
+          <div className="space-y-4 flex-1 min-w-0">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight truncate">{selectedStudent.student_profile.name}</h2>
+            <div className="flex flex-wrap gap-x-8 gap-y-4 text-sm">
+              <div className="flex flex-col space-y-0.5">
+                <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Admission No</span>
+                <span className="font-mono font-medium text-foreground">{selectedStudent.student_profile.admission_number || "N/A"}</span>
+              </div>
               {selectedStudent.student_profile.roll_number && (
-                <span><span className="font-medium text-foreground">Roll:</span> {selectedStudent.student_profile.roll_number}</span>
+                <div className="flex flex-col space-y-0.5">
+                  <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Roll No</span>
+                  <span className="font-medium text-foreground">{selectedStudent.student_profile.roll_number}</span>
+                </div>
               )}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">Branch/Batch:</span> {selectedStudent.student_profile.branch_name}
-              {selectedStudent.student_profile.batch_name && ` / ${selectedStudent.student_profile.batch_name}`}
+              <div className="flex flex-col space-y-0.5">
+                <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Branch/Batch</span>
+                <span className="font-medium text-foreground truncate max-w-[200px]" title={`${selectedStudent.student_profile.branch_name}${selectedStudent.student_profile.batch_name ? ` / ${selectedStudent.student_profile.batch_name}` : ''}`}>
+                  {selectedStudent.student_profile.branch_name}
+                  {selectedStudent.student_profile.batch_name && ` / ${selectedStudent.student_profile.batch_name}`}
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-6 items-center md:items-end">
-          <div className="flex flex-col items-center sm:items-end">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Overall Attendance</span>
-            <div className="text-4xl font-extrabold text-primary flex items-center gap-3">
-              {selectedStudent.attendance_percentage.toFixed(1)}%
-              <Badge className={`text-xs font-semibold px-2 py-0.5 ${pct(selectedStudent.attendance_percentage)}`}>
+        {/* Divider for mobile/tablet */}
+        <div className="w-full h-px bg-border xl:hidden relative z-10" />
+
+        {/* Stats Section */}
+        <div className="flex flex-col sm:flex-row gap-6 sm:gap-10 items-start sm:items-center w-full xl:w-auto relative z-10 bg-muted/30 p-5 sm:p-6 rounded-2xl border border-border/50">
+          
+          <div className="flex flex-col items-start sm:items-center">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Overall</span>
+            <div className="flex items-center gap-3">
+              <span className="text-4xl sm:text-5xl font-black text-primary tracking-tighter">
+                {selectedStudent.attendance_percentage.toFixed(1)}<span className="text-2xl sm:text-3xl text-primary font-bold ml-1">%</span>
+              </span>
+              <Badge variant="outline" className={`border-2 text-xs font-bold px-2.5 py-1 uppercase tracking-wider ${pct(selectedStudent.attendance_percentage)}`}>
                 {selectedStudent.attendance_percentage >= 75 ? 'Excellent' : selectedStudent.attendance_percentage >= 50 ? 'Average' : 'Low'}
               </Badge>
             </div>
           </div>
           
-          <div className="grid grid-cols-3 gap-2">
+          {/* Vertical divider */}
+          <div className="hidden sm:block w-px h-16 bg-border" />
+          <div className="block sm:hidden w-full h-px bg-border" />
+
+          <div className="flex gap-3 sm:gap-4 w-full sm:w-auto justify-between sm:justify-start">
             {[
-              { label: "Present", value: selectedStudent.summary.present_count, color: "text-green-600", bg: "bg-green-50" },
-              { label: "Absent",  value: selectedStudent.summary.absent_count,  color: "text-red-600", bg: "bg-red-50" },
-              { label: "Late",    value: selectedStudent.summary.late_count,    color: "text-yellow-600", bg: "bg-yellow-50" },
+              { label: "Present", value: selectedStudent.summary.present_count || 0, color: "text-emerald-700", bg: "bg-emerald-100/50", border: "border-emerald-200" },
+              { label: "Absent",  value: selectedStudent.summary.absent_count || 0,  color: "text-rose-700", bg: "bg-rose-100/50", border: "border-rose-200" },
+              { label: "Late",    value: selectedStudent.summary.late_count || 0,    color: "text-amber-700", bg: "bg-amber-100/50", border: "border-amber-200" },
             ].map(item => (
-              <div key={item.label} className={`${item.bg} rounded-lg p-2 text-center border border-border/40 min-w-[70px]`}>
-                <div className={`text-xl font-extrabold ${item.color}`}>{item.value}</div>
-                <div className="text-[10px] uppercase font-semibold text-muted-foreground mt-0.5">{item.label}</div>
+              <div key={item.label} className={`${item.bg} ${item.border} rounded-xl p-3 sm:p-4 flex flex-col items-center justify-center border-2 shadow-sm min-w-[80px] sm:min-w-[90px] transition-transform hover:scale-105`}>
+                <div className={`text-2xl sm:text-3xl font-black ${item.color}`}>{item.value}</div>
+                <div className={`text-[10px] sm:text-xs uppercase font-bold ${item.color} mt-1 tracking-widest`}>{item.label}</div>
               </div>
             ))}
           </div>

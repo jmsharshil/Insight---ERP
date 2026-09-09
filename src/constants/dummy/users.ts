@@ -13,6 +13,8 @@ export interface DummyUser {
   password?: string;
   created_at?: string;
   profile_pic?: string | null;
+  additional_roles?: string[];
+  accessible_modules?: string[];
 }
 
 export const DUMMY_USERS: DummyUser[] = [

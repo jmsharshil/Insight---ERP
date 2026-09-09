@@ -1,6 +1,6 @@
 import { useMemo, useEffect, useCallback, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, BellOff, CheckCheck, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Bell, BellOff, CheckCheck, Loader2, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store";
@@ -12,7 +12,6 @@ import { NotificationsSkeleton } from "@/components/common/Skeletons";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/useToast";
 import { useUI } from "@/hooks/useUI";
 
@@ -38,7 +37,7 @@ function groupByDay(notifs: AppNotification[]) {
 }
 
 const NOTIFICATION_TYPES = [
-  { value: "all", label: "All" },
+  { value: "all", label: "All Types" },
   { value: "system", label: "System" },
   { value: "authentication", label: "Authentication" },
   { value: "admission", label: "Admission" },
@@ -156,11 +155,29 @@ export default function NotificationsPage() {
     <div className="mx-auto pb-10">
       <PageHeader title="Notifications" subtitle={loading ? "Loading..." : `${notifications.filter(n => !n.isRead).length} unread`}
         actions={
-          <div className="flex gap-2">
-            <Select value={filter} onValueChange={(v: any) => setFilter(v)}>
-              <SelectTrigger className="w-32 h-9 text-xs"><SelectValue /></SelectTrigger>
+          <div className="flex flex-wrap gap-2 justify-end">
+            <Select value={activeTab} onValueChange={(v: any) => { setActiveTab(v); setPage(1); }}>
+              <SelectTrigger className="w-36 h-9 text-xs">
+                <div className="flex items-center gap-2">
+                  <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+                  <SelectValue placeholder="Type" />
+                </div>
+              </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All</SelectItem>
+                {NOTIFICATION_TYPES.map(t => (
+                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filter} onValueChange={(v: any) => setFilter(v)}>
+              <SelectTrigger className="w-36 h-9 text-xs">
+                <div className="flex items-center gap-2">
+                  <Bell className="w-3.5 h-3.5 text-muted-foreground" />
+                  <SelectValue placeholder="Status" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="unread">Unread</SelectItem>
                 <SelectItem value="high">High Priority</SelectItem>
               </SelectContent>
@@ -172,15 +189,7 @@ export default function NotificationsPage() {
         }
       />
       
-      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setPage(1); }} className="w-full mt-6">
-        <TabsList className="mb-4 inline-flex flex-wrap h-auto justify-start gap-1 p-1 bg-transparent">
-          {NOTIFICATION_TYPES.map(t => (
-            <TabsTrigger key={t.value} value={t.value} className="capitalize data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-card hover:bg-muted">
-              {t.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <div className="mt-6"></div>
 
       {loading ? (
         <div className="mt-6">

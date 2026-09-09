@@ -6,8 +6,8 @@ import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { axiosRequest } from "@/service/axiosRequest";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface NotificationItem {
   id: string;
@@ -21,7 +21,7 @@ interface NotificationItem {
 }
 
 const NOTIFICATION_TYPES = [
-  { value: "all", label: "All" },
+  { value: "all", label: "All Types" },
   { value: "system", label: "System" },
   { value: "authentication", label: "Authentication" },
   { value: "admission", label: "Admission" },
@@ -131,13 +131,19 @@ export function NotificationPopup() {
               </Badge>
             </div>
           </div>
-          <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-1">
-            {NOTIFICATION_TYPES.map(t => (
-              <button key={t.value} onClick={() => setActiveTab(t.value)} 
-              className={`text-xs px-3 py-1 rounded-full whitespace-nowrap capitalize transition-colors ${activeTab === t.value ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
-                {t.label}
-              </button>
-            ))}
+          <div className="pt-2 pb-1">
+            <Select value={activeTab} onValueChange={setActiveTab}>
+              <SelectTrigger className="w-full h-8 text-xs bg-background">
+                <SelectValue placeholder="Filter by type" />
+              </SelectTrigger>
+              <SelectContent>
+                {NOTIFICATION_TYPES.map(t => (
+                  <SelectItem key={t.value} value={t.value} className="text-xs">
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

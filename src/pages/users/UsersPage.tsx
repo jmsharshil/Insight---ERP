@@ -68,6 +68,8 @@ import {
   XCircle,
   Upload,
   Camera,
+  AlertTriangle,
+  Info,
 } from "lucide-react";
 import EmptyState from "@/components/common/EmptyState";
 
@@ -247,6 +249,7 @@ export default function UsersPage() {
     branch: "",
     branches: [] as string[],
     role: "",
+    additional_roles: [] as string[],
     salary_retention_percentage: "0",
     is_active: true,
     employee_id: "",
@@ -339,6 +342,7 @@ export default function UsersPage() {
         phone: selectedUser.phone || "",
         branch: selectedUser.branch || "",
         branches: selectedUser.branches || [],
+        additional_roles: selectedUser.additional_roles || [],
         salary_retention_percentage:
           selectedUser.salary_retention_percentage !== undefined
             ? String(selectedUser.salary_retention_percentage)
@@ -450,6 +454,7 @@ export default function UsersPage() {
       branch: "",
       branches: [],
       role: "",
+      additional_roles: [],
       salary_retention_percentage: "0",
       is_active: true,
       employee_id: "",
@@ -488,6 +493,7 @@ export default function UsersPage() {
       phone: editForm.phone,
       name: editForm.name,
       role: editForm.role,
+      additional_roles: editForm.additional_roles,
       branches: editForm.branches,
       salary_retention_percentage: editForm.salary_retention_percentage,
       is_active: false,
@@ -513,6 +519,9 @@ export default function UsersPage() {
           ...(editForm.role && ROLES[editForm.role as keyof typeof ROLES]
             ? ROLES[editForm.role as keyof typeof ROLES].modules
             : []),
+          ...(editForm?.additional_roles?.flatMap(r => 
+            ROLES[r as keyof typeof ROLES] ? ROLES[r as keyof typeof ROLES].modules : []
+          ) || []),
           ...editForm.accessible_modules,
         ]),
       ),
@@ -557,6 +566,7 @@ export default function UsersPage() {
       branch: selectedUser.branch || "",
       branches: selectedUser.branches || [],
       role: selectedUser.role || "",
+      additional_roles: selectedUser.additional_roles || [],
       salary_retention_percentage:
         selectedUser.salary_retention_percentage !== undefined
           ? String(selectedUser.salary_retention_percentage)
@@ -623,78 +633,89 @@ export default function UsersPage() {
   const handleUpdateUser = () => {
     if (!selectedUser) return;
 
-    const formData = new FormData();
-    formData.append("name", editForm.name);
-    formData.append("email", editForm.email);
-    formData.append("phone", editForm.phone);
-    formData.append("is_active", String(editForm.is_active));
-    formData.append("salary_retention_percentage", editForm.salary_retention_percentage);
-    // DRF expects branches as a list. Since this is multipart/form-data,
-    // append each branch ID separately.
-    editForm.branches.forEach((b: string) => formData.append("branches", b));
-    if (profilePicFile) formData.append("profile_pic", profilePicFile);
-
-    if (editForm.employee_id !== undefined) formData.append("employee_id", editForm.employee_id);
-    if (editForm.qualification !== undefined)
-      formData.append("qualification", editForm.qualification);
-    if (editForm.specialization !== undefined)
-      formData.append("specialization", editForm.specialization);
-    if (editForm.subject_expertise !== undefined)
-      formData.append("subject_expertise", editForm.subject_expertise);
-    if (editForm.level !== undefined) formData.append("level", editForm.level);
-    if (editForm.employment_type !== undefined)
-      formData.append("employment_type", editForm.employment_type);
-    if (editForm.joining_date !== undefined) formData.append("joining_date", editForm.joining_date);
-    if (editForm.hourly_rate !== undefined && editForm.hourly_rate !== "")
-      formData.append("hourly_rate", editForm.hourly_rate);
-    if (editForm.session_hours !== undefined && editForm.session_hours !== "")
-      formData.append("session_hours", editForm.session_hours);
-    if (editForm.salary !== undefined && editForm.salary !== "")
-      formData.append("salary", editForm.salary);
-    if (editForm.bank_account !== undefined) formData.append("bank_account", editForm.bank_account);
-    if (editForm.ifsc_code !== undefined) formData.append("ifsc_code", editForm.ifsc_code);
-    if (editForm.pan_number !== undefined) formData.append("pan_number", editForm.pan_number);
-    if (editForm.aadhar_number !== undefined)
-      formData.append("aadhar_number", editForm.aadhar_number);
-    if (editForm.work_start_time !== undefined)
-      formData.append("work_start_time", editForm.work_start_time);
-    if (editForm.work_end_time !== undefined)
-      formData.append("work_end_time", editForm.work_end_time);
-    if (editForm.per_paper_rate !== undefined && editForm.per_paper_rate !== "")
-      formData.append("per_paper_rate", editForm.per_paper_rate);
-
     const allModules = Array.from(
       new Set([
         ...(editForm.role && ROLES[editForm.role as keyof typeof ROLES]
           ? ROLES[editForm.role as keyof typeof ROLES].modules
           : []),
+        ...editForm.additional_roles.flatMap(r => 
+          ROLES[r as keyof typeof ROLES] ? ROLES[r as keyof typeof ROLES].modules : []
+        ),
         ...editForm.accessible_modules,
       ]),
     );
-    // Send accessible_modules correctly
-    allModules.forEach((m: string) => formData.append("accessible_modules", m));
 
     setUpdateLoading(true);
+
+    const formData = new FormData();
+    if (editForm.username) {
+      formData.append("username", editForm.username);
+    }
+    formData.append("name", editForm.name);
+    formData.append("email", editForm.email);
+    formData.append("phone", editForm.phone);
+    formData.append("is_active", String(editForm.is_active));
+    formData.append("salary_retention_percentage", editForm.salary_retention_percentage);
+    // --- BRANCHES ---
+    if (editForm.branches.length === 1) {
+      formData.append("branches", editForm.branches[0]);
+      formData.append("branches", editForm.branches[0]);
+    } else if (editForm.branches.length > 1) {
+      editForm.branches.forEach((b: string) => formData.append("branches", b));
+    }
+
+    // --- ADDITIONAL ROLES ---
+    if (!editForm.additional_roles || editForm.additional_roles.length === 0) {
+      formData.append("additional_roles", []);
+    } else if (editForm.additional_roles.length === 1) {
+      formData.append("additional_roles", editForm.additional_roles[0]);
+      formData.append("additional_roles", editForm.additional_roles[0]);
+    } else {
+      editForm.additional_roles.forEach((r: string) => {
+        if (r && r !== "") formData.append("additional_roles", r);
+      });
+    }
+    
+    if (profilePicFile) {
+      formData.append("profile_pic", profilePicFile);
+    }
+
+    if (editForm.employee_id !== undefined) formData.append("employee_id", editForm.employee_id);
+    if (editForm.qualification !== undefined) formData.append("qualification", editForm.qualification);
+    if (editForm.specialization !== undefined) formData.append("specialization", editForm.specialization);
+    if (editForm.subject_expertise !== undefined) formData.append("subject_expertise", editForm.subject_expertise);
+    if (editForm.level !== undefined) formData.append("level", editForm.level);
+    if (editForm.employment_type !== undefined) formData.append("employment_type", editForm.employment_type);
+    if (editForm.joining_date !== undefined) formData.append("joining_date", editForm.joining_date);
+    if (editForm.hourly_rate !== undefined && editForm.hourly_rate !== "") formData.append("hourly_rate", editForm.hourly_rate);
+    if (editForm.session_hours !== undefined && editForm.session_hours !== "") formData.append("session_hours", editForm.session_hours);
+    if (editForm.salary !== undefined && editForm.salary !== "") formData.append("salary", editForm.salary);
+    if (editForm.bank_account !== undefined) formData.append("bank_account", editForm.bank_account);
+    if (editForm.ifsc_code !== undefined) formData.append("ifsc_code", editForm.ifsc_code);
+    if (editForm.pan_number !== undefined) formData.append("pan_number", editForm.pan_number);
+    if (editForm.aadhar_number !== undefined) formData.append("aadhar_number", editForm.aadhar_number);
+    if (editForm.work_start_time !== undefined) formData.append("work_start_time", editForm.work_start_time);
+    if (editForm.work_end_time !== undefined) formData.append("work_end_time", editForm.work_end_time);
+    if (editForm.per_paper_rate !== undefined && editForm.per_paper_rate !== "") formData.append("per_paper_rate", editForm.per_paper_rate);
+
+    // --- ACCESSIBLE MODULES ---
+    if (allModules && allModules.length === 1) {
+      formData.append("accessible_modules", allModules[0]);
+      formData.append("accessible_modules", allModules[0]);
+    } else if (allModules && allModules.length > 1) {
+      allModules.forEach((m: string) => {
+        if (m && m !== "") formData.append("accessible_modules", m);
+      });
+    }
+
     dispatch({
       type: userActions.UPDATE_USER,
-      method: "PATCH",
+      method: "PUT",
       endPoint: `/api/auth/users/${selectedUser.id}/`,
       body: formData,
       auth: true,
       setLoading: (val: boolean) => setUpdateLoading(val),
-      getResponse: (res: any) => {
-        const updatedUser = res?.id ? res : res?.data;
-        if (updatedUser) {
-          dispatch(updateUserInList(updatedUser));
-          dispatch(setSelectedUser(updatedUser));
-          toast.success("User updated successfully!");
-          setIsEditing(false);
-          setProfilePicFile(null);
-          setProfilePicPreview(null);
-          // Refresh the list to ensure consistency
-          fetchUsers();
-        }
-      },
+      getResponse: (res: any) => handleUpdateResponse(res),
       getError: (err: any) => {
         const msg =
           err?.response?.data?.message ||
@@ -704,6 +725,20 @@ export default function UsersPage() {
         toast.error(msg);
       },
     });
+  };
+
+  const handleUpdateResponse = (res: any) => {
+    const updatedUser = res?.id ? res : res?.data;
+    if (updatedUser) {
+      dispatch(updateUserInList(updatedUser));
+      dispatch(setSelectedUser(updatedUser));
+      toast.success("User updated successfully!");
+      setIsEditing(false);
+      setProfilePicFile(null);
+      setProfilePicPreview(null);
+      // Refresh the list to ensure consistency
+      fetchUsers();
+    }
   };
 
   /* ── Table ── */
@@ -733,10 +768,17 @@ export default function UsersPage() {
     isEmployee && !(isFaculty && isPartTimeOrVisiting) && !isPaperChecker && !isExaminer;
 
   const defaultModules = useMemo(() => {
-    if (!editForm.role) return [];
-    const roleDef = ROLES[editForm.role as keyof typeof ROLES];
-    return roleDef ? roleDef.modules : [];
-  }, [editForm.role]);
+    let mods: any[] = [];
+    if (editForm.role) {
+      const roleDef = ROLES[editForm.role as keyof typeof ROLES];
+      if (roleDef) mods = [...mods, ...roleDef.modules];
+    }
+    editForm.additional_roles.forEach(r => {
+      const roleDef = ROLES[r as keyof typeof ROLES];
+      if (roleDef) mods = [...mods, ...roleDef.modules];
+    });
+    return Array.from(new Set(mods));
+  }, [editForm.role, editForm.additional_roles]);
 
   return (
     <div>
@@ -908,7 +950,7 @@ export default function UsersPage() {
           if (!open) cancelEditing();
         }}
       >
-        <SheetContent className="sm:max-w-md overflow-y-auto scrollbar-hidden">
+        <SheetContent className="sm:max-w-2xl overflow-y-auto scrollbar-hidden">
           <SheetHeader>
             <SheetTitle>
               {isAdding ? "Add New User" : isEditing ? "Edit User" : "User Details"}
@@ -989,7 +1031,7 @@ export default function UsersPage() {
                 )}
 
                 {/* Form Fields (Unified for both View & Edit) */}
-                <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-5">
                   {/* Username (Only when adding) */}
                   {/* {isAdding && (
                     <div className="space-y-1">
@@ -1080,7 +1122,7 @@ export default function UsersPage() {
                   </div>
 
                   {/* Branches */}
-                  <div className="space-y-2">
+                  <div className="sm:col-span-2 space-y-2">
                     <Label
                       className="text-xs text-muted-foreground uppercase tracking-wider font-semibold"
                     >
@@ -1120,7 +1162,7 @@ export default function UsersPage() {
                     ) : (
                       <div className="text-sm font-medium text-text-primary pt-0.5 flex flex-wrap gap-1">
                         {selectedUser?.branches && selectedUser?.branches.length > 0
-                          ? selectedUser?.branches.map((bId: string) => {
+                          ? Array.from(new Set(selectedUser.branches)).map((bId: string) => {
                               const bLabel = branchOptions.find((o) => String(o.value) === String(bId))?.label || bId;
                               return <span key={bId} className="inline-flex bg-muted/50 px-2 py-0.5 rounded-md text-xs">{bLabel}</span>;
                             })
@@ -1131,7 +1173,7 @@ export default function UsersPage() {
 
                   {/* Organization (Always read-only) */}
                   {!isAdding && selectedUser?.organization_name && (
-                    <div className="space-y-1">
+                    <div className="sm:col-span-2 space-y-1">
                       <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
                         Organization
                       </Label>
@@ -1141,18 +1183,22 @@ export default function UsersPage() {
                     </div>
                   )}
 
-                  {/* Role */}
+                  {/* Primary Role */}
                   {isAdding ? (
-                    <div className="space-y-1">
+                    <div className="sm:col-span-2 space-y-1">
                       <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                        Role
+                        Primary Role
                       </Label>
                       <Select
                         value={editForm.role}
-                        onValueChange={(val) => setEditForm((f) => ({ ...f, role: val }))}
+                        onValueChange={(val) => setEditForm((f) => ({ 
+                          ...f, 
+                          role: val,
+                          additional_roles: f.additional_roles.filter(r => r !== val)
+                        }))}
                       >
                         <SelectTrigger className="bg-background">
-                          <SelectValue placeholder="Select a role" />
+                          <SelectValue placeholder="Select a primary role" />
                         </SelectTrigger>
                         <SelectContent>
                           {ROLE_CHOICES.filter(
@@ -1167,19 +1213,187 @@ export default function UsersPage() {
                           ))}
                         </SelectContent>
                       </Select>
+                      <div className="mt-2 p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-md flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                        <p className="text-xs text-amber-600/90 dark:text-amber-400 font-medium leading-relaxed">
+                          The role with the highest level of access should be given as the primary role and cannot be changed later.
+                        </p>
+                      </div>
                     </div>
                   ) : (
-                    <div className="space-y-1">
+                    <div className="sm:col-span-2 space-y-1">
                       <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                        Role
+                        Primary Role
                       </Label>
                       <div className="pt-1">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary-dark">
                           {selectedUser?.role_display || selectedUser?.role}
                         </span>
                       </div>
+                      <div className="mt-2 p-2 bg-muted/50 border border-border rounded-md flex items-start gap-2">
+                        <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                        <p className="text-xs text-muted-foreground font-medium">
+                          The primary role cannot be changed.
+                        </p>
+                      </div>
                     </div>
                   )}
+
+                  {/* Secondary Roles */}
+                  {isAdding || isEditing ? (
+                    <div className="sm:col-span-2 space-y-2 pt-2">
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                        Secondary Roles (Optional)
+                      </Label>
+                      <div className="grid grid-cols-2 gap-3 border border-input bg-background rounded-md p-3 max-h-40 overflow-y-auto">
+                        {!editForm.role ? (
+                          <div className="col-span-2 text-sm text-muted-foreground py-4 text-center">
+                            Please select a Primary Role first
+                          </div>
+                        ) : (
+                          ROLE_CHOICES.filter(
+                              (r) =>
+                                r.value !== "super_admin" &&
+                                r.value !== "student" &&
+                                r.value !== "parents" &&
+                                r.value !== editForm.role
+                          ).map((r) => {
+                            const isChecked = editForm.additional_roles.includes(r.value);
+                            return (
+                              <div key={r.value} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`sec-role-${r.value}`}
+                                  checked={isChecked}
+                                  onCheckedChange={(checked) => {
+                                    setEditForm(f => {
+                                      const newRoles = checked
+                                        ? [...f.additional_roles, r.value]
+                                        : f.additional_roles.filter(v => v !== r.value);
+                                      return { ...f, additional_roles: newRoles };
+                                    });
+                                  }}
+                                />
+                                <Label htmlFor={`sec-role-${r.value}`} className="text-sm font-medium">
+                                  {r.label}
+                                </Label>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    selectedUser?.additional_roles && selectedUser.additional_roles.length > 0 && (
+                      <div className="sm:col-span-2 space-y-1 pt-2">
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                          Secondary Roles
+                        </Label>
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {Array.from(new Set(selectedUser.additional_roles)).map((rId: string) => {
+                            const rLabel = ROLE_CHOICES.find(o => o.value === rId)?.label || rId;
+                            return (
+                              <span key={rId} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary/10 text-secondary-foreground border border-secondary/20">
+                                {rLabel}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )
+                  )}
+
+                  {/* Status (Switch if editing, Badge if viewing) */}
+                  <div className="sm:col-span-2 space-y-1">
+                    {isEditing && !isAdding ? (
+                      <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3 bg-muted/30">
+                        <div>
+                          <Label
+                            htmlFor="edit-active"
+                            className="text-sm font-medium text-text-primary"
+                          >
+                            Active Status
+                          </Label>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {editForm.is_active
+                              ? "User can access the system"
+                              : "User is blocked from access"}
+                          </p>
+                        </div>
+                        <Switch
+                          id="edit-active"
+                          checked={editForm.is_active}
+                          onCheckedChange={(checked) =>
+                            setEditForm((f) => ({ ...f, is_active: checked }))
+                          }
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                          Status
+                        </Label>
+                        <div className="pt-1">
+                          <span
+                            className={cn(
+                              "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
+                              selectedUser?.is_active
+                                ? "bg-green-500/10 text-green-600"
+                                : "bg-destructive/10 text-destructive",
+                            )}
+                          >
+                            {selectedUser?.is_active ? "Active" : "Inactive"}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Accessible Modules */}
+                  <div className="sm:col-span-2 space-y-2 pt-2">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                      Accessible Modules
+                    </Label>
+                    <div className="flex flex-wrap gap-2 p-1">
+                      {ALL_MODULES.map((mod) => {
+                        const isDefault = defaultModules.includes(mod.id as any);
+                        const isChecked = isDefault || editForm.accessible_modules.includes(mod.id);
+
+                        return (
+                          <Label
+                            key={mod.id}
+                            htmlFor={`module-${mod.id}`}
+                            className={cn(
+                              "flex items-center space-x-2 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors",
+                              (!isEditing && !isAdding)
+                                ? ""
+                                : "cursor-pointer hover:bg-muted/50",
+                              isChecked
+                                ? "bg-primary/10 border-primary/30 text-primary-dark"
+                                : "bg-background border-input text-muted-foreground",
+                              isDefault ? "opacity-70 cursor-default" : ""
+                            )}
+                          >
+                            <Checkbox
+                              id={`module-${mod.id}`}
+                              checked={isChecked}
+                              disabled={isDefault || (!isEditing && !isAdding)}
+                              className="h-3.5 w-3.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                              onCheckedChange={(checked) => {
+                                if (isDefault || (!isEditing && !isAdding)) return;
+                                setEditForm((f) => {
+                                  const newModules = checked
+                                    ? [...f.accessible_modules, mod.id]
+                                    : f.accessible_modules.filter((m) => m !== mod.id);
+                                  return { ...f, accessible_modules: newModules };
+                                });
+                              }}
+                            />
+                            <span>{mod.label}</span>
+                          </Label>
+                        );
+                      })}
+                    </div>
+                  </div>
 
                   {/* Salary Retention Percentage */}
                   <div className="space-y-1">
@@ -1537,92 +1751,6 @@ export default function UsersPage() {
                     </div>
                   )}
 
-                  {/* Status (Switch if editing, Badge if viewing) */}
-                  <div className="space-y-1">
-                    {isEditing && !isAdding ? (
-                      <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3 bg-muted/30">
-                        <div>
-                          <Label
-                            htmlFor="edit-active"
-                            className="text-sm font-medium text-text-primary"
-                          >
-                            Active Status
-                          </Label>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {editForm.is_active
-                              ? "User can access the system"
-                              : "User is blocked from access"}
-                          </p>
-                        </div>
-                        <Switch
-                          id="edit-active"
-                          checked={editForm.is_active}
-                          onCheckedChange={(checked) =>
-                            setEditForm((f) => ({ ...f, is_active: checked }))
-                          }
-                        />
-                      </div>
-                    ) : (
-                      <>
-                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                          Status
-                        </Label>
-                        <div className="pt-1">
-                          <span
-                            className={cn(
-                              "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
-                              selectedUser?.is_active
-                                ? "bg-green-500/10 text-green-600"
-                                : "bg-destructive/10 text-destructive",
-                            )}
-                          >
-                            {selectedUser?.is_active ? "Active" : "Inactive"}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Accessible Modules */}
-                  <div className="space-y-3 pt-2">
-                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                      Accessible Modules
-                    </Label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {ALL_MODULES.map((mod) => {
-                        const isDefault = defaultModules.includes(mod.id as any);
-                        const isChecked = isDefault || editForm.accessible_modules.includes(mod.id);
-
-                        return (
-                          <div key={mod.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`module-${mod.id}`}
-                              checked={isChecked}
-                              disabled={isDefault || (!isEditing && !isAdding)}
-                              onCheckedChange={(checked) => {
-                                if (isDefault || (!isEditing && !isAdding)) return;
-                                setEditForm((f) => {
-                                  const newModules = checked
-                                    ? [...f.accessible_modules, mod.id]
-                                    : f.accessible_modules.filter((m) => m !== mod.id);
-                                  return { ...f, accessible_modules: newModules };
-                                });
-                              }}
-                            />
-                            <Label
-                              htmlFor={`module-${mod.id}`}
-                              className={cn(
-                                "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
-                                isDefault ? "text-muted-foreground" : "text-text-primary",
-                              )}
-                            >
-                              {mod.label}
-                            </Label>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
                 </div>
 
                 {/* Actions Footer */}

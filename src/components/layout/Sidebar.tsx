@@ -86,23 +86,14 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
   }
   if (!Array.isArray(rawModules)) rawModules = [];
   
-  // Force dashboard for all roles (override backend module list if needed)
+  // Force dashboard for all roles
   if (!rawModules.includes("dashboard")) {
     rawModules = ["dashboard", ...rawModules];
   }
 
-  // Force add attendance and leave for all staff roles so they can view their My Attendance and My Leave tabs
-  if (user && !["student", "parents"].includes(user.role)) {
-    if (!rawModules.includes("attendance")) rawModules = [...rawModules, "attendance"];
-    if (!["exam_supervisor", "paper_checker", "security", "house_keeping"].includes(user.role) && !rawModules.includes("leave")) {
-      rawModules = [...rawModules, "leave"];
-    }
-  }
-
   let modules = rawModules.filter((m) => m !== "support");
-  if (!modules.includes("notifications")) {
-    modules.push("notifications");
-  }
+  
+  // Force support at the bottom
   modules.push("support");
   const items = modules.map((m)  => ({ id: m, ...NAV_ITEMS[m as import('@/types/role.types').ModuleId] })).filter((item) => item?.label);
 

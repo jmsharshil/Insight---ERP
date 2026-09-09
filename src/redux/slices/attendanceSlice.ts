@@ -88,13 +88,14 @@ export interface FacultySummary {
 }
 
 export interface FacultyDetail {
-  faculty: { id: string; name: string; employee_id: string; email: string };
-  summary: { present_count: number; absent_count: number; leave_count: number; late_count: number; attendance_percentage: number };
-  daily_attendance_history: any[];
-  check_in_logs: any[];
-  check_out_logs: any[];
-  working_hours: { total_hours: number; average_hours_per_day: number };
-  monthly_analytics: { month: string; percentage: number }[];
+  employee_profile: { id: string; name: string; employee_id: string; email: string; role: string; branch_name: string };
+  attendance_percentage: number;
+  summary: { present_count: number; absent_count: number; leave_count: number; late_count: number; attendance_percentage?: number };
+  day_wise_attendance: any[];
+  recent_absences: any[];
+  check_in_history: any[];
+  check_out_history: any[];
+  monthly_trend: { month_name: string; percentage: number }[];
 }
 
 export interface AnalyticsData {
