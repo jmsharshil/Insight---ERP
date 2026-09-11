@@ -3,7 +3,8 @@ export type RoleId =
   | "front_desk" | "counsellor" | "tele_caller" | "sales_senior_executive"
   | "sales_executive" | "student" | "parents" | "faculty"
   | "exam_supervisor" | "paper_checker" | "accountant"
-  | "security" | "house_keeping";
+  | "security" | "house_keeping" | "head_coordinator" | "senior_tele_caller" 
+  | "cmo" | "associate_bdm" /* | "printers" */;
 
 export type ModuleId =
   | "crm" | "students" | "courses_batches" | "timetable" | "attendance" | "fees"
