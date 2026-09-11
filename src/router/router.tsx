@@ -49,6 +49,7 @@ const PayrollPage = lazy(() => import("@/pages/payroll/PayrollPage"));
 const ResultsPage = lazy(() => import("@/pages/results/ResultsPage"));
 const SupportPage = lazy(() => import("@/pages/support/SupportPage"));
 const SupportTicketDetailPage = lazy(() => import("@/pages/support/SupportTicketDetailPage"));
+const ReimbursementDetailPage = lazy(() => import("@/pages/reimbursements/ReimbursementDetailPage"));
 
 /* ─── Helpers ───────────────────────────────────────────────── */
 
@@ -153,6 +154,7 @@ const router = createBrowserRouter([
     { module: "audit_logs", path: "/audit-logs", element: withSuspense(<AuditLogsPage />) },
     { module: "reports", path: "/reports", element: withSuspense(<ReportsPage />) },
     { module: "payroll", path: "/payroll", element: withSuspense(<PayrollPage />) },
+    { module: "payroll", path: "/reimbursements/:id", element: withSuspense(<ReimbursementDetailPage />) },
     { module: "users", path: "/users", element: withSuspense(<UsersPage />) },
     { module: "results", path: "/results", element: withSuspense(<ResultsPage />) },
     { module: "support", path: "/support", element: withSuspense(<SupportPage />) },

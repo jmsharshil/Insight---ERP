@@ -45,25 +45,25 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   tele_caller: {
     id: "tele_caller", label: "Telecaller", description: "Outreach and lead contact role",
     color: "bg-indigo-100", textColor: "text-indigo-800",
-    modules: ["dashboard","crm","attendance","leave","payroll","notifications","settings","support"],
+    modules: ["dashboard","crm","attendance","inventory","leave","payroll","notifications","settings","support"],
     canDelete: false, canExport: false,
   },
   sales_senior_executive: {
     id: "sales_senior_executive", label: "Sales Senior Executive", description: "Full CRM pipeline authority",
     color: "bg-violet-100", textColor: "text-violet-800",
-    modules: ["dashboard","crm","attendance","leave","payroll","notifications","settings","support"],
+    modules: ["dashboard","crm","attendance","inventory","leave","payroll","notifications","settings","support"],
     canDelete: false, canExport: true,
   },
   sales_executive: {
     id: "sales_executive", label: "Sales Executive", description: "Lead assignment only",
     color: "bg-fuchsia-100", textColor: "text-fuchsia-800",
-    modules: ["dashboard","crm","attendance","leave","payroll","notifications","settings","support"],
+    modules: ["dashboard","crm","attendance","inventory","leave","payroll","notifications","settings","support"],
     canDelete: false, canExport: false,
   },
   student: {
     id: "student", label: "Student", description: "Enrolled student — mobile app user",
     color: "bg-green-100", textColor: "text-green-800",
-    modules: ["dashboard", "timetable","attendance","courses_batches","exams","fees","leave","chat","notifications","settings","support"],
+    modules: ["dashboard", "timetable","attendance","courses_batches","exams","fees","inventory","leave","chat","notifications","settings","support"],
     canDelete: false, canExport: false,
   },
   parents: {
@@ -75,7 +75,7 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
   faculty: {
     id: "faculty", label: "Faculty", description: "Teaching staff member",
     color: "bg-amber-100", textColor: "text-amber-800",
-    modules: ["dashboard","timetable","attendance","exams","leave","chat","notifications","payroll","settings","support"],
+    modules: ["dashboard","timetable","attendance","exams","inventory","leave","chat","notifications","payroll","settings","support"],
     canDelete: false, canExport: false,
   },
   exam_supervisor: {

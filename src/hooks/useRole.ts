@@ -12,8 +12,17 @@ export const useRole = () => {
       // Globally allow notifications and support for all users/roles
       if (module === "notifications" || module === "support") return true;
 
-      if (user?.accessible_modules && user.accessible_modules.length > 0) {
-        return user.accessible_modules.includes(module);
+      let userMods: any = user?.accessible_modules;
+      if (typeof userMods === "string") {
+        try {
+          userMods = JSON.parse(userMods);
+        } catch {
+          userMods = (userMods as string).split(",").map((s) => s.trim()).filter(Boolean);
+        }
+      }
+
+      if (Array.isArray(userMods) && userMods.length > 0) {
+        return userMods.includes(module);
       }
       return !!role?.modules.includes(module as ModuleId);
     },

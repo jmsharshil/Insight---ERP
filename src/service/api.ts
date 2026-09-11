@@ -341,4 +341,23 @@ BATCHES: {
     FLUSH: "/api/audit-logs/flush/",
     BY_USER: "/api/audit-logs/by-user/",
   },
+
+  /** Reimbursements endpoints */
+  REIMBURSEMENTS: {
+    LIST: "/api/v1/reimbursements/",
+    SUMMARY: "/api/v1/reimbursements/summary/",
+    DETAIL: (id: string | number) => `/api/v1/reimbursements/${id}/`,
+    APPROVE: (id: string | number) => `/api/v1/reimbursements/${id}/approve/`,
+    REJECT: (id: string | number) => `/api/v1/reimbursements/${id}/reject/`,
+  },
+
+  /** Sales Field Activities & Tracking endpoints */
+  SALES: {
+    ACTIVITIES: "/api/v1/sales/activities/",
+    ACTIVITY_DETAIL: (id: string | number) => `/api/v1/sales/activities/${id}/`,
+    ACTIVITY_PHOTOS: (activityId: string | number) => `/api/v1/sales/activities/${activityId}/photos/`,
+    ODOMETER_READINGS: "/api/v1/sales/odometer-readings/",
+    ODOMETER_READING_APPROVE: (id: string | number) => `/api/v1/sales/odometer-readings/${id}/approve/`,
+    ODOMETER_READING_REJECT: (id: string | number) => `/api/v1/sales/odometer-readings/${id}/reject/`,
+  },
 } as const;

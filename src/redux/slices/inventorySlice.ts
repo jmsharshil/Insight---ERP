@@ -47,11 +47,13 @@ export interface ItemAllocation {
   student_name: string | null;
   faculty: string | null;
   faculty_name: string | null;
+  sales_user: string | null;
+  sales_user_name: string | null;
   quantity: number;
-  status: "issued" | "returned";
+  status: "issued" | "returned" | "lost" | "damaged";
   status_display: string;
   issued_at: string;
-  issued_by: number;
+  issued_by: string | number;
   issued_by_name: string;
   returned_at: string | null;
   return_notes: string;
@@ -77,8 +79,9 @@ export interface UserOption {
   id: string;
   name: string;
   role: string;
-  role_display: string;
-  is_active: boolean;
+  email?: string;
+  role_display?: string;
+  is_active?: boolean;
 }
 
 interface InventoryState {

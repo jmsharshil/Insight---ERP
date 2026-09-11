@@ -37,13 +37,25 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ROLES } from "@/constants/roles";
+
+const formatRoleName = (roleStr?: string): string => {
+  if (!roleStr) return "";
+  if (ROLES[roleStr as keyof typeof ROLES]?.label) {
+    return ROLES[roleStr as keyof typeof ROLES].label;
+  }
+  return roleStr
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+};
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 // Single allocation form
 interface SingleAllocForm {
   item: string;
-  recipient_type: "student" | "faculty";
+  recipient_type: "student" | "faculty" | "sales_user";
   recipient_id: string;
   quantity: string;
   notes: string;
@@ -68,11 +80,20 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
 }
 
 function AllocationDetail({ item }: { item: ItemAllocation }) {
+  const recipientName = item.sales_user_name ?? item.student_name ?? item.faculty_name ?? "—";
+  const recipientType = item.sales_user
+    ? "Sales Staff"
+    : item.student
+      ? "Student"
+      : item.faculty
+        ? "Faculty"
+        : "—";
+
   return (
     <div className="space-y-1 mt-4">
       <DetailRow label="Item" value={item.item_name} />
-      <DetailRow label="Issued To" value={item.student_name ?? item.faculty_name ?? "—"} />
-      <DetailRow label="Type" value={item.student ? "Student" : "Faculty"} />
+      <DetailRow label="Issued To" value={recipientName} />
+      <DetailRow label="Type" value={recipientType} />
       <DetailRow label="Quantity" value={item.quantity} />
       <DetailRow
         label="Status"
@@ -129,6 +150,7 @@ export default function AllocationsTab() {
   // ── User lists ────────────────────────────────────────────────────────────
   const [students, setStudents] = useState<UserOption[]>([]);
   const [faculty, setFaculty] = useState<UserOption[]>([]);
+  const [salesUsers, setSalesUsers] = useState<UserOption[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
 
   useEffect(() => {
@@ -140,25 +162,103 @@ export default function AllocationsTab() {
       auth: true,
       setLoading: (v: boolean) => setUsersLoading(v),
       getResponse: (res: any) => {
-        const data = Array.isArray(res?.data) ? res.data : [];
+        const data = Array.isArray(res?.data) ? res.data : Array.isArray(res?.results) ? res.results : [];
         setStudents(data);
       },
       getError: () => {},
     });
 
-    // Fetch faculty concurrently, using a different action type to avoid takeLatest cancellation
+    // Fetch faculty concurrently
     dispatch({
       type: userActions.GET_USERS_FOR_ASSIGN,
       method: "GET",
       endPoint: "/api/auth/users/?role=faculty",
       auth: true,
       getResponse: (res: any) => {
-        const data = Array.isArray(res?.data) ? res.data : [];
+        const data = Array.isArray(res?.data) ? res.data : Array.isArray(res?.results) ? res.results : [];
         setFaculty(data);
       },
       getError: () => {},
     });
-  }, []);
+
+    // Fetch sales staff (including users with sales in primary or additional_roles)
+    const fetchSalesUsers = async () => {
+      try {
+        const raw = localStorage.getItem("Insight_Login_Data");
+        const token = raw ? JSON.parse(raw)?.access : "";
+        const baseUrl = import.meta.env.VITE_APP_BASE_URL || "";
+        const res = await fetch(`${baseUrl}/api/auth/users/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          const list: any[] = Array.isArray(json?.data)
+            ? json.data
+            : Array.isArray(json?.results)
+              ? json.results
+              : Array.isArray(json)
+                ? json
+                : [];
+
+          const SALES_ROLES = ["sales_senior_executive", "sales_executive", "tele_caller"];
+
+          const hasSalesRole = (u: any) => {
+            if (u.role && SALES_ROLES.includes(u.role)) return true;
+            if (Array.isArray(u.additional_roles) && u.additional_roles.some((r: string) => SALES_ROLES.includes(r))) {
+              return true;
+            }
+            if (Array.isArray(u.roles) && u.roles.some((r: string) => SALES_ROLES.includes(r))) {
+              return true;
+            }
+            if (typeof u.additional_roles === "string") {
+              const arr = u.additional_roles.split(",").map((s: string) => s.trim());
+              if (arr.some((r: string) => SALES_ROLES.includes(r))) return true;
+            }
+            return false;
+          };
+
+          const salesStaff: UserOption[] = list
+            .filter(hasSalesRole)
+            .map((u: any) => {
+              const isPrimarySales = u.role && SALES_ROLES.includes(u.role);
+              const matchedAdditional = Array.isArray(u.additional_roles)
+                ? u.additional_roles.filter((r: string) => SALES_ROLES.includes(r))
+                : typeof u.additional_roles === "string"
+                  ? u.additional_roles
+                      .split(",")
+                      .map((s: string) => s.trim())
+                      .filter((r: string) => SALES_ROLES.includes(r))
+                  : [];
+
+              const primaryLabel = formatRoleName(u.role_display || u.role);
+              const additionalLabels = matchedAdditional.map(formatRoleName).join(", ");
+
+              let roleLabel = primaryLabel;
+              if (!isPrimarySales && additionalLabels) {
+                roleLabel = `${primaryLabel} · Additional: ${additionalLabels}`;
+              }
+
+              return {
+                id: String(u.id),
+                name:
+                  u.full_name ||
+                  u.name ||
+                  `${u.first_name || ""} ${u.last_name || ""}`.trim() ||
+                  u.email ||
+                  "Sales Rep",
+                email: u.email,
+                role: u.role,
+                role_display: roleLabel,
+              };
+            });
+          setSalesUsers(salesStaff);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    fetchSalesUsers();
+  }, [dispatch]);
 
   // ── Filters ───────────────────────────────────────────────────────────────
   const [search, setSearch] = useState("");
@@ -177,7 +277,7 @@ export default function AllocationsTab() {
   const [singleForm, setSingleForm] = useState<SingleAllocForm>(blankSingleForm());
 
   // Bulk issue form
-  const [bulkRecipientType, setBulkRecipientType] = useState<"student" | "faculty">("student");
+  const [bulkRecipientType, setBulkRecipientType] = useState<"student" | "faculty" | "sales_user">("student");
   const [bulkRecipientId, setBulkRecipientId] = useState("");
   const [bulkLines, setBulkLines] = useState<BulkAllocLine[]>([blankBulkLine()]);
 
@@ -218,7 +318,11 @@ export default function AllocationsTab() {
   }, [statusFilter]);
 
   // ── Recipients helper ─────────────────────────────────────────────────────
-  const recipientList = (type: "student" | "faculty") => (type === "student" ? students : faculty);
+  const recipientList = (type: "student" | "faculty" | "sales_user") => {
+    if (type === "student") return students;
+    if (type === "faculty") return faculty;
+    return salesUsers;
+  };
 
   // ── Single Issue ──────────────────────────────────────────────────────────
   const handleSingleIssue = () => {
@@ -228,8 +332,13 @@ export default function AllocationsTab() {
       status: "issued",
       ...(singleForm.notes ? { notes: singleForm.notes } : {}),
     };
-    if (singleForm.recipient_type === "student") body.student = singleForm.recipient_id;
-    else body.faculty = singleForm.recipient_id;
+    if (singleForm.recipient_type === "student") {
+      body.student = singleForm.recipient_id;
+    } else if (singleForm.recipient_type === "faculty") {
+      body.faculty = singleForm.recipient_id;
+    } else if (singleForm.recipient_type === "sales_user") {
+      body.sales_user = singleForm.recipient_id;
+    }
 
     dispatch({
       type: inventoryActions.CREATE_ALLOCATION,
@@ -251,7 +360,7 @@ export default function AllocationsTab() {
     });
   };
 
-  // ── Bulk Issue ────────────────────────────────────────────────────────────
+  // ── Bulk Issue ────────────────────────────────────────────────────
   const handleBulkIssue = () => {
     const body: any = {
       allocations: bulkLines.map((line) => ({
@@ -260,8 +369,13 @@ export default function AllocationsTab() {
         ...(line.notes ? { notes: line.notes } : {}),
       })),
     };
-    if (bulkRecipientType === "student") body.student = bulkRecipientId;
-    else body.faculty = bulkRecipientId;
+    if (bulkRecipientType === "student") {
+      body.student = bulkRecipientId;
+    } else if (bulkRecipientType === "faculty") {
+      body.faculty = bulkRecipientId;
+    } else if (bulkRecipientType === "sales_user") {
+      body.sales_user = bulkRecipientId;
+    }
 
     dispatch({
       type: inventoryActions.BULK_ALLOCATION,
@@ -428,12 +542,18 @@ export default function AllocationsTab() {
                     className="border-b border-border/50 hover:bg-muted/20 transition-colors cursor-pointer"
                   >
                     <td className="px-4 py-3 font-medium">{alloc.item_name}</td>
-                    <td className="px-4 py-3">{alloc.student_name ?? alloc.faculty_name ?? "—"}</td>
+                    <td className="px-4 py-3">{alloc.sales_user_name ?? alloc.student_name ?? alloc.faculty_name ?? "—"}</td>
                     <td className="px-4 py-3">
                       <Badge
-                        className={`text-xs ${alloc.student ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"}`}
+                        className={`text-xs ${
+                          alloc.sales_user
+                            ? "bg-amber-100 text-amber-700"
+                            : alloc.student
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-purple-100 text-purple-700"
+                        }`}
                       >
-                        {alloc.student ? "Student" : "Faculty"}
+                        {alloc.sales_user ? "Sales Staff" : alloc.student ? "Student" : "Faculty"}
                       </Badge>
                     </td>
                     <td className="px-4 py-3">{alloc.quantity}</td>
@@ -545,7 +665,7 @@ export default function AllocationsTab() {
                   <Label className="text-xs mb-1 block">Issue To *</Label>
                   <Select
                     value={singleForm.recipient_type}
-                    onValueChange={(v: "student" | "faculty") =>
+                    onValueChange={(v: "student" | "faculty" | "sales_user") =>
                       setSingleForm((f) => ({ ...f, recipient_type: v, recipient_id: "" }))
                     }
                   >
@@ -555,24 +675,30 @@ export default function AllocationsTab() {
                     <SelectContent>
                       <SelectItem value="student">Student</SelectItem>
                       <SelectItem value="faculty">Faculty</SelectItem>
+                      <SelectItem value="sales_user">Sales Staff</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label className="text-xs mb-1 block">
-                    {singleForm.recipient_type === "student" ? "Student" : "Faculty"} *
+                    {singleForm.recipient_type === "sales_user" ? "Sales Representative" : singleForm.recipient_type === "student" ? "Student" : "Faculty"} *
                   </Label>
                   <Select
                     value={singleForm.recipient_id}
                     onValueChange={(v) => setSingleForm((f) => ({ ...f, recipient_id: v }))}
                   >
                     <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder={`Select ${singleForm.recipient_type}`} />
+                      <SelectValue placeholder={`Select recipient`} />
                     </SelectTrigger>
                     <SelectContent>
                       {recipientList(singleForm.recipient_type).map((u) => (
                         <SelectItem key={u.id} value={u.id}>
-                          {u.name}
+                          <span>{u.name}</span>
+                          {u.role_display && (
+                            <span className="text-xs text-muted-foreground ml-1.5">
+                              ({u.role_display})
+                            </span>
+                          )}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -584,7 +710,7 @@ export default function AllocationsTab() {
                 <div>
                   <Label className="text-xs mb-1 block">Quantity *</Label>
                   <Input
-                    type="number" min="0"
+                    type="number"
                     value={singleForm.quantity}
                     onChange={(e) => setSingleForm((f) => ({ ...f, quantity: e.target.value }))}
                     min="1"
@@ -615,7 +741,7 @@ export default function AllocationsTab() {
                   <Label className="text-xs mb-1 block">Issue To *</Label>
                   <Select
                     value={bulkRecipientType}
-                    onValueChange={(v: "student" | "faculty") => {
+                    onValueChange={(v: "student" | "faculty" | "sales_user") => {
                       setBulkRecipientType(v);
                       setBulkRecipientId("");
                     }}
@@ -626,21 +752,27 @@ export default function AllocationsTab() {
                     <SelectContent>
                       <SelectItem value="student">Student</SelectItem>
                       <SelectItem value="faculty">Faculty</SelectItem>
+                      <SelectItem value="sales_user">Sales Staff</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label className="text-xs mb-1 block">
-                    {bulkRecipientType === "student" ? "Student" : "Faculty"} *
+                    {bulkRecipientType === "sales_user" ? "Sales Representative" : bulkRecipientType === "student" ? "Student" : "Faculty"} *
                   </Label>
                   <Select value={bulkRecipientId} onValueChange={setBulkRecipientId}>
                     <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder={`Select ${bulkRecipientType}`} />
+                      <SelectValue placeholder={`Select recipient`} />
                     </SelectTrigger>
                     <SelectContent>
                       {recipientList(bulkRecipientType).map((u) => (
                         <SelectItem key={u.id} value={u.id}>
-                          {u.name}
+                          <span>{u.name}</span>
+                          {u.role_display && (
+                            <span className="text-xs text-muted-foreground ml-1.5">
+                              ({u.role_display})
+                            </span>
+                          )}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -690,10 +822,9 @@ export default function AllocationsTab() {
                     <div className="col-span-2">
                       {idx === 0 && <Label className="text-xs mb-1 block">Qty</Label>}
                       <Input
-                        type="number" min="0"
+                        type="number"
                         value={line.quantity}
                         onChange={(e) => updateBulkLine(idx, "quantity", e.target.value)}
-                        min="1"
                         className="h-8 text-xs"
                       />
                     </div>

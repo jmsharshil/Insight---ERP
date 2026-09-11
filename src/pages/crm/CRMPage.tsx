@@ -68,6 +68,7 @@ import AnalyticsTab from "./components/AnalyticsTab";
 import KanbanBoard from "./components/KanbanBoard";
 import LeadDetailSheet from "./components/LeadDetailSheet";
 import TransferRequestsTab from "./components/TransferRequestsTab";
+import SalesActivitiesTab from "./components/SalesActivitiesTab";
 
 /* ─── Stage config ───────────────────────────────────────────── */
 
@@ -409,6 +410,7 @@ export default function CRMPage() {
           <TabsTrigger value="table">Table</TabsTrigger>
           <TabsTrigger value="pipeline">Kanban Board</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="field-activities">Field Activities</TabsTrigger>
           {canReviewTransfers && (
             <TabsTrigger value="transfer-requests">Transfer Requests</TabsTrigger>
           )}
@@ -451,6 +453,11 @@ export default function CRMPage() {
         {/* Analytics */}
         <TabsContent value="analytics">
           <AnalyticsTab analytics={analytics} />
+        </TabsContent>
+
+        {/* Field Activities */}
+        <TabsContent value="field-activities">
+          <SalesActivitiesTab />
         </TabsContent>
 
         {/* Transfer Requests */}

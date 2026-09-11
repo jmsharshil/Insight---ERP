@@ -68,7 +68,7 @@ export default function NotificationsPage() {
   const fetchNotifications = useCallback((currentPage: number, typeFilter: string) => {
     let endPoint = `/api/auth/notifications/?page=${currentPage}`;
     if (typeFilter !== "all") {
-      endPoint += `&type=${typeFilter}`;
+      endPoint += `&notification_type=${typeFilter}&type=${typeFilter}`;
     }
 
     dispatch({
@@ -80,7 +80,13 @@ export default function NotificationsPage() {
       getResponse: (res: any) => {
         setHasNext(!!res?.next);
         setHasPrev(!!res?.previous);
-        const apiData = res?.data || [];
+        const apiData = Array.isArray(res?.results)
+          ? res.results
+          : Array.isArray(res?.data)
+            ? res.data
+            : Array.isArray(res)
+              ? res
+              : [];
         const mapped: AppNotification[] = apiData.map((n: any) => ({
           id: n.id,
           title: n.title,
@@ -89,7 +95,7 @@ export default function NotificationsPage() {
           isRead: n.is_read,
           priority: n.data?.priority || "normal",
           notificationType: n.notification_type || "system",
-          actionUrl: n.data?.url || undefined,
+          actionUrl: n.data?.url || (n.route === "lead_transferred" ? "/crm?tab=leads" : undefined),
           data: n.data
         }));
         dispatch(setNotifications(mapped));

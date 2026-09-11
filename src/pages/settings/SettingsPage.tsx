@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import PageHeader from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -66,6 +66,21 @@ export default function SettingsPage() {
   const [copiedId, setCopiedId] = useState(false);
   const [copiedOrgId, setCopiedOrgId] = useState(false);
 
+  const additionalRolesList: string[] = useMemo(() => {
+    const roles = profile?.additional_roles;
+    if (!roles) return [];
+    if (Array.isArray(roles)) return roles.filter(Boolean);
+    if (typeof roles === "string") {
+      try {
+        const parsed = JSON.parse(roles);
+        if (Array.isArray(parsed)) return parsed.filter(Boolean);
+      } catch {
+        return roles.split(",").map((s: string) => s.trim()).filter(Boolean);
+      }
+    }
+    return [];
+  }, [profile?.additional_roles]);
+
   const fetchSettings = () => {
     dispatch(setSettingsLoading(true));
     dispatch({
@@ -86,6 +101,7 @@ export default function SettingsPage() {
             phone: res.phone,
             name: res.name,
             role: res.role,
+            additional_roles: res.additional_roles,
             linked_students: res.linked_students,
             branch: res.branch,
             organization: res.organization,
@@ -241,6 +257,9 @@ export default function SettingsPage() {
                 <div className="flex flex-wrap justify-center md:justify-start items-center gap-2">
                   <h3 className="text-2xl font-bold text-text-primary">{profile?.name}</h3>
                   <RoleBadge role={profile?.role} />
+                  {additionalRolesList.map((r: string) => (
+                    <RoleBadge key={r} role={r} />
+                  ))}
                 </div>
                 <p className="text-sm text-muted-foreground">@{profile?.username}</p>
                 <div className="flex flex-wrap justify-center md:justify-start gap-x-4 gap-y-1 text-xs text-muted-foreground pt-1">
@@ -470,6 +489,20 @@ export default function SettingsPage() {
                     </span>
                   </div>
                 </div>
+
+                {/* Additional Roles */}
+                {additionalRolesList.length > 0 && (
+                  <div className="p-3 rounded-lg bg-muted/30 border border-border space-y-1.5">
+                    <span className="text-xs text-muted-foreground uppercase font-semibold tracking-wider block">
+                      Additional Roles
+                    </span>
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      {additionalRolesList.map((r: string) => (
+                        <RoleBadge key={r} role={r} />
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Linked Student */}
                 <div className="p-3 rounded-lg bg-muted/30 border border-border space-y-1 flex items-center justify-between">

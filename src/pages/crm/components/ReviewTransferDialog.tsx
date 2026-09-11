@@ -72,7 +72,7 @@ export default function ReviewTransferDialog({
     } as any);
   }, [open, dispatch, toast]);
 
-  const ALLOWED_ROLES = ["counsellor"];
+  const ALLOWED_ROLES = ["counsellor", "sales_senior_executive", "sales_executive", "tele_caller"];
 
   const filtered = users.filter((u) => {
     if (!u.role || !ALLOWED_ROLES.includes(u.role)) {
@@ -91,7 +91,7 @@ export default function ReviewTransferDialog({
     async (status: "approved" | "rejected") => {
       if (!request) return;
       if (status === "approved" && !selectedUser) {
-        toast.error("Please select a counsellor to assign");
+        toast.error("Please select a team member to assign");
         return;
       }
 

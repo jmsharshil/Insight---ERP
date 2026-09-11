@@ -185,6 +185,35 @@ const columns: ColumnDef<UserRecord>[] = [
     ),
   },
   {
+    accessorKey: "additional_roles",
+    header: "Additional Roles",
+    cell: ({ row }) => {
+      const roles = row.getValue("additional_roles") as string[] | undefined;
+      if (!roles || !Array.isArray(roles) || roles.length === 0) return <span className="text-muted-foreground text-xs">-</span>;
+      
+      const visibleRoles = roles.slice(0, 2);
+      const remainingCount = roles.length - 2;
+
+      return (
+        <div className="flex flex-wrap gap-1 max-w-[250px]">
+          {visibleRoles.map(r => {
+            const roleDef = ROLES[r as keyof typeof ROLES];
+            return (
+              <span key={r} className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-muted/50 text-muted-foreground border border-border/50 whitespace-nowrap">
+                {roleDef ? roleDef.label : r}
+              </span>
+            );
+          })}
+          {remainingCount > 0 && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-primary/10 text-primary-dark whitespace-nowrap">
+              +{remainingCount} more
+            </span>
+          )}
+        </div>
+      );
+    },
+  },
+  {
     accessorKey: "created_at",
     header: "Created At",
     cell: ({ row }) => (
@@ -209,6 +238,30 @@ const columns: ColumnDef<UserRecord>[] = [
     },
   },
 ];
+
+const parseAccessibleModules = (user: any): string[] => {
+  if (!user) return [];
+  let mods: string[] = [];
+  if (Array.isArray(user.accessible_modules)) {
+    mods = user.accessible_modules;
+  } else if (typeof user.accessible_modules === "string") {
+    try {
+      const parsed = JSON.parse(user.accessible_modules);
+      if (Array.isArray(parsed)) mods = parsed;
+      else mods = [user.accessible_modules];
+    } catch {
+      mods = user.accessible_modules.split(",").map((s: string) => s.trim()).filter(Boolean);
+    }
+  }
+
+  if (mods.length === 0 && user.role && ROLES[user.role as keyof typeof ROLES]) {
+    mods = [
+      ...ROLES[user.role as keyof typeof ROLES].modules,
+      ...(user.additional_roles?.flatMap((r: string) => (ROLES[r as keyof typeof ROLES] ? ROLES[r as keyof typeof ROLES].modules : [])) || []),
+    ];
+  }
+  return Array.from(new Set(mods));
+};
 
 /* ─── Component ─────────────────────────────────────────────── */
 
@@ -341,8 +394,8 @@ export default function UsersPage() {
         email: selectedUser.email || "",
         phone: selectedUser.phone || "",
         branch: selectedUser.branch || "",
-        branches: selectedUser.branches || [],
-        additional_roles: selectedUser.additional_roles || [],
+        branches: Array.isArray(selectedUser.branches) ? selectedUser.branches : (selectedUser.branches ? [selectedUser.branches as unknown as string] : []),
+        additional_roles: Array.isArray(selectedUser.additional_roles) ? selectedUser.additional_roles : (selectedUser.additional_roles ? [selectedUser.additional_roles as unknown as string] : []),
         salary_retention_percentage:
           selectedUser.salary_retention_percentage !== undefined
             ? String(selectedUser.salary_retention_percentage)
@@ -377,7 +430,7 @@ export default function UsersPage() {
           selectedUser.per_paper_rate !== undefined && selectedUser.per_paper_rate !== null
             ? String(selectedUser.per_paper_rate)
             : "",
-        accessible_modules: selectedUser.accessible_modules || [],
+        accessible_modules: parseAccessibleModules(selectedUser),
       });
     }
   }, [selectedUser]);
@@ -433,7 +486,7 @@ export default function UsersPage() {
       getResponse: (res: any) => {
         const userData = res?.id ? res : res?.data;
         if (userData) {
-          dispatch(setSelectedUser(userData));
+          dispatch(setSelectedUser({ ...userData, id: userData.id || userId }));
         } else {
           toast.error("Failed to parse user details.");
         }
@@ -514,17 +567,7 @@ export default function UsersPage() {
       work_start_time: editForm.work_start_time,
       work_end_time: editForm.work_end_time,
       per_paper_rate: editForm.per_paper_rate ? Number(editForm.per_paper_rate) : null,
-      accessible_modules: Array.from(
-        new Set([
-          ...(editForm.role && ROLES[editForm.role as keyof typeof ROLES]
-            ? ROLES[editForm.role as keyof typeof ROLES].modules
-            : []),
-          ...(editForm?.additional_roles?.flatMap(r => 
-            ROLES[r as keyof typeof ROLES] ? ROLES[r as keyof typeof ROLES].modules : []
-          ) || []),
-          ...editForm.accessible_modules,
-        ]),
-      ),
+      accessible_modules: editForm.accessible_modules,
     };
 
     dispatch({
@@ -564,9 +607,9 @@ export default function UsersPage() {
       email: selectedUser.email || "",
       phone: selectedUser.phone || "",
       branch: selectedUser.branch || "",
-      branches: selectedUser.branches || [],
+      branches: Array.isArray(selectedUser.branches) ? selectedUser.branches : (selectedUser.branches ? [selectedUser.branches as unknown as string] : []),
       role: selectedUser.role || "",
-      additional_roles: selectedUser.additional_roles || [],
+      additional_roles: Array.isArray(selectedUser.additional_roles) ? selectedUser.additional_roles : (selectedUser.additional_roles ? [selectedUser.additional_roles as unknown as string] : []),
       salary_retention_percentage:
         selectedUser.salary_retention_percentage !== undefined
           ? String(selectedUser.salary_retention_percentage)
@@ -601,7 +644,7 @@ export default function UsersPage() {
         selectedUser.per_paper_rate !== undefined && selectedUser.per_paper_rate !== null
           ? String(selectedUser.per_paper_rate)
           : "",
-      accessible_modules: selectedUser.accessible_modules || [],
+      accessible_modules: parseAccessibleModules(selectedUser),
     });
     setProfilePicFile(null);
     setProfilePicPreview(null);
@@ -633,17 +676,7 @@ export default function UsersPage() {
   const handleUpdateUser = () => {
     if (!selectedUser) return;
 
-    const allModules = Array.from(
-      new Set([
-        ...(editForm.role && ROLES[editForm.role as keyof typeof ROLES]
-          ? ROLES[editForm.role as keyof typeof ROLES].modules
-          : []),
-        ...editForm.additional_roles.flatMap(r => 
-          ROLES[r as keyof typeof ROLES] ? ROLES[r as keyof typeof ROLES].modules : []
-        ),
-        ...editForm.accessible_modules,
-      ]),
-    );
+    const allModules = editForm.accessible_modules || [];
 
     setUpdateLoading(true);
 
@@ -657,19 +690,13 @@ export default function UsersPage() {
     formData.append("is_active", String(editForm.is_active));
     formData.append("salary_retention_percentage", editForm.salary_retention_percentage);
     // --- BRANCHES ---
-    if (editForm.branches.length === 1) {
-      formData.append("branches", editForm.branches[0]);
-      formData.append("branches", editForm.branches[0]);
-    } else if (editForm.branches.length > 1) {
+    if (editForm.branches.length > 0) {
       editForm.branches.forEach((b: string) => formData.append("branches", b));
     }
 
     // --- ADDITIONAL ROLES ---
     if (!editForm.additional_roles || editForm.additional_roles.length === 0) {
       formData.append("additional_roles", []);
-    } else if (editForm.additional_roles.length === 1) {
-      formData.append("additional_roles", editForm.additional_roles[0]);
-      formData.append("additional_roles", editForm.additional_roles[0]);
     } else {
       editForm.additional_roles.forEach((r: string) => {
         if (r && r !== "") formData.append("additional_roles", r);
@@ -699,10 +726,7 @@ export default function UsersPage() {
     if (editForm.per_paper_rate !== undefined && editForm.per_paper_rate !== "") formData.append("per_paper_rate", editForm.per_paper_rate);
 
     // --- ACCESSIBLE MODULES ---
-    if (allModules && allModules.length === 1) {
-      formData.append("accessible_modules", allModules[0]);
-      formData.append("accessible_modules", allModules[0]);
-    } else if (allModules && allModules.length > 1) {
+    if (allModules && allModules.length > 0) {
       allModules.forEach((m: string) => {
         if (m && m !== "") formData.append("accessible_modules", m);
       });
@@ -730,8 +754,9 @@ export default function UsersPage() {
   const handleUpdateResponse = (res: any) => {
     const updatedUser = res?.id ? res : res?.data;
     if (updatedUser) {
-      dispatch(updateUserInList(updatedUser));
-      dispatch(setSelectedUser(updatedUser));
+      const mergedUser = { ...updatedUser, id: updatedUser.id || selectedUser?.id };
+      dispatch(updateUserInList(mergedUser));
+      dispatch(setSelectedUser(mergedUser));
       toast.success("User updated successfully!");
       setIsEditing(false);
       setProfilePicFile(null);
@@ -766,19 +791,6 @@ export default function UsersPage() {
   const isExaminer = activeRole === "exam_supervisor";
   const showSalary =
     isEmployee && !(isFaculty && isPartTimeOrVisiting) && !isPaperChecker && !isExaminer;
-
-  const defaultModules = useMemo(() => {
-    let mods: any[] = [];
-    if (editForm.role) {
-      const roleDef = ROLES[editForm.role as keyof typeof ROLES];
-      if (roleDef) mods = [...mods, ...roleDef.modules];
-    }
-    editForm.additional_roles.forEach(r => {
-      const roleDef = ROLES[r as keyof typeof ROLES];
-      if (roleDef) mods = [...mods, ...roleDef.modules];
-    });
-    return Array.from(new Set(mods));
-  }, [editForm.role, editForm.additional_roles]);
 
   return (
     <div>
@@ -1191,11 +1203,20 @@ export default function UsersPage() {
                       </Label>
                       <Select
                         value={editForm.role}
-                        onValueChange={(val) => setEditForm((f) => ({ 
-                          ...f, 
-                          role: val,
-                          additional_roles: f.additional_roles.filter(r => r !== val)
-                        }))}
+                        onValueChange={(val) => {
+                          const roleDef = ROLES[val as keyof typeof ROLES];
+                          const roleMods = roleDef ? [...roleDef.modules] : [];
+                          const remainingAdditional = editForm.additional_roles.filter((r) => r !== val);
+                          const additionalMods = remainingAdditional.flatMap(
+                            (r) => (ROLES[r as keyof typeof ROLES] ? ROLES[r as keyof typeof ROLES].modules : [])
+                          );
+                          setEditForm((f) => ({
+                            ...f,
+                            role: val,
+                            additional_roles: remainingAdditional,
+                            accessible_modules: Array.from(new Set([...roleMods, ...additionalMods])),
+                          }));
+                        }}
                       >
                         <SelectTrigger className="bg-background">
                           <SelectValue placeholder="Select a primary role" />
@@ -1227,7 +1248,7 @@ export default function UsersPage() {
                       </Label>
                       <div className="pt-1">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary-dark">
-                          {selectedUser?.role_display || selectedUser?.role}
+                          {selectedUser?.role_display || ROLE_CHOICES.find(r => r.value === selectedUser?.role)?.label || selectedUser?.role}
                         </span>
                       </div>
                       <div className="mt-2 p-2 bg-muted/50 border border-border rounded-md flex items-start gap-2">
@@ -1269,7 +1290,27 @@ export default function UsersPage() {
                                       const newRoles = checked
                                         ? [...f.additional_roles, r.value]
                                         : f.additional_roles.filter(v => v !== r.value);
-                                      return { ...f, additional_roles: newRoles };
+                                        
+                                      let newModules = [...f.accessible_modules];
+                                      if (checked) {
+                                        const roleDef = ROLES[r.value as keyof typeof ROLES];
+                                        if (roleDef) {
+                                          newModules = Array.from(new Set([...newModules, ...roleDef.modules]));
+                                        }
+                                      } else {
+                                        const roleDef = ROLES[r.value as keyof typeof ROLES];
+                                        if (roleDef) {
+                                          const remainingRoleMods = [
+                                            ...(f.role && ROLES[f.role as keyof typeof ROLES] ? ROLES[f.role as keyof typeof ROLES].modules : []),
+                                            ...newRoles.flatMap(nr => ROLES[nr as keyof typeof ROLES]?.modules || [])
+                                          ];
+                                          newModules = newModules.filter(
+                                            (m) => remainingRoleMods.includes(m as any) || !roleDef.modules.includes(m as any)
+                                          );
+                                        }
+                                      }
+
+                                      return { ...f, additional_roles: newRoles, accessible_modules: newModules };
                                     });
                                   }}
                                 />
@@ -1355,8 +1396,7 @@ export default function UsersPage() {
                     </Label>
                     <div className="flex flex-wrap gap-2 p-1">
                       {ALL_MODULES.map((mod) => {
-                        const isDefault = defaultModules.includes(mod.id as any);
-                        const isChecked = isDefault || editForm.accessible_modules.includes(mod.id);
+                        const isChecked = editForm.accessible_modules.includes(mod.id);
 
                         return (
                           <Label
@@ -1369,17 +1409,16 @@ export default function UsersPage() {
                                 : "cursor-pointer hover:bg-muted/50",
                               isChecked
                                 ? "bg-primary/10 border-primary/30 text-primary-dark"
-                                : "bg-background border-input text-muted-foreground",
-                              isDefault ? "opacity-70 cursor-default" : ""
+                                : "bg-background border-input text-muted-foreground"
                             )}
                           >
                             <Checkbox
                               id={`module-${mod.id}`}
                               checked={isChecked}
-                              disabled={isDefault || (!isEditing && !isAdding)}
+                              disabled={!isEditing && !isAdding}
                               className="h-3.5 w-3.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               onCheckedChange={(checked) => {
-                                if (isDefault || (!isEditing && !isAdding)) return;
+                                if (!isEditing && !isAdding) return;
                                 setEditForm((f) => {
                                   const newModules = checked
                                     ? [...f.accessible_modules, mod.id]

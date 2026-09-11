@@ -13,6 +13,7 @@ import LatePolicyTab from "./tabs/LatePolicyTab";
 import ExtraHoursTab from "./tabs/ExtraHoursTab";
 import MyPayrollTab from "./tabs/MyPayrollTab";
 import SalaryPreviewTab from "./tabs/SalaryPreviewTab";
+import ReimbursementsTab from "./tabs/ReimbursementsTab";
 import { setSelectedRun } from "@/redux/slices/payrollSlice";
 
 export default function PayrollPage() {
@@ -105,6 +106,14 @@ export default function PayrollPage() {
               </TabsTrigger>
             )}
 
+            {/* Common Employee Tabs */}
+            <TabsTrigger
+              value="reimbursements"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md text-xs font-medium px-4 py-2 flex items-center gap-1.5 transition-all"
+            >
+              <FileText className="w-4 h-4" /> Reimbursements
+            </TabsTrigger>
+
           </TabsList>
         </div>
 
@@ -112,6 +121,7 @@ export default function PayrollPage() {
         <div className="mt-2 outline-none">
           {/* Employee Tabs */}
           <TabsContent value="my-payroll" className="outline-none border-none p-0 m-0"><MyPayrollTab /></TabsContent>
+          <TabsContent value="reimbursements" className="outline-none border-none p-0 m-0"><ReimbursementsTab /></TabsContent>
           {canPreviewSalary && <TabsContent value="preview" className="outline-none border-none p-0 m-0"><SalaryPreviewTab /></TabsContent>}
 
           {/* Admin Tabs */}

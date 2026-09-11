@@ -86,15 +86,11 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
   }
   if (!Array.isArray(rawModules)) rawModules = [];
   
-  // Force dashboard for all roles
-  if (!rawModules.includes("dashboard")) {
-    rawModules = ["dashboard", ...rawModules];
-  }
-
-  let modules = rawModules.filter((m) => m !== "support");
+  let modules = rawModules.filter((m) => m !== "support" && m !== "dashboard");
   
-  // Force support at the bottom
-  modules.push("support");
+  // Force dashboard at the top, support at the bottom
+  modules = ["dashboard", ...modules, "support"];
+
   const items = modules.map((m)  => ({ id: m, ...NAV_ITEMS[m as import('@/types/role.types').ModuleId] })).filter((item) => item?.label);
 
   return (

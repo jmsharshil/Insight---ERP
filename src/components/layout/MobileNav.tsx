@@ -15,7 +15,7 @@ export default function MobileNav() {
     try {
       allModules = JSON.parse(allModules);
     } catch {
-      allModules = (allModules as string).split(",").map((s) => s.trim()).filter(Boolean);
+      allModules = (allModules as unknown as string).split(",").map((s) => s.trim()).filter(Boolean) as any;
     }
   }
   
@@ -24,7 +24,9 @@ export default function MobileNav() {
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-card border-t border-border flex items-stretch h-16">
       {modules.map((m) => {
-        const item = NAV_ITEMS[m];
+        const item = NAV_ITEMS[m as keyof typeof NAV_ITEMS];
+        if (!item) return null;
+        
         return (
           <NavLink
             key={m}
