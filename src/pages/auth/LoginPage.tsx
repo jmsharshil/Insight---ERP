@@ -531,7 +531,7 @@ export default function LoginPage() {
             ))}
           </div>
 
-          <Accordion type="single" collapsible className="mt-5">
+          {/* <Accordion type="single" collapsible className="mt-5">
             <AccordionItem value="demo" className="border border-dashed border-border rounded-lg px-3">
               <AccordionTrigger className="text-xs font-medium text-muted-foreground hover:no-underline">
                 🧪 Demo accounts · click to autofill
@@ -570,7 +570,7 @@ export default function LoginPage() {
                 </div>
               </AccordionContent>
             </AccordionItem>
-          </Accordion>
+          </Accordion> */}
         </div>
       </div>
     </InsightFormLayout>

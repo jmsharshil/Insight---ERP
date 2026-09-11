@@ -344,12 +344,7 @@ export default function CRMPage() {
               <UserPlus className="w-4 h-4" />
               Inquiry Form
             </Button>
-            <Button
-              onClick={fetchLeads}
-              variant="outline"
-              disabled={leadsLoading}
-              className="gap-2"
-            >
+            <Button onClick={fetchLeads} variant="outline" disabled={leadsLoading} className="gap-2">
               {leadsLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
