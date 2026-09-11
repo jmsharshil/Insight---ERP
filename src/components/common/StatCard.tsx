@@ -29,7 +29,7 @@ export default function StatCard({ title, value, icon: Icon, trend, trendType = 
   const content = (
     <div className="flex items-start justify-between gap-3">
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-muted-foreground font-medium truncate">{title}</p>
+        <div className="text-sm text-muted-foreground font-medium break-words">{title}</div>
         <p className="mt-2 text-2xl font-heading font-bold text-text-primary truncate">
           <HoverValue value={value} />
         </p>

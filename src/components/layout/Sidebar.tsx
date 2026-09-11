@@ -86,22 +86,12 @@ export default function Sidebar({ mobile = false }: { mobile?: boolean }) {
   }
   if (!Array.isArray(rawModules)) rawModules = [];
   
-  // Force dashboard for all roles (override backend module list if needed)
-  if (!rawModules.includes("dashboard")) {
-    rawModules = ["dashboard", ...rawModules];
-  }
+  let modules = rawModules.filter((m) => m !== "support" && m !== "dashboard");
+  
+  // Force dashboard at the top, support at the bottom
+  modules = ["dashboard", ...modules, "support"];
 
-  // Force add attendance and leave for all staff roles so they can view their My Attendance and My Leave tabs
-  if (user && !["student", "parents"].includes(user.role)) {
-    if (!rawModules.includes("attendance")) rawModules = [...rawModules, "attendance"];
-    if (!["exam_supervisor", "paper_checker", "security", "house_keeping"].includes(user.role) && !rawModules.includes("leave")) {
-      rawModules = [...rawModules, "leave"];
-    }
-  }
-
-  let modules = rawModules.includes("notifications") ? rawModules : [...rawModules, "notifications"];
-  modules = modules.includes("support") ? modules : [...modules, "support"];
-  const items = modules.map((m) => ({ id: m, ...NAV_ITEMS[m as import('@/types/role.types').ModuleId] })).filter((item) => item?.label);
+  const items = modules.map((m)  => ({ id: m, ...NAV_ITEMS[m as import('@/types/role.types').ModuleId] })).filter((item) => item?.label);
 
   return (
     <aside

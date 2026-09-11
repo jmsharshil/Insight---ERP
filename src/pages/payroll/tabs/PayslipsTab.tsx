@@ -312,6 +312,7 @@ export default function PayslipsTab() {
                     "Basic / Rate",
                     "Hours / Amount",
                     "Bonus",
+                    "Reimbursements",
                     "Deductions",
                     "Deduction Note",
                     "Net Salary",
@@ -399,6 +400,11 @@ export default function PayslipsTab() {
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-green-600">
                         {slip.bonus > 0 ? `₹${Number(slip.bonus).toLocaleString("en-IN")}` : "—"}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-green-600">
+                        {Number(slip.reimbursements_amount || 0) > 0
+                          ? `₹${Number(slip.reimbursements_amount).toLocaleString("en-IN")}`
+                          : "—"}
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-red-600">
                         ₹

@@ -565,3 +565,78 @@ export function SupportTicketDetailSkeleton() {
     </div>
   );
 }
+
+export function AttendanceDetailSkeleton() {
+  return (
+    <div className="mx-auto space-y-6 animate-in fade-in duration-300 mt-4 w-full">
+      {/* Top Banner Skeleton */}
+      <div className="bg-white rounded-2xl border border-border p-6 sm:p-8 shadow-sm flex flex-col xl:flex-row gap-8 justify-between items-start xl:items-center">
+        {/* Profile Info */}
+        <div className="flex items-start sm:items-center gap-6 w-full xl:w-auto">
+          <Skeleton circle height={96} width={96} containerClassName="flex-shrink-0" />
+          <div className="space-y-4 flex-1">
+            <Skeleton width={200} height={32} />
+            <div className="flex flex-wrap gap-x-8 gap-y-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="space-y-1.5 flex flex-col">
+                  <Skeleton width={80} height={12} />
+                  <Skeleton width={120} height={16} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        
+        {/* Stats Section */}
+        <div className="flex flex-col sm:flex-row gap-6 sm:gap-10 items-start sm:items-center w-full xl:w-auto bg-muted/30 p-5 sm:p-6 rounded-2xl border border-border/50">
+          <div className="flex flex-col space-y-2">
+             <Skeleton width={60} height={12} />
+             <Skeleton width={120} height={40} />
+          </div>
+          <div className="hidden sm:block w-px h-16 bg-border" />
+          <div className="flex gap-3 sm:gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} width={90} height={90} className="rounded-xl" containerClassName="leading-none" />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs Skeleton */}
+      <div className="flex gap-6 border-b border-border pb-2">
+        <Skeleton width={120} height={24} />
+        <Skeleton width={140} height={24} />
+        <Skeleton width={100} height={24} />
+        <Skeleton width={120} height={24} />
+      </div>
+
+      {/* Content Area Skeleton (Table) */}
+      <div className="bg-white rounded-xl border border-border overflow-hidden shadow-sm">
+         <div className="px-6 py-4 border-b border-border bg-muted/10 flex justify-between items-center">
+            <Skeleton width={200} height={20} />
+            <Skeleton width={100} height={16} />
+         </div>
+         <div className="p-4">
+            <div className="space-y-4">
+              <div className="flex justify-between border-b pb-3">
+                 <Skeleton width="15%" height={16} />
+                 <Skeleton width="15%" height={16} />
+                 <Skeleton width="25%" height={16} />
+                 <Skeleton width="15%" height={16} />
+                 <Skeleton width="15%" height={16} />
+              </div>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex justify-between items-center py-2">
+                   <Skeleton width="15%" height={14} />
+                   <Skeleton width="8%" height={24} className="rounded-full" />
+                   <Skeleton width="25%" height={14} />
+                   <Skeleton width="15%" height={14} />
+                   <Skeleton width="15%" height={14} />
+                </div>
+              ))}
+            </div>
+         </div>
+      </div>
+    </div>
+  );
+}

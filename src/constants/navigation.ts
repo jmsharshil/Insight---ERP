@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, GraduationCap, Calendar, ScanLine, CreditCard,
   BookOpen, Eye, Briefcase, CalendarOff, MessageSquare, Bell, FileText,
-  BarChart3, Wallet, Settings, Package, PieChart, LifeBuoy
+  BarChart3, Wallet, Settings, Package, PieChart, LifeBuoy, ReceiptText
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ModuleId } from "@/types/role.types";

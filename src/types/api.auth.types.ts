@@ -10,6 +10,7 @@ export interface AuthUser {
   phone: string;
   name: string;
   role: string;
+  additional_roles?: string[] | string;
   linked_students: null | string[];
   branch?: string | null;
   organization?: string;

@@ -68,6 +68,8 @@ import {
   XCircle,
   Upload,
   Camera,
+  AlertTriangle,
+  Info,
 } from "lucide-react";
 import EmptyState from "@/components/common/EmptyState";
 
@@ -183,6 +185,35 @@ const columns: ColumnDef<UserRecord>[] = [
     ),
   },
   {
+    accessorKey: "additional_roles",
+    header: "Additional Roles",
+    cell: ({ row }) => {
+      const roles = row.getValue("additional_roles") as string[] | undefined;
+      if (!roles || !Array.isArray(roles) || roles.length === 0) return <span className="text-muted-foreground text-xs">-</span>;
+      
+      const visibleRoles = roles.slice(0, 2);
+      const remainingCount = roles.length - 2;
+
+      return (
+        <div className="flex flex-wrap gap-1 max-w-[250px]">
+          {visibleRoles.map(r => {
+            const roleDef = ROLES[r as keyof typeof ROLES];
+            return (
+              <span key={r} className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-muted/50 text-muted-foreground border border-border/50 whitespace-nowrap">
+                {roleDef ? roleDef.label : r}
+              </span>
+            );
+          })}
+          {remainingCount > 0 && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-primary/10 text-primary-dark whitespace-nowrap">
+              +{remainingCount} more
+            </span>
+          )}
+        </div>
+      );
+    },
+  },
+  {
     accessorKey: "created_at",
     header: "Created At",
     cell: ({ row }) => (
@@ -207,6 +238,30 @@ const columns: ColumnDef<UserRecord>[] = [
     },
   },
 ];
+
+const parseAccessibleModules = (user: any): string[] => {
+  if (!user) return [];
+  let mods: string[] = [];
+  if (Array.isArray(user.accessible_modules)) {
+    mods = user.accessible_modules;
+  } else if (typeof user.accessible_modules === "string") {
+    try {
+      const parsed = JSON.parse(user.accessible_modules);
+      if (Array.isArray(parsed)) mods = parsed;
+      else mods = [user.accessible_modules];
+    } catch {
+      mods = user.accessible_modules.split(",").map((s: string) => s.trim()).filter(Boolean);
+    }
+  }
+
+  if (mods.length === 0 && user.role && ROLES[user.role as keyof typeof ROLES]) {
+    mods = [
+      ...ROLES[user.role as keyof typeof ROLES].modules,
+      ...(user.additional_roles?.flatMap((r: string) => (ROLES[r as keyof typeof ROLES] ? ROLES[r as keyof typeof ROLES].modules : [])) || []),
+    ];
+  }
+  return Array.from(new Set(mods));
+};
 
 /* ─── Component ─────────────────────────────────────────────── */
 
@@ -247,6 +302,7 @@ export default function UsersPage() {
     branch: "",
     branches: [] as string[],
     role: "",
+    additional_roles: [] as string[],
     salary_retention_percentage: "0",
     is_active: true,
     employee_id: "",
@@ -338,7 +394,8 @@ export default function UsersPage() {
         email: selectedUser.email || "",
         phone: selectedUser.phone || "",
         branch: selectedUser.branch || "",
-        branches: selectedUser.branches || [],
+        branches: Array.isArray(selectedUser.branches) ? selectedUser.branches : (selectedUser.branches ? [selectedUser.branches as unknown as string] : []),
+        additional_roles: Array.isArray(selectedUser.additional_roles) ? selectedUser.additional_roles : (selectedUser.additional_roles ? [selectedUser.additional_roles as unknown as string] : []),
         salary_retention_percentage:
           selectedUser.salary_retention_percentage !== undefined
             ? String(selectedUser.salary_retention_percentage)
@@ -373,7 +430,7 @@ export default function UsersPage() {
           selectedUser.per_paper_rate !== undefined && selectedUser.per_paper_rate !== null
             ? String(selectedUser.per_paper_rate)
             : "",
-        accessible_modules: selectedUser.accessible_modules || [],
+        accessible_modules: parseAccessibleModules(selectedUser),
       });
     }
   }, [selectedUser]);
@@ -429,7 +486,7 @@ export default function UsersPage() {
       getResponse: (res: any) => {
         const userData = res?.id ? res : res?.data;
         if (userData) {
-          dispatch(setSelectedUser(userData));
+          dispatch(setSelectedUser({ ...userData, id: userData.id || userId }));
         } else {
           toast.error("Failed to parse user details.");
         }
@@ -450,6 +507,7 @@ export default function UsersPage() {
       branch: "",
       branches: [],
       role: "",
+      additional_roles: [],
       salary_retention_percentage: "0",
       is_active: true,
       employee_id: "",
@@ -488,6 +546,7 @@ export default function UsersPage() {
       phone: editForm.phone,
       name: editForm.name,
       role: editForm.role,
+      additional_roles: editForm.additional_roles,
       branches: editForm.branches,
       salary_retention_percentage: editForm.salary_retention_percentage,
       is_active: false,
@@ -508,14 +567,7 @@ export default function UsersPage() {
       work_start_time: editForm.work_start_time,
       work_end_time: editForm.work_end_time,
       per_paper_rate: editForm.per_paper_rate ? Number(editForm.per_paper_rate) : null,
-      accessible_modules: Array.from(
-        new Set([
-          ...(editForm.role && ROLES[editForm.role as keyof typeof ROLES]
-            ? ROLES[editForm.role as keyof typeof ROLES].modules
-            : []),
-          ...editForm.accessible_modules,
-        ]),
-      ),
+      accessible_modules: editForm.accessible_modules,
     };
 
     dispatch({
@@ -555,8 +607,9 @@ export default function UsersPage() {
       email: selectedUser.email || "",
       phone: selectedUser.phone || "",
       branch: selectedUser.branch || "",
-      branches: selectedUser.branches || [],
+      branches: Array.isArray(selectedUser.branches) ? selectedUser.branches : (selectedUser.branches ? [selectedUser.branches as unknown as string] : []),
       role: selectedUser.role || "",
+      additional_roles: Array.isArray(selectedUser.additional_roles) ? selectedUser.additional_roles : (selectedUser.additional_roles ? [selectedUser.additional_roles as unknown as string] : []),
       salary_retention_percentage:
         selectedUser.salary_retention_percentage !== undefined
           ? String(selectedUser.salary_retention_percentage)
@@ -591,7 +644,7 @@ export default function UsersPage() {
         selectedUser.per_paper_rate !== undefined && selectedUser.per_paper_rate !== null
           ? String(selectedUser.per_paper_rate)
           : "",
-      accessible_modules: selectedUser.accessible_modules || [],
+      accessible_modules: parseAccessibleModules(selectedUser),
     });
     setProfilePicFile(null);
     setProfilePicPreview(null);
@@ -623,78 +676,70 @@ export default function UsersPage() {
   const handleUpdateUser = () => {
     if (!selectedUser) return;
 
+    const allModules = editForm.accessible_modules || [];
+
+    setUpdateLoading(true);
+
     const formData = new FormData();
+    if (editForm.username) {
+      formData.append("username", editForm.username);
+    }
     formData.append("name", editForm.name);
     formData.append("email", editForm.email);
     formData.append("phone", editForm.phone);
     formData.append("is_active", String(editForm.is_active));
     formData.append("salary_retention_percentage", editForm.salary_retention_percentage);
-    // DRF expects branches as a list. Since this is multipart/form-data,
-    // append each branch ID separately.
-    editForm.branches.forEach((b: string) => formData.append("branches", b));
-    if (profilePicFile) formData.append("profile_pic", profilePicFile);
+    // --- BRANCHES ---
+    if (editForm.branches.length > 0) {
+      editForm.branches.forEach((b: string) => formData.append("branches", b));
+    }
+
+    // --- ADDITIONAL ROLES ---
+    if (!editForm.additional_roles || editForm.additional_roles.length === 0) {
+      formData.append("additional_roles", []);
+    } else {
+      editForm.additional_roles.forEach((r: string) => {
+        if (r && r !== "") formData.append("additional_roles", r);
+      });
+    }
+    
+    if (profilePicFile) {
+      formData.append("profile_pic", profilePicFile);
+    }
 
     if (editForm.employee_id !== undefined) formData.append("employee_id", editForm.employee_id);
-    if (editForm.qualification !== undefined)
-      formData.append("qualification", editForm.qualification);
-    if (editForm.specialization !== undefined)
-      formData.append("specialization", editForm.specialization);
-    if (editForm.subject_expertise !== undefined)
-      formData.append("subject_expertise", editForm.subject_expertise);
+    if (editForm.qualification !== undefined) formData.append("qualification", editForm.qualification);
+    if (editForm.specialization !== undefined) formData.append("specialization", editForm.specialization);
+    if (editForm.subject_expertise !== undefined) formData.append("subject_expertise", editForm.subject_expertise);
     if (editForm.level !== undefined) formData.append("level", editForm.level);
-    if (editForm.employment_type !== undefined)
-      formData.append("employment_type", editForm.employment_type);
+    if (editForm.employment_type !== undefined) formData.append("employment_type", editForm.employment_type);
     if (editForm.joining_date !== undefined) formData.append("joining_date", editForm.joining_date);
-    if (editForm.hourly_rate !== undefined && editForm.hourly_rate !== "")
-      formData.append("hourly_rate", editForm.hourly_rate);
-    if (editForm.session_hours !== undefined && editForm.session_hours !== "")
-      formData.append("session_hours", editForm.session_hours);
-    if (editForm.salary !== undefined && editForm.salary !== "")
-      formData.append("salary", editForm.salary);
+    if (editForm.hourly_rate !== undefined && editForm.hourly_rate !== "") formData.append("hourly_rate", editForm.hourly_rate);
+    if (editForm.session_hours !== undefined && editForm.session_hours !== "") formData.append("session_hours", editForm.session_hours);
+    if (editForm.salary !== undefined && editForm.salary !== "") formData.append("salary", editForm.salary);
     if (editForm.bank_account !== undefined) formData.append("bank_account", editForm.bank_account);
     if (editForm.ifsc_code !== undefined) formData.append("ifsc_code", editForm.ifsc_code);
     if (editForm.pan_number !== undefined) formData.append("pan_number", editForm.pan_number);
-    if (editForm.aadhar_number !== undefined)
-      formData.append("aadhar_number", editForm.aadhar_number);
-    if (editForm.work_start_time !== undefined)
-      formData.append("work_start_time", editForm.work_start_time);
-    if (editForm.work_end_time !== undefined)
-      formData.append("work_end_time", editForm.work_end_time);
-    if (editForm.per_paper_rate !== undefined && editForm.per_paper_rate !== "")
-      formData.append("per_paper_rate", editForm.per_paper_rate);
+    if (editForm.aadhar_number !== undefined) formData.append("aadhar_number", editForm.aadhar_number);
+    if (editForm.work_start_time !== undefined) formData.append("work_start_time", editForm.work_start_time);
+    if (editForm.work_end_time !== undefined) formData.append("work_end_time", editForm.work_end_time);
+    if (editForm.per_paper_rate !== undefined && editForm.per_paper_rate !== "") formData.append("per_paper_rate", editForm.per_paper_rate);
 
-    const allModules = Array.from(
-      new Set([
-        ...(editForm.role && ROLES[editForm.role as keyof typeof ROLES]
-          ? ROLES[editForm.role as keyof typeof ROLES].modules
-          : []),
-        ...editForm.accessible_modules,
-      ]),
-    );
-    // Send accessible_modules correctly
-    allModules.forEach((m: string) => formData.append("accessible_modules", m));
+    // --- ACCESSIBLE MODULES ---
+    if (allModules && allModules.length > 0) {
+      allModules.forEach((m: string) => {
+        if (m && m !== "") formData.append("accessible_modules", m);
+      });
+    }
 
-    setUpdateLoading(true);
     dispatch({
       type: userActions.UPDATE_USER,
-      method: "PATCH",
+      method: "PUT",
       endPoint: `/api/auth/users/${selectedUser.id}/`,
       body: formData,
       auth: true,
       setLoading: (val: boolean) => setUpdateLoading(val),
-      getResponse: (res: any) => {
-        const updatedUser = res?.id ? res : res?.data;
-        if (updatedUser) {
-          dispatch(updateUserInList(updatedUser));
-          dispatch(setSelectedUser(updatedUser));
-          toast.success("User updated successfully!");
-          setIsEditing(false);
-          setProfilePicFile(null);
-          setProfilePicPreview(null);
-          // Refresh the list to ensure consistency
-          fetchUsers();
-        }
-      },
+      getResponse: (res: any) => handleUpdateResponse(res),
       getError: (err: any) => {
         const msg =
           err?.response?.data?.message ||
@@ -704,6 +749,21 @@ export default function UsersPage() {
         toast.error(msg);
       },
     });
+  };
+
+  const handleUpdateResponse = (res: any) => {
+    const updatedUser = res?.id ? res : res?.data;
+    if (updatedUser) {
+      const mergedUser = { ...updatedUser, id: updatedUser.id || selectedUser?.id };
+      dispatch(updateUserInList(mergedUser));
+      dispatch(setSelectedUser(mergedUser));
+      toast.success("User updated successfully!");
+      setIsEditing(false);
+      setProfilePicFile(null);
+      setProfilePicPreview(null);
+      // Refresh the list to ensure consistency
+      fetchUsers();
+    }
   };
 
   /* ── Table ── */
@@ -731,12 +791,6 @@ export default function UsersPage() {
   const isExaminer = activeRole === "exam_supervisor";
   const showSalary =
     isEmployee && !(isFaculty && isPartTimeOrVisiting) && !isPaperChecker && !isExaminer;
-
-  const defaultModules = useMemo(() => {
-    if (!editForm.role) return [];
-    const roleDef = ROLES[editForm.role as keyof typeof ROLES];
-    return roleDef ? roleDef.modules : [];
-  }, [editForm.role]);
 
   return (
     <div>
@@ -908,7 +962,7 @@ export default function UsersPage() {
           if (!open) cancelEditing();
         }}
       >
-        <SheetContent className="sm:max-w-md overflow-y-auto scrollbar-hidden">
+        <SheetContent className="sm:max-w-2xl overflow-y-auto scrollbar-hidden">
           <SheetHeader>
             <SheetTitle>
               {isAdding ? "Add New User" : isEditing ? "Edit User" : "User Details"}
@@ -989,7 +1043,7 @@ export default function UsersPage() {
                 )}
 
                 {/* Form Fields (Unified for both View & Edit) */}
-                <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-5">
                   {/* Username (Only when adding) */}
                   {/* {isAdding && (
                     <div className="space-y-1">
@@ -1080,7 +1134,7 @@ export default function UsersPage() {
                   </div>
 
                   {/* Branches */}
-                  <div className="space-y-2">
+                  <div className="sm:col-span-2 space-y-2">
                     <Label
                       className="text-xs text-muted-foreground uppercase tracking-wider font-semibold"
                     >
@@ -1120,7 +1174,7 @@ export default function UsersPage() {
                     ) : (
                       <div className="text-sm font-medium text-text-primary pt-0.5 flex flex-wrap gap-1">
                         {selectedUser?.branches && selectedUser?.branches.length > 0
-                          ? selectedUser?.branches.map((bId: string) => {
+                          ? Array.from(new Set(selectedUser.branches)).map((bId: string) => {
                               const bLabel = branchOptions.find((o) => String(o.value) === String(bId))?.label || bId;
                               return <span key={bId} className="inline-flex bg-muted/50 px-2 py-0.5 rounded-md text-xs">{bLabel}</span>;
                             })
@@ -1131,7 +1185,7 @@ export default function UsersPage() {
 
                   {/* Organization (Always read-only) */}
                   {!isAdding && selectedUser?.organization_name && (
-                    <div className="space-y-1">
+                    <div className="sm:col-span-2 space-y-1">
                       <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
                         Organization
                       </Label>
@@ -1141,18 +1195,31 @@ export default function UsersPage() {
                     </div>
                   )}
 
-                  {/* Role */}
+                  {/* Primary Role */}
                   {isAdding ? (
-                    <div className="space-y-1">
+                    <div className="sm:col-span-2 space-y-1">
                       <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                        Role
+                        Primary Role
                       </Label>
                       <Select
                         value={editForm.role}
-                        onValueChange={(val) => setEditForm((f) => ({ ...f, role: val }))}
+                        onValueChange={(val) => {
+                          const roleDef = ROLES[val as keyof typeof ROLES];
+                          const roleMods = roleDef ? [...roleDef.modules] : [];
+                          const remainingAdditional = editForm.additional_roles.filter((r) => r !== val);
+                          const additionalMods = remainingAdditional.flatMap(
+                            (r) => (ROLES[r as keyof typeof ROLES] ? ROLES[r as keyof typeof ROLES].modules : [])
+                          );
+                          setEditForm((f) => ({
+                            ...f,
+                            role: val,
+                            additional_roles: remainingAdditional,
+                            accessible_modules: Array.from(new Set([...roleMods, ...additionalMods])),
+                          }));
+                        }}
                       >
                         <SelectTrigger className="bg-background">
-                          <SelectValue placeholder="Select a role" />
+                          <SelectValue placeholder="Select a primary role" />
                         </SelectTrigger>
                         <SelectContent>
                           {ROLE_CHOICES.filter(
@@ -1167,19 +1234,205 @@ export default function UsersPage() {
                           ))}
                         </SelectContent>
                       </Select>
+                      <div className="mt-2 p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-md flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                        <p className="text-xs text-amber-600/90 dark:text-amber-400 font-medium leading-relaxed">
+                          The role with the highest level of access should be given as the primary role and cannot be changed later.
+                        </p>
+                      </div>
                     </div>
                   ) : (
-                    <div className="space-y-1">
+                    <div className="sm:col-span-2 space-y-1">
                       <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                        Role
+                        Primary Role
                       </Label>
                       <div className="pt-1">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary-dark">
-                          {selectedUser?.role_display || selectedUser?.role}
+                          {selectedUser?.role_display || ROLE_CHOICES.find(r => r.value === selectedUser?.role)?.label || selectedUser?.role}
                         </span>
+                      </div>
+                      <div className="mt-2 p-2 bg-muted/50 border border-border rounded-md flex items-start gap-2">
+                        <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                        <p className="text-xs text-muted-foreground font-medium">
+                          The primary role cannot be changed.
+                        </p>
                       </div>
                     </div>
                   )}
+
+                  {/* Secondary Roles */}
+                  {isAdding || isEditing ? (
+                    <div className="sm:col-span-2 space-y-2 pt-2">
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                        Secondary Roles (Optional)
+                      </Label>
+                      <div className="grid grid-cols-2 gap-3 border border-input bg-background rounded-md p-3 max-h-40 overflow-y-auto">
+                        {!editForm.role ? (
+                          <div className="col-span-2 text-sm text-muted-foreground py-4 text-center">
+                            Please select a Primary Role first
+                          </div>
+                        ) : (
+                          ROLE_CHOICES.filter(
+                              (r) =>
+                                r.value !== "super_admin" &&
+                                r.value !== "student" &&
+                                r.value !== "parents" &&
+                                r.value !== editForm.role
+                          ).map((r) => {
+                            const isChecked = editForm.additional_roles.includes(r.value);
+                            return (
+                              <div key={r.value} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`sec-role-${r.value}`}
+                                  checked={isChecked}
+                                  onCheckedChange={(checked) => {
+                                    setEditForm(f => {
+                                      const newRoles = checked
+                                        ? [...f.additional_roles, r.value]
+                                        : f.additional_roles.filter(v => v !== r.value);
+                                        
+                                      let newModules = [...f.accessible_modules];
+                                      if (checked) {
+                                        const roleDef = ROLES[r.value as keyof typeof ROLES];
+                                        if (roleDef) {
+                                          newModules = Array.from(new Set([...newModules, ...roleDef.modules]));
+                                        }
+                                      } else {
+                                        const roleDef = ROLES[r.value as keyof typeof ROLES];
+                                        if (roleDef) {
+                                          const remainingRoleMods = [
+                                            ...(f.role && ROLES[f.role as keyof typeof ROLES] ? ROLES[f.role as keyof typeof ROLES].modules : []),
+                                            ...newRoles.flatMap(nr => ROLES[nr as keyof typeof ROLES]?.modules || [])
+                                          ];
+                                          newModules = newModules.filter(
+                                            (m) => remainingRoleMods.includes(m as any) || !roleDef.modules.includes(m as any)
+                                          );
+                                        }
+                                      }
+
+                                      return { ...f, additional_roles: newRoles, accessible_modules: newModules };
+                                    });
+                                  }}
+                                />
+                                <Label htmlFor={`sec-role-${r.value}`} className="text-sm font-medium">
+                                  {r.label}
+                                </Label>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    selectedUser?.additional_roles && selectedUser.additional_roles.length > 0 && (
+                      <div className="sm:col-span-2 space-y-1 pt-2">
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                          Secondary Roles
+                        </Label>
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {Array.from(new Set(selectedUser.additional_roles)).map((rId: string) => {
+                            const rLabel = ROLE_CHOICES.find(o => o.value === rId)?.label || rId;
+                            return (
+                              <span key={rId} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary/10 text-secondary-foreground border border-secondary/20">
+                                {rLabel}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )
+                  )}
+
+                  {/* Status (Switch if editing, Badge if viewing) */}
+                  <div className="sm:col-span-2 space-y-1">
+                    {isEditing && !isAdding ? (
+                      <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3 bg-muted/30">
+                        <div>
+                          <Label
+                            htmlFor="edit-active"
+                            className="text-sm font-medium text-text-primary"
+                          >
+                            Active Status
+                          </Label>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {editForm.is_active
+                              ? "User can access the system"
+                              : "User is blocked from access"}
+                          </p>
+                        </div>
+                        <Switch
+                          id="edit-active"
+                          checked={editForm.is_active}
+                          onCheckedChange={(checked) =>
+                            setEditForm((f) => ({ ...f, is_active: checked }))
+                          }
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                          Status
+                        </Label>
+                        <div className="pt-1">
+                          <span
+                            className={cn(
+                              "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
+                              selectedUser?.is_active
+                                ? "bg-green-500/10 text-green-600"
+                                : "bg-destructive/10 text-destructive",
+                            )}
+                          >
+                            {selectedUser?.is_active ? "Active" : "Inactive"}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Accessible Modules */}
+                  <div className="sm:col-span-2 space-y-2 pt-2">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                      Accessible Modules
+                    </Label>
+                    <div className="flex flex-wrap gap-2 p-1">
+                      {ALL_MODULES.map((mod) => {
+                        const isChecked = editForm.accessible_modules.includes(mod.id);
+
+                        return (
+                          <Label
+                            key={mod.id}
+                            htmlFor={`module-${mod.id}`}
+                            className={cn(
+                              "flex items-center space-x-2 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors",
+                              (!isEditing && !isAdding)
+                                ? ""
+                                : "cursor-pointer hover:bg-muted/50",
+                              isChecked
+                                ? "bg-primary/10 border-primary/30 text-primary-dark"
+                                : "bg-background border-input text-muted-foreground"
+                            )}
+                          >
+                            <Checkbox
+                              id={`module-${mod.id}`}
+                              checked={isChecked}
+                              disabled={!isEditing && !isAdding}
+                              className="h-3.5 w-3.5 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                              onCheckedChange={(checked) => {
+                                if (!isEditing && !isAdding) return;
+                                setEditForm((f) => {
+                                  const newModules = checked
+                                    ? [...f.accessible_modules, mod.id]
+                                    : f.accessible_modules.filter((m) => m !== mod.id);
+                                  return { ...f, accessible_modules: newModules };
+                                });
+                              }}
+                            />
+                            <span>{mod.label}</span>
+                          </Label>
+                        );
+                      })}
+                    </div>
+                  </div>
 
                   {/* Salary Retention Percentage */}
                   <div className="space-y-1">
@@ -1537,92 +1790,6 @@ export default function UsersPage() {
                     </div>
                   )}
 
-                  {/* Status (Switch if editing, Badge if viewing) */}
-                  <div className="space-y-1">
-                    {isEditing && !isAdding ? (
-                      <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3 bg-muted/30">
-                        <div>
-                          <Label
-                            htmlFor="edit-active"
-                            className="text-sm font-medium text-text-primary"
-                          >
-                            Active Status
-                          </Label>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {editForm.is_active
-                              ? "User can access the system"
-                              : "User is blocked from access"}
-                          </p>
-                        </div>
-                        <Switch
-                          id="edit-active"
-                          checked={editForm.is_active}
-                          onCheckedChange={(checked) =>
-                            setEditForm((f) => ({ ...f, is_active: checked }))
-                          }
-                        />
-                      </div>
-                    ) : (
-                      <>
-                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                          Status
-                        </Label>
-                        <div className="pt-1">
-                          <span
-                            className={cn(
-                              "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
-                              selectedUser?.is_active
-                                ? "bg-green-500/10 text-green-600"
-                                : "bg-destructive/10 text-destructive",
-                            )}
-                          >
-                            {selectedUser?.is_active ? "Active" : "Inactive"}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Accessible Modules */}
-                  <div className="space-y-3 pt-2">
-                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                      Accessible Modules
-                    </Label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {ALL_MODULES.map((mod) => {
-                        const isDefault = defaultModules.includes(mod.id as any);
-                        const isChecked = isDefault || editForm.accessible_modules.includes(mod.id);
-
-                        return (
-                          <div key={mod.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`module-${mod.id}`}
-                              checked={isChecked}
-                              disabled={isDefault || (!isEditing && !isAdding)}
-                              onCheckedChange={(checked) => {
-                                if (isDefault || (!isEditing && !isAdding)) return;
-                                setEditForm((f) => {
-                                  const newModules = checked
-                                    ? [...f.accessible_modules, mod.id]
-                                    : f.accessible_modules.filter((m) => m !== mod.id);
-                                  return { ...f, accessible_modules: newModules };
-                                });
-                              }}
-                            />
-                            <Label
-                              htmlFor={`module-${mod.id}`}
-                              className={cn(
-                                "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
-                                isDefault ? "text-muted-foreground" : "text-text-primary",
-                              )}
-                            >
-                              {mod.label}
-                            </Label>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
                 </div>
 
                 {/* Actions Footer */}
