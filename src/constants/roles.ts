@@ -108,4 +108,36 @@ export const ROLES: Record<RoleId, RoleDefinition> = {
     modules: ["dashboard","attendance","payroll","notifications","settings","support"],
     canDelete: false, canExport: false,
   },
+  head_coordinator: {
+    id: "head_coordinator", label: "Head Coordinator", description: "Head Coordinator role",
+    color: "bg-indigo-100", textColor: "text-indigo-800",
+    modules: ["dashboard","students","attendance","courses_batches","timetable","leave","notifications","settings","support"],
+    canDelete: false, canExport: false,
+  },
+  senior_tele_caller: {
+    id: "senior_tele_caller", label: "Senior Tele Caller", description: "Senior Telecaller role",
+    color: "bg-indigo-100", textColor: "text-indigo-800",
+    modules: ["dashboard","crm","attendance","leave","payroll","notifications","settings","support"],
+    canDelete: false, canExport: false,
+  },
+  cmo: {
+    id: "cmo", label: "CMO", description: "Chief Marketing Officer",
+    color: "bg-fuchsia-100", textColor: "text-fuchsia-800",
+    modules: ["dashboard","crm","attendance","inventory","leave","payroll","notifications","settings","support"],
+    canDelete: false, canExport: true,
+  },
+  associate_bdm: {
+    id: "associate_bdm", label: "Associate Business Development Manager", description: "Associate BDM role",
+    color: "bg-violet-100", textColor: "text-violet-800",
+    modules: ["dashboard","crm","attendance","inventory","leave","payroll","notifications","settings","support"],
+    canDelete: false, canExport: false,
+  },
+  /*
+  printers: {
+    id: "printers", label: "Printers", description: "Printing and stationary staff",
+    color: "bg-slate-100", textColor: "text-slate-800",
+    modules: ["dashboard","attendance","inventory","payroll","notifications","settings","support"],
+    canDelete: false, canExport: false,
+  },
+  */
 };
