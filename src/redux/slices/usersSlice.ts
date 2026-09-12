@@ -22,6 +22,8 @@ export interface UserRecord {
   specialization?: string;
   subject_expertise?: string;
   level?: string;
+  levels?: string[];
+  levels_details?: { id: string; name: string; course_id?: string; course_name?: string }[];
   employment_type?: string;
   joining_date?: string;
   hourly_rate?: number | string;
