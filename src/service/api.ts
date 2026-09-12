@@ -353,11 +353,15 @@ BATCHES: {
 
   /** Sales Field Activities & Tracking endpoints */
   SALES: {
+    PLANS: "/api/v1/sales/plans/",
+    PLAN_DETAIL: (id: string | number) => `/api/v1/sales/plans/${id}/`,
     ACTIVITIES: "/api/v1/sales/activities/",
     ACTIVITY_DETAIL: (id: string | number) => `/api/v1/sales/activities/${id}/`,
     ACTIVITY_PHOTOS: (activityId: string | number) => `/api/v1/sales/activities/${activityId}/photos/`,
     ODOMETER_READINGS: "/api/v1/sales/odometer-readings/",
     ODOMETER_READING_APPROVE: (id: string | number) => `/api/v1/sales/odometer-readings/${id}/approve/`,
     ODOMETER_READING_REJECT: (id: string | number) => `/api/v1/sales/odometer-readings/${id}/reject/`,
+    ODOMETER_MONTHLY_APPROVE: "/api/v1/sales/odometer/monthly/approve/",
+    ODOMETER_MONTHLY_REJECT: "/api/v1/sales/odometer/monthly/reject/",
   },
 } as const;

@@ -46,6 +46,7 @@ import {
   SalesPhotoType,
   PHOTO_TYPE_LABELS,
   OdometerReading,
+  SalesDailyPlan,
 } from "@/types/salesActivity";
 import { TableSkeleton } from "@/components/common/Skeletons";
 
@@ -63,7 +64,8 @@ export default function SalesActivitiesTab() {
   const toast = useToast();
   const { user } = useAuth();
 
-  const [activities, setActivities] = useState<SalesDailyActivity[]>([]);
+  const [plans, setPlans] = useState<SalesDailyPlan[]>([]);
+  const [dateFilter, setDateFilter] = useState("today");
   const [loading, setLoading] = useState(false);
   // Filters
   const [fromDate, setFromDate] = useState("");
@@ -101,10 +103,10 @@ export default function SalesActivitiesTab() {
   // Create Activity Dialog
   const [createOpen, setCreateOpen] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
-  const [activityDate, setActivityDate] = useState(
+  const [planDescription, setPlanDescription] = useState("");
+  const [planDate, setPlanDate] = useState(
     new Date().toISOString().split("T")[0],
   );
-  const [activityNotes, setActivityNotes] = useState("");
 
   // Upload Photo Dialog
   const [photoOpen, setPhotoOpen] = useState(false);
@@ -127,12 +129,21 @@ export default function SalesActivitiesTab() {
   const [rejectOdoReading, setRejectOdoReading] = useState<OdometerReading | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string>("");
 
+  // Bulk Settlement State
+  const [bulkSettlementOpen, setBulkSettlementOpen] = useState(false);
+  const [bulkMonth, setBulkMonth] = useState<number>(new Date().getMonth() + 1);
+  const [bulkYear, setBulkYear] = useState<number>(new Date().getFullYear());
+  const [bulkUserId, setBulkUserId] = useState<string>("");
+  const [bulkExpensePerKm, setBulkExpensePerKm] = useState<string>("7.50");
+  const [bulkRejectionReason, setBulkRejectionReason] = useState<string>("");
+  const [bulkLoading, setBulkLoading] = useState(false);
+
   const isSalesStaff =
     user?.role === "sales_executive" ||
     user?.role === "sales_senior_executive" ||
     user?.role === "tele_caller";
 
-  const fetchActivities = useCallback(async () => {
+  const fetchPlans = useCallback(async () => {
     setLoading(true);
     try {
       const raw = localStorage.getItem("Insight_Login_Data");
@@ -140,6 +151,7 @@ export default function SalesActivitiesTab() {
       const baseUrl = import.meta.env.VITE_APP_BASE_URL || "";
 
       const params = new URLSearchParams();
+      if (dateFilter && dateFilter !== 'all') params.append("date", dateFilter);
       if (search) params.append("search", search);
       if (fromDate) params.append("from_date", fromDate);
       if (toDate) params.append("to_date", toDate);
@@ -149,10 +161,10 @@ export default function SalesActivitiesTab() {
 
       const query = params.toString() ? `?${params.toString()}` : "";
 
-      const res = await fetch(`${baseUrl}${API.SALES.ACTIVITIES}${query}`, {
+      const res = await fetch(`${baseUrl}${API.SALES.PLANS}${query}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error("Failed to fetch sales activities");
+      if (!res.ok) throw new Error("Failed to fetch sales plans");
       const data = await res.json();
       const list = Array.isArray(data?.results)
         ? data.results
@@ -161,7 +173,8 @@ export default function SalesActivitiesTab() {
           : Array.isArray(data)
             ? data
             : [];
-      setActivities(list);
+      setPlans(list);
+      return list;
 
       // Fetch odometer readings
       const odoRes = await fetch(`${baseUrl}${API.SALES.ODOMETER_READINGS}${query}`, {
@@ -179,7 +192,7 @@ export default function SalesActivitiesTab() {
         setOdometerReadings(odoList);
       }
     } catch (err: any) {
-      toast.error(err.message || "Failed to load sales activities");
+      toast.error(err.message || "Failed to load sales plans");
     } finally {
       setLoading(false);
     }
@@ -205,7 +218,7 @@ export default function SalesActivitiesTab() {
       }
       toast.success("Odometer reading approved successfully");
       setApproveOdoReading(null);
-      fetchActivities();
+      fetchPlans();
     } catch (err: any) {
       toast.error(err.message || "An error occurred");
     }
@@ -232,15 +245,93 @@ export default function SalesActivitiesTab() {
       toast.success("Odometer reading rejected successfully");
       setRejectOdoReading(null);
       setRejectionReason("");
-      fetchActivities();
+      fetchPlans();
     } catch (err: any) {
       toast.error(err.message || "An error occurred");
     }
   };
 
+  const handleBulkApprove = async () => {
+    if (!bulkUserId || !bulkMonth || !bulkYear) {
+      toast.error("Please select User, Month, and Year");
+      return;
+    }
+    setBulkLoading(true);
+    try {
+      const raw = localStorage.getItem("Insight_Login_Data");
+      const token = raw ? JSON.parse(raw)?.access : "";
+      const baseUrl = import.meta.env.VITE_APP_BASE_URL || "";
+      const res = await fetch(`${baseUrl}${API.SALES.ODOMETER_MONTHLY_APPROVE}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          user_id: bulkUserId,
+          month: bulkMonth,
+          year: bulkYear,
+          expense_per_km: parseFloat(bulkExpensePerKm),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || data.message || "Failed to bulk approve");
+      toast.success(data.message || "Bulk approval successful");
+      setBulkSettlementOpen(false);
+      fetchPlans();
+    } catch (err: any) {
+      toast.error(err.message || "An error occurred");
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const handleBulkReject = async () => {
+    if (!bulkUserId || !bulkMonth || !bulkYear) {
+      toast.error("Please select User, Month, and Year");
+      return;
+    }
+    if (!bulkRejectionReason) {
+      toast.error("Please provide a rejection reason");
+      return;
+    }
+    setBulkLoading(true);
+    try {
+      const raw = localStorage.getItem("Insight_Login_Data");
+      const token = raw ? JSON.parse(raw)?.access : "";
+      const baseUrl = import.meta.env.VITE_APP_BASE_URL || "";
+      const res = await fetch(`${baseUrl}${API.SALES.ODOMETER_MONTHLY_REJECT}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          user_id: bulkUserId,
+          month: bulkMonth,
+          year: bulkYear,
+          rejection_reason: bulkRejectionReason,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || data.message || "Failed to bulk reject");
+      toast.success(data.message || "Bulk rejection successful");
+      setBulkSettlementOpen(false);
+      fetchPlans();
+    } catch (err: any) {
+      toast.error(err.message || "An error occurred");
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetchActivities();
-  }, [fetchActivities]);
+    fetchPlans().then(fetched => {
+      if (isSalesStaff && !fromDate && !toDate && fetched?.length === 0) {
+        setCreateOpen(true);
+      }
+    });
+  }, [fetchPlans, isSalesStaff, fromDate, toDate]);
 
   // Geolocation fetcher
   const fetchCurrentLocation = () => {
@@ -264,33 +355,33 @@ export default function SalesActivitiesTab() {
     );
   };
 
-  const handleCreateActivity = async () => {
+  const handleCreatePlan = async () => {
     setCreateLoading(true);
     try {
       const raw = localStorage.getItem("Insight_Login_Data");
       const token = raw ? JSON.parse(raw)?.access : "";
       const baseUrl = import.meta.env.VITE_APP_BASE_URL || "";
-      const res = await fetch(`${baseUrl}${API.SALES.ACTIVITIES}`, {
+      const res = await fetch(`${baseUrl}${API.SALES.PLANS}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          activity_date: activityDate,
-          notes: activityNotes,
+          plan_date: planDate,
+          description: planDescription,
         }),
       });
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || errData.message || "Failed to initialize daily activity");
+        throw new Error(errData.detail || errData.message || "Failed to initialize daily plan");
       }
 
-      toast.success("Daily activity container initialized successfully.");
+      toast.success("Daily plan initialized successfully.");
       setCreateOpen(false);
-      setActivityNotes("");
-      fetchActivities();
+      setPlanDescription("");
+      fetchPlans();
     } catch (err: any) {
       toast.error(err.message || "An error occurred");
     } finally {
@@ -357,7 +448,7 @@ export default function SalesActivitiesTab() {
       setPhotoOpen(false);
       setPhotoFile(null);
       setOdometerKms("");
-      fetchActivities();
+      fetchPlans();
     } catch (err: any) {
       toast.error(err.message || "An error occurred during upload");
     } finally {
@@ -365,7 +456,7 @@ export default function SalesActivitiesTab() {
     }
   };
 
-  const filteredActivities = activities.filter((act) => {
+  const filteredPlans = plans.filter((act) => {
     if (statusFilter !== "all" || isPaidFilter !== "all") {
       const actOdoReading = odometerReadings.find((r: any) => (r.activity?.id || r.activity) === act.id) || (act as any).odometer_reading || (act as any).odometer_claim;
       if (!actOdoReading) return false;
@@ -446,22 +537,32 @@ export default function SalesActivitiesTab() {
                 setUserIdFilter("all");
                 setStatusFilter("all");
                 setIsPaidFilter("all");
-                setTimeout(fetchActivities, 0); // Trigger fetch after clear
+                setTimeout(fetchPlans, 0); // Trigger fetch after clear
               }}
             >
               Clear
             </Button>
           )}
-          <Button variant="outline" size="sm" className="h-9 gap-1" onClick={fetchActivities}>
+          <Button variant="outline" size="sm" className="h-9 gap-1" onClick={fetchPlans}>
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
+          {!isSalesStaff && (
+            <Button
+              variant="default"
+              size="sm"
+              className="h-9 gap-1 bg-primary text-primary-foreground"
+              onClick={() => setBulkSettlementOpen(true)}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" /> Monthly Settlement
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Activities Grid */}
       {loading ? (
         <TableSkeleton rows={4} columns={4} />
-      ) : filteredActivities.length === 0 ? (
+      ) : filteredPlans.length === 0 ? (
         <div className="text-center py-12 border border-dashed rounded-xl bg-muted/20">
           <Navigation className="w-10 h-10 text-muted-foreground mx-auto mb-2 opacity-50" />
           <h3 className="font-semibold text-foreground text-sm">No Field Activities Found</h3>
@@ -473,17 +574,10 @@ export default function SalesActivitiesTab() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4">
-          {filteredActivities.map((act) => {
-            const startOdo = act.photos.find((p) => p.photo_type === "start_odometer")?.odometer_kms;
-            const endOdo = act.photos.find((p) => p.photo_type === "end_odometer")?.odometer_kms;
-            const distance =
-              startOdo && endOdo
-                ? (Number(endOdo) - Number(startOdo)).toFixed(1)
-                : null;
-
+          {filteredPlans.map((plan) => {
             return (
               <motion.div
-                key={act.id}
+                key={plan.id}
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="p-5 bg-card rounded-xl border border-border/60 shadow-sm space-y-4"
@@ -492,27 +586,46 @@ export default function SalesActivitiesTab() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-base text-foreground">
-                        {act.user_name || "Sales Executive"}
+                        {plan.user_name || "Sales Executive"}
                       </span>
                       <Badge variant="outline" className="text-xs font-medium gap-1 bg-primary/5 text-primary">
                         <Calendar className="w-3 h-3" />
-                        {act.activity_date}
+                        {plan.plan_date}
                       </Badge>
                     </div>
-                    {act.notes && (
+                    {plan.description && (
                       <p className="text-xs text-muted-foreground flex items-start gap-1.5 pt-0.5">
                         <FileText className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
-                        <span>{act.notes}</span>
+                        <span>{plan.description}</span>
                       </p>
                     )}
                   </div>
                 </div>
 
-                {/* Verification Photos Timeline */}
-                <div>
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
-                    <Camera className="w-3.5 h-3.5" /> Geo-Tagged Evidence ({act.photos.length})
-                  </h4>
+                {/* Iterate over nested activities */}
+                {plan.activities && plan.activities.length > 0 ? plan.activities.map((act) => {
+                  const startOdo = act.photos.find((p) => p.photo_type === "start_odometer")?.odometer_kms;
+                  const endOdo = act.photos.find((p) => p.photo_type === "end_odometer")?.odometer_kms;
+                  const distance =
+                    startOdo && endOdo
+                      ? (Number(endOdo) - Number(startOdo)).toFixed(1)
+                      : null;
+                      
+                  return (
+                    <div key={act.id} className="mt-4 pt-4 border-t border-dashed border-border/50">
+                      {act.notes && (
+                        <p className="text-xs text-muted-foreground flex items-start gap-1.5 pt-0.5 mb-3">
+                          <FileText className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                          <span>{act.notes}</span>
+                        </p>
+                      )}
+                      {/* Verification Photos Timeline */}
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                            <Camera className="w-3.5 h-3.5" /> Geo-Tagged Evidence ({act.photos.length})
+                          </h4>
+                        </div>
 
                   {act.photos.length === 0 ? (
                     <div className="text-xs text-muted-foreground italic bg-muted/20 rounded-lg p-3">
@@ -646,6 +759,13 @@ export default function SalesActivitiesTab() {
                     </div>
                   );
                 })()}
+                    </div>
+                  );
+                }) : (
+                  <div className="text-xs text-muted-foreground italic bg-muted/20 rounded-lg p-3 text-center">
+                    No field activities recorded for this plan yet.
+                  </div>
+                )}
               </motion.div>
             );
           })}
@@ -663,16 +783,16 @@ export default function SalesActivitiesTab() {
               <Label className="text-xs mb-1 block">Activity Date *</Label>
               <Input
                 type="date"
-                value={activityDate}
-                onChange={(e) => setActivityDate(e.target.value)}
+                value={planDate}
+                onChange={(e) => setPlanDate(e.target.value)}
                 className="h-9 text-sm"
               />
             </div>
             <div>
               <Label className="text-xs mb-1 block">Day's Target / Remarks</Label>
               <Textarea
-                value={activityNotes}
-                onChange={(e) => setActivityNotes(e.target.value)}
+                value={planDescription}
+                onChange={(e) => setPlanDescription(e.target.value)}
                 rows={3}
                 placeholder="e.g. Visiting St. Xavier's and Ryan International for CS course seminar."
                 className="text-sm resize-none"
@@ -683,7 +803,7 @@ export default function SalesActivitiesTab() {
             <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={createLoading}>
               Cancel
             </Button>
-            <Button onClick={handleCreateActivity} disabled={createLoading || !activityDate} className="bg-primary text-primary-foreground">
+            <Button onClick={handleCreatePlan} disabled={createLoading || !planDate} className="bg-primary text-primary-foreground">
               {createLoading ? "Saving…" : "Initialize Activity"}
             </Button>
           </DialogFooter>
@@ -851,11 +971,12 @@ export default function SalesActivitiesTab() {
               {(() => {
                 if (previewPhoto.photo_type !== "start_odometer" && previewPhoto.photo_type !== "end_odometer") return null;
 
+                const allActivities = plans.flatMap(p => p.activities || []);
                 const actOdoReading = odometerReadings.find((r: any) => (r.activity?.id || r.activity) === previewPhoto.activity) ||
-                  (activities.find(a => a.id === previewPhoto.activity) as any)?.odometer_reading ||
-                  (activities.find(a => a.id === previewPhoto.activity) as any)?.odometer_claim;
+                  (allActivities.find(a => a.id === previewPhoto.activity) as any)?.odometer_reading ||
+                  (allActivities.find(a => a.id === previewPhoto.activity) as any)?.odometer_claim;
 
-                const act = activities.find(a => a.id === previewPhoto.activity);
+                const act = allActivities.find(a => a.id === previewPhoto.activity);
                 const startOdo = act?.photos.find((p) => p.photo_type === "start_odometer");
                 const endOdo = act?.photos.find((p) => p.photo_type === "end_odometer");
 
@@ -957,6 +1078,102 @@ export default function SalesActivitiesTab() {
               Confirm Rejection
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Bulk Monthly Settlement Dialog ─── */}
+      <Dialog open={bulkSettlementOpen} onOpenChange={setBulkSettlementOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Bulk Monthly Settlement</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs mb-1 block">Month *</Label>
+                <Select value={String(bulkMonth)} onValueChange={(v) => setBulkMonth(Number(v))}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 12 }).map((_, i) => (
+                      <SelectItem key={i + 1} value={String(i + 1)}>
+                        {new Date(2000, i).toLocaleString('default', { month: 'long' })}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs mb-1 block">Year *</Label>
+                <Select value={String(bulkYear)} onValueChange={(v) => setBulkYear(Number(v))}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[0, 1, 2].map((offset) => {
+                      const yr = new Date().getFullYear() - offset;
+                      return (
+                        <SelectItem key={yr} value={String(yr)}>
+                          {yr}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div>
+              <Label className="text-xs mb-1 block">User *</Label>
+              <Select value={bulkUserId} onValueChange={setBulkUserId}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Select Team Member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teamUsers.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.first_name ? `${u.first_name} ${u.last_name}` : (u.name || u.username || u.email || u.id)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="p-3 bg-muted/40 rounded-lg border border-border space-y-3 mt-4">
+              <h4 className="text-sm font-semibold text-foreground mb-2">Approve All Pending</h4>
+              <div>
+                <Label className="text-xs mb-1 block">Expense per KM (₹) *</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={bulkExpensePerKm}
+                  onChange={(e) => setBulkExpensePerKm(e.target.value)}
+                  className="h-9 text-sm bg-background"
+                />
+              </div>
+              <Button onClick={handleBulkApprove} disabled={bulkLoading || !bulkUserId} className="w-full bg-green-600 hover:bg-green-700 text-white h-9">
+                {bulkLoading ? "Processing..." : "Approve Pending Records"}
+              </Button>
+            </div>
+
+            <div className="p-3 bg-red-50/50 dark:bg-red-950/10 rounded-lg border border-red-200/50 space-y-3 mt-4">
+              <h4 className="text-sm font-semibold text-red-700 dark:text-red-400 mb-2">Reject All Pending</h4>
+              <div>
+                <Label className="text-xs mb-1 block text-red-900/70 dark:text-red-200">Rejection Reason *</Label>
+                <Textarea
+                  value={bulkRejectionReason}
+                  onChange={(e) => setBulkRejectionReason(e.target.value)}
+                  rows={2}
+                  placeholder="Reason for rejecting all..."
+                  className="text-sm resize-none bg-background border-red-200"
+                />
+              </div>
+              <Button onClick={handleBulkReject} disabled={bulkLoading || !bulkUserId || !bulkRejectionReason} variant="destructive" className="w-full h-9">
+                {bulkLoading ? "Processing..." : "Reject Pending Records"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

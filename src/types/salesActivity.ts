@@ -24,9 +24,11 @@ export interface SalesDailyActivity {
   id: string;
   user: string;
   user_name: string;
+  plan: string;
   activity_date: string;
   notes: string;
   photos: SalesActivityPhoto[];
+  odometer_reading?: OdometerReading;
   created_at: string;
   updated_at: string;
 }
@@ -63,6 +65,23 @@ export interface OdometerReading {
   is_paid: boolean;
   start_odometer_photo?: string;
   end_odometer_photo?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SalesDailyPlan {
+  id: string;
+  user: string;
+  user_name: string;
+  plan_date: string;
+  type?: string;
+  start_time?: string;
+  end_time?: string;
+  place?: string;
+  description: string;
+  reminder_sent?: boolean;
+  day_of_reminder_sent?: boolean;
+  activities: SalesDailyActivity[];
   created_at: string;
   updated_at: string;
 }
