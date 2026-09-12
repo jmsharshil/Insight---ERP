@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { motion } from "framer-motion";
-import { Pencil, Trash2, ChevronLeft, Save, X, Clock, Wallet, ShieldAlert, Layers, BookOpen, Plus, FileText, Download, Upload, Database } from "lucide-react";
+import { Pencil, Trash2, ChevronLeft, Save, X, Clock, Wallet, ShieldAlert, Layers, BookOpen, Plus, FileText, Download, Upload, Database, ChevronDown } from "lucide-react";
 
 import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import Skeleton from "react-loading-skeleton";
@@ -39,7 +45,7 @@ import {
 
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
-import { levelActions, subjectAction, chapterAction, subjectPaperAction } from "@/redux/actions";
+import { levelActions, subjectAction, chapterAction, subjectPaperAction, userActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import { cn } from "@/lib/utils";
 import { updateLevelInList, removeLevelFromList } from "@/redux/slices/levelsSlice";
@@ -145,7 +151,10 @@ export default function LevelDetailPage() {
     order: 1,
     duration_hours: 0,
     is_active: true,
+    faculties: [] as string[],
   });
+
+  const [facultyOptions, setFacultyOptions] = useState<{ id: string; name: string; levels: string[] }[]>([]);
 
   const canEdit =
     user && ["super_admin", "branch_manager", "admin_senior_executive"].includes(user.role);
@@ -187,6 +196,29 @@ export default function LevelDetailPage() {
 
   useEffect(() => {
     fetchLevelDetail();
+    
+    // Fetch faculties for chapter assignment
+    dispatch({
+      type: userActions.GET_USERS,
+      method: "GET",
+      endPoint: "/api/auth/users/?role=faculty",
+      auth: true,
+      getResponse: (res: any) => {
+        if (res?.data) {
+          setFacultyOptions(res.data.map((u: any) => ({
+            id: u.id,
+            name: u.name,
+            levels: Array.isArray(u.levels) ? u.levels.map((l: any) => typeof l === 'object' ? l.id : l) : (u.level ? [u.level] : [])
+          })));
+        } else if (Array.isArray(res)) {
+          setFacultyOptions(res.map((u: any) => ({
+            id: u.id,
+            name: u.name,
+            levels: Array.isArray(u.levels) ? u.levels.map((l: any) => typeof l === 'object' ? l.id : l) : (u.level ? [u.level] : [])
+          })));
+        }
+      },
+    } as any);
   }, [courseId, levelId]);
 
   const handleUpdate = () => {
@@ -317,10 +349,11 @@ export default function LevelDetailPage() {
         order: chapter.order || 1,
         duration_hours: chapter.duration_hours || 0,
         is_active: chapter.is_active !== false,
+        faculties: chapter.faculties || [],
       });
     } else {
       setEditingChapter(null);
-      setChapterForm({ name: "", description: "", order: 1, duration_hours: 0, is_active: true });
+      setChapterForm({ name: "", description: "", order: 1, duration_hours: 0, is_active: true, faculties: [] });
     }
     setChapterModalOpen(true);
   };
@@ -333,6 +366,7 @@ export default function LevelDetailPage() {
       order: Number(chapterForm.order),
       duration_hours: Number(chapterForm.duration_hours),
       is_active: chapterForm.is_active,
+      faculties: chapterForm.faculties,
     };
     const isEdit = !!editingChapter;
     dispatch({
@@ -704,6 +738,15 @@ export default function LevelDetailPage() {
                                               <Clock className="w-3 h-3" /> {chapter.duration_hours} duration hours
                                             </p>
                                           )}
+                                          {chapter.faculties_details && chapter.faculties_details.length > 0 && (
+                                            <div className="pl-8 pt-1 flex flex-wrap gap-1">
+                                              {chapter.faculties_details.map((faculty: any) => (
+                                                <Badge key={faculty.id} variant="secondary" className="text-[10px] py-0 h-5 bg-primary/5 text-primary-dark">
+                                                  {faculty.name}
+                                                </Badge>
+                                              ))}
+                                            </div>
+                                          )}
                                         </div>
                                         {canEdit && !isEditing && (
                                           <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-background/80 backdrop-blur-sm rounded-lg p-1">
@@ -728,7 +771,7 @@ export default function LevelDetailPage() {
                               </AccordionContent>
                             </AccordionItem>
 
-                            <AccordionItem value="papers" className="border-0 mt-2">
+                            {/* <AccordionItem value="papers" className="border-0 mt-2">
                               <AccordionTrigger className="py-2.5 px-4 rounded-lg bg-muted/40 hover:bg-muted/60 hover:no-underline text-sm font-semibold text-muted-foreground transition-colors">
                                 <div className="flex items-center gap-2">
                                   <FileText className="w-4 h-4" />
@@ -792,7 +835,7 @@ export default function LevelDetailPage() {
                                   </div>
                                 )}
                               </AccordionContent>
-                            </AccordionItem>
+                            </AccordionItem> */}
                           </Accordion>
                         </div>
                       </div>
@@ -924,6 +967,52 @@ export default function LevelDetailPage() {
             <div className="space-y-1">
               <Label htmlFor="chap-hours">Duration Hours</Label>
               <Input id="chap-hours" type="number" min="0" value={chapterForm.duration_hours} onChange={(e) => setChapterForm({ ...chapterForm, duration_hours: Number(e.target.value) })} />
+            </div>
+            <div className="space-y-1 flex flex-col">
+              <Label className="text-xs font-medium">Assigned Faculties</Label>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between font-normal bg-background h-auto min-h-9 py-1.5">
+                    <div className="flex gap-1 flex-wrap items-center mr-2">
+                      {chapterForm.faculties && chapterForm.faculties.length > 0 ? (
+                        chapterForm.faculties.map(fId => {
+                          const fDetail = facultyOptions.find(fo => fo.id === fId);
+                          return (
+                            <span key={fId} className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground border border-border/50">
+                              {fDetail ? fDetail.name : "Unknown"}
+                            </span>
+                          );
+                        })
+                      ) : (
+                        <span className="text-muted-foreground">Select Faculties</span>
+                      )}
+                    </div>
+                    <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-[380px] max-h-60 overflow-y-auto">
+                  {facultyOptions.filter(fac => fac.levels.includes(levelId)).map((fac) => (
+                    <DropdownMenuCheckboxItem
+                      key={fac.id}
+                      checked={chapterForm.faculties.includes(fac.id)}
+                      onSelect={(e) => e.preventDefault()}
+                      onCheckedChange={(checked) => {
+                        setChapterForm((f) => {
+                          const newFaculties = checked
+                            ? [...f.faculties, fac.id]
+                            : f.faculties.filter((v) => v !== fac.id);
+                          return { ...f, faculties: newFaculties };
+                        });
+                      }}
+                    >
+                      {fac.name}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                  {facultyOptions.filter(fac => fac.levels.includes(levelId)).length === 0 && (
+                    <div className="p-2 text-sm text-muted-foreground text-center">No faculties found for this level</div>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 bg-muted/30 mt-2">
               <Label htmlFor="chap-active" className="text-sm font-medium cursor-pointer">Active Status</Label>

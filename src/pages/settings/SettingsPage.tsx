@@ -235,10 +235,19 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Settings"
-        subtitle="Manage your profile, system settings, and preferences"
-      />
+      <div>
+        <PageHeader
+          title="Settings"
+          subtitle="Manage your profile, system settings, and preferences"
+        />
+
+        <div className="-mt-2">
+          <span className="inline-flex items-center rounded-lg border border-border bg-red-100 px-4 py-2.5 text-sm text-red-500">
+            <AlertCircle className="w-4 h-4 mr-2 shrink-0" />
+            Profile updates are managed by your administrator. Please contact them if you need to make any changes.
+          </span>
+        </div>
+      </div>
 
       {/* Premium Profile Header Banner */}
       {profile && (

@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useUI } from "@/hooks/useUI";
 import { useAuth } from "@/hooks/useAuth";
 import { useDropdown } from "@/hooks/useDropdown";
-import { userActions } from "@/redux/actions";
+import { userActions, dropdownActions } from "@/redux/actions";
 import {
   setUsers,
   setUsersLoading,
@@ -43,6 +43,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -58,6 +65,7 @@ import {
   Loader2,
   FileSearch,
   ArrowUpDown,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   UserPlus,
@@ -314,7 +322,8 @@ export default function UsersPage() {
     qualification: "",
     specialization: "",
     subject_expertise: "",
-    level: "",
+    // level: "",
+    levels: [] as string[],
     employment_type: "",
     joining_date: "",
     hourly_rate: "",
@@ -333,6 +342,7 @@ export default function UsersPage() {
   const [profilePicPreview, setProfilePicPreview] = useState<string | null>(null);
   const [updateLoading, setUpdateLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [academicLevels, setAcademicLevels] = useState<{ id: string; name: string }[]>([]);
 
   /* ── Server-side filter state ── */
   const [searchInput, setSearchInput] = useState("");
@@ -386,6 +396,18 @@ export default function UsersPage() {
     setPageTitle("Users");
     fetchUsers({ search: "", role: "", is_active: "" });
     fetchBranchOptions();
+
+    dispatch({
+      type: dropdownActions.GET_DROPDOWN,
+      method: "GET",
+      endPoint: "/api/v1/batches/dropdowns/",
+      auth: true,
+      getResponse: (res: any) => {
+        if (res?.data?.levels || res?.levels) {
+          setAcademicLevels(res?.data?.levels || res?.levels || []);
+        }
+      },
+    } as any);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -399,8 +421,8 @@ export default function UsersPage() {
         email: selectedUser.email || "",
         phone: selectedUser.phone || "",
         branch: selectedUser.branch || "",
-        branches: Array.isArray(selectedUser.branches) ? selectedUser.branches : (selectedUser.branches ? [selectedUser.branches as unknown as string] : []),
-        additional_roles: Array.isArray(selectedUser.additional_roles) ? selectedUser.additional_roles : (selectedUser.additional_roles ? [selectedUser.additional_roles as unknown as string] : []),
+        branches: Array.isArray(selectedUser.branches) ? selectedUser.branches.map((b: any) => typeof b === "object" && b !== null ? String(b.id || b.value || "") : String(b)) : (selectedUser.branches ? [String(selectedUser.branches)] : []),
+        additional_roles: Array.isArray(selectedUser.additional_roles) ? selectedUser.additional_roles.map((r: any) => typeof r === "object" && r !== null ? String(r.id || r.value || "") : String(r)) : (selectedUser.additional_roles ? [String(selectedUser.additional_roles)] : []),
         salary_retention_percentage:
           selectedUser.salary_retention_percentage !== undefined
             ? String(selectedUser.salary_retention_percentage)
@@ -410,7 +432,8 @@ export default function UsersPage() {
         qualification: selectedUser.qualification || "",
         specialization: selectedUser.specialization || "",
         subject_expertise: selectedUser.subject_expertise || "",
-        level: selectedUser.level || "",
+        // level: selectedUser.level || "",
+        levels: Array.isArray(selectedUser.levels) ? selectedUser.levels.map((l: any) => typeof l === "object" && l !== null ? l.id : l) : (selectedUser.level ? [selectedUser.level as string] : []),
         employment_type: selectedUser.employment_type || "",
         joining_date: selectedUser.joining_date || "",
         hourly_rate:
@@ -519,7 +542,8 @@ export default function UsersPage() {
       qualification: "",
       specialization: "",
       subject_expertise: "",
-      level: "",
+      // level: "",
+      levels: [],
       employment_type: "",
       joining_date: "",
       hourly_rate: "",
@@ -559,7 +583,8 @@ export default function UsersPage() {
       qualification: editForm.qualification,
       specialization: editForm.specialization,
       subject_expertise: editForm.subject_expertise,
-      level: editForm.level,
+      // level: editForm.level,
+      levels: editForm.levels,
       employment_type: editForm.employment_type,
       joining_date: editForm.joining_date,
       hourly_rate: editForm.hourly_rate ? Number(editForm.hourly_rate) : null,
@@ -612,9 +637,9 @@ export default function UsersPage() {
       email: selectedUser.email || "",
       phone: selectedUser.phone || "",
       branch: selectedUser.branch || "",
-      branches: Array.isArray(selectedUser.branches) ? selectedUser.branches : (selectedUser.branches ? [selectedUser.branches as unknown as string] : []),
+      branches: Array.isArray(selectedUser.branches) ? selectedUser.branches.map((b: any) => typeof b === "object" && b !== null ? String(b.id || b.value || "") : String(b)) : (selectedUser.branches ? [String(selectedUser.branches)] : []),
       role: selectedUser.role || "",
-      additional_roles: Array.isArray(selectedUser.additional_roles) ? selectedUser.additional_roles : (selectedUser.additional_roles ? [selectedUser.additional_roles as unknown as string] : []),
+      additional_roles: Array.isArray(selectedUser.additional_roles) ? selectedUser.additional_roles.map((r: any) => typeof r === "object" && r !== null ? String(r.id || r.value || "") : String(r)) : (selectedUser.additional_roles ? [String(selectedUser.additional_roles)] : []),
       salary_retention_percentage:
         selectedUser.salary_retention_percentage !== undefined
           ? String(selectedUser.salary_retention_percentage)
@@ -624,7 +649,8 @@ export default function UsersPage() {
       qualification: selectedUser.qualification || "",
       specialization: selectedUser.specialization || "",
       subject_expertise: selectedUser.subject_expertise || "",
-      level: selectedUser.level || "",
+      // level: selectedUser.level || "",
+      levels: Array.isArray(selectedUser.levels) ? selectedUser.levels.map((l: any) => typeof l === "object" && l !== null ? l.id : l) : (selectedUser.level ? [selectedUser.level as string] : []),
       employment_type: selectedUser.employment_type || "",
       joining_date: selectedUser.joining_date || "",
       hourly_rate:
@@ -700,9 +726,7 @@ export default function UsersPage() {
     }
 
     // --- ADDITIONAL ROLES ---
-    if (!editForm.additional_roles || editForm.additional_roles.length === 0) {
-      formData.append("additional_roles", []);
-    } else {
+    if (editForm.additional_roles && editForm.additional_roles.length > 0) {
       editForm.additional_roles.forEach((r: string) => {
         if (r && r !== "") formData.append("additional_roles", r);
       });
@@ -716,7 +740,9 @@ export default function UsersPage() {
     if (editForm.qualification !== undefined) formData.append("qualification", editForm.qualification);
     if (editForm.specialization !== undefined) formData.append("specialization", editForm.specialization);
     if (editForm.subject_expertise !== undefined) formData.append("subject_expertise", editForm.subject_expertise);
-    if (editForm.level !== undefined) formData.append("level", editForm.level);
+    if (editForm.levels && editForm.levels.length > 0) {
+      editForm.levels.forEach((l: string) => formData.append("levels", l));
+    }
     if (editForm.employment_type !== undefined) formData.append("employment_type", editForm.employment_type);
     if (editForm.joining_date !== undefined) formData.append("joining_date", editForm.joining_date);
     if (editForm.hourly_rate !== undefined && editForm.hourly_rate !== "") formData.append("hourly_rate", editForm.hourly_rate);
@@ -787,13 +813,18 @@ export default function UsersPage() {
   });
 
   const activeRole = isAdding ? editForm.role : selectedUser?.role || editForm.role;
-  const isEmployee = activeRole && activeRole !== "student" && activeRole !== "parents";
-  const isFaculty = activeRole === "faculty";
+  const activeAdditionalRoles = isAdding ? editForm.additional_roles : selectedUser?.additional_roles || editForm.additional_roles || [];
+  const allActiveRoles = [activeRole, ...(Array.isArray(activeAdditionalRoles) ? activeAdditionalRoles : [])].filter(Boolean);
+
+  const hasRole = (role: string) => allActiveRoles.includes(role);
+
+  const isEmployee = allActiveRoles.length > 0 && !allActiveRoles.every((r) => r === "student" || r === "parents");
+  const isFaculty = hasRole("faculty");
   const isPartTimeOrVisiting =
     isFaculty &&
     (editForm.employment_type === "part_time" || editForm.employment_type === "visiting");
-  const isPaperChecker = activeRole === "paper_checker";
-  const isExaminer = activeRole === "exam_supervisor";
+  const isPaperChecker = hasRole("paper_checker");
+  const isExaminer = hasRole("exam_supervisor");
   const showSalary =
     isEmployee && !(isFaculty && isPartTimeOrVisiting) && !isPaperChecker && !isExaminer;
 
@@ -1179,9 +1210,11 @@ export default function UsersPage() {
                     ) : (
                       <div className="text-sm font-medium text-text-primary pt-0.5 flex flex-wrap gap-1">
                         {selectedUser?.branches && selectedUser?.branches.length > 0
-                          ? Array.from(new Set(selectedUser.branches)).map((bId: string) => {
-                              const bLabel = branchOptions.find((o) => String(o.value) === String(bId))?.label || bId;
-                              return <span key={bId} className="inline-flex bg-muted/50 px-2 py-0.5 rounded-md text-xs">{bLabel}</span>;
+                          ? Array.from(new Set(selectedUser.branches)).map((bId: any) => {
+                              const strId = typeof bId === "object" && bId !== null ? String(bId.id || bId.value || "") : String(bId);
+                              const objName = typeof bId === "object" && bId !== null ? bId.name || bId.label : null;
+                              const bLabel = objName || branchOptions.find((o) => String(o.value) === strId)?.label || strId;
+                              return <span key={strId} className="inline-flex bg-muted/50 px-2 py-0.5 rounded-md text-xs">{bLabel}</span>;
                             })
                           : "N/A"}
                       </div>
@@ -1335,10 +1368,12 @@ export default function UsersPage() {
                           Secondary Roles
                         </Label>
                         <div className="flex flex-wrap gap-1 pt-1">
-                          {Array.from(new Set(selectedUser.additional_roles)).map((rId: string) => {
-                            const rLabel = ROLE_CHOICES.find(o => o.value === rId)?.label || rId;
+                          {Array.from(new Set(selectedUser.additional_roles)).map((rId: any) => {
+                            const strId = typeof rId === "object" && rId !== null ? String(rId.id || rId.value || "") : String(rId);
+                            const objName = typeof rId === "object" && rId !== null ? rId.name || rId.label : null;
+                            const rLabel = objName || ROLE_CHOICES.find((r) => r.value === strId)?.label || strId;
                             return (
-                              <span key={rId} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary/10 text-secondary-foreground border border-secondary/20">
+                              <span key={strId} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary/10 text-secondary-foreground border border-secondary/20">
                                 {rLabel}
                               </span>
                             );
@@ -1662,6 +1697,78 @@ export default function UsersPage() {
                         ) : (
                           <div className="text-sm font-medium text-text-primary pt-0.5">
                             {selectedUser?.specialization || "N/A"}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1 flex flex-col">
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                          Levels
+                        </Label>
+                        {isEditing || isAdding ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className="w-full justify-between font-normal bg-background h-auto min-h-9 py-1.5"
+                              >
+                                <div className="flex gap-1 flex-wrap items-center mr-2">
+                                  {editForm.levels && editForm.levels.length > 0 ? (
+                                    editForm.levels.map(l => {
+                                      const lvlDetail = academicLevels.find(al => al.id === l);
+                                      return (
+                                        <span key={l} className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground border border-border/50">
+                                          {lvlDetail ? lvlDetail.name : l}
+                                        </span>
+                                      );
+                                    })
+                                  ) : (
+                                    <span className="text-muted-foreground">Select Levels</span>
+                                  )}
+                                </div>
+                                <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-56 max-h-60 overflow-y-auto">
+                              {academicLevels.map((lvl) => (
+                                <DropdownMenuCheckboxItem
+                                  key={lvl.id}
+                                  checked={editForm.levels.includes(lvl.id)}
+                                  onSelect={(e) => e.preventDefault()}
+                                  onCheckedChange={(checked) => {
+                                    setEditForm((f) => {
+                                      const newLevels = checked
+                                        ? [...f.levels, lvl.id]
+                                        : f.levels.filter((v) => v !== lvl.id);
+                                      return { ...f, levels: newLevels};
+                                    });
+                                  }}
+                                >
+                                  {lvl.name}
+                                </DropdownMenuCheckboxItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : (
+                          <div className="flex flex-wrap gap-1 pt-1">
+                            {selectedUser?.levels_details && selectedUser.levels_details.length > 0
+                              ? selectedUser.levels_details.map((lvlDetail: any) => (
+                                  <span key={lvlDetail.id} className="inline-flex bg-muted/50 px-2 py-0.5 rounded-md text-xs border border-border/50">
+                                    {lvlDetail.name}
+                                  </span>
+                                ))
+                              : selectedUser?.levels && selectedUser.levels.length > 0
+                                ? selectedUser.levels.map((lvl: any) => {
+                                    const lvlStr = typeof lvl === "object" && lvl !== null ? lvl.id : lvl;
+                                    const lvlName = typeof lvl === "object" && lvl !== null && lvl.name ? lvl.name : lvlStr;
+                                    const lvlDetail = academicLevels.find(al => al.id === lvlStr);
+                                    return (
+                                      <span key={lvlStr} className="inline-flex bg-muted/50 px-2 py-0.5 rounded-md text-xs border border-border/50">
+                                        {lvlDetail ? lvlDetail.name : lvlName}
+                                      </span>
+                                    );
+                                  })
+                                : <span className="text-sm font-medium text-text-primary pt-0.5">{selectedUser?.level || "N/A"}</span>}
                           </div>
                         )}
                       </div>
