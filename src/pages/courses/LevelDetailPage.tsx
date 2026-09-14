@@ -148,7 +148,6 @@ export default function LevelDetailPage() {
   const [chapterForm, setChapterForm] = useState({
     name: "",
     description: "",
-    order: 1,
     duration_hours: 0,
     is_active: true,
     faculties: [] as string[],
@@ -346,14 +345,13 @@ export default function LevelDetailPage() {
       setChapterForm({
         name: chapter.name || "",
         description: chapter.description || "",
-        order: chapter.order || 1,
         duration_hours: chapter.duration_hours || 0,
         is_active: chapter.is_active !== false,
         faculties: chapter.faculties || [],
       });
     } else {
       setEditingChapter(null);
-      setChapterForm({ name: "", description: "", order: 1, duration_hours: 0, is_active: true, faculties: [] });
+      setChapterForm({ name: "", description: "", duration_hours: 0, is_active: true, faculties: [] });
     }
     setChapterModalOpen(true);
   };
@@ -363,7 +361,6 @@ export default function LevelDetailPage() {
     const payload = {
       name: chapterForm.name.trim(),
       description: chapterForm.description.trim(),
-      order: Number(chapterForm.order),
       duration_hours: Number(chapterForm.duration_hours),
       is_active: chapterForm.is_active,
       faculties: chapterForm.faculties,
@@ -714,13 +711,10 @@ export default function LevelDetailPage() {
                                 </div>
                                 {subject.chapters && subject.chapters.length > 0 ? (
                                   <div className="space-y-3">
-                                    {subject.chapters.sort((a: any, b: any) => (a.order || 0) - (b.order || 0)).map((chapter: any) => (
+                                    {subject.chapters.map((chapter: any) => (
                                       <div key={chapter.id} className="group relative flex items-start justify-between p-4 rounded-xl bg-background border border-border/60 hover:border-primary/40 hover:shadow-sm transition-all">
                                         <div className="space-y-1.5">
                                           <div className="flex items-center gap-2.5">
-                                            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary font-bold text-xs">
-                                              {chapter.order || "-"}
-                                            </span>
                                             <span className="font-semibold text-text-primary text-base">
                                               {chapter.name}
                                             </span>
@@ -733,11 +727,9 @@ export default function LevelDetailPage() {
                                               {chapter.description}
                                             </p>
                                           )}
-                                          {chapter.duration_hours > 0 && (
-                                            <p className="text-xs font-medium text-muted-foreground/80 pl-8 flex items-center gap-1">
-                                              <Clock className="w-3 h-3" /> {chapter.duration_hours} duration hours
-                                            </p>
-                                          )}
+                                          <p className="text-xs font-medium text-muted-foreground/80 pl-8 flex items-center gap-1">
+                                            <Clock className="w-3 h-3" /> {chapter.duration_hours > 0 ? `${chapter.duration_hours} duration hours` : "Not Defined"}
+                                          </p>
                                           {chapter.faculties_details && chapter.faculties_details.length > 0 && (
                                             <div className="pl-8 pt-1 flex flex-wrap gap-1">
                                               {chapter.faculties_details.map((faculty: any) => (
@@ -955,10 +947,6 @@ export default function LevelDetailPage() {
             <div className="space-y-1">
               <Label htmlFor="chap-name">Chapter Name <span className="text-destructive">*</span></Label>
               <Input id="chap-name" value={chapterForm.name} onChange={(e) => setChapterForm({ ...chapterForm, name: e.target.value })} />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="chap-order">Sequence Order</Label>
-              <Input id="chap-order" type="number" min="1" value={chapterForm.order} onChange={(e) => setChapterForm({ ...chapterForm, order: Number(e.target.value) })} />
             </div>
             <div className="space-y-1">
               <Label htmlFor="chap-desc">Description</Label>

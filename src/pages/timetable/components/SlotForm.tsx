@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,6 +14,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { useDispatch } from "react-redux";
+import { API } from "@/service/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -177,13 +179,14 @@ interface SlotFormProps {
   /** Fields that are pre-filled from grid context and should NOT be editable */
   lockedFields?:  (keyof SlotFormValues)[];
   batches:        { id: string; name: string }[];
-  subjects:       { id: string; name: string }[];
-  facultyList:    { id: string; name: string; employee_id?: string }[];
+  subjects:       { id: string; name: string; level_id?: string; level_name?: string; course_level_name?: string; level?: any }[];
+  levels?:        any[];
+  facultyList:    { id: string; name: string; employee_id?: string; levels?: any[] }[];
   classrooms:     { id: string; name: string }[];
   chapters:       { id: string; name: string; order: number; subject?: string }[];
   papers?:        { id: string; name: string; subject?: string; file?: string }[];
-  examinersList?: { id: string; name: string; employee_id?: string }[];
-  paperCheckersList?: { id: string; name: string; employee_id?: string }[];
+  examinersList?: { id: string; name: string; employee_id?: string; levels?: any[] }[];
+  paperCheckersList?: { id: string; name: string; employee_id?: string; levels?: any[] }[];
   loading:        boolean;
   onSubmit:       (payload: Record<string, any>, values: SlotFormValues) => void;
   onCancel:       () => void;
@@ -193,7 +196,7 @@ interface SlotFormProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function SlotForm({
-  defaultValues, lockedFields = [], batches, subjects, facultyList, classrooms,
+  defaultValues, lockedFields = [], batches, subjects, levels, facultyList, classrooms,
   chapters, papers = [], examinersList = [], paperCheckersList = [], loading, onSubmit, onCancel, isEdit,
 }: SlotFormProps) {
   const { control, register, handleSubmit, watch, setValue, formState: { errors } } = useForm<SlotFormValues>({
@@ -207,6 +210,8 @@ export default function SlotForm({
       ...defaultValues,
     },
   });
+
+  const dispatch = useDispatch();
 
   const isLocked = (field: keyof SlotFormValues) => lockedFields.includes(field);
 
@@ -234,7 +239,72 @@ export default function SlotForm({
     ? papers.filter(p => p.subject === selectedSubject)
     : [];
 
-  // Auto-fill start/end time when slot_code changes
+  const selectedBatchId = watch("batch");
+  const selectedBatch = batches.find((b: any) => b.id === selectedBatchId);
+  const selectedBatchName = selectedBatch?.name?.toLowerCase() || "";
+
+
+  
+  const isCSEET = selectedBatchName.includes("cseet");
+  const isExecutive = selectedBatchName.includes("executive");
+  const isProfessional = selectedBatchName.includes("professional");
+  const hasRecognizedLevel = isCSEET || isExecutive || isProfessional;
+
+  const matchesBatchLevel = (targetStr: string | undefined | null) => {
+    if (!targetStr) return false;
+    const lowerTarget = targetStr.toLowerCase();
+    if (isCSEET && lowerTarget.includes("cseet")) return true;
+    if (isExecutive && lowerTarget.includes("executive")) return true;
+    if (isProfessional && lowerTarget.includes("professional")) return true;
+    return false;
+  };
+
+  const filteredSubjects = subjects.filter((subject: any) => {
+    if (!selectedBatchId || !hasRecognizedLevel) return true;
+    
+    let subjectLevelName = subject.level_name || subject.course_level_name || subject.level?.name;
+    
+    if (!subjectLevelName && subject.level_id && levels && levels.length > 0) {
+      const foundLevel = levels.find(l => l.id === subject.level_id);
+      if (foundLevel) {
+        subjectLevelName = foundLevel.name;
+      }
+    }
+    
+    if (subjectLevelName && typeof subjectLevelName === 'string') {
+      return matchesBatchLevel(subjectLevelName);
+    }
+    
+    if (subject.level && typeof subject.level === 'object' && subject.level.name) {
+      return matchesBatchLevel(subject.level.name);
+    }
+    
+    if (subject.name && typeof subject.name === 'string') {
+      if (matchesBatchLevel(subject.name)) return true;
+    }
+    
+    return true; // Fallback to showing it instead of hiding if we can't determine the level
+  });
+
+  const filterStaffByLevel = (staffList: any[]) => {
+    return staffList.filter((staff: any) => {
+      if (!selectedBatchId || !hasRecognizedLevel) return true;
+      if (staff.levels && Array.isArray(staff.levels) && staff.levels.length > 0) {
+        const matches = staff.levels.some((lvl: any) => {
+          const lvlStr = typeof lvl === 'string' ? lvl : (lvl?.name || lvl?.level_name || "");
+          return matchesBatchLevel(lvlStr);
+        });
+        if (!matches) return false;
+        return true;
+      }
+      return true;
+    });
+  };
+
+  const filteredFacultyList = filterStaffByLevel(facultyList);
+  const filteredExaminersList = filterStaffByLevel(examinersList);
+  const filteredPaperCheckersList = filterStaffByLevel(paperCheckersList);
+
   const slotCode = watch("slot_code");
   useEffect(() => {
     if (slotCode) {
@@ -328,7 +398,7 @@ export default function SlotForm({
             <SelectValue placeholder="Select supervisor..." />
           </SelectTrigger>
           <SelectContent className="max-h-[250px]">
-            {examinersList.map((fac) => (
+            {filteredExaminersList.map((fac) => (
               <SelectItem key={fac.id} value={fac.id}>
                 {fac.name} {fac.employee_id ? `(${fac.employee_id})` : ""}
               </SelectItem>
@@ -347,7 +417,7 @@ export default function SlotForm({
             <SelectValue placeholder="Select paper checker..." />
           </SelectTrigger>
           <SelectContent className="max-h-[250px]">
-            {paperCheckersList.map((fac) => (
+            {filteredPaperCheckersList.map((fac) => (
               <SelectItem key={fac.id} value={fac.id}>
                 {fac.name} {fac.employee_id ? `(${fac.employee_id})` : ""}
               </SelectItem>
@@ -396,7 +466,7 @@ export default function SlotForm({
             <Select value={field.value || ""} onValueChange={field.onChange}>
               <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select subject" /></SelectTrigger>
               <SelectContent>
-                {subjects.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                {filteredSubjects.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
               </SelectContent>
             </Select>
           )} />
@@ -407,7 +477,7 @@ export default function SlotForm({
             <Select value={field.value || ""} onValueChange={field.onChange}>
               <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select faculty" /></SelectTrigger>
               <SelectContent>
-                {facultyList.map(f => (
+                {filteredFacultyList.map(f => (
                   <SelectItem key={f.id} value={f.id}>{f.name} {f.employee_id ? `(${f.employee_id})` : ""}</SelectItem>
                 ))}
               </SelectContent>

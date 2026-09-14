@@ -132,6 +132,71 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
   );
 };
 
+const ReimbursementNoteCell = ({ row }: { row: any }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (!row.reimbursement_notes || row.reimbursement_notes.length === 0) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-6 px-2 text-primary hover:text-primary/80 mt-1"
+        onClick={() => setIsOpen(true)}
+      >
+        View Reimbursement Note
+      </Button>
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-[600px] ">
+          <DialogHeader>
+            <DialogTitle>Reimbursement Note</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 max-h-[70vh] overflow-y-auto">
+            <div className="space-y-3">
+              {row.reimbursement_notes.map((note: any, idx: number) => (
+                <div key={idx} className="bg-white p-4 rounded-lg border border-border shadow-sm">
+                  <div className="flex justify-between items-start gap-4">
+                    <div>
+                      <h4 className="font-medium text-sm text-foreground">
+                        {note.event || "Reimbursement / Claim"}
+                      </h4>
+                      {note.kms ? (
+                        <p className="text-xs text-muted-foreground mt-0.5 mb-3">
+                          {note.kms} kms
+                        </p>
+                      ) : null}
+                    </div>
+                    <span className="font-mono text-sm text-green-600 font-medium shrink-0 bg-green-50 px-2 py-1 rounded-md border border-green-100">
+                      ₹{Number(note.expense || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  {note.date && (
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      <Badge variant="outline" className="text-[11px] font-normal bg-slate-50 text-slate-600 border-slate-200">
+                        {note.date}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
+
 const STATUS_BADGE: Record<string, string> = {
   draft: "bg-gray-100 text-gray-700",
   pending_approval: "bg-yellow-100 text-yellow-700",
@@ -299,7 +364,7 @@ export default function PayslipsTab() {
       </div>
 
       {payslipsLoading ? (
-        <TableSkeleton columns={7} rows={6} className="mt-0" />
+        <TableSkeleton columns={12} rows={6} className="mt-0" />
       ) : (
         <div className="bg-white rounded-xl border border-border overflow-hidden">
           <div className="overflow-x-auto">
@@ -313,6 +378,7 @@ export default function PayslipsTab() {
                     "Hours / Amount",
                     "Bonus",
                     "Reimbursements",
+                    "Reimb. Note",
                     "Deductions",
                     "Deduction Note",
                     "Net Salary",
@@ -331,7 +397,7 @@ export default function PayslipsTab() {
               <tbody>
                 {payslips.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="text-center py-12 text-muted-foreground text-sm">
+                    <td colSpan={12} className="text-center py-12 text-muted-foreground text-sm">
                       No payslips found.
                     </td>
                   </tr>
@@ -405,6 +471,9 @@ export default function PayslipsTab() {
                         {Number(slip.reimbursements_amount || 0) > 0
                           ? `₹${Number(slip.reimbursements_amount).toLocaleString("en-IN")}`
                           : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-xs">
+                        <ReimbursementNoteCell row={slip} />
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-red-600">
                         ₹

@@ -212,6 +212,7 @@ export default function TimetablePage() {
               name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim(),
               employee_id: item.employee_id,
               user_id: item.user || item.user_id,
+              levels: item.levels || (item.level ? [item.level] : []),
             })),
           }));
         }
@@ -236,6 +237,7 @@ export default function TimetablePage() {
             employee_id: item.employee_id,
             role: item.role,
             roles: item.roles,
+            levels: item.levels || (item.level ? [item.level] : []),
           }));
           setExaminersList(parsed);
         }
@@ -258,6 +260,7 @@ export default function TimetablePage() {
             employee_id: item.employee_id,
             role: item.role,
             roles: item.roles,
+            levels: item.levels || (item.level ? [item.level] : []),
           }));
           setPaperCheckersList(parsed);
         }
@@ -271,6 +274,7 @@ export default function TimetablePage() {
 
   const subjects = Array.isArray(dropdowns.subjects) ? dropdowns.subjects : [];
   const facultyList = Array.isArray(dropdowns.faculty) ? dropdowns.faculty : [];
+  const levels = Array.isArray(dropdowns.levels) ? dropdowns.levels : [];
 
   return (
     <div className="space-y-4">
@@ -365,6 +369,7 @@ export default function TimetablePage() {
             <SlotsTab
                batches={batches}
                subjects={subjects}
+               levels={levels}
                facultyList={facultyList}
                classrooms={classrooms}
                chapters={chapters}
@@ -381,6 +386,7 @@ export default function TimetablePage() {
             <SlotsTab
               batches={batches}
               subjects={subjects}
+              levels={levels}
               facultyList={facultyList}
               classrooms={classrooms}
               chapters={chapters}

@@ -389,8 +389,17 @@ export default function SalesActivitiesTab() {
     }
   };
 
+  const handleOpenGeneralPhoto = (type: SalesPhotoType) => {
+    setSelectedActivity(null);
+    setPhotoType(type);
+    setPhotoOpen(true);
+  };
+
   const handleUploadPhoto = async () => {
-    if (!selectedActivity) return;
+    if (!selectedActivity && photoType !== "start_selfie" && photoType !== "end_selfie") {
+      toast.error("Please select an activity to upload this photo type.");
+      return;
+    }
     if (!photoFile) {
       toast.error("Please select a photo to upload");
       return;
@@ -431,7 +440,11 @@ export default function SalesActivitiesTab() {
       }
       formData.append("captured_at", new Date().toISOString());
 
-      const res = await fetch(`${baseUrl}${API.SALES.ACTIVITY_PHOTOS(selectedActivity.id)}`, {
+      const endpoint = selectedActivity 
+        ? `${baseUrl}${API.SALES.ACTIVITY_PHOTOS(selectedActivity.id)}` 
+        : `${baseUrl}${API.SALES.PHOTOS}`;
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -546,7 +559,7 @@ export default function SalesActivitiesTab() {
           <Button variant="outline" size="sm" className="h-9 gap-1" onClick={fetchPlans}>
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
-          {!isSalesStaff && (
+          {!isSalesStaff ? (
             <Button
               variant="default"
               size="sm"
@@ -555,6 +568,33 @@ export default function SalesActivitiesTab() {
             >
               <CheckCircle2 className="w-3.5 h-3.5" /> Monthly Settlement
             </Button>
+          ) : (
+            <div className="flex gap-2">
+              <Button
+                variant="default"
+                size="sm"
+                className="h-9 gap-1 bg-green-600 hover:bg-green-700 text-white"
+                onClick={() => handleOpenGeneralPhoto("start_selfie")}
+              >
+                <Camera className="w-3.5 h-3.5" /> Check-In
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                className="h-9 gap-1 bg-primary text-primary-foreground"
+                onClick={() => setCreateOpen(true)}
+              >
+                <Plus className="w-3.5 h-3.5" /> Plan Activity
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                className="h-9 gap-1 bg-red-600 hover:bg-red-700 text-white"
+                onClick={() => handleOpenGeneralPhoto("end_selfie")}
+              >
+                <Camera className="w-3.5 h-3.5" /> Check-Out
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -625,6 +665,20 @@ export default function SalesActivitiesTab() {
                           <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                             <Camera className="w-3.5 h-3.5" /> Geo-Tagged Evidence ({act.photos.length})
                           </h4>
+                          {isSalesStaff && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => {
+                                setSelectedActivity(act);
+                                setPhotoType("start_odometer");
+                                setPhotoOpen(true);
+                              }}
+                            >
+                              <Plus className="w-3 h-3 mr-1" /> Add Photo
+                            </Button>
+                          )}
                         </div>
 
                   {act.photos.length === 0 ? (

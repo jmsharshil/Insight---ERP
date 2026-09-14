@@ -356,6 +356,7 @@ BATCHES: {
     PLANS: "/api/v1/sales/plans/",
     PLAN_DETAIL: (id: string | number) => `/api/v1/sales/plans/${id}/`,
     ACTIVITIES: "/api/v1/sales/activities/",
+    PHOTOS: "/api/v1/sales/photos/",
     ACTIVITY_DETAIL: (id: string | number) => `/api/v1/sales/activities/${id}/`,
     ACTIVITY_PHOTOS: (activityId: string | number) => `/api/v1/sales/activities/${activityId}/photos/`,
     ODOMETER_READINGS: "/api/v1/sales/odometer-readings/",
