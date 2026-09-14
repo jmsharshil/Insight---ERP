@@ -57,15 +57,15 @@ interface SlotsTabProps {
   papers:         { id: string; name: string; subject?: string; file?: string }[];
   examinersList:  { id: string; name: string; employee_id?: string }[];
   paperCheckersList: { id: string; name: string; employee_id?: string }[];
-  paperCheckersList: { id: string; name: string; employee_id?: string }[];
   defaultView?:   "grid" | "list";
   studentDetail?: any;
   onFiltersChange?: (filters: any) => void;
+  levels?:        any[];
 }
 
 export default function SlotsTab({
   batches, subjects, facultyList, classrooms, chapters, papers,
-  examinersList, paperCheckersList, defaultView = "list", studentDetail, onFiltersChange
+  examinersList, paperCheckersList, defaultView = "list", studentDetail, onFiltersChange, levels = []
 }: SlotsTabProps) {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
@@ -335,6 +335,7 @@ export default function SlotsTab({
             <SlotForm
               batches={filteredBatches}
               subjects={subjects}
+              levels={levels}
               facultyList={facultyList}
               classrooms={classrooms}
               chapters={chapters}
@@ -593,6 +594,7 @@ export default function SlotsTab({
           <SlotForm
             batches={filteredBatches}
             subjects={subjects}
+            levels={levels}
             facultyList={facultyList}
             classrooms={classrooms}
             chapters={chapters}
