@@ -25,6 +25,7 @@ export interface SalesDailyActivity {
   user: string;
   user_name: string;
   plan: string;
+  name?: string;
   activity_date: string;
   notes: string;
   photos: SalesActivityPhoto[];
@@ -49,6 +50,8 @@ export interface OdometerReading {
   activity_date: string;
   user: string;
   user_name: string;
+  vehicle_type?: '2W' | '4W' | string;
+  vehicle_type_display?: string;
   start_kms: string;
   end_kms: string;
   total_kms: string;
@@ -82,6 +85,7 @@ export interface SalesDailyPlan {
   reminder_sent?: boolean;
   day_of_reminder_sent?: boolean;
   activities: SalesDailyActivity[];
+  photos?: SalesActivityPhoto[];
   created_at: string;
   updated_at: string;
 }

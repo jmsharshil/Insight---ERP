@@ -98,6 +98,7 @@ type DocumentKey =
   | "doc_signature"
   | "doc_dob_certificate"
   | "doc_id_card"
+  | "doc_pan_card"
   | "doc_twelfth_receipt"
   | "doc_twelfth_marksheet"
   | "doc_category_cert";
@@ -112,7 +113,8 @@ const DOCUMENT_TYPES: readonly DocType[] = [
   { key: "doc_photo", label: "Photograph", icon: Camera },
   { key: "doc_signature", label: "Signature", icon: PenTool },
   { key: "doc_dob_certificate", label: "DOB Certificate / 10th Marksheet", icon: Baby },
-  { key: "doc_id_card", label: "ID Proof (Aadhar/PAN/License)", icon: CreditCard },
+  { key: "doc_id_card", label: "Aadhar Card", icon: CreditCard },
+  { key: "doc_pan_card", label: "PAN Card", icon: CreditCard },
   { key: "doc_twelfth_receipt", label: "12th Receipt / Hall Ticket", icon: FileCheck },
   { key: "doc_twelfth_marksheet", label: "12th Marksheet", icon: GraduationCap },
   { key: "doc_category_cert", label: "Category Certificate", icon: BadgeCheck },

@@ -223,6 +223,7 @@ export default function StudentAdmissionForm() {
   const [docSignature, setDocSignature] = useState<File | null>(null);
   const [docPhoto, setDocPhoto] = useState<File | null>(null);
   const [docIdCard, setDocIdCard] = useState<File | null>(null);
+  const [docPanCard, setDocPanCard] = useState<File | null>(null);
   const [docDobCertificate, setDocDobCertificate] = useState<File | null>(null);
   const [doc12thReceipt, setDoc12thReceipt] = useState<File | null>(null);
   const [doc12thMarkSheet, setDoc12thMarkSheet] = useState<File | null>(null);
@@ -309,6 +310,7 @@ export default function StudentAdmissionForm() {
     if (docSignature) payload.append("doc_signature", docSignature);
     if (docPhoto) payload.append("doc_photo", docPhoto);
     if (docIdCard) payload.append("doc_id_card", docIdCard);
+    if (docPanCard) payload.append("doc_pan_card", docPanCard);
     if (docDobCertificate) payload.append("doc_dob_certificate", docDobCertificate);
     if (doc12thReceipt) payload.append("doc_twelfth_receipt", doc12thReceipt);
     if (doc12thMarkSheet) payload.append("doc_twelfth_marksheet", doc12thMarkSheet);
@@ -465,10 +467,17 @@ export default function StudentAdmissionForm() {
                 // required
               />
               <FileUploadField
-                label="ID Card (Aadhar Card, License, Pan Card)"
+                label="Aadhar Card"
                 icon={CreditCard}
                 file={docIdCard}
                 onFileChange={setDocIdCard}
+                // required
+              />
+              <FileUploadField
+                label="PAN Card"
+                icon={CreditCard}
+                file={docPanCard}
+                onFileChange={setDocPanCard}
                 // required
               />
               <FileUploadField
