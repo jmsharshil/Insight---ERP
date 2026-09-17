@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Gauge,
   User,
+  Users,
   Image as ImageIcon,
   CheckCircle2,
   Navigation,
@@ -593,9 +594,73 @@ export default function SalesActivitiesTab() {
               <h3 className="text-lg font-bold border-b pb-2 text-primary flex items-center gap-2">
                  <User className="w-5 h-5" /> {userName}
               </h3>
+              {(() => {
+                const uniquePhotosMap = new Map<string, any>();
+                userPlans.forEach(plan => {
+                  if (plan.photos) {
+                    plan.photos.forEach((p: any) => uniquePhotosMap.set(p.id, p));
+                  }
+                });
+                const photosArray = Array.from(uniquePhotosMap.values());
+                if (photosArray.length === 0) return null;
+                return (
+                  <div className="mb-4">
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-2">
+                      <Camera className="w-3.5 h-3.5" /> Plan Photos ({photosArray.length})
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                      {photosArray.map((p: any) => (
+                        <div
+                          key={p.id}
+                          className="group relative rounded-lg border border-border/80 bg-background overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                          onClick={() => setPreviewPhoto(p)}
+                        >
+                          <div className="aspect-video w-full bg-muted/40 relative flex items-center justify-center overflow-hidden">
+                            <img
+                              src={p.photo}
+                              alt={p.photo_type_display || p.photo_type}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                              onError={(e) => {
+                                (e.target as any).src = "https://placehold.co/400x300?text=Photo+Unavailable";
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                              <Eye className="w-5 h-5" />
+                            </div>
+                          </div>
+                          <div className="p-2 space-y-1">
+                            <div className="text-[11px] font-semibold truncate text-foreground">
+                              {p.photo_type_display || PHOTO_TYPE_LABELS[p.photo_type] || p.photo_type}
+                            </div>
+                            {p.odometer_kms && (
+                              <div className="text-[10px] text-primary font-bold flex items-center gap-1">
+                                <Gauge className="w-3 h-3" /> {p.odometer_kms} km
+                              </div>
+                            )}
+                            {p.latitude && p.longitude ? (
+                              <a
+                                href={`https://www.google.com/maps?q=${p.latitude},${p.longitude}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 truncate group/loc w-fit max-w-full"
+                                onClick={(e) => e.stopPropagation()}
+                                title="Open location in Google Maps"
+                              >
+                                <MapPin className="w-2.5 h-2.5 text-red-500 shrink-0 group-hover/loc:scale-110 transition-transform" />
+                                <span className="underline underline-offset-2 truncate">
+                                  {p.latitude.substring(0, 7)}, {p.longitude.substring(0, 7)}
+                                </span>
+                              </a>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
               <div className="grid grid-cols-1 gap-4">
-                {userPlans.map((plan) => {
-            return (
+                {userPlans.map((plan) => (
               <motion.div
                 key={plan.id}
                 initial={{ opacity: 0, y: 5 }}
@@ -646,109 +711,106 @@ export default function SalesActivitiesTab() {
                   </div>
                 </div>
 
-                {plan.photos && plan.photos.length > 0 && (
-                  <div>
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-2">
-                      <Camera className="w-3.5 h-3.5" /> Plan Photos ({plan.photos.length})
-                    </h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                      {plan.photos.map((p) => (
-                        <div
-                          key={p.id}
-                          className="group relative rounded-lg border border-border/80 bg-background overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-                          onClick={() => setPreviewPhoto(p)}
-                        >
-                          <div className="aspect-video w-full bg-muted/40 relative flex items-center justify-center overflow-hidden">
-                            <img
-                              src={p.photo}
-                              alt={p.photo_type_display || p.photo_type}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                              onError={(e) => {
-                                (e.target as any).src = "https://placehold.co/400x300?text=Photo+Unavailable";
-                              }}
-                            />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                              <Eye className="w-5 h-5" />
-                            </div>
-                          </div>
-                          <div className="p-2 space-y-1">
-                            <div className="text-[11px] font-semibold truncate text-foreground">
-                              {p.photo_type_display || PHOTO_TYPE_LABELS[p.photo_type] || p.photo_type}
-                            </div>
-                            {p.odometer_kms && (
-                              <div className="text-[10px] text-primary font-bold flex items-center gap-1">
-                                <Gauge className="w-3 h-3" /> {p.odometer_kms} km
-                              </div>
-                            )}
-                            {p.latitude && p.longitude ? (
-                              <a
-                                href={`https://www.google.com/maps?q=${p.latitude},${p.longitude}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[10px] text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 truncate group/loc w-fit max-w-full"
-                                onClick={(e) => e.stopPropagation()}
-                                title="Open location in Google Maps"
-                              >
-                                <MapPin className="w-2.5 h-2.5 text-red-500 shrink-0 group-hover/loc:scale-110 transition-transform" />
-                                <span className="underline underline-offset-2 truncate">
-                                  {p.latitude.substring(0, 7)}, {p.longitude.substring(0, 7)}
-                                </span>
-                              </a>
-                            ) : null}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+
 
                 {/* Iterate over nested activities */}
-                {plan.activities && plan.activities.length > 0 ? plan.activities.map((act) => {
-                  const startOdo = act.photos.find((p) => p.photo_type === "start_odometer")?.odometer_kms;
-                  const endOdo = act.photos.find((p) => p.photo_type === "end_odometer")?.odometer_kms;
-                  const distance =
-                    startOdo && endOdo
-                      ? (Number(endOdo) - Number(startOdo)).toFixed(1)
-                      : null;
-                      
-                  return (
-                    <div key={act.id} className="mt-4 pt-4 border-t border-dashed border-border/50">
-                      {act.name && (
-                        <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5">
-                           <Navigation className="w-4 h-4 text-primary" /> {act.name}
-                        </h4>
-                      )}
-                      {act.notes && (
-                        <p className="text-xs text-muted-foreground flex items-start gap-1.5 pt-0.5 mb-3">
-                          <FileText className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
-                          <span>{act.notes}</span>
-                        </p>
-                      )}
-                      {/* Verification Photos Timeline */}
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                            <Camera className="w-3.5 h-3.5" /> Geo-Tagged Evidence ({act.photos.length})
-                          </h4>
-                          {isSalesStaff && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => {
-                                setSelectedActivity(act);
-                                setPhotoType("start_odometer");
-                                setPhotoOpen(true);
-                              }}
-                            >
-                              <Plus className="w-3 h-3 mr-1" /> Add Photo
-                            </Button>
-                          )}
-                        </div>
+                {plan.activities && plan.activities.length > 0 ? (
+                  <div className="mt-8 pt-6 border-t border-border/40">
+                    <div className="flex items-center gap-2 mb-5">
+                      <div className="w-1.5 h-5 bg-primary rounded-full"></div>
+                      <h4 className="text-base font-bold text-foreground tracking-tight">Activity Tasks ({plan.activities.length})</h4>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 gap-5">
+                      {plan.activities.map((act, index) => {
+                        const startOdo = act.photos.find((p) => p.photo_type === "start_odometer")?.odometer_kms;
+                        const endOdo = act.photos.find((p) => p.photo_type === "end_odometer")?.odometer_kms;
+                        const distance =
+                          startOdo && endOdo
+                            ? (Number(endOdo) - Number(startOdo)).toFixed(1)
+                            : null;
+                            
+                        return (
+                          <div key={act.id} className="bg-card/40 border border-border/60 rounded-xl overflow-hidden hover:bg-card/80 hover:shadow-sm hover:border-border/80 transition-all">
+                            <div className="p-4 border-b border-border/50 bg-muted/20 flex flex-wrap items-center justify-between gap-3">
+                                {act.name && (
+                                  <div className="flex items-center gap-3">
+                                     <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary font-bold text-sm shadow-sm border border-primary/10">
+                                        {index + 1}
+                                     </div>
+                                     <div>
+                                       <h4 className="text-sm font-bold text-foreground">
+                                         {act.name}
+                                       </h4>
+                                       <p className="text-[11px] text-muted-foreground font-medium mt-0.5">
+                                         Sub-Activity Log
+                                       </p>
+                                     </div>
+                                  </div>
+                                )}
+                                {isSalesStaff && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-xs bg-background shadow-sm hover:bg-primary hover:text-primary-foreground transition-colors"
+                                    onClick={() => {
+                                      setSelectedActivity(act);
+                                      setPhotoType("start_odometer");
+                                      setPhotoOpen(true);
+                                    }}
+                                  >
+                                    <Camera className="w-3.5 h-3.5 mr-1.5" /> Upload Evidence
+                                  </Button>
+                                )}
+                            </div>
+
+                            <div className="p-5 space-y-6">
+                        {act.notes && (
+                          <div className="bg-background rounded-lg p-3 border border-border/40 text-xs text-muted-foreground flex gap-2.5 shadow-sm">
+                            <FileText className="w-4 h-4 text-primary/70 shrink-0 mt-0.5" />
+                            <p className="leading-relaxed text-foreground/80">{act.notes}</p>
+                          </div>
+                        )}
+
+                        {(act.students_expected != null || act.students_attended != null) && (
+                          <div className="flex flex-wrap gap-3">
+                            {act.students_expected != null && (
+                              <div className="flex items-center gap-2.5 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 px-3 py-2 rounded-lg border border-blue-100 dark:border-blue-900/50 flex-1 min-w-[140px] shadow-sm">
+                                <div className="p-1.5 bg-blue-100 dark:bg-blue-900/50 rounded-md">
+                                  <Users className="w-4 h-4" />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] uppercase font-bold opacity-80 leading-none mb-0.5">Students Expected</span>
+                                  <span className="text-sm font-bold leading-tight">{act.students_expected}</span>
+                                </div>
+                              </div>
+                            )}
+                            {act.students_attended != null && (
+                              <div className="flex items-center gap-2.5 bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 px-3 py-2 rounded-lg border border-green-100 dark:border-green-900/50 flex-1 min-w-[140px] shadow-sm">
+                                <div className="p-1.5 bg-green-100 dark:bg-green-900/50 rounded-md">
+                                  <CheckCircle2 className="w-4 h-4" />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] uppercase font-bold opacity-80 leading-none mb-0.5">Students Attended</span>
+                                  <span className="text-sm font-bold leading-tight">{act.students_attended}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Verification Photos Timeline */}
+                        <div className="pt-2">
+                          <div className="flex items-center gap-2 mb-3">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                              <Camera className="w-4 h-4 text-primary/70" /> Geo-Tagged Evidence
+                            </h4>
+                            <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-bold rounded-md bg-muted text-muted-foreground">{act.photos.length}</Badge>
+                          </div>
 
                   {act.photos.length === 0 ? (
-                    <div className="text-xs text-muted-foreground italic bg-muted/20 rounded-lg p-3">
-                      No verification photos uploaded yet for this day.
+                    <div className="text-xs text-muted-foreground italic bg-muted/30 border border-dashed border-border/60 rounded-lg p-4 text-center">
+                      No verification photos uploaded yet for this activity.
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -907,16 +969,19 @@ export default function SalesActivitiesTab() {
                     </div>
                   );
                 })()}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                }) : (
-                  <div className="text-xs text-muted-foreground italic bg-muted/20 rounded-lg p-3 text-center">
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground italic bg-muted/20 rounded-lg p-4 text-center mt-6 border border-dashed border-border/60">
                     No field activities recorded for this plan yet.
                   </div>
                 )}
               </motion.div>
-            );
-          })}
+            ))}
               </div>
             </div>
           ))}

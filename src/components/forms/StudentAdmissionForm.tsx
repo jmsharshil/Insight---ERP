@@ -6,6 +6,9 @@ import { useDropdown } from "@/hooks/useDropdown";
 import { admissionActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import { AppDispatch } from "@/store";
+import { axiosRequest } from "@/service/axiosRequest";
+import { type FeesStructure } from "@/redux/slices/feesSlice";
+import { formatCurrency } from "@/lib/utils";
 import logo from "@/assets/logo.png";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,6 +44,8 @@ import {
   PenTool,
   FileCheck,
   BadgeCheck,
+  AlertCircle,
+  Info,
 } from "lucide-react";
 
 import { THEME } from "@/config/theme";
@@ -205,8 +210,12 @@ export default function StudentAdmissionForm() {
   const [searchParams] = useSearchParams();
   const admissionId = searchParams.get("id") || "";
 
+  const [savedAdmissionId, setSavedAdmissionId] = useState<string | null>(admissionId || null);
+
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+
 
   // Fetch locations dropdown
   const {
@@ -235,6 +244,9 @@ export default function StudentAdmissionForm() {
     course: "cseet",
     group_module: "module_1",
     batch_attempt: "june",
+    attempt_year: new Date().getFullYear().toString(),
+    payment_type: "full_payment",
+    icsi_fees_payment: "pay_yourself",
     first_name: "",
     surname: "",
     father_name: "",
@@ -295,33 +307,135 @@ export default function StudentAdmissionForm() {
     }));
   }, [formData.course]);
 
-  /* ── Submit ── */
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  /* ─── Auto-set Course based on Qualification ───────────────── */
+  useEffect(() => {
+    setFormData((prev) => {
+      const q = prev.qualification;
+      let newCourse = prev.course;
+      if (q === "appearing_12" || q === "pass_12") {
+        newCourse = "cseet";
+      } else if (q === "cseet_pass" || q === "graduate" || q === "post_graduate") {
+        newCourse = "cs_executive";
+      } else if (q === "cs_executive_pass") {
+        newCourse = "cs_professional";
+      }
+      return newCourse !== prev.course ? { ...prev, course: newCourse } : prev;
+    });
+  }, [formData.qualification]);
 
-    if (!formData.consent) {
+  const getAvailableYears = (course: string, attempt: string, groupModule: string) => {
+    const current = new Date();
+    const currentYear = current.getFullYear();
+    const currentMonth = current.getMonth();
+    
+    let firstValidYear = currentYear;
+
+    if (course === "cseet") {
+      if (attempt === "june") {
+        if (currentMonth > 0) firstValidYear = currentYear + 1;
+      } else if (attempt === "oct") {
+        if (currentMonth > 4) firstValidYear = currentYear + 1;
+      } else if (attempt === "feb") {
+        if (currentMonth > 9) firstValidYear = currentYear + 2;
+        else firstValidYear = currentYear + 1;
+      }
+    } else {
+      if (attempt === "june") {
+        if (groupModule === "both" || groupModule === "full") {
+          if (currentMonth > 10) firstValidYear = currentYear + 2;
+          else firstValidYear = currentYear + 1;
+        } else {
+          if (currentMonth > 0) firstValidYear = currentYear + 1;
+        }
+      } else if (attempt === "dec") {
+        if (groupModule === "both" || groupModule === "full") {
+          if (currentMonth > 4) firstValidYear = currentYear + 1;
+        } else {
+          if (currentMonth > 6) firstValidYear = currentYear + 1;
+        }
+      }
+    }
+
+    return [firstValidYear, firstValidYear + 1, firstValidYear + 2, firstValidYear + 3].map(String);
+  };
+
+  const availableYears = getAvailableYears(formData.course, formData.batch_attempt, formData.group_module);
+
+  // Keep attempt_year valid
+  useEffect(() => {
+    if (!availableYears.includes(formData.attempt_year)) {
+      handleChange("attempt_year", availableYears[0]);
+    }
+  }, [availableYears, formData.attempt_year]);
+
+  const [matchedFee, setMatchedFee] = useState<FeesStructure | null>(null);
+
+  /* ─── Fetch Matching Fee Structure ──────────────────────────── */
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchFees = async () => {
+      try {
+        const response = await axiosRequest({
+          baseURL: import.meta.env.VITE_APP_BASE_URL,
+          url: API.FEES.STRUCTURES,
+          method: "GET",
+        });
+        
+        if (!isMounted) return;
+
+        const data: FeesStructure[] = response.data?.data || response.data?.results || (Array.isArray(response.data) ? response.data : []);
+        
+        const match = data.find(
+          (fs) =>
+            fs.is_active &&
+            fs.level_name?.toLowerCase().includes(formData.course.toLowerCase().replace("_", " ")) &&
+            fs.attempt === formData.batch_attempt &&
+            (String(fs.year) === formData.attempt_year || fs.name?.includes(formData.attempt_year))
+        );
+        setMatchedFee(match || null);
+      } catch (error) {
+        if (isMounted) {
+          console.error("Failed to fetch fees", error);
+        }
+      }
+    };
+
+    fetchFees();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [formData.course, formData.batch_attempt, formData.attempt_year, formData.group_module]);
+
+
+  const nextStep = () => { setCurrentStep(p => min(p + 1, 3)); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const prevStep = () => { setCurrentStep(p => max(p - 1, 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const min = Math.min;
+  const max = Math.max;
+
+  const handleNext = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (currentStep < 3) {
+      submitData(false);
+    } else {
+      submitData(true);
+    }
+  };
+
+  /* ── Submit ── */
+  const submitData = (isFinalStep: boolean) => {
+    if (isFinalStep && !formData.consent) {
       toast.error("Please accept the consent to proceed.");
       return;
     }
 
     const payload = new FormData();
 
-    // Append documents
-    if (docSignature) payload.append("doc_signature", docSignature);
-    if (docPhoto) payload.append("doc_photo", docPhoto);
-    if (docIdCard) payload.append("doc_id_card", docIdCard);
-    if (docPanCard) payload.append("doc_pan_card", docPanCard);
-    if (docDobCertificate) payload.append("doc_dob_certificate", docDobCertificate);
-    if (doc12thReceipt) payload.append("doc_twelfth_receipt", doc12thReceipt);
-    if (doc12thMarkSheet) payload.append("doc_twelfth_marksheet", doc12thMarkSheet);
-    if (docCategoryCertificate) payload.append("doc_category_cert", docCategoryCertificate);
-
-    // Append text fields
+    // Append text fields (always)
     Object.entries(formData).forEach(([key, value]) => {
       if (key === "reference_name") {
-        if (value) {
-          payload.append(key, String(value));
-        }
+        if (value) payload.append(key, String(value));
         return;
       }
       if (
@@ -338,25 +452,52 @@ export default function StudentAdmissionForm() {
       }
     });
 
+    // Append documents ONLY on final step
+    if (isFinalStep) {
+      if (docSignature) payload.append("doc_signature", docSignature);
+      if (docPhoto) payload.append("doc_photo", docPhoto);
+      if (docIdCard) payload.append("doc_id_card", docIdCard);
+      if (docPanCard) payload.append("doc_pan_card", docPanCard);
+      if (docDobCertificate) payload.append("doc_dob_certificate", docDobCertificate);
+      if (doc12thReceipt) payload.append("doc_twelfth_receipt", doc12thReceipt);
+      if (doc12thMarkSheet) payload.append("doc_twelfth_marksheet", doc12thMarkSheet);
+      if (docCategoryCertificate) payload.append("doc_category_cert", docCategoryCertificate);
+    }
+
     setLoading(true);
+
+    const method = savedAdmissionId ? "PATCH" : "POST";
+    const endpoint = savedAdmissionId
+      ? API.ADMISSIONS.SUBMIT(savedAdmissionId)
+      : API.ADMISSIONS.CREATE;
+
     dispatch({
       type: admissionActions.SUBMIT_ADMISSION,
-      method: "POST",
-      endPoint: API.ADMISSIONS.SUBMIT(admissionId),
+      method: method,
+      endPoint: endpoint,
       body: payload,
       auth: false,
       isFormData: true,
       setLoading: (val: boolean) => setLoading(val),
-      getResponse: () => {
-        setIsSubmitted(true);
-        toast.success("Your admission form has been submitted successfully!");
+      getResponse: (res: any) => {
+        // If it was a POST, save the new ID
+        if (!savedAdmissionId && res?.data?.id) {
+          setSavedAdmissionId(String(res.data.id));
+        }
+
+        if (isFinalStep) {
+          setIsSubmitted(true);
+          toast.success("Your admission form has been submitted successfully!");
+        } else {
+          nextStep();
+        }
       },
       getError: (err: any) => {
         const msg =
           err?.response?.data?.message ||
           err?.response?.data?.error ||
           err?.message ||
-          "Failed to submit. Please try again.";
+          "Failed to save data. Please try again.";
         toast.error(msg);
       },
     });
@@ -446,148 +587,49 @@ export default function StudentAdmissionForm() {
           )}
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
-          {/* ════════════════════════════════════════════════════════ */}
-          {/*  DOCUMENT UPLOADS                                      */}
-          {/* ════════════════════════════════════════════════════════ */}
-          <SectionCard icon={FileImage} title="Document Uploads">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              <FileUploadField
-                label="Signature Upload"
-                icon={PenTool}
-                file={docSignature}
-                onFileChange={setDocSignature}
-                // required
-              />
-              <FileUploadField
-                label="Your Passport Size Photo Upload"
-                icon={Camera}
-                file={docPhoto}
-                onFileChange={setDocPhoto}
-                // required
-              />
-              <FileUploadField
-                label="Aadhar Card"
-                icon={CreditCard}
-                file={docIdCard}
-                onFileChange={setDocIdCard}
-                // required
-              />
-              <FileUploadField
-                label="PAN Card"
-                icon={CreditCard}
-                file={docPanCard}
-                onFileChange={setDocPanCard}
-                // required
-              />
-              <FileUploadField
-                label="10th Marksheet"
-                icon={Baby}
-                file={docDobCertificate}
-                onFileChange={setDocDobCertificate}
-                // required
-              />
-              <FileUploadField
-                label="12th Receipt / Hall Ticket (if Appearing in 10+2)"
-                icon={FileCheck}
-                file={doc12thReceipt}
-                onFileChange={setDoc12thReceipt}
-                // required
-              />
-              <FileUploadField
-                label="12th Passing Certificate / Marksheet"
-                icon={GraduationCap}
-                file={doc12thMarkSheet}
-                onFileChange={setDoc12thMarkSheet}
-                // required
-              />
-              <FileUploadField
-                label="Category Certificate (if belonging to SC/ST or Physically Handicapped Category)"
-                icon={BadgeCheck}
-                file={docCategoryCertificate}
-                onFileChange={setDocCategoryCertificate}
-                // required
-              />
-            </div>
-          </SectionCard>
+                {/* ── Stepper ── */}
+        <div className="flex items-center justify-center mb-8">
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            {[
+              { num: 1, label: "Personal Info" },
+              { num: 2, label: "Course Info" },
+              { num: 3, label: "Documents" },
+            ].map((step, idx) => (
+              <React.Fragment key={step.num}>
+                <div className="flex flex-col items-center">
+                  <div
+                    className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-sm sm:text-base transition-colors duration-300 ${
+                      currentStep >= step.num
+                        ? 'bg-amber-500 text-white shadow-md'
+                        : 'bg-gray-200 !text-white !important'
+                    }`}
+                    style={{ background: currentStep >= step.num ? T.primary : T.grayLight, color: currentStep >= step.num ? T.black : T.textMuted }}
+                  >
+                    {step.num}
+                  </div>
+                  <span className="text-xs sm:text-sm mt-1.5 font-medium hidden sm:block" style={{ color: currentStep >= step.num ? T.black : T.textMuted }}>
+                    {step.label}
+                  </span>
+                </div>
+                {idx < 2 && (
+                  <div
+                    className={`w-8 sm:w-16 h-1 rounded-full transition-colors duration-300 mb-5 sm:mb-6 ${
+                      currentStep > step.num ? 'bg-amber-500' : 'bg-gray-200'
+                    }`}
+                    style={{ background: currentStep > step.num ? T.primary : T.grayLight }}
+                  />
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
 
+        <form onSubmit={handleNext} className="space-y-5 sm:space-y-6">
           {/* ════════════════════════════════════════════════════════ */}
-          {/*  ACADEMIC PREFERENCES                                  */}
+          {/*  STEP 1: PERSONAL INFO                                 */}
           {/* ════════════════════════════════════════════════════════ */}
-          <SectionCard icon={GraduationCap} title="Academic Preferences">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                  Course <span style={{ color: T.error }}>*</span>
-                </Label>
-                <Select
-                  value={formData.course}
-                  onValueChange={(val) => handleChange("course", val)}
-                >
-                  <SelectTrigger className="h-10 sm:h-11 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cseet">CSEET</SelectItem>
-                    <SelectItem value="cs_executive">CS Executive</SelectItem>
-                    <SelectItem value="cs_professional">CS Professional</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                  Group Module
-                </Label>
-                <Select
-                  value={formData.group_module}
-                  onValueChange={(val) => handleChange("group_module", val)}
-                >
-                  <SelectTrigger className="h-10 sm:h-11 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {formData.course === "cseet" ? (
-                      <SelectItem value="full">Full Syllabus</SelectItem>
-                    ) : (
-                      <>
-                        <SelectItem value="both">Both</SelectItem>
-                        <SelectItem value="module_1">Module 1</SelectItem>
-                        <SelectItem value="module_2">Module 2</SelectItem>
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                  Batch Attempt
-                </Label>
-                <Select
-                  value={formData.batch_attempt}
-                  onValueChange={(val) => handleChange("batch_attempt", val)}
-                >
-                  <SelectTrigger className="h-10 sm:h-11 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {formData.course === "cseet" ? (
-                      <>
-                        <SelectItem value="june">June</SelectItem>
-                        <SelectItem value="oct">October</SelectItem>
-                        <SelectItem value="feb">February</SelectItem>
-                      </>
-                    ) : (
-                      <>
-                        <SelectItem value="june">June</SelectItem>
-                        <SelectItem value="dec">December</SelectItem>
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </SectionCard>
-
+          {currentStep === 1 && (
+            <>
           {/* ════════════════════════════════════════════════════════ */}
           {/*  PERSONAL INFORMATION                                  */}
           {/* ════════════════════════════════════════════════════════ */}
@@ -730,7 +772,6 @@ export default function StudentAdmissionForm() {
               </div>
             </div>
           </SectionCard>
-
           {/* ════════════════════════════════════════════════════════ */}
           {/*  ADDRESS DETAILS                                       */}
           {/* ════════════════════════════════════════════════════════ */}
@@ -793,36 +834,11 @@ export default function StudentAdmissionForm() {
               </div>
             </div>
           </SectionCard>
-
           {/* ════════════════════════════════════════════════════════ */}
           {/*  ACADEMIC BACKGROUND                                   */}
           {/* ════════════════════════════════════════════════════════ */}
           <SectionCard icon={GraduationCap} title="Past Academic Background">
             <div className="space-y-6 sm:space-y-8">
-              {/* Qualification */}
-              <div className="pb-5 sm:pb-6" style={{ borderBottom: `1px solid ${T.border}` }}>
-                <div className="max-w-xs">
-                  <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                    Current Qualification
-                  </Label>
-                  <Select
-                    value={formData.qualification}
-                    onValueChange={(val) => handleChange("qualification", val)}
-                  >
-                    <SelectTrigger className="h-10 sm:h-11 text-sm mt-1.5">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="appearing_12">Appearing 12th</SelectItem>
-                      <SelectItem value="pass_12">Passed 12th</SelectItem>
-                      <SelectItem value="cseet_pass">CSEET Pass</SelectItem>
-                      <SelectItem value="graduate">Graduate</SelectItem>
-                      <SelectItem value="post_graduate">Post Graduate</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
               {/* 10th */}
               <div>
                 <SubSection icon={School} title="10th Standard Details" />
@@ -976,7 +992,6 @@ export default function StudentAdmissionForm() {
               </div>
             </div>
           </SectionCard>
-
           {/* ════════════════════════════════════════════════════════ */}
           {/*  OTHER DETAILS                                         */}
           {/* ════════════════════════════════════════════════════════ */}
@@ -1045,7 +1060,472 @@ export default function StudentAdmissionForm() {
               </div>
             </div>
           </SectionCard>
+              <div className="flex justify-end pt-4">
+                <Button type="submit" disabled={loading} className="h-12 px-8 font-semibold" style={{ background: T.primary, color: T.black }}>
+                  {loading ? (
+                    <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Saving...</>
+                  ) : (
+                    "Next: Course Info"
+                  )}
+                </Button>
+              </div>
+            </>
+          )}
 
+          {/* ════════════════════════════════════════════════════════ */}
+          {/*  STEP 2: COURSE & ACADEMIC INFO                        */}
+          {/* ════════════════════════════════════════════════════════ */}
+          {currentStep === 2 && (
+            <>
+          {/* ════════════════════════════════════════════════════════ */}
+          {/*  ACADEMIC PREFERENCES                                  */}
+          {/* ════════════════════════════════════════════════════════ */}
+          <SectionCard icon={GraduationCap} title="Academic Preferences">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {/* Qualification */}
+              <div className="space-y-1.5">
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  Current Qualification <span style={{ color: T.error }}>*</span>
+                </Label>
+                <Select
+                  value={formData.qualification}
+                  onValueChange={(val) => handleChange("qualification", val)}
+                >
+                  <SelectTrigger className="h-10 sm:h-11 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="appearing_12">Appearing 12th</SelectItem>
+                    <SelectItem value="pass_12">Passed 12th</SelectItem>
+                    <SelectItem value="cseet_pass">CSEET Pass</SelectItem>
+                    <SelectItem value="cs_executive_pass">CS Executive Pass</SelectItem>
+                    <SelectItem value="graduate">Graduate</SelectItem>
+                    <SelectItem value="post_graduate">Post Graduate</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  Course <span style={{ color: T.error }}>*</span>
+                </Label>
+                <Select
+                  value={formData.course}
+                  onValueChange={(val) => handleChange("course", val)}
+                >
+                  <SelectTrigger className="h-10 sm:h-11 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["appearing_12", "pass_12"].includes(formData.qualification) && (
+                      <SelectItem value="cseet">CSEET</SelectItem>
+                    )}
+                    {["cseet_pass", "graduate", "post_graduate"].includes(formData.qualification) && (
+                      <SelectItem value="cs_executive">CS Executive</SelectItem>
+                    )}
+                    {formData.qualification === "cs_executive_pass" && (
+                      <SelectItem value="cs_professional">CS Professional</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  Group Module
+                </Label>
+                <Select
+                  value={formData.group_module}
+                  onValueChange={(val) => handleChange("group_module", val)}
+                >
+                  <SelectTrigger className="h-10 sm:h-11 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {formData.course === "cseet" ? (
+                      <SelectItem value="full">Full Syllabus</SelectItem>
+                    ) : (
+                      <>
+                        <SelectItem value="both">Both</SelectItem>
+                        <SelectItem value="module_1">Module 1</SelectItem>
+                        <SelectItem value="module_2">Module 2</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  Batch Attempt
+                </Label>
+                <Select
+                  value={formData.batch_attempt}
+                  onValueChange={(val) => handleChange("batch_attempt", val)}
+                >
+                  <SelectTrigger className="h-10 sm:h-11 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {formData.course === "cseet" ? (
+                      <>
+                        <SelectItem value="june">June</SelectItem>
+                        <SelectItem value="oct">October</SelectItem>
+                        <SelectItem value="feb">February</SelectItem>
+                      </>
+                    ) : (
+                      <>
+                        <SelectItem value="june">June</SelectItem>
+                        <SelectItem value="dec">December</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  Attempt Year <span style={{ color: T.error }}>*</span>
+                </Label>
+                <Select
+                  value={formData.attempt_year}
+                  onValueChange={(val) => handleChange("attempt_year", val)}
+                >
+                  <SelectTrigger className="h-10 sm:h-11 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableYears.map((y) => (
+                      <SelectItem key={y} value={y}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  Payment Type <span style={{ color: T.error }}>*</span>
+                </Label>
+                <Select
+                  value={formData.payment_type}
+                  onValueChange={(val) => handleChange("payment_type", val)}
+                >
+                  <SelectTrigger className="h-10 sm:h-11 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="full_payment">Full Payment</SelectItem>
+                    <SelectItem value="finance">Finance</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  ICSI Fees Payment <span style={{ color: T.error }}>*</span>
+                </Label>
+                <Select
+                  value={formData.icsi_fees_payment}
+                  onValueChange={(val) => handleChange("icsi_fees_payment", val)}
+                >
+                  <SelectTrigger className="h-10 sm:h-11 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pay_yourself">Pay Yourself</SelectItem>
+                    <SelectItem value="pay_through_institute">Pay through Institute</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </SectionCard>
+
+          {/* ════════════════════════════════════════════════════════ */}
+          {/*  FEE BREAKDOWN                                         */}
+          {/* ════════════════════════════════════════════════════════ */}
+          <SectionCard icon={CreditCard} title="Fee Breakdown">
+            <div className="space-y-4">
+              {matchedFee ? (
+                <>
+                  {/* Level & Structure Info Header */}
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/40">
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Level</span>
+                    </div>
+                    <span className="text-sm font-semibold text-foreground">{matchedFee.level_name || "—"}</span>
+                  </div>
+
+                  {/* ── Pay to Institute Section ── */}
+                  <div className="rounded-xl border border-border/50 overflow-hidden">
+                    <div className="px-4 py-2.5 bg-muted/20 border-b border-border/40">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: T.primaryDark }} />
+                        <span className="text-xs font-semibold uppercase tracking-wider text-foreground/80">
+                          Pay to Institute
+                        </span>
+                      </div>
+                    </div>
+                    <div className="p-4 space-y-2.5">
+                      {/* CSEET: Institute Fee */}
+                      {formData.course === "cseet" && (
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">Institute Fee</span>
+                          <span className="font-medium text-foreground">{formatCurrency(Number(matchedFee.total_amount || 0))}</span>
+                        </div>
+                      )}
+
+                      {/* CS Exec / Prof: Module-based Institute Fees */}
+                      {formData.course !== "cseet" && (
+                        <>
+                          {formData.group_module === "both" && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-muted-foreground">Institute Fee (Both Modules)</span>
+                              <span className="font-medium text-foreground">{formatCurrency(Number(matchedFee.institute_fees_both_modules || 0))}</span>
+                            </div>
+                          )}
+                          {formData.group_module === "module_1" && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-muted-foreground">Institute Fee (Module 1)</span>
+                              <span className="font-medium text-foreground">{formatCurrency(Number(matchedFee.institute_fees_module_1 || 0))}</span>
+                            </div>
+                          )}
+                          {formData.group_module === "module_2" && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-muted-foreground">Institute Fee (Module 2)</span>
+                              <span className="font-medium text-foreground">{formatCurrency(Number(matchedFee.institute_fees_module_2 || 0))}</span>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {/* ICSI fees included when paying through institute */}
+                      {formData.icsi_fees_payment === "pay_through_institute" && (
+                        <>
+                          {formData.course === "cseet" && (
+                            <>
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-muted-foreground">ICSI Registration Fees</span>
+                                <span className="font-medium text-foreground">{formatCurrency(Number(matchedFee.icsi_registration_fees || 0))}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-muted-foreground">ICSI Exam Fees</span>
+                                <span className="font-medium text-foreground">{formatCurrency(Number(matchedFee.icsi_exam_fees || 0))}</span>
+                              </div>
+                            </>
+                          )}
+                          {formData.course === "cs_executive" && (
+                            <>
+                              {formData.qualification === "cseet_pass" && (
+                                <div className="flex justify-between items-center text-sm">
+                                  <span className="text-muted-foreground">ICSI Reg. Fees (Via CSEET)</span>
+                                  <span className="font-medium text-foreground">{formatCurrency(Number(matchedFee.icsi_registration_fees_via_cseet || 0))}</span>
+                                </div>
+                              )}
+                              {["graduate", "post_graduate"].includes(formData.qualification) && (
+                                <div className="flex justify-between items-center text-sm">
+                                  <span className="text-muted-foreground">ICSI Reg. Fees (Direct Entry)</span>
+                                  <span className="font-medium text-foreground">{formatCurrency(Number(matchedFee.icsi_registration_fees_direct || 0))}</span>
+                                </div>
+                              )}
+                            </>
+                          )}
+                          {formData.course === "cs_professional" && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-muted-foreground">ICSI Registration Fees</span>
+                              <span className="font-medium text-foreground">{formatCurrency(Number(matchedFee.icsi_registration_fees || 0))}</span>
+                            </div>
+                          )}
+                          {formData.course !== "cseet" && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-muted-foreground">ICSI Exam Fees (Per Module)</span>
+                              <span className="font-medium text-foreground">{formatCurrency(Number(matchedFee.icsi_exam_fees || 0) * (formData.group_module === "both" ? 2 : 1))}</span>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {/* ── Total Payable ── */}
+                      <div className="flex justify-between items-center pt-3 mt-1 border-t border-border/50">
+                        <span className="text-sm font-semibold text-foreground">Total Payable to Institute</span>
+                        <span className="text-base font-bold" style={{ color: T.primaryDark }}>
+                          {(() => {
+                            let total = 0;
+                            if (formData.course === "cseet") {
+                              total += Number(matchedFee.total_amount || 0);
+                            } else {
+                              if (formData.group_module === "both") total += Number(matchedFee.institute_fees_both_modules || 0);
+                              if (formData.group_module === "module_1") total += Number(matchedFee.institute_fees_module_1 || 0);
+                              if (formData.group_module === "module_2") total += Number(matchedFee.institute_fees_module_2 || 0);
+                            }
+                            if (formData.icsi_fees_payment === "pay_through_institute") {
+                              if (formData.course === "cseet") {
+                                total += Number(matchedFee.icsi_registration_fees || 0) + Number(matchedFee.icsi_exam_fees || 0);
+                              } else if (formData.course === "cs_executive") {
+                                total += formData.qualification === "cseet_pass"
+                                  ? Number(matchedFee.icsi_registration_fees_via_cseet || 0)
+                                  : Number(matchedFee.icsi_registration_fees_direct || 0);
+                                total += Number(matchedFee.icsi_exam_fees || 0) * (formData.group_module === "both" ? 2 : 1);
+                              } else if (formData.course === "cs_professional") {
+                                total += Number(matchedFee.icsi_registration_fees || 0);
+                                total += Number(matchedFee.icsi_exam_fees || 0) * (formData.group_module === "both" ? 2 : 1);
+                              }
+                            }
+                            return formatCurrency(total);
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ── Pay by Yourself (ICSI) Section ── */}
+                  {formData.icsi_fees_payment === "pay_yourself" && (
+                    <div className="rounded-xl border border-amber-500/30 overflow-hidden bg-amber-50/30 dark:bg-amber-950/10 mt-4">
+                      <div className="px-4 py-2.5 bg-amber-100/50 dark:bg-amber-900/20 border-b border-amber-500/20">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                          <span className="text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                            Pay by Yourself (Directly to ICSI)
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-4 space-y-2.5">
+                        {formData.course === "cseet" && (
+                          <>
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-amber-800/70 dark:text-amber-300/70">ICSI Registration Fees</span>
+                              <span className="font-medium text-amber-800 dark:text-amber-300">{formatCurrency(Number(matchedFee.icsi_registration_fees || 0))}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-amber-800/70 dark:text-amber-300/70">ICSI Exam Fees</span>
+                              <span className="font-medium text-amber-800 dark:text-amber-300">{formatCurrency(Number(matchedFee.icsi_exam_fees || 0))}</span>
+                            </div>
+                          </>
+                        )}
+                        {formData.course === "cs_executive" && (
+                          <>
+                            {formData.qualification === "cseet_pass" && (
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-amber-800/70 dark:text-amber-300/70">ICSI Reg. Fees (Via CSEET)</span>
+                                <span className="font-medium text-amber-800 dark:text-amber-300">{formatCurrency(Number(matchedFee.icsi_registration_fees_via_cseet || 0))}</span>
+                              </div>
+                            )}
+                            {["graduate", "post_graduate"].includes(formData.qualification) && (
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-amber-800/70 dark:text-amber-300/70">ICSI Reg. Fees (Direct Entry)</span>
+                                <span className="font-medium text-amber-800 dark:text-amber-300">{formatCurrency(Number(matchedFee.icsi_registration_fees_direct || 0))}</span>
+                              </div>
+                            )}
+                          </>
+                        )}
+                        {formData.course === "cs_professional" && (
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-amber-800/70 dark:text-amber-300/70">ICSI Registration Fees</span>
+                            <span className="font-medium text-amber-800 dark:text-amber-300">{formatCurrency(Number(matchedFee.icsi_registration_fees || 0))}</span>
+                          </div>
+                        )}
+                        {formData.course !== "cseet" && (
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-amber-800/70 dark:text-amber-300/70">ICSI Exam Fees (Per Module)</span>
+                            <span className="font-medium text-amber-800 dark:text-amber-300">{formatCurrency(Number(matchedFee.icsi_exam_fees || 0) * (formData.group_module === "both" ? 2 : 1))}</span>
+                          </div>
+                        )}
+                        <div className="flex items-start gap-2 pt-2 mt-1 border-t border-amber-500/20">
+                          <Info className="w-3.5 h-3.5 mt-0.5 text-amber-600/70 dark:text-amber-400/70 shrink-0" />
+                          <span className="text-xs text-amber-700/80 dark:text-amber-400/70">
+                            These fees are to be paid directly to ICSI by you. They are not included in the institute total above.
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-6 text-sm text-muted-foreground flex flex-col items-center gap-2">
+                  <CreditCard className="w-7 h-7 text-muted-foreground/40" />
+                  <span className="font-medium">No fee structure found for this combination</span>
+                  <span className="text-xs text-muted-foreground/60">Standard fees will apply upon submission.</span>
+                </div>
+              )}
+            </div>
+          </SectionCard>
+              <div className="flex justify-between pt-4">
+                <Button type="button" variant="outline" onClick={prevStep} className="h-12 px-8 font-semibold">
+                  Back
+                </Button>
+                <Button type="submit" disabled={loading} className="h-12 px-8 font-semibold" style={{ background: T.primary, color: T.black }}>
+                  {loading ? (
+                    <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Saving...</>
+                  ) : (
+                    "Next: Documents"
+                  )}
+                </Button>
+              </div>
+            </>
+          )}
+
+          {/* ════════════════════════════════════════════════════════ */}
+          {/*  STEP 3: DOCUMENTS & SUBMIT                            */}
+          {/* ════════════════════════════════════════════════════════ */}
+          {currentStep === 3 && (
+            <>
+          {/* ════════════════════════════════════════════════════════ */}
+          {/*  DOCUMENT UPLOADS                                      */}
+          {/* ════════════════════════════════════════════════════════ */}
+          <SectionCard icon={FileImage} title="Document Uploads">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              <FileUploadField
+                label="Signature Upload"
+                icon={PenTool}
+                file={docSignature}
+                onFileChange={setDocSignature}
+                // required
+              />
+              <FileUploadField
+                label="Your Passport Size Photo Upload"
+                icon={Camera}
+                file={docPhoto}
+                onFileChange={setDocPhoto}
+                // required
+              />
+              <FileUploadField
+                label="Aadhar Card"
+                icon={CreditCard}
+                file={docIdCard}
+                onFileChange={setDocIdCard}
+                // required
+              />
+              <FileUploadField
+                label="PAN Card"
+                icon={CreditCard}
+                file={docPanCard}
+                onFileChange={setDocPanCard}
+                // required
+              />
+              <FileUploadField
+                label="10th Marksheet"
+                icon={Baby}
+                file={docDobCertificate}
+                onFileChange={setDocDobCertificate}
+                // required
+              />
+              <FileUploadField
+                label="12th Receipt / Hall Ticket (if Appearing in 10+2)"
+                icon={FileCheck}
+                file={doc12thReceipt}
+                onFileChange={setDoc12thReceipt}
+                // required
+              />
+              <FileUploadField
+                label="12th Passing Certificate / Marksheet"
+                icon={GraduationCap}
+                file={doc12thMarkSheet}
+                onFileChange={setDoc12thMarkSheet}
+                // required
+              />
+              <FileUploadField
+                label="Category Certificate (if belonging to SC/ST or Physically Handicapped Category)"
+                icon={BadgeCheck}
+                file={docCategoryCertificate}
+                onFileChange={setDocCategoryCertificate}
+                // required
+              />
+            </div>
+          </SectionCard>
           {/* ── Consent & Submit ── */}
           <div
             className="rounded-2xl p-4 sm:p-6"
@@ -1098,6 +1578,13 @@ export default function StudentAdmissionForm() {
               )}
             </Button>
           </div>
+              <div className="flex justify-start -mt-2 mb-6 px-4">
+                 <Button type="button" variant="outline" onClick={prevStep} className="h-12 px-8 font-semibold">
+                  Back to Course Info
+                </Button>
+              </div>
+            </>
+          )}
         </form>
 
         {/* ── Footer ── */}
@@ -1108,3 +1595,5 @@ export default function StudentAdmissionForm() {
     </div>
   );
 }
+
+

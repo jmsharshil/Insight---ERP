@@ -8,6 +8,15 @@ export interface FeesStructure {
   level: string | null;
   level_name: string | null;
   total_amount: string | number;
+  icsi_registration_fees?: string | number;
+  icsi_exam_fees?: string | number;
+  icsi_registration_fees_via_cseet?: string | number;
+  icsi_registration_fees_direct?: string | number;
+  institute_fees_both_modules?: string | number;
+  institute_fees_module_1?: string | number;
+  institute_fees_module_2?: string | number;
+  attempt?: string;
+  year?: string;
   is_active: boolean;
   created_at: string;
   description?: string;

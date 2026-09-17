@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { levelActions } from "@/redux/actions";
 import { API } from "@/service/api";
@@ -45,47 +45,77 @@ export function FeeStructureDialog({
   const [name, setName] = useState("");
   const [course, setCourse] = useState("");
   const [level, setLevel] = useState("");
-  const [levels, setLevels] = useState<any[]>([]);
-  const [levelsLoading, setLevelsLoading] = useState(false);
+  const [levelsByCourse, setLevelsByCourse] = useState<Record<string, any[]>>({});
+  const [fetchingLevels, setFetchingLevels] = useState<Record<string, boolean>>({});
+  const fetchedRef = useRef<Set<string>>(new Set());
+
+  const levels = course ? (levelsByCourse[course] || []) : [];
+  const levelsLoading = course ? (fetchingLevels[course] && !levelsByCourse[course]) : false;
   const [totalAmount, setTotalAmount] = useState("");
+  const [icsiRegistrationFees, setIcsiRegistrationFees] = useState("");
+  const [icsiExamFees, setIcsiExamFees] = useState("");
+  const [icsiRegistrationFeesViaCseet, setIcsiRegistrationFeesViaCseet] = useState("");
+  const [icsiRegistrationFeesDirect, setIcsiRegistrationFeesDirect] = useState("");
+  const [instituteFeesBothModules, setInstituteFeesBothModules] = useState("");
+  const [instituteFeesModule1, setInstituteFeesModule1] = useState("");
+  const [instituteFeesModule2, setInstituteFeesModule2] = useState("");
+  const [attempt, setAttempt] = useState("");
+  const [year, setYear] = useState(new Date().getFullYear().toString());
   const [description, setDescription] = useState("");
   const [isActive, setIsActive] = useState(true);
 
-  // Fetch levels when course changes
-  useEffect(() => {
-    if (course) {
-      setLevelsLoading(true);
-      dispatch({
-        type: levelActions.GET_LEVELS,
-        method: "GET",
-        endPoint: API.COURSES.LEVELS.LIST(course),
-        auth: true,
-        getResponse: (res: any) => {
-          setLevels(res?.data || res || []);
-          setLevelsLoading(false);
-        },
-        getError: () => {
-          setLevels([]);
-          setLevelsLoading(false);
-        },
-      });
-    } else {
-      setLevels([]);
-      setLevel("");
-    }
-  }, [course, dispatch]);
+  const selectedLevelName = levels.find(l => l.id === level)?.name || structure?.level_name || "";
+  const isCseet = selectedLevelName === "CSEET";
+  const isCsExecutive = selectedLevelName === "CS Executive";
+  const isCsProfessional = selectedLevelName === "CS Professional";
+  const isSpecialLevel = isCseet || isCsExecutive || isCsProfessional;
 
-  // Auto-fill totalAmount from selected level's fee_amount
+  let attemptOptions = [
+    { value: "jan", label: "January" },
+    { value: "feb", label: "February" },
+    { value: "mar", label: "March" },
+    { value: "apr", label: "April" },
+    { value: "may", label: "May" },
+    { value: "june", label: "June" },
+    { value: "jul", label: "July" },
+    { value: "aug", label: "August" },
+    { value: "sep", label: "September" },
+    { value: "oct", label: "October" },
+    { value: "nov", label: "November" },
+    { value: "dec", label: "December" }
+  ];
+  if (isCseet) {
+    attemptOptions = attemptOptions.filter(o => ["feb", "june", "oct"].includes(o.value));
+  } else if (isCsExecutive || isCsProfessional) {
+    attemptOptions = attemptOptions.filter(o => ["june", "dec"].includes(o.value));
+  }
+
+  // Pre-fetch levels for all courses to avoid loading delays when selecting a course
   useEffect(() => {
-    if (level && levels.length > 0) {
-      const selectedLevel = levels.find((l: any) => l.id === level);
-      if (selectedLevel?.fee_amount) {
-        setTotalAmount(String(selectedLevel.fee_amount));
+    courses?.forEach(c => {
+      const id = String(c.id);
+      if (!fetchedRef.current.has(id)) {
+        fetchedRef.current.add(id);
+        setFetchingLevels(prev => ({ ...prev, [id]: true }));
+        dispatch({
+          type: levelActions.GET_LEVELS,
+          method: "GET",
+          endPoint: API.COURSES.LEVELS.LIST(id),
+          auth: true,
+          getResponse: (res: any) => {
+            setLevelsByCourse(prev => ({ ...prev, [id]: res?.data || res || [] }));
+            setFetchingLevels(prev => ({ ...prev, [id]: false }));
+          },
+          getError: () => {
+            setLevelsByCourse(prev => ({ ...prev, [id]: [] }));
+            setFetchingLevels(prev => ({ ...prev, [id]: false }));
+          }
+        });
       }
-    } else if (!level) {
-      setTotalAmount("");
-    }
-  }, [level, levels]);
+    });
+  }, [courses, dispatch]);
+
+
 
   useEffect(() => {
     if (structure) {
@@ -93,6 +123,15 @@ export function FeeStructureDialog({
       setCourse(structure.course || "");
       setLevel(structure.level || "");
       setTotalAmount(String(structure.total_amount) || "");
+      setIcsiRegistrationFees(String(structure.icsi_registration_fees || ""));
+      setIcsiExamFees(String(structure.icsi_exam_fees || ""));
+      setIcsiRegistrationFeesViaCseet(String(structure.icsi_registration_fees_via_cseet || ""));
+      setIcsiRegistrationFeesDirect(String(structure.icsi_registration_fees_direct || ""));
+      setInstituteFeesBothModules(String(structure.institute_fees_both_modules || ""));
+      setInstituteFeesModule1(String(structure.institute_fees_module_1 || ""));
+      setInstituteFeesModule2(String(structure.institute_fees_module_2 || ""));
+      setAttempt(structure.attempt || "");
+      setYear(structure.year ? String(structure.year) : new Date().getFullYear().toString());
       setDescription(structure.description || "");
       setIsActive(structure.is_active !== false);
     } else {
@@ -100,15 +139,28 @@ export function FeeStructureDialog({
       setCourse("");
       setLevel("");
       setTotalAmount("");
+      setIcsiRegistrationFees("");
+      setIcsiExamFees("");
+      setIcsiRegistrationFeesViaCseet("");
+      setIcsiRegistrationFeesDirect("");
+      setInstituteFeesBothModules("");
+      setInstituteFeesModule1("");
+      setInstituteFeesModule2("");
+      setAttempt("");
+      setYear(new Date().getFullYear().toString());
       setDescription("");
       setIsActive(true);
-    }
+    }        
   }, [structure, open]);
 
   const isEdit = !!structure;
 
   const handleSave = () => {
-    if (!name.trim() || !course || !totalAmount) {
+    if (!name.trim() || !course) {
+      return;
+    }
+    // For CSEET, total_amount (Institute Fee) is required
+    if (isCseet && !totalAmount) {
       return;
     }
 
@@ -116,7 +168,16 @@ export function FeeStructureDialog({
       name,
       course,
       level: level || null,
-      total_amount: parseFloat(totalAmount),
+      total_amount: (isCsExecutive || isCsProfessional) ? 0 : parseFloat(totalAmount || "0"),
+      icsi_registration_fees: (isCseet || isCsProfessional) ? parseFloat(icsiRegistrationFees || "0") : 0,
+      icsi_exam_fees: isSpecialLevel ? parseFloat(icsiExamFees || "0") : 0,
+      icsi_registration_fees_via_cseet: isCsExecutive ? parseFloat(icsiRegistrationFeesViaCseet || "0") : 0,
+      icsi_registration_fees_direct: isCsExecutive ? parseFloat(icsiRegistrationFeesDirect || "0") : 0,
+      institute_fees_both_modules: (isCsExecutive || isCsProfessional) ? parseFloat(instituteFeesBothModules || "0") : 0,
+      institute_fees_module_1: (isCsExecutive || isCsProfessional) ? parseFloat(instituteFeesModule1 || "0") : 0,
+      institute_fees_module_2: (isCsExecutive || isCsProfessional) ? parseFloat(instituteFeesModule2 || "0") : 0,
+      attempt,
+      year,
       description,
       is_active: isActive,
     };
@@ -180,6 +241,34 @@ export function FeeStructureDialog({
               </Select>
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Year</Label>
+              <Select value={year} onValueChange={setYear}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {["2024", "2025", "2026", "2027", "2028", "2029", "2030"].map((y) => (
+                    <SelectItem key={y} value={y}>{y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Attempt</Label>
+              <Select value={attempt} onValueChange={setAttempt}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select Attempt" />
+                </SelectTrigger>
+                <SelectContent>
+                  {attemptOptions.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <div>
             <Label htmlFor="fs-desc">Description</Label>
             <Textarea
@@ -192,17 +281,153 @@ export function FeeStructureDialog({
             />
           </div>
 
-          <div>
-            <Label htmlFor="fs-amount">Total Amount *</Label>
-            <Input
-              id="fs-amount"
-              type="number" min="0"
-              value={totalAmount}
-              readOnly
-              placeholder="Select a level to auto-fill"
-              className="mt-1 bg-muted/50 cursor-not-allowed"
-            />
-          </div>
+          {isCseet && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="fs-icsi-reg">ICSI Reg. Fees</Label>
+                <Input
+                  id="fs-icsi-reg"
+                  type="number" min="0"
+                  value={icsiRegistrationFees}
+                  onChange={(e) => setIcsiRegistrationFees(e.target.value)}
+                  placeholder="0.00"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="fs-icsi-exam">ICSI Exam Fees</Label>
+                <Input
+                  id="fs-icsi-exam"
+                  type="number" min="0"
+                  value={icsiExamFees}
+                  onChange={(e) => setIcsiExamFees(e.target.value)}
+                  placeholder="0.00"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
+
+          {isCsExecutive && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="fs-icsi-reg-cseet">ICSI Reg. Fees (Via CSEET)</Label>
+                  <Input
+                    id="fs-icsi-reg-cseet"
+                    type="number" min="0"
+                    value={icsiRegistrationFeesViaCseet}
+                    onChange={(e) => setIcsiRegistrationFeesViaCseet(e.target.value)}
+                    placeholder="0.00"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="fs-icsi-reg-direct">ICSI Reg. Fees (Direct)</Label>
+                  <Input
+                    id="fs-icsi-reg-direct"
+                    type="number" min="0"
+                    value={icsiRegistrationFeesDirect}
+                    onChange={(e) => setIcsiRegistrationFeesDirect(e.target.value)}
+                    placeholder="0.00"
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="fs-icsi-exam">ICSI Exam Fees (Per Module)</Label>
+                <Input
+                  id="fs-icsi-exam"
+                  type="number" min="0"
+                  value={icsiExamFees}
+                  onChange={(e) => setIcsiExamFees(e.target.value)}
+                  placeholder="0.00"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
+
+          {isCsProfessional && (
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="fs-icsi-reg">ICSI Registration Fees</Label>
+                <Input
+                  id="fs-icsi-reg"
+                  type="number" min="0"
+                  value={icsiRegistrationFees}
+                  onChange={(e) => setIcsiRegistrationFees(e.target.value)}
+                  placeholder="0.00"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="fs-icsi-exam">ICSI Exam Fees (Per Module)</Label>
+                <Input
+                  id="fs-icsi-exam"
+                  type="number" min="0"
+                  value={icsiExamFees}
+                  onChange={(e) => setIcsiExamFees(e.target.value)}
+                  placeholder="0.00"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
+
+          {(isCsExecutive || isCsProfessional) && (
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="fs-inst-both">Institute Fees (Both Modules)</Label>
+                <Input
+                  id="fs-inst-both"
+                  type="number" min="0"
+                  value={instituteFeesBothModules}
+                  onChange={(e) => setInstituteFeesBothModules(e.target.value)}
+                  placeholder="0.00"
+                  className="mt-1"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="fs-inst-mod1">Institute Fees (Module 1)</Label>
+                  <Input
+                    id="fs-inst-mod1"
+                    type="number" min="0"
+                    value={instituteFeesModule1}
+                    onChange={(e) => setInstituteFeesModule1(e.target.value)}
+                    placeholder="0.00"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="fs-inst-mod2">Institute Fees (Module 2)</Label>
+                  <Input
+                    id="fs-inst-mod2"
+                    type="number" min="0"
+                    value={instituteFeesModule2}
+                    onChange={(e) => setInstituteFeesModule2(e.target.value)}
+                    placeholder="0.00"
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!(isCsExecutive || isCsProfessional) && (
+            <div>
+              <Label htmlFor="fs-amount">Institute Fee *</Label>
+              <Input
+                id="fs-amount"
+                type="number" min="0"
+                value={totalAmount}
+                onChange={(e) => setTotalAmount(e.target.value)}
+                placeholder="0.00"
+                className="mt-1"
+              />
+            </div>
+          )}
 
           <div className="flex items-center gap-2 mt-2">
             <input
@@ -223,7 +448,7 @@ export function FeeStructureDialog({
           </Button>
           <Button
             onClick={handleSave}
-            disabled={loading || !name.trim() || !course || !totalAmount}
+            disabled={loading || !name.trim() || !course || (!(isCsExecutive || isCsProfessional) && !totalAmount)}
             className="bg-primary hover:bg-primary-dark text-primary-foreground"
           >
             {loading ? "Saving..." : "Save"}

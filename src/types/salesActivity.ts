@@ -27,6 +27,8 @@ export interface SalesDailyActivity {
   plan: string;
   name?: string;
   activity_date: string;
+  students_expected: number;
+  students_attended: number;
   notes: string;
   photos: SalesActivityPhoto[];
   odometer_reading?: OdometerReading;

@@ -101,6 +101,8 @@ const ROLE_CHOICES = [
   { value: "senior_tele_caller", label: "Senior Tele Caller" },
   { value: "cmo", label: "CMO" },
   { value: "associate_bdm", label: "Associate Business Development Manager" },
+  { value: "senior_bdm", label: "Senior Business Development Manager" },
+  { value: "deputy_bdm", label: "Deputy Business Development Manager" },
   // { value: "printers", label: "Printers" },
   { value: "exam_supervisor", label: "Exam Supervisor" },
   { value: "paper_checker", label: "Paper Checker" },
