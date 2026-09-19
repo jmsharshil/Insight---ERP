@@ -21,6 +21,10 @@ import {
   ExternalLink,
   Check,
   X,
+  BookOpen,
+  Target,
+  Phone,
+  Mic,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -794,6 +798,34 @@ export default function SalesActivitiesTab() {
                                   <span className="text-[10px] uppercase font-bold opacity-80 leading-none mb-0.5">Students Attended</span>
                                   <span className="text-sm font-bold leading-tight">{act.students_attended}</span>
                                 </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {(act.standard || act.board || act.medium || act.seminar_reference_by || act.seminar_given_by || act.target_name || act.target_number) && (
+                          <div className="flex flex-wrap gap-2 text-xs pt-1 mt-1">
+                            {act.standard && <Badge variant="outline" className="bg-muted/50 text-muted-foreground"><BookOpen className="w-3 h-3 mr-1.5"/> Std: {act.standard}</Badge>}
+                            {act.board && <Badge variant="outline" className="bg-muted/50 text-muted-foreground"><BookOpen className="w-3 h-3 mr-1.5"/> Board: {act.board}</Badge>}
+                            {act.medium && <Badge variant="outline" className="bg-muted/50 text-muted-foreground"><BookOpen className="w-3 h-3 mr-1.5"/> Medium: {act.medium}</Badge>}
+                            {act.seminar_reference_by && (
+                              <div className="flex items-center gap-1.5 bg-background border border-border px-2 py-1 rounded-md text-muted-foreground">
+                                <User className="w-3.5 h-3.5" /> Ref By: <span className="font-medium text-foreground">{act.seminar_reference_by}</span>
+                              </div>
+                            )}
+                            {act.seminar_given_by && (
+                              <div className="flex items-center gap-1.5 bg-background border border-border px-2 py-1 rounded-md text-muted-foreground">
+                                <Mic className="w-3.5 h-3.5" /> Given By: <span className="font-medium text-foreground">{act.seminar_given_by}</span>
+                              </div>
+                            )}
+                            {act.target_name && (
+                              <div className="flex items-center gap-1.5 bg-background border border-border px-2 py-1 rounded-md text-muted-foreground">
+                                <Target className="w-3.5 h-3.5 text-primary" /> Target: <span className="font-medium text-foreground">{act.target_name}</span>
+                              </div>
+                            )}
+                            {act.target_number && (
+                              <div className="flex items-center gap-1.5 bg-background border border-border px-2 py-1 rounded-md text-muted-foreground">
+                                <Phone className="w-3.5 h-3.5 text-primary" /> Phone: <span className="font-medium text-foreground">{act.target_number}</span>
                               </div>
                             )}
                           </div>

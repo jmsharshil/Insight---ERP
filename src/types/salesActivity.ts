@@ -27,9 +27,16 @@ export interface SalesDailyActivity {
   plan: string;
   name?: string;
   activity_date: string;
-  students_expected: number;
-  students_attended: number;
+  students_expected: number | null;
+  students_attended: number | null;
   notes: string;
+  standard?: string;
+  board?: string;
+  medium?: string;
+  seminar_reference_by?: string;
+  seminar_given_by?: string;
+  target_name?: string;
+  target_number?: string;
   photos: SalesActivityPhoto[];
   odometer_reading?: OdometerReading;
   created_at: string;
