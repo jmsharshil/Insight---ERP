@@ -16,6 +16,21 @@ interface StructuresTabProps {
   setDeleteOpen: (fs: FeesStructure) => void;
 }
 
+const ATTEMPT_LABELS: Record<string, string> = {
+  jan: "January",
+  feb: "February",
+  mar: "March",
+  apr: "April",
+  may: "May",
+  june: "June",
+  jul: "July",
+  aug: "August",
+  sep: "September",
+  oct: "October",
+  nov: "November",
+  dec: "December",
+};
+
 export default function StructuresTab({
   feeStructure,
   loading,
@@ -88,6 +103,15 @@ export default function StructuresTab({
                   {fs.level_name || "—"}
                 </span>
               </div>
+              {(fs.attempt || fs.year) && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="font-medium">Session:</span>
+                  <span className="text-card-foreground font-semibold truncate">
+                    {[ATTEMPT_LABELS[fs.attempt || ""] || fs.attempt, fs.year].filter(Boolean).join(" ")}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
                 <span className="font-medium">Created:</span>
@@ -97,26 +121,56 @@ export default function StructuresTab({
               </div>
             </div>
 
-            {/* <div className="border-t pt-3.5 mb-4 space-y-2">
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-muted-foreground">ICSI Reg. Fees</span>
-                <span className="font-medium text-card-foreground">{formatCurrency(Number(fs.icsi_registration_fees || 0))}</span>
-              </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-muted-foreground">ICSI Exam Fees</span>
-                <span className="font-medium text-card-foreground">{formatCurrency(Number(fs.icsi_exam_fees || 0))}</span>
-              </div>
-              <div className="flex justify-between items-center text-xs pb-1">
-                <span className="text-muted-foreground">Token Amount</span>
-                <span className="font-medium text-card-foreground">{formatCurrency(Number(fs.token_amount || 0))}</span>
-              </div>
-              <div className="flex justify-between items-center border-t border-dashed pt-2">
-                <span className="text-xs font-bold text-card-foreground">Total Fee</span>
-                <span className="font-mono text-primary text-lg font-bold">
-                  {formatCurrency(Number(fs.total_amount))}
-                </span>
-              </div>
-            </div> */}
+            <div className="border-t pt-3.5 mb-4 space-y-2">
+              {(fs.level_name === "CSEET" || fs.level_name === "CS Professional") && (
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground">ICSI Reg. Fees</span>
+                  <span className="font-medium text-card-foreground">{formatCurrency(Number(fs.icsi_registration_fees || 0))}</span>
+                </div>
+              )}
+              {(fs.level_name === "CSEET" || fs.level_name === "CS Executive" || fs.level_name === "CS Professional") && (
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground">ICSI Exam Fees {fs.level_name !== "CSEET" && "(Per Module)"}</span>
+                  <span className="font-medium text-card-foreground">{formatCurrency(Number(fs.icsi_exam_fees || 0))}</span>
+                </div>
+              )}
+              {fs.level_name === "CS Executive" && (
+                <>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">ICSI Reg. (Via CSEET)</span>
+                    <span className="font-medium text-card-foreground">{formatCurrency(Number(fs.icsi_registration_fees_via_cseet || 0))}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">ICSI Reg. (Direct)</span>
+                    <span className="font-medium text-card-foreground">{formatCurrency(Number(fs.icsi_registration_fees_direct || 0))}</span>
+                  </div>
+                </>
+              )}
+              {(fs.level_name === "CS Executive" || fs.level_name === "CS Professional") && (
+                <>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">Inst. Fees (Both)</span>
+                    <span className="font-medium text-card-foreground">{formatCurrency(Number(fs.institute_fees_both_modules || 0))}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">Inst. Fees (Mod 1)</span>
+                    <span className="font-medium text-card-foreground">{formatCurrency(Number(fs.institute_fees_module_1 || 0))}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">Inst. Fees (Mod 2)</span>
+                    <span className="font-medium text-card-foreground">{formatCurrency(Number(fs.institute_fees_module_2 || 0))}</span>
+                  </div>
+                </>
+              )}
+              {!(fs.level_name === "CS Executive" || fs.level_name === "CS Professional") && (
+                <div className="flex justify-between items-center border-t border-dashed pt-2">
+                  <span className="text-xs font-bold text-card-foreground">Institute Fee</span>
+                  <span className="font-mono text-primary text-lg font-bold">
+                    {formatCurrency(Number(fs.total_amount))}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
 
           {(isAccountant || isAdmin) && (

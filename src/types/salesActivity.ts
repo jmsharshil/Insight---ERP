@@ -25,8 +25,18 @@ export interface SalesDailyActivity {
   user: string;
   user_name: string;
   plan: string;
+  name?: string;
   activity_date: string;
+  students_expected: number | null;
+  students_attended: number | null;
   notes: string;
+  standard?: string;
+  board?: string;
+  medium?: string;
+  seminar_reference_by?: string;
+  seminar_given_by?: string;
+  target_name?: string;
+  target_number?: string;
   photos: SalesActivityPhoto[];
   odometer_reading?: OdometerReading;
   created_at: string;
@@ -49,6 +59,8 @@ export interface OdometerReading {
   activity_date: string;
   user: string;
   user_name: string;
+  vehicle_type?: '2W' | '4W' | string;
+  vehicle_type_display?: string;
   start_kms: string;
   end_kms: string;
   total_kms: string;
@@ -82,6 +94,7 @@ export interface SalesDailyPlan {
   reminder_sent?: boolean;
   day_of_reminder_sent?: boolean;
   activities: SalesDailyActivity[];
+  photos?: SalesActivityPhoto[];
   created_at: string;
   updated_at: string;
 }

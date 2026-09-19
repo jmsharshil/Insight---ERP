@@ -155,7 +155,7 @@ export function NotificationPopup() {
             ) : tabFiltered.map((notif) => (
               <div 
                 key={notif.id}
-                onClick={() => handleNotificationClick(notif.route)}
+                // onClick={() => handleNotificationClick(notif.route)}
                 className={`flex gap-3 p-3 rounded-lg transition-colors ${notif.route ? 'cursor-pointer hover:bg-muted/60' : 'hover:bg-muted/40'}`}
               >
                 <div className="flex-shrink-0 mt-0.5">

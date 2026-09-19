@@ -65,6 +65,7 @@ export const API = {
 
   /** Admissions endpoints */
   ADMISSIONS: {
+    CREATE: "/api/v1/admissions/",
     LIST: "/api/v1/admissions/",
     GET: (id: string | number) => `/api/v1/admissions/${id}/`,
     SUBMIT: (id: string | number) => `/api/v1/admissions/${id}/`,

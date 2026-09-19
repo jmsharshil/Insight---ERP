@@ -439,7 +439,8 @@ export default function StudentDetailPage() {
     .filter(Boolean).join(", ");
 
   const docs = [
-    { key: "doc_id_proof", label: "ID Proof", icon: <Shield className="w-4 h-4" /> },
+    { key: "doc_id_proof", label: "Aadhar Card", icon: <Shield className="w-4 h-4" /> },
+    { key: "doc_pan_card", label: "PAN Card", icon: <CreditCard className="w-4 h-4" /> },
     { key: "doc_dob_certificate", label: "DOB Certificate", icon: <Calendar className="w-4 h-4" /> },
     { key: "doc_signature", label: "Signature", icon: <FileText className="w-4 h-4" /> },
     { key: "doc_tenth_marksheet", label: "10th Marksheet", icon: <BookOpen className="w-4 h-4" /> },

@@ -1,4 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState, AppDispatch } from "@/store";
+import { salesActions, userActions } from "@/redux/actions";
+import { setPlans, setOdometerReadings, setSalesLoading } from "@/redux/slices/salesSlice";
 import {
   MapPin,
   Calendar,
@@ -7,6 +11,7 @@ import {
   RefreshCw,
   Gauge,
   User,
+  Users,
   Image as ImageIcon,
   CheckCircle2,
   Navigation,
@@ -16,6 +21,10 @@ import {
   ExternalLink,
   Check,
   X,
+  BookOpen,
+  Target,
+  Phone,
+  Mic,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -64,9 +73,9 @@ export default function SalesActivitiesTab() {
   const toast = useToast();
   const { user } = useAuth();
 
-  const [plans, setPlans] = useState<SalesDailyPlan[]>([]);
+  const dispatch = useDispatch<AppDispatch>();
+  const { plans, odometerReadings, loading } = useSelector((state: RootState) => state.sales);
   const [dateFilter, setDateFilter] = useState("today");
-  const [loading, setLoading] = useState(false);
   // Filters
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -77,24 +86,21 @@ export default function SalesActivitiesTab() {
 
   const [teamUsers, setTeamUsers] = useState<any[]>([]);
 
-  const fetchTeamUsers = useCallback(async () => {
-    try {
-      const raw = localStorage.getItem("Insight_Login_Data");
-      const token = raw ? JSON.parse(raw)?.access : "";
-      const baseUrl = import.meta.env.VITE_APP_BASE_URL || "";
-      const res = await fetch(`${baseUrl}${API.USERS.LIST}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
+  const fetchTeamUsers = useCallback(() => {
+    dispatch({
+      type: userActions.GET_USERS,
+      method: "GET",
+      endPoint: API.USERS.LIST,
+      auth: true,
+      getResponse: (data: any) => {
         const allUsers = Array.isArray(data?.results) ? data.results : Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
-        // Filter out non-staff members like students and parents
         setTeamUsers(allUsers.filter((u: any) => u.role !== "student" && u.role !== "parents" && u.role !== "parent"));
+      },
+      getError: (err: any) => {
+        console.error("Failed to fetch team users:", err);
       }
-    } catch (err) {
-      console.error("Failed to fetch team users:", err);
-    }
-  }, []);
+    });
+  }, [dispatch]);
 
   useEffect(() => {
     fetchTeamUsers();
@@ -123,7 +129,6 @@ export default function SalesActivitiesTab() {
   const [previewPhoto, setPreviewPhoto] = useState<SalesActivityPhoto | null>(null);
 
   // Odometer Approval/Rejection State
-  const [odometerReadings, setOdometerReadings] = useState<OdometerReading[]>([]);
   const [approveOdoReading, setApproveOdoReading] = useState<OdometerReading | null>(null);
   const [expensePerKm, setExpensePerKm] = useState<string>("6.50");
   const [rejectOdoReading, setRejectOdoReading] = useState<OdometerReading | null>(null);
@@ -134,159 +139,185 @@ export default function SalesActivitiesTab() {
   const [bulkMonth, setBulkMonth] = useState<number>(new Date().getMonth() + 1);
   const [bulkYear, setBulkYear] = useState<number>(new Date().getFullYear());
   const [bulkUserId, setBulkUserId] = useState<string>("");
-  const [bulkExpensePerKm, setBulkExpensePerKm] = useState<string>("7.50");
+  const [bulkExpensePerKm2W, setBulkExpensePerKm2W] = useState<string>("5.00");
+  const [bulkExpensePerKm4W, setBulkExpensePerKm4W] = useState<string>("12.00");
   const [bulkRejectionReason, setBulkRejectionReason] = useState<string>("");
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkOdoSummary, setBulkOdoSummary] = useState<{
+    pending2W: number; pending4W: number; pendingCount2W: number; pendingCount4W: number;
+    approved2W: number; approved4W: number; approvedCount2W: number; approvedCount4W: number;
+  } | null>(null);
+  const [customSettlementAmount, setCustomSettlementAmount] = useState<string>("");
+
+  useEffect(() => {
+    setCustomSettlementAmount("");
+  }, [bulkOdoSummary, bulkExpensePerKm2W, bulkExpensePerKm4W]);
+
+  useEffect(() => {
+    if (bulkSettlementOpen && bulkUserId && bulkMonth && bulkYear) {
+      const start = new Date(bulkYear, bulkMonth - 1, 1).toISOString().split("T")[0];
+      const end = new Date(bulkYear, bulkMonth, 0).toISOString().split("T")[0];
+      
+      dispatch({
+        type: salesActions.GET_ODOMETER_READINGS,
+        method: "GET",
+        endPoint: `${API.SALES.ODOMETER_READINGS}?user_id=${bulkUserId}&from_date=${start}&to_date=${end}`,
+        auth: true,
+        getResponse: (data: any) => {
+          const list = Array.isArray(data?.results) ? data.results : Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+          let p2W = 0, p4W = 0, pC2W = 0, pC4W = 0;
+          let a2W = 0, a4W = 0, aC2W = 0, aC4W = 0;
+          list.forEach((r: any) => {
+            if (r.status === "pending") {
+              if (r.vehicle_type === "2W") {
+                p2W += parseFloat(r.total_kms) || 0;
+                pC2W++;
+              } else if (r.vehicle_type === "4W") {
+                p4W += parseFloat(r.total_kms) || 0;
+                pC4W++;
+              }
+            } else if (r.status === "approved" && !r.is_paid) {
+              if (r.vehicle_type === "2W") {
+                a2W += parseFloat(r.total_kms) || 0;
+                aC2W++;
+              } else if (r.vehicle_type === "4W") {
+                a4W += parseFloat(r.total_kms) || 0;
+                aC4W++;
+              }
+            }
+          });
+          setBulkOdoSummary({ 
+            pending2W: p2W, pending4W: p4W, pendingCount2W: pC2W, pendingCount4W: pC4W,
+            approved2W: a2W, approved4W: a4W, approvedCount2W: aC2W, approvedCount4W: aC4W
+          });
+        },
+        getError: (err: any) => {
+          console.error(err);
+        }
+      });
+    } else {
+      setBulkOdoSummary(null);
+    }
+  }, [bulkSettlementOpen, bulkUserId, bulkMonth, bulkYear, dispatch]);
 
   const isSalesStaff =
     user?.role === "sales_executive" ||
     user?.role === "sales_senior_executive" ||
     user?.role === "tele_caller";
 
-  const fetchPlans = useCallback(async () => {
-    setLoading(true);
-    try {
-      const raw = localStorage.getItem("Insight_Login_Data");
-      const token = raw ? JSON.parse(raw)?.access : "";
-      const baseUrl = import.meta.env.VITE_APP_BASE_URL || "";
+  const canApproveOdoAccess = user?.role === "super_admin" || user?.role === "accountant";
 
-      const params = new URLSearchParams();
-      if (dateFilter && dateFilter !== 'all') params.append("date", dateFilter);
-      if (search) params.append("search", search);
-      if (fromDate) params.append("from_date", fromDate);
-      if (toDate) params.append("to_date", toDate);
-      if (userIdFilter && userIdFilter !== "all") params.append("user_id", userIdFilter);
-      if (statusFilter && statusFilter !== "all") params.append("status", statusFilter);
-      if (isPaidFilter && isPaidFilter !== "all") params.append("is_paid", isPaidFilter);
+  const fetchPlans = useCallback(() => {
+    const params = new URLSearchParams();
+    if (dateFilter && dateFilter !== 'all' && !fromDate && !toDate) params.append("date", dateFilter);
+    if (search) params.append("search", search);
+    if (fromDate) params.append("from_date", fromDate);
+    if (toDate) params.append("to_date", toDate);
+    if (userIdFilter && userIdFilter !== "all") params.append("user_id", userIdFilter);
+    if (statusFilter && statusFilter !== "all") params.append("status", statusFilter);
+    if (isPaidFilter && isPaidFilter !== "all") params.append("is_paid", isPaidFilter);
 
-      const query = params.toString() ? `?${params.toString()}` : "";
+    const query = params.toString() ? `?${params.toString()}` : "";
 
-      const res = await fetch(`${baseUrl}${API.SALES.PLANS}${query}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Failed to fetch sales plans");
-      const data = await res.json();
-      const list = Array.isArray(data?.results)
-        ? data.results
-        : Array.isArray(data?.data)
-          ? data.data
-          : Array.isArray(data)
-            ? data
-            : [];
-      setPlans(list);
-      return list;
-
-      // Fetch odometer readings
-      const odoRes = await fetch(`${baseUrl}${API.SALES.ODOMETER_READINGS}${query}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (odoRes.ok) {
-        const odoData = await odoRes.json();
-        const odoList = Array.isArray(odoData?.results)
-          ? odoData.results
-          : Array.isArray(odoData?.data)
-            ? odoData.data
-            : Array.isArray(odoData)
-              ? odoData
-              : [];
-        setOdometerReadings(odoList);
+    dispatch({
+      type: salesActions.GET_PLANS,
+      method: "GET",
+      endPoint: `${API.SALES.PLANS}${query}`,
+      auth: true,
+      setLoading: (val: boolean) => dispatch(setSalesLoading(val)),
+      getResponse: (data: any) => {
+        const list = Array.isArray(data?.results) ? data.results : Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+        dispatch(setPlans(list));
+      },
+      getError: (err: any) => {
+        toast.error(err.message || "Failed to load sales plans");
       }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to load sales plans");
-    } finally {
-      setLoading(false);
-    }
-  }, [toast, search, fromDate, toDate, userIdFilter, statusFilter, isPaidFilter]);
+    });
 
-  const handleApproveOdo = async () => {
+    dispatch({
+      type: salesActions.GET_ODOMETER_READINGS,
+      method: "GET",
+      endPoint: `${API.SALES.ODOMETER_READINGS}${query}`,
+      auth: true,
+      getResponse: (data: any) => {
+        const list = Array.isArray(data?.results) ? data.results : Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+        dispatch(setOdometerReadings(list));
+      }
+    });
+  }, [toast, search, fromDate, toDate, userIdFilter, statusFilter, isPaidFilter, dateFilter, dispatch]);
+
+  const handleApproveOdo = () => {
     if (!approveOdoReading) return;
-    try {
-      const raw = localStorage.getItem("Insight_Login_Data");
-      const token = raw ? JSON.parse(raw)?.access : "";
-      const baseUrl = import.meta.env.VITE_APP_BASE_URL || "";
-      const res = await fetch(`${baseUrl}${API.SALES.ODOMETER_READING_APPROVE(approveOdoReading.id)}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ expense_per_km: parseFloat(expensePerKm) }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || err.message || "Failed to approve odometer reading");
+    dispatch({
+      type: salesActions.APPROVE_ODOMETER,
+      method: "POST",
+      endPoint: API.SALES.ODOMETER_READING_APPROVE(approveOdoReading.id),
+      auth: true,
+      body: { expense_per_km: parseFloat(expensePerKm) },
+      getResponse: () => {
+        toast.success("Odometer reading approved successfully");
+        setApproveOdoReading(null);
+        fetchPlans();
+      },
+      getError: (err: any) => {
+        toast.error(err.message || "An error occurred");
       }
-      toast.success("Odometer reading approved successfully");
-      setApproveOdoReading(null);
-      fetchPlans();
-    } catch (err: any) {
-      toast.error(err.message || "An error occurred");
-    }
+    });
   };
 
-  const handleRejectOdo = async () => {
+  const handleRejectOdo = () => {
     if (!rejectOdoReading) return;
-    try {
-      const raw = localStorage.getItem("Insight_Login_Data");
-      const token = raw ? JSON.parse(raw)?.access : "";
-      const baseUrl = import.meta.env.VITE_APP_BASE_URL || "";
-      const res = await fetch(`${baseUrl}${API.SALES.ODOMETER_READING_REJECT(rejectOdoReading.id)}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ rejection_reason: rejectionReason }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || err.message || "Failed to reject odometer reading");
+    dispatch({
+      type: salesActions.REJECT_ODOMETER,
+      method: "POST",
+      endPoint: API.SALES.ODOMETER_READING_REJECT(rejectOdoReading.id),
+      auth: true,
+      body: { rejection_reason: rejectionReason },
+      getResponse: () => {
+        toast.success("Odometer reading rejected successfully");
+        setRejectOdoReading(null);
+        setRejectionReason("");
+        fetchPlans();
+      },
+      getError: (err: any) => {
+        toast.error(err.message || "An error occurred");
       }
-      toast.success("Odometer reading rejected successfully");
-      setRejectOdoReading(null);
-      setRejectionReason("");
-      fetchPlans();
-    } catch (err: any) {
-      toast.error(err.message || "An error occurred");
-    }
+    });
   };
 
-  const handleBulkApprove = async () => {
+  const handleBulkApprove = () => {
     if (!bulkUserId || !bulkMonth || !bulkYear) {
       toast.error("Please select User, Month, and Year");
       return;
     }
-    setBulkLoading(true);
-    try {
-      const raw = localStorage.getItem("Insight_Login_Data");
-      const token = raw ? JSON.parse(raw)?.access : "";
-      const baseUrl = import.meta.env.VITE_APP_BASE_URL || "";
-      const res = await fetch(`${baseUrl}${API.SALES.ODOMETER_MONTHLY_APPROVE}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          user_id: bulkUserId,
-          month: bulkMonth,
-          year: bulkYear,
-          expense_per_km: parseFloat(bulkExpensePerKm),
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.detail || data.message || "Failed to bulk approve");
-      toast.success(data.message || "Bulk approval successful");
-      setBulkSettlementOpen(false);
-      fetchPlans();
-    } catch (err: any) {
-      toast.error(err.message || "An error occurred");
-    } finally {
-      setBulkLoading(false);
-    }
+    dispatch({
+      type: salesActions.BULK_APPROVE_ODOMETER,
+      method: "POST",
+      endPoint: API.SALES.ODOMETER_MONTHLY_APPROVE,
+      auth: true,
+      setLoading: (val: boolean) => setBulkLoading(val),
+      body: {
+        user_id: bulkUserId,
+        month: bulkMonth,
+        year: bulkYear,
+        expense_per_km_2w: parseFloat(bulkExpensePerKm2W),
+        expense_per_km_4w: parseFloat(bulkExpensePerKm4W),
+        total_expense: customSettlementAmount !== "" 
+          ? parseFloat(customSettlementAmount) 
+          : (((bulkOdoSummary?.pending2W || 0) + (bulkOdoSummary?.approved2W || 0)) * parseFloat(bulkExpensePerKm2W || "0")) + (((bulkOdoSummary?.pending4W || 0) + (bulkOdoSummary?.approved4W || 0)) * parseFloat(bulkExpensePerKm4W || "0")),
+      },
+      getResponse: (data: any) => {
+        toast.success(data?.message || "Bulk approval successful");
+        setBulkSettlementOpen(false);
+        fetchPlans();
+      },
+      getError: (err: any) => {
+        toast.error(err.message || "An error occurred");
+      }
+    });
   };
 
-  const handleBulkReject = async () => {
+  const handleBulkReject = () => {
     if (!bulkUserId || !bulkMonth || !bulkYear) {
       toast.error("Please select User, Month, and Year");
       return;
@@ -295,43 +326,32 @@ export default function SalesActivitiesTab() {
       toast.error("Please provide a rejection reason");
       return;
     }
-    setBulkLoading(true);
-    try {
-      const raw = localStorage.getItem("Insight_Login_Data");
-      const token = raw ? JSON.parse(raw)?.access : "";
-      const baseUrl = import.meta.env.VITE_APP_BASE_URL || "";
-      const res = await fetch(`${baseUrl}${API.SALES.ODOMETER_MONTHLY_REJECT}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          user_id: bulkUserId,
-          month: bulkMonth,
-          year: bulkYear,
-          rejection_reason: bulkRejectionReason,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.detail || data.message || "Failed to bulk reject");
-      toast.success(data.message || "Bulk rejection successful");
-      setBulkSettlementOpen(false);
-      fetchPlans();
-    } catch (err: any) {
-      toast.error(err.message || "An error occurred");
-    } finally {
-      setBulkLoading(false);
-    }
+    dispatch({
+      type: salesActions.BULK_REJECT_ODOMETER,
+      method: "POST",
+      endPoint: API.SALES.ODOMETER_MONTHLY_REJECT,
+      auth: true,
+      setLoading: (val: boolean) => setBulkLoading(val),
+      body: {
+        user_id: bulkUserId,
+        month: bulkMonth,
+        year: bulkYear,
+        rejection_reason: bulkRejectionReason,
+      },
+      getResponse: (data: any) => {
+        toast.success(data?.message || "Bulk rejection successful");
+        setBulkSettlementOpen(false);
+        fetchPlans();
+      },
+      getError: (err: any) => {
+        toast.error(err.message || "An error occurred");
+      }
+    });
   };
 
   useEffect(() => {
-    fetchPlans().then(fetched => {
-      if (isSalesStaff && !fromDate && !toDate && fetched?.length === 0) {
-        setCreateOpen(true);
-      }
-    });
-  }, [fetchPlans, isSalesStaff, fromDate, toDate]);
+    fetchPlans();
+  }, [fetchPlans]);
 
   // Geolocation fetcher
   const fetchCurrentLocation = () => {
@@ -355,38 +375,27 @@ export default function SalesActivitiesTab() {
     );
   };
 
-  const handleCreatePlan = async () => {
-    setCreateLoading(true);
-    try {
-      const raw = localStorage.getItem("Insight_Login_Data");
-      const token = raw ? JSON.parse(raw)?.access : "";
-      const baseUrl = import.meta.env.VITE_APP_BASE_URL || "";
-      const res = await fetch(`${baseUrl}${API.SALES.PLANS}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          plan_date: planDate,
-          description: planDescription,
-        }),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || errData.message || "Failed to initialize daily plan");
+  const handleCreatePlan = () => {
+    dispatch({
+      type: salesActions.CREATE_PLAN,
+      method: "POST",
+      endPoint: API.SALES.PLANS,
+      auth: true,
+      setLoading: (val: boolean) => setCreateLoading(val),
+      body: {
+        plan_date: planDate,
+        description: planDescription,
+      },
+      getResponse: () => {
+        toast.success("Daily plan initialized successfully.");
+        setCreateOpen(false);
+        setPlanDescription("");
+        fetchPlans();
+      },
+      getError: (err: any) => {
+        toast.error(err.message || "An error occurred");
       }
-
-      toast.success("Daily plan initialized successfully.");
-      setCreateOpen(false);
-      setPlanDescription("");
-      fetchPlans();
-    } catch (err: any) {
-      toast.error(err.message || "An error occurred");
-    } finally {
-      setCreateLoading(false);
-    }
+    });
   };
 
   const handleOpenGeneralPhoto = (type: SalesPhotoType) => {
@@ -395,7 +404,7 @@ export default function SalesActivitiesTab() {
     setPhotoOpen(true);
   };
 
-  const handleUploadPhoto = async () => {
+  const handleUploadPhoto = () => {
     if (!selectedActivity && photoType !== "start_selfie" && photoType !== "end_selfie") {
       toast.error("Please select an activity to upload this photo type.");
       return;
@@ -416,7 +425,7 @@ export default function SalesActivitiesTab() {
     }
 
     // Check exhibition photo count
-    if (photoType === "exhibition") {
+    if (photoType === "exhibition" && selectedActivity) {
       const exhibitionCount = selectedActivity.photos.filter((p) => p.photo_type === "exhibition").length;
       if (exhibitionCount >= 6) {
         toast.error("A maximum of 6 exhibition photos is allowed per activity day.");
@@ -424,49 +433,39 @@ export default function SalesActivitiesTab() {
       }
     }
 
-    setPhotoLoading(true);
-    try {
-      const raw = localStorage.getItem("Insight_Login_Data");
-      const token = raw ? JSON.parse(raw)?.access : "";
-      const baseUrl = import.meta.env.VITE_APP_BASE_URL || "";
-
-      const formData = new FormData();
-      formData.append("photo", photoFile);
-      formData.append("photo_type", photoType);
-      formData.append("latitude", latitude);
-      formData.append("longitude", longitude);
-      if (isMeterType) {
-        formData.append("odometer_kms", odometerKms);
-      }
-      formData.append("captured_at", new Date().toISOString());
-
-      const endpoint = selectedActivity 
-        ? `${baseUrl}${API.SALES.ACTIVITY_PHOTOS(selectedActivity.id)}` 
-        : `${baseUrl}${API.SALES.PHOTOS}`;
-
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || errData.message || "Failed to upload photo evidence");
-      }
-
-      toast.success("Photo verification uploaded successfully.");
-      setPhotoOpen(false);
-      setPhotoFile(null);
-      setOdometerKms("");
-      fetchPlans();
-    } catch (err: any) {
-      toast.error(err.message || "An error occurred during upload");
-    } finally {
-      setPhotoLoading(false);
+    const formData = new FormData();
+    formData.append("photo", photoFile);
+    formData.append("photo_type", photoType);
+    formData.append("latitude", latitude);
+    formData.append("longitude", longitude);
+    if (isMeterType) {
+      formData.append("odometer_kms", odometerKms);
     }
+    formData.append("captured_at", new Date().toISOString());
+
+    const endpoint = selectedActivity 
+      ? API.SALES.ACTIVITY_PHOTOS(selectedActivity.id)
+      : API.SALES.PHOTOS;
+
+    dispatch({
+      type: salesActions.UPLOAD_ACTIVITY_PHOTO,
+      method: "POST",
+      endPoint: endpoint,
+      auth: true,
+      isFormData: true,
+      body: formData,
+      setLoading: (val: boolean) => setPhotoLoading(val),
+      getResponse: () => {
+        toast.success("Photo verification uploaded successfully.");
+        setPhotoOpen(false);
+        setPhotoFile(null);
+        setOdometerKms("");
+        fetchPlans();
+      },
+      getError: (err: any) => {
+        toast.error(err.message || "An error occurred during upload");
+      }
+    });
   };
 
   const filteredPlans = plans.filter((act) => {
@@ -478,6 +477,13 @@ export default function SalesActivitiesTab() {
     }
     return true;
   });
+
+  const groupedPlans = filteredPlans.reduce((acc, plan) => {
+    const userName = plan.user_name || "Sales Executive";
+    if (!acc[userName]) acc[userName] = [];
+    acc[userName].push(plan);
+    return acc;
+  }, {} as Record<string, typeof filteredPlans>);
 
   return (
     <div className="space-y-4">
@@ -559,7 +565,7 @@ export default function SalesActivitiesTab() {
           <Button variant="outline" size="sm" className="h-9 gap-1" onClick={fetchPlans}>
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
-          {!isSalesStaff ? (
+          {canApproveOdoAccess && (
             <Button
               variant="default"
               size="sm"
@@ -568,33 +574,6 @@ export default function SalesActivitiesTab() {
             >
               <CheckCircle2 className="w-3.5 h-3.5" /> Monthly Settlement
             </Button>
-          ) : (
-            <div className="flex gap-2">
-              <Button
-                variant="default"
-                size="sm"
-                className="h-9 gap-1 bg-green-600 hover:bg-green-700 text-white"
-                onClick={() => handleOpenGeneralPhoto("start_selfie")}
-              >
-                <Camera className="w-3.5 h-3.5" /> Check-In
-              </Button>
-              <Button
-                variant="default"
-                size="sm"
-                className="h-9 gap-1 bg-primary text-primary-foreground"
-                onClick={() => setCreateOpen(true)}
-              >
-                <Plus className="w-3.5 h-3.5" /> Plan Activity
-              </Button>
-              <Button
-                variant="default"
-                size="sm"
-                className="h-9 gap-1 bg-red-600 hover:bg-red-700 text-white"
-                onClick={() => handleOpenGeneralPhoto("end_selfie")}
-              >
-                <Camera className="w-3.5 h-3.5" /> Check-Out
-              </Button>
-            </div>
           )}
         </div>
       </div>
@@ -613,9 +592,79 @@ export default function SalesActivitiesTab() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4">
-          {filteredPlans.map((plan) => {
-            return (
+        <div className="space-y-8">
+          {Object.entries(groupedPlans).map(([userName, userPlans]) => (
+            <div key={userName} className="space-y-4">
+              <h3 className="text-lg font-bold border-b pb-2 text-primary flex items-center gap-2">
+                 <User className="w-5 h-5" /> {userName}
+              </h3>
+              {(() => {
+                const uniquePhotosMap = new Map<string, any>();
+                userPlans.forEach(plan => {
+                  if (plan.photos) {
+                    plan.photos.forEach((p: any) => uniquePhotosMap.set(p.id, p));
+                  }
+                });
+                const photosArray = Array.from(uniquePhotosMap.values());
+                if (photosArray.length === 0) return null;
+                return (
+                  <div className="mb-4">
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-2">
+                      <Camera className="w-3.5 h-3.5" /> Plan Photos ({photosArray.length})
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                      {photosArray.map((p: any) => (
+                        <div
+                          key={p.id}
+                          className="group relative rounded-lg border border-border/80 bg-background overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                          onClick={() => setPreviewPhoto(p)}
+                        >
+                          <div className="aspect-video w-full bg-muted/40 relative flex items-center justify-center overflow-hidden">
+                            <img
+                              src={p.photo}
+                              alt={p.photo_type_display || p.photo_type}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                              onError={(e) => {
+                                (e.target as any).src = "https://placehold.co/400x300?text=Photo+Unavailable";
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                              <Eye className="w-5 h-5" />
+                            </div>
+                          </div>
+                          <div className="p-2 space-y-1">
+                            <div className="text-[11px] font-semibold truncate text-foreground">
+                              {p.photo_type_display || PHOTO_TYPE_LABELS[p.photo_type] || p.photo_type}
+                            </div>
+                            {p.odometer_kms && (
+                              <div className="text-[10px] text-primary font-bold flex items-center gap-1">
+                                <Gauge className="w-3 h-3" /> {p.odometer_kms} km
+                              </div>
+                            )}
+                            {p.latitude && p.longitude ? (
+                              <a
+                                href={`https://www.google.com/maps?q=${p.latitude},${p.longitude}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 truncate group/loc w-fit max-w-full"
+                                onClick={(e) => e.stopPropagation()}
+                                title="Open location in Google Maps"
+                              >
+                                <MapPin className="w-2.5 h-2.5 text-red-500 shrink-0 group-hover/loc:scale-110 transition-transform" />
+                                <span className="underline underline-offset-2 truncate">
+                                  {p.latitude.substring(0, 7)}, {p.longitude.substring(0, 7)}
+                                </span>
+                              </a>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+              <div className="grid grid-cols-1 gap-4">
+                {userPlans.map((plan) => (
               <motion.div
                 key={plan.id}
                 initial={{ opacity: 0, y: 5 }}
@@ -624,7 +673,7 @@ export default function SalesActivitiesTab() {
               >
                 <div className="flex flex-wrap items-start justify-between gap-2 border-b border-border/40 pb-3">
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-base text-foreground">
                         {plan.user_name || "Sales Executive"}
                       </span>
@@ -632,7 +681,31 @@ export default function SalesActivitiesTab() {
                         <Calendar className="w-3 h-3" />
                         {plan.plan_date}
                       </Badge>
+                      {plan.type && (
+                        <Badge variant="secondary" className="text-xs font-medium capitalize bg-secondary/50">
+                          {plan.type.replace(/_/g, ' ')}
+                        </Badge>
+                      )}
                     </div>
+
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground pt-1 pb-1">
+                      {(plan.start_time || plan.end_time) && (
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-primary/70" />
+                          <span>
+                            {plan.start_time ? plan.start_time.substring(0, 5) : "--:--"}
+                            {plan.end_time ? ` to ${plan.end_time.substring(0, 5)}` : ""}
+                          </span>
+                        </div>
+                      )}
+                      {plan.place && (
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="w-3.5 h-3.5 text-primary/70" />
+                          <span>{plan.place}</span>
+                        </div>
+                      )}
+                    </div>
+
                     {plan.description && (
                       <p className="text-xs text-muted-foreground flex items-start gap-1.5 pt-0.5">
                         <FileText className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
@@ -642,48 +715,134 @@ export default function SalesActivitiesTab() {
                   </div>
                 </div>
 
+
+
                 {/* Iterate over nested activities */}
-                {plan.activities && plan.activities.length > 0 ? plan.activities.map((act) => {
-                  const startOdo = act.photos.find((p) => p.photo_type === "start_odometer")?.odometer_kms;
-                  const endOdo = act.photos.find((p) => p.photo_type === "end_odometer")?.odometer_kms;
-                  const distance =
-                    startOdo && endOdo
-                      ? (Number(endOdo) - Number(startOdo)).toFixed(1)
-                      : null;
-                      
-                  return (
-                    <div key={act.id} className="mt-4 pt-4 border-t border-dashed border-border/50">
-                      {act.notes && (
-                        <p className="text-xs text-muted-foreground flex items-start gap-1.5 pt-0.5 mb-3">
-                          <FileText className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
-                          <span>{act.notes}</span>
-                        </p>
-                      )}
-                      {/* Verification Photos Timeline */}
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                            <Camera className="w-3.5 h-3.5" /> Geo-Tagged Evidence ({act.photos.length})
-                          </h4>
-                          {isSalesStaff && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => {
-                                setSelectedActivity(act);
-                                setPhotoType("start_odometer");
-                                setPhotoOpen(true);
-                              }}
-                            >
-                              <Plus className="w-3 h-3 mr-1" /> Add Photo
-                            </Button>
-                          )}
-                        </div>
+                {plan.activities && plan.activities.length > 0 ? (
+                  <div className="mt-8 pt-6 border-t border-border/40">
+                    <div className="flex items-center gap-2 mb-5">
+                      <div className="w-1.5 h-5 bg-primary rounded-full"></div>
+                      <h4 className="text-base font-bold text-foreground tracking-tight">Activity Tasks ({plan.activities.length})</h4>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 gap-5">
+                      {plan.activities.map((act, index) => {
+                        const startOdo = act.photos.find((p) => p.photo_type === "start_odometer")?.odometer_kms;
+                        const endOdo = act.photos.find((p) => p.photo_type === "end_odometer")?.odometer_kms;
+                        const distance =
+                          startOdo && endOdo
+                            ? (Number(endOdo) - Number(startOdo)).toFixed(1)
+                            : null;
+                            
+                        return (
+                          <div key={act.id} className="bg-card/40 border border-border/60 rounded-xl overflow-hidden hover:bg-card/80 hover:shadow-sm hover:border-border/80 transition-all">
+                            <div className="p-4 border-b border-border/50 bg-muted/20 flex flex-wrap items-center justify-between gap-3">
+                                {act.name && (
+                                  <div className="flex items-center gap-3">
+                                     <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary font-bold text-sm shadow-sm border border-primary/10">
+                                        {index + 1}
+                                     </div>
+                                     <div>
+                                       <h4 className="text-sm font-bold text-foreground">
+                                         {act.name}
+                                       </h4>
+                                       <p className="text-[11px] text-muted-foreground font-medium mt-0.5">
+                                         Sub-Activity Log
+                                       </p>
+                                     </div>
+                                  </div>
+                                )}
+                                {isSalesStaff && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-xs bg-background shadow-sm hover:bg-primary hover:text-primary-foreground transition-colors"
+                                    onClick={() => {
+                                      setSelectedActivity(act);
+                                      setPhotoType("start_odometer");
+                                      setPhotoOpen(true);
+                                    }}
+                                  >
+                                    <Camera className="w-3.5 h-3.5 mr-1.5" /> Upload Evidence
+                                  </Button>
+                                )}
+                            </div>
+
+                            <div className="p-5 space-y-6">
+                        {act.notes && (
+                          <div className="bg-background rounded-lg p-3 border border-border/40 text-xs text-muted-foreground flex gap-2.5 shadow-sm">
+                            <FileText className="w-4 h-4 text-primary/70 shrink-0 mt-0.5" />
+                            <p className="leading-relaxed text-foreground/80">{act.notes}</p>
+                          </div>
+                        )}
+
+                        {(act.students_expected != null || act.students_attended != null) && (
+                          <div className="flex flex-wrap gap-3">
+                            {act.students_expected != null && (
+                              <div className="flex items-center gap-2.5 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 px-3 py-2 rounded-lg border border-blue-100 dark:border-blue-900/50 flex-1 min-w-[140px] shadow-sm">
+                                <div className="p-1.5 bg-blue-100 dark:bg-blue-900/50 rounded-md">
+                                  <Users className="w-4 h-4" />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] uppercase font-bold opacity-80 leading-none mb-0.5">Students Expected</span>
+                                  <span className="text-sm font-bold leading-tight">{act.students_expected}</span>
+                                </div>
+                              </div>
+                            )}
+                            {act.students_attended != null && (
+                              <div className="flex items-center gap-2.5 bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 px-3 py-2 rounded-lg border border-green-100 dark:border-green-900/50 flex-1 min-w-[140px] shadow-sm">
+                                <div className="p-1.5 bg-green-100 dark:bg-green-900/50 rounded-md">
+                                  <CheckCircle2 className="w-4 h-4" />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] uppercase font-bold opacity-80 leading-none mb-0.5">Students Attended</span>
+                                  <span className="text-sm font-bold leading-tight">{act.students_attended}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {(act.standard || act.board || act.medium || act.seminar_reference_by || act.seminar_given_by || act.target_name || act.target_number) && (
+                          <div className="flex flex-wrap gap-2 text-xs pt-1 mt-1">
+                            {act.standard && <Badge variant="outline" className="bg-muted/50 text-muted-foreground"><BookOpen className="w-3 h-3 mr-1.5"/> Std: {act.standard}</Badge>}
+                            {act.board && <Badge variant="outline" className="bg-muted/50 text-muted-foreground"><BookOpen className="w-3 h-3 mr-1.5"/> Board: {act.board}</Badge>}
+                            {act.medium && <Badge variant="outline" className="bg-muted/50 text-muted-foreground"><BookOpen className="w-3 h-3 mr-1.5"/> Medium: {act.medium}</Badge>}
+                            {act.seminar_reference_by && (
+                              <div className="flex items-center gap-1.5 bg-background border border-border px-2 py-1 rounded-md text-muted-foreground">
+                                <User className="w-3.5 h-3.5" /> Ref By: <span className="font-medium text-foreground">{act.seminar_reference_by}</span>
+                              </div>
+                            )}
+                            {act.seminar_given_by && (
+                              <div className="flex items-center gap-1.5 bg-background border border-border px-2 py-1 rounded-md text-muted-foreground">
+                                <Mic className="w-3.5 h-3.5" /> Given By: <span className="font-medium text-foreground">{act.seminar_given_by}</span>
+                              </div>
+                            )}
+                            {act.target_name && (
+                              <div className="flex items-center gap-1.5 bg-background border border-border px-2 py-1 rounded-md text-muted-foreground">
+                                <Target className="w-3.5 h-3.5 text-primary" /> Target: <span className="font-medium text-foreground">{act.target_name}</span>
+                              </div>
+                            )}
+                            {act.target_number && (
+                              <div className="flex items-center gap-1.5 bg-background border border-border px-2 py-1 rounded-md text-muted-foreground">
+                                <Phone className="w-3.5 h-3.5 text-primary" /> Phone: <span className="font-medium text-foreground">{act.target_number}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Verification Photos Timeline */}
+                        <div className="pt-2">
+                          <div className="flex items-center gap-2 mb-3">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                              <Camera className="w-4 h-4 text-primary/70" /> Geo-Tagged Evidence
+                            </h4>
+                            <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-bold rounded-md bg-muted text-muted-foreground">{act.photos.length}</Badge>
+                          </div>
 
                   {act.photos.length === 0 ? (
-                    <div className="text-xs text-muted-foreground italic bg-muted/20 rounded-lg p-3">
-                      No verification photos uploaded yet for this day.
+                    <div className="text-xs text-muted-foreground italic bg-muted/30 border border-dashed border-border/60 rounded-lg p-4 text-center">
+                      No verification photos uploaded yet for this activity.
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -758,7 +917,7 @@ export default function SalesActivitiesTab() {
                   const readingId = actOdoReading?.id || act.id;
                   const totalKms = actOdoReading?.total_kms || (startOdo && endOdo ? (Number(endOdo.odometer_kms) - Number(startOdo.odometer_kms)).toFixed(1) : "0.00");
                   const status = actOdoReading?.status || "pending";
-                  const canApprove = !isSalesStaff && status === "pending";
+                  const canApprove = canApproveOdoAccess && status === "pending";
 
                   return (
                     <div className="bg-muted/30 p-3 rounded-lg border border-border mt-4">
@@ -787,7 +946,16 @@ export default function SalesActivitiesTab() {
                           
                           {canApprove && (
                             <div className="flex gap-2">
-                              <Button size="sm" variant="outline" className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => setApproveOdoReading({ id: readingId, total_kms: totalKms } as any)}>
+                              <Button size="sm" variant="outline" className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => {
+                                setApproveOdoReading({ id: readingId, total_kms: totalKms } as any);
+                                if (actOdoReading?.vehicle_type === '4W') {
+                                  setExpensePerKm("12.00");
+                                } else if (actOdoReading?.vehicle_type === '2W') {
+                                  setExpensePerKm("5.00");
+                                } else {
+                                  setExpensePerKm("6.50");
+                                }
+                              }}>
                                 <Check className="w-3.5 h-3.5 mr-1" /> Approve
                               </Button>
                               <Button size="sm" variant="outline" className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => setRejectOdoReading({ id: readingId } as any)}>
@@ -797,9 +965,29 @@ export default function SalesActivitiesTab() {
                           )}
                           
                           {status === "approved" && actOdoReading && (
-                            <div className="text-xs text-right">
-                              <div className="font-medium">₹{actOdoReading.total_expense} (@ ₹{actOdoReading.expense_per_km}/km)</div>
-                              <div className="text-muted-foreground text-[10px]">by {actOdoReading.approved_by_name}</div>
+                            <div className="flex flex-col items-end gap-1.5 text-right mt-2 sm:mt-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[11px] text-muted-foreground font-medium bg-background px-2 py-0.5 rounded-full border border-border">
+                                  ({actOdoReading.vehicle_type || '2W'}) ₹{actOdoReading.expense_per_km}/km
+                                </span>
+                                <span className="font-bold text-primary text-sm">
+                                  ₹{actOdoReading.total_expense}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {actOdoReading.is_paid ? (
+                                  <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 border-none text-[9px] h-4 px-1.5">
+                                    <CheckCircle2 className="w-2.5 h-2.5 mr-0.5" /> PAID
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="secondary" className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none text-[9px] h-4 px-1.5">
+                                    <Clock className="w-2.5 h-2.5 mr-0.5" /> UNPAID
+                                  </Badge>
+                                )}
+                                <span className="text-[10px] text-muted-foreground">
+                                  Approved by {actOdoReading.approved_by_name || 'Admin'}
+                                </span>
+                              </div>
                             </div>
                           )}
                           {status === "rejected" && actOdoReading && (
@@ -813,16 +1001,22 @@ export default function SalesActivitiesTab() {
                     </div>
                   );
                 })()}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                }) : (
-                  <div className="text-xs text-muted-foreground italic bg-muted/20 rounded-lg p-3 text-center">
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground italic bg-muted/20 rounded-lg p-4 text-center mt-6 border border-dashed border-border/60">
                     No field activities recorded for this plan yet.
                   </div>
                 )}
               </motion.div>
-            );
-          })}
+            ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -1037,7 +1231,7 @@ export default function SalesActivitiesTab() {
                 const readingId = actOdoReading?.id || previewPhoto.activity;
                 const totalKms = actOdoReading?.total_kms || (startOdo && endOdo ? (Number(endOdo.odometer_kms) - Number(startOdo.odometer_kms)).toFixed(1) : "0.00");
                 const status = actOdoReading?.status || "pending";
-                const canApprove = !isSalesStaff && status === "pending";
+                const canApprove = canApproveOdoAccess && status === "pending";
 
                 return (
                   <div className="bg-card border border-border p-3 rounded-lg mt-2 flex items-center justify-between shadow-sm">
@@ -1052,7 +1246,16 @@ export default function SalesActivitiesTab() {
                     
                     {canApprove && (
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="h-7 text-xs text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => setApproveOdoReading({ id: readingId, total_kms: totalKms } as any)}>
+                        <Button size="sm" variant="outline" className="h-7 text-xs text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => {
+                          setApproveOdoReading({ id: readingId, total_kms: totalKms } as any);
+                          if (actOdoReading?.vehicle_type === '4W') {
+                            setExpensePerKm("12.00");
+                          } else if (actOdoReading?.vehicle_type === '2W') {
+                            setExpensePerKm("5.00");
+                          } else {
+                            setExpensePerKm("6.50");
+                          }
+                        }}>
                           <Check className="w-3 h-3 mr-1" /> Approve
                         </Button>
                         <Button size="sm" variant="outline" className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => setRejectOdoReading({ id: readingId } as any)}>
@@ -1137,7 +1340,7 @@ export default function SalesActivitiesTab() {
 
       {/* ─── Bulk Monthly Settlement Dialog ─── */}
       <Dialog open={bulkSettlementOpen} onOpenChange={setBulkSettlementOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Bulk Monthly Settlement</DialogTitle>
           </DialogHeader>
@@ -1194,19 +1397,101 @@ export default function SalesActivitiesTab() {
               </Select>
             </div>
 
+            {bulkOdoSummary && (
+              <div className="bg-primary/5 p-3 rounded-lg border border-primary/20 space-y-3 mt-4">
+                <h4 className="text-xs font-semibold text-primary">Pending & Unpaid Travel Summary</h4>
+                
+                {/* Pending */}
+                {(bulkOdoSummary.pendingCount2W > 0 || bulkOdoSummary.pendingCount4W > 0) && (
+                  <div className="space-y-1">
+                    <h5 className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">Pending Approval</h5>
+                    {bulkOdoSummary.pendingCount2W > 0 && (
+                      <div className="flex justify-between text-sm items-center">
+                        <span>2W Travel ({bulkOdoSummary.pendingCount2W} records):</span>
+                        <div className="text-right whitespace-nowrap">
+                          <span className="font-medium">{bulkOdoSummary.pending2W.toFixed(2)} km</span>
+                          <span className="text-xs text-muted-foreground ml-1">(~ ₹{(bulkOdoSummary.pending2W * parseFloat(bulkExpensePerKm2W || "0")).toFixed(2)})</span>
+                        </div>
+                      </div>
+                    )}
+                    {bulkOdoSummary.pendingCount4W > 0 && (
+                      <div className="flex justify-between text-sm items-center">
+                        <span>4W Travel ({bulkOdoSummary.pendingCount4W} records):</span>
+                        <div className="text-right whitespace-nowrap">
+                          <span className="font-medium">{bulkOdoSummary.pending4W.toFixed(2)} km</span>
+                          <span className="text-xs text-muted-foreground ml-1">(~ ₹{(bulkOdoSummary.pending4W * parseFloat(bulkExpensePerKm4W || "0")).toFixed(2)})</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Approved */}
+                {(bulkOdoSummary.approvedCount2W > 0 || bulkOdoSummary.approvedCount4W > 0) && (
+                  <div className="space-y-1">
+                    <h5 className="text-[10px] uppercase font-bold text-green-600/80 tracking-wider mb-1">Approved (Unpaid)</h5>
+                    {bulkOdoSummary.approvedCount2W > 0 && (
+                      <div className="flex justify-between text-sm items-center">
+                        <span>2W Travel ({bulkOdoSummary.approvedCount2W} records):</span>
+                        <div className="text-right whitespace-nowrap">
+                          <span className="font-medium">{bulkOdoSummary.approved2W.toFixed(2)} km</span>
+                          <span className="text-xs text-muted-foreground ml-1">(~ ₹{(bulkOdoSummary.approved2W * parseFloat(bulkExpensePerKm2W || "0")).toFixed(2)})</span>
+                        </div>
+                      </div>
+                    )}
+                    {bulkOdoSummary.approvedCount4W > 0 && (
+                      <div className="flex justify-between text-sm items-center">
+                        <span>4W Travel ({bulkOdoSummary.approvedCount4W} records):</span>
+                        <div className="text-right whitespace-nowrap">
+                          <span className="font-medium">{bulkOdoSummary.approved4W.toFixed(2)} km</span>
+                          <span className="text-xs text-muted-foreground ml-1">(~ ₹{(bulkOdoSummary.approved4W * parseFloat(bulkExpensePerKm4W || "0")).toFixed(2)})</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex justify-between text-sm pt-2 mt-2 border-t border-primary/10 items-center">
+                  <span className="font-semibold text-primary">Estimated Settlement:</span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-bold text-primary">₹</span>
+                    <Input 
+                      type="number"
+                      step="0.01"
+                      className="h-7 w-28 text-right font-bold text-primary bg-primary/10 border-primary/20 px-2"
+                      value={customSettlementAmount !== "" ? customSettlementAmount : (((bulkOdoSummary.pending2W + bulkOdoSummary.approved2W) * parseFloat(bulkExpensePerKm2W || "0")) + ((bulkOdoSummary.pending4W + bulkOdoSummary.approved4W) * parseFloat(bulkExpensePerKm4W || "0"))).toFixed(2)}
+                      onChange={(e) => setCustomSettlementAmount(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="p-3 bg-muted/40 rounded-lg border border-border space-y-3 mt-4">
               <h4 className="text-sm font-semibold text-foreground mb-2">Approve All Pending</h4>
-              <div>
-                <Label className="text-xs mb-1 block">Expense per KM (₹) *</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={bulkExpensePerKm}
-                  onChange={(e) => setBulkExpensePerKm(e.target.value)}
-                  className="h-9 text-sm bg-background"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs mb-1 block">2W Expense/KM (₹) *</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={bulkExpensePerKm2W}
+                    onChange={(e) => setBulkExpensePerKm2W(e.target.value)}
+                    className="h-9 text-sm bg-background"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs mb-1 block">4W Expense/KM (₹) *</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={bulkExpensePerKm4W}
+                    onChange={(e) => setBulkExpensePerKm4W(e.target.value)}
+                    className="h-9 text-sm bg-background"
+                  />
+                </div>
               </div>
-              <Button onClick={handleBulkApprove} disabled={bulkLoading || !bulkUserId} className="w-full bg-green-600 hover:bg-green-700 text-white h-9">
+              <Button onClick={handleBulkApprove} disabled={bulkLoading || !bulkUserId} className="w-full bg-green-600 hover:bg-green-700 text-white h-9 mt-1">
                 {bulkLoading ? "Processing..." : "Approve Pending Records"}
               </Button>
             </div>

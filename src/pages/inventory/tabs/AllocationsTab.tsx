@@ -283,6 +283,7 @@ export default function AllocationsTab() {
 
   // ── Return confirm ────────────────────────────────────────────────────────
   const [returnTarget, setReturnTarget] = useState<ItemAllocation | null>(null);
+  const [returnQuantity, setReturnQuantity] = useState("");
   const [returnNotes, setReturnNotes] = useState("");
   const [returnOpen, setReturnOpen] = useState(false);
   const [returnLoading, setReturnLoading] = useState(false);
@@ -406,24 +407,20 @@ export default function AllocationsTab() {
       type: inventoryActions.RETURN_ALLOCATION,
       method: "POST",
       endPoint: API.INVENTORY.ALLOCATION_RETURN(returnTarget.id),
-      body: { return_notes: returnNotes },
+      body: { 
+        return_notes: returnNotes,
+        return_quantity: Number(returnQuantity)
+      },
       auth: true,
       setLoading: (v: boolean) => setReturnLoading(v),
       getResponse: () => {
         // Backend returns { status: "Item returned successfully." }
-        // Update local allocation status
-        const updated: ItemAllocation = {
-          ...returnTarget,
-          status: "returned",
-          status_display: "Returned",
-          returned_at: new Date().toISOString(),
-          return_notes: returnNotes,
-        };
-        dispatch(updateAllocationInList(updated));
+        fetchAllocations(); // Refetch to get updated quantities/status
         toast.success("Item returned successfully. Stock restored.");
         setReturnOpen(false);
         setReturnTarget(null);
         setReturnNotes("");
+        setReturnQuantity("");
       },
       getError: (err: any) => toast.error(err?.response?.data?.message || "Failed to return item"),
     });
@@ -585,6 +582,7 @@ export default function AllocationsTab() {
                           onClick={() => {
                             setReturnTarget(alloc);
                             setReturnNotes("");
+                            setReturnQuantity(String(alloc.quantity));
                             setReturnOpen(true);
                           }}
                           title="Return Item"
@@ -894,6 +892,7 @@ export default function AllocationsTab() {
           if (!o) {
             setReturnTarget(null);
             setReturnNotes("");
+            setReturnQuantity("");
           }
         }}
       >
@@ -910,15 +909,28 @@ export default function AllocationsTab() {
               </p>
             )}
           </DialogHeader>
-          <div className="py-2">
-            <Label className="text-xs mb-1 block">Return Notes</Label>
-            <Textarea
-              value={returnNotes}
-              onChange={(e) => setReturnNotes(e.target.value)}
-              rows={3}
-              placeholder="e.g. Returned in good condition. Student transferred."
-              className="text-sm resize-none"
-            />
+          <div className="py-2 space-y-3">
+            <div>
+              <Label className="text-xs mb-1 block">Return Quantity *</Label>
+              <Input
+                type="number"
+                value={returnQuantity}
+                onChange={(e) => setReturnQuantity(e.target.value)}
+                min="1"
+                max={returnTarget?.quantity || 1}
+                className="h-9 text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-xs mb-1 block">Return Notes</Label>
+              <Textarea
+                value={returnNotes}
+                onChange={(e) => setReturnNotes(e.target.value)}
+                rows={3}
+                placeholder="e.g. Returned in good condition. Student transferred."
+                className="text-sm resize-none"
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -934,7 +946,7 @@ export default function AllocationsTab() {
             </Button>
             <Button
               onClick={handleReturn}
-              disabled={returnLoading}
+              disabled={returnLoading || !returnQuantity || Number(returnQuantity) < 1 || Number(returnQuantity) > (returnTarget?.quantity || 1)}
               className="bg-orange-500 hover:bg-orange-600 text-white"
             >
               {returnLoading ? "Processing…" : "Confirm Return"}
