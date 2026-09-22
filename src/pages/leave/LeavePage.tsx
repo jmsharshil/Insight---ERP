@@ -21,27 +21,27 @@ const TAB_CONFIG = [
   {
     value: "applications",
     label: "All Leaves",
-    roles: ["super_admin", "branch_manager", "admin_senior_executive"],
+    roles: ["super_admin", "branch_manager", "admin_senior_executive", "cmo", "head_coordinator"],
   },
   {
     value: "policies",
     label: "Policies",
-    roles: ["super_admin", "branch_manager"],
+    roles: ["super_admin", "branch_manager", "cmo", "head_coordinator"],
   },
   {
     value: "analytics",
     label: "Analytics",
-    roles: ["super_admin", "branch_manager", "admin_senior_executive"],
+    roles: ["super_admin", "branch_manager", "admin_senior_executive", "cmo", "head_coordinator"],
   },
   {
     value: "holidays",
     label: "Public Holidays",
-    roles: ["super_admin", "branch_manager", "admin_senior_executive", "admin_executive",  "faculty", "front_desk", "counsellor", "accountant", "sales_executive", "sales_senior_executive", "tele_caller"],
+    roles: ["super_admin", "branch_manager", "admin_senior_executive", "admin_executive",  "faculty", "front_desk", "counsellor", "accountant", "sales_executive", "sales_senior_executive", "tele_caller", "cmo", "head_coordinator"],
   },
   {
     value: "balances",
     label: "Leave Balance",
-    roles: ["super_admin", "branch_manager", "admin_senior_executive", "admin_executive",  "faculty", "front_desk", "counsellor", "accountant", "sales_executive", "sales_senior_executive", "tele_caller"],
+    roles: ["super_admin", "branch_manager", "admin_senior_executive", "admin_executive",  "faculty", "front_desk", "counsellor", "accountant", "sales_executive", "sales_senior_executive", "tele_caller", "cmo", "head_coordinator"],
   },
   {
     value: "late_entries",

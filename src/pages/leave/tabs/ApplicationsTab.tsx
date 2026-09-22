@@ -64,7 +64,7 @@ const STUDENT_LEAVE_TYPE_OPTS = [
   { value: "uniform", label: "Uniform Leave" },
 ];
 
-const ADMIN_ROLES = ["super_admin", "branch_manager", "admin_senior_executive"];
+const ADMIN_ROLES = ["super_admin", "branch_manager", "admin_senior_executive", "cmo", "head_coordinator"];
 const APPLY_ROLES = [
   "admin_senior_executive",
   "branch_manager",
@@ -81,7 +81,7 @@ const APPLY_ROLES = [
   "exam_supervisor",
   "accountant",
 ];
-const APPROVE_ROLES = ["super_admin", "branch_manager", "admin_senior_executive"];
+const APPROVE_ROLES = ["super_admin", "branch_manager", "cmo", "head_coordinator"];
 
 // Shared detail helpers
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
@@ -682,8 +682,19 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
                 filtered.map((app, i) => {
                   const applicantRole = app.applied_by_role || app.user_role;
                   const isOwnLeave = app.applied_by === user?.id;
-                  const isBranchManagerLeave = applicantRole === "branch_manager";
-                  const canApproveThis = canApprove && !isOwnLeave && (!isBranchManagerLeave || role === "super_admin") && !(role === "admin_senior_executive" && app.is_first_approval_done);
+
+                  let canApproveThis = false;
+                  if (canApprove && !isOwnLeave) {
+                    if (["counsellor", "sales_senior_executive", "sales_executive"].includes(applicantRole)) {
+                      canApproveThis = !app.is_first_approval_done ? role === "cmo" : role === "super_admin";
+                    } else if (applicantRole === "head_coordinator") {
+                      canApproveThis = !app.is_first_approval_done ? role === "branch_manager" : role === "super_admin";
+                    } else if (applicantRole === "branch_manager") {
+                      canApproveThis = role === "super_admin";
+                    } else {
+                      canApproveThis = !app.is_first_approval_done ? role === "head_coordinator" : role === "branch_manager";
+                    }
+                  }
 
                   return (
                   <motion.tr

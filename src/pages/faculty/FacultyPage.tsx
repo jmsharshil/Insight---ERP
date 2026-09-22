@@ -1392,7 +1392,7 @@ export default function FacultyPage() {
               </Button> */}
             </div>
             <DataTable
-              exportable
+              exportable={user?.role === "super_admin"}
               loading={payrollLoading}
               data={payrollRows}
               onRowClick={(row) => navigate(`/faculty/payroll/${row.id}`)}

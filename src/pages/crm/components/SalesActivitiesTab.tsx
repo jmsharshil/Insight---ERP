@@ -634,7 +634,7 @@ export default function SalesActivitiesTab() {
                           </div>
                           <div className="p-2 space-y-1">
                             <div className="text-[11px] font-semibold truncate text-foreground">
-                              {p.photo_type_display || PHOTO_TYPE_LABELS[p.photo_type] || p.photo_type}
+                              {p.photo_type_display || PHOTO_TYPE_LABELS[p.photo_type as keyof typeof PHOTO_TYPE_LABELS] || p.photo_type}
                             </div>
                             {p.odometer_kms && (
                               <div className="text-[10px] text-primary font-bold flex items-center gap-1">
@@ -867,7 +867,7 @@ export default function SalesActivitiesTab() {
                           </div>
                           <div className="p-2 space-y-1">
                             <div className="text-[11px] font-semibold truncate text-foreground">
-                              {p.photo_type_display || PHOTO_TYPE_LABELS[p.photo_type] || p.photo_type}
+                              {p.photo_type_display || PHOTO_TYPE_LABELS[p.photo_type as keyof typeof PHOTO_TYPE_LABELS] || p.photo_type}
                             </div>
                             {p.odometer_kms && (
                               <div className="text-[10px] text-primary font-bold flex items-center gap-1">

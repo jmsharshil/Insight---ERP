@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
-import { Sliders, CheckCircle2, Send, Users, MessageSquarePlus, Edit3 } from "lucide-react";
+import { Sliders, CheckCircle2, Send, Users, MessageSquarePlus, Edit3, Download } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -279,6 +279,48 @@ export default function PayslipsTab() {
     });
   };
 
+  const exportCsv = () => {
+    const headers = [
+      "Employee", "Type", "Basic/Rate", "Hours/Amount", "Bonus", 
+      "Reimbursements", "Deductions", "Net Salary", "Status"
+    ].join(",");
+    
+    const rows = payslips.map((slip) => {
+      const basic = Number(slip.basic_salary || slip.salary || 0);
+      const isFaculty = slip.faculty;
+      const type = isFaculty ? "Faculty" : "Staff";
+      const bonus = Number(slip.bonus || 0);
+      const reimb = Number(slip.reimbursements_amount || 0);
+      const deduct = Number(slip.late_penalty || 0) +
+                     Number(slip.leave_deductions || 0) +
+                     Number(slip.absence_deductions || 0) +
+                     Number(slip.retention_deduction || 0) +
+                     Number(slip.other_deductions || 0);
+      const net = Number(slip.net_salary || 0);
+      const statusStr = slip.is_disbursed ? "Disbursed" : "Pending";
+
+      return [
+        `"${slip.faculty_name}"`,
+        `"${type}"`,
+        `"${basic}"`,
+        `"${Number(slip.hour_based_amount || 0)}"`,
+        `"${bonus}"`,
+        `"${reimb}"`,
+        `"${deduct}"`,
+        `"${net}"`,
+        `"${statusStr}"`
+      ].join(",");
+    });
+
+    const csv = [headers, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Payslips_${selectedRun?.month}_${selectedRun?.year}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
 
   if (!selectedRun) {
@@ -361,6 +403,11 @@ export default function PayslipsTab() {
           </SelectContent>
         </Select>
         <span className="text-xs text-muted-foreground">{payslips.length} payslip(s)</span>
+        {role === "super_admin" && (
+          <Button variant="outline" size="sm" onClick={exportCsv} className="h-8 text-xs gap-1.5 ml-auto">
+            <Download className="w-3.5 h-3.5" /> Export CSV
+          </Button>
+        )}
       </div>
 
       {payslipsLoading ? (
