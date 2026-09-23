@@ -16,12 +16,12 @@ const TAB_CONFIG = [
   {
     value: "my_leaves",
     label: "My Leaves",
-    roles: ["branch_manager", "admin_senior_executive","admin_executive", "faculty", "front_desk", "counsellor", "student", "parents", "accountant", "sales_executive", "sales_senior_executive", "tele_caller"],
+    roles: ["branch_manager", "admin_senior_executive","admin_executive", "faculty", "front_desk", "counsellor", "student", "parents", "accountant", "sales_executive", "sales_senior_executive", "tele_caller", "head_coordinator"],
   },
   {
     value: "applications",
     label: "All Leaves",
-    roles: ["super_admin", "branch_manager", "admin_senior_executive", "cmo", "head_coordinator"],
+    roles: ["super_admin", "branch_manager", "cmo", "head_coordinator"],
   },
   {
     value: "policies",

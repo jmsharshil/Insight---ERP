@@ -64,7 +64,7 @@ const STUDENT_LEAVE_TYPE_OPTS = [
   { value: "uniform", label: "Uniform Leave" },
 ];
 
-const ADMIN_ROLES = ["super_admin", "branch_manager", "admin_senior_executive", "cmo", "head_coordinator"];
+const ADMIN_ROLES = ["super_admin", "branch_manager", "cmo", "head_coordinator"];
 const APPLY_ROLES = [
   "admin_senior_executive",
   "branch_manager",
@@ -77,7 +77,6 @@ const APPLY_ROLES = [
   "sales_executive",
   "tele_caller",
   "admin_executive",
-  "admin_senior_executive",
   "exam_supervisor",
   "accountant",
 ];
@@ -555,12 +554,14 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
           >
             Staff Leaves
           </button>
-          <button
-            onClick={() => setActiveTab("student")}
-            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === "student" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            Student Leaves
-          </button>
+          {role !== "head_coordinator" && (
+            <button
+              onClick={() => setActiveTab("student")}
+              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === "student" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Student Leaves
+            </button>
+          )}
         </div>
       )}
 
@@ -684,13 +685,19 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
                   const isOwnLeave = app.applied_by === user?.id;
 
                   let canApproveThis = false;
+                  const isStudentLeaveType = activeTab === "student" || role === "student" || role === "parents" || applicantRole === "student" || applicantRole === "parents" || !!app.student_name;
+
                   if (canApprove && !isOwnLeave) {
-                    if (["counsellor", "sales_senior_executive", "sales_executive"].includes(applicantRole)) {
-                      canApproveThis = !app.is_first_approval_done ? role === "cmo" : role === "super_admin";
+                    if (role === "super_admin") {
+                      canApproveThis = true;
+                    } else if (isStudentLeaveType) {
+                      canApproveThis = app.parent_consulted ? role === "branch_manager" : false;
+                    } else if (["counsellor", "sales_senior_executive", "sales_executive"].includes(applicantRole)) {
+                      canApproveThis = !app.is_first_approval_done ? role === "cmo" : false;
                     } else if (applicantRole === "head_coordinator") {
-                      canApproveThis = !app.is_first_approval_done ? role === "branch_manager" : role === "super_admin";
+                      canApproveThis = !app.is_first_approval_done ? role === "branch_manager" : false;
                     } else if (applicantRole === "branch_manager") {
-                      canApproveThis = role === "super_admin";
+                      canApproveThis = false; // already covered by super_admin block
                     } else {
                       canApproveThis = !app.is_first_approval_done ? role === "head_coordinator" : role === "branch_manager";
                     }
