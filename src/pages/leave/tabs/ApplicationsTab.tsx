@@ -64,7 +64,7 @@ const STUDENT_LEAVE_TYPE_OPTS = [
   { value: "uniform", label: "Uniform Leave" },
 ];
 
-const ADMIN_ROLES = ["super_admin", "branch_manager", "admin_senior_executive"];
+const ADMIN_ROLES = ["super_admin", "branch_manager", "cmo", "head_coordinator"];
 const APPLY_ROLES = [
   "admin_senior_executive",
   "branch_manager",
@@ -77,11 +77,10 @@ const APPLY_ROLES = [
   "sales_executive",
   "tele_caller",
   "admin_executive",
-  "admin_senior_executive",
   "exam_supervisor",
   "accountant",
 ];
-const APPROVE_ROLES = ["super_admin", "branch_manager", "admin_senior_executive"];
+const APPROVE_ROLES = ["super_admin", "branch_manager", "cmo", "head_coordinator"];
 
 // Shared detail helpers
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
@@ -555,12 +554,14 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
           >
             Staff Leaves
           </button>
-          <button
-            onClick={() => setActiveTab("student")}
-            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === "student" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            Student Leaves
-          </button>
+          {role !== "head_coordinator" && (
+            <button
+              onClick={() => setActiveTab("student")}
+              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === "student" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Student Leaves
+            </button>
+          )}
         </div>
       )}
 
@@ -682,8 +683,25 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
                 filtered.map((app, i) => {
                   const applicantRole = app.applied_by_role || app.user_role;
                   const isOwnLeave = app.applied_by === user?.id;
-                  const isBranchManagerLeave = applicantRole === "branch_manager";
-                  const canApproveThis = canApprove && !isOwnLeave && (!isBranchManagerLeave || role === "super_admin") && !(role === "admin_senior_executive" && app.is_first_approval_done);
+
+                  let canApproveThis = false;
+                  const isStudentLeaveType = activeTab === "student" || role === "student" || role === "parents" || applicantRole === "student" || applicantRole === "parents" || !!app.student_name;
+
+                  if (canApprove && !isOwnLeave) {
+                    if (role === "super_admin") {
+                      canApproveThis = true;
+                    } else if (isStudentLeaveType) {
+                      canApproveThis = app.parent_consulted ? role === "branch_manager" : false;
+                    } else if (["counsellor", "sales_senior_executive", "sales_executive"].includes(applicantRole)) {
+                      canApproveThis = !app.is_first_approval_done ? role === "cmo" : false;
+                    } else if (applicantRole === "head_coordinator") {
+                      canApproveThis = !app.is_first_approval_done ? role === "branch_manager" : false;
+                    } else if (applicantRole === "branch_manager") {
+                      canApproveThis = false; // already covered by super_admin block
+                    } else {
+                      canApproveThis = !app.is_first_approval_done ? role === "head_coordinator" : role === "branch_manager";
+                    }
+                  }
 
                   return (
                   <motion.tr

@@ -107,12 +107,12 @@ export default function AdmissionsTab() {
 
   const admissionCols: DataTableColumn<AdmissionRecord>[] = [
     { key: "id", header: "ID", className: "font-mono text-xs w-16" },
-    { key: "student", header: "Student", render: (r) => <span className="font-medium">{r.first_name} {r.surname}</span> },
-    { key: "contact", header: "Contact", render: (r) => <div className="text-xs"><div>{r.phone_student}</div><div className="text-muted-foreground">{r.email}</div></div> },
-    { key: "course", header: "Course", render: (r) => <span className="capitalize">{r.course.replace(/_/g, " ")}</span> },
-    { key: "batch", header: "Batch Attempt", render: (r) => <span className="capitalize">{r.batch_attempt}</span> },
-    { key: "status", header: "Status", render: (r) => <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground capitalize">{r.status_display}</span> },
-    { key: "counsellor", header: "Counsellor", render: (r) => r.assigned_counsellor ? r.assigned_counsellor.name : "-" },
+    { key: "student", header: "Student", exportValue: (r) => `${r.first_name} ${r.surname}`, render: (r) => <span className="font-medium">{r.first_name} {r.surname}</span> },
+    { key: "contact", header: "Contact", exportValue: (r) => `${r.phone_student || ""} ${r.email || ""}`, render: (r) => <div className="text-xs"><div>{r.phone_student}</div><div className="text-muted-foreground">{r.email}</div></div> },
+    { key: "course", header: "Course", exportValue: (r) => r.course, render: (r) => <span className="capitalize">{r.course.replace(/_/g, " ")}</span> },
+    { key: "batch", header: "Batch Attempt", exportValue: (r) => r.batch_attempt, render: (r) => <span className="capitalize">{r.batch_attempt}</span> },
+    { key: "status", header: "Status", exportValue: (r) => r.status_display || r.status, render: (r) => <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground capitalize">{r.status_display}</span> },
+    { key: "counsellor", header: "Counsellor", exportValue: (r) => r.assigned_counsellor ? r.assigned_counsellor.name : "-", render: (r) => r.assigned_counsellor ? r.assigned_counsellor.name : "-" },
     { key: "submitted_at", header: "Submitted At", render: (r) => <span className="text-xs text-muted-foreground">{r.submitted_at}</span> },
     {
       key: "actions", header: "",
@@ -217,7 +217,7 @@ export default function AdmissionsTab() {
       <DataTable 
         columns={admissionCols} 
         data={filteredAdmissions} 
-        exportable={isSuperAdmin || user?.role === "branch_manager"} 
+        exportable={isSuperAdmin} 
         onRowClick={(r) => navigate(`/admissions/${r.id}`)}
       />
 

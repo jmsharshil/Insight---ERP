@@ -412,18 +412,6 @@ export default function LevelsTab() {
                   </p>
                 )}
 
-                <div className="grid grid-cols-2 gap-3 pt-2 text-xs text-muted-foreground border-t border-border/50">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
-                    <span className="truncate">{level.duration_months ?? 0} Months</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <Wallet className="w-3.5 h-3.5 text-primary shrink-0" />
-                    <span className="truncate font-medium text-text-primary">
-                      Fee: ₹{Number(level.fee_amount || 0).toLocaleString("en-IN")}
-                    </span>
-                  </div>
-                </div>
               </div>
 
               {canEdit && (
@@ -482,7 +470,7 @@ export default function LevelsTab() {
             </DialogHeader>
 
             <div className="space-y-4 py-2">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Level Name</Label>
                   <Input
@@ -494,52 +482,8 @@ export default function LevelsTab() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="order">Sequence Order</Label>
-                  <Input
-                    id="order"
-                    type="number"
-                    min="1"
-                    placeholder="e.g. 1"
-                    value={levelForm.order}
-                    onChange={(e) => setLevelForm({ ...levelForm, order: Number(e.target.value) })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="duration_months">Duration (Months)</Label>
-                <Input
-                  id="duration_months"
-                  type="number"
-                  min="0"
-                  placeholder="e.g. 12"
-                  value={levelForm.duration_months}
-                  onChange={(e) =>
-                    setLevelForm({ ...levelForm, duration_months: Number(e.target.value) })
-                  }
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fee_amount">Fee Amount</Label>
-                  <Input
-                    id="fee_amount"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="e.g. 5000.00"
-                    value={levelForm.fee_amount}
-                    onChange={(e) => setLevelForm({ ...levelForm, fee_amount: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col justify-end pb-1.5">
-                  <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 bg-muted/30 h-10">
+                <div className="flex flex-col justify-end pb-0 sm:pb-0">
+                  <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 bg-muted/30 h-10 mt-6 sm:mt-0">
                     <Label
                       htmlFor="level-active"
                       className="text-xs font-semibold text-text-primary cursor-pointer"

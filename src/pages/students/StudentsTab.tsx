@@ -189,6 +189,7 @@ export default function StudentsTab() {
     {
       key: "name",
       header: "Student",
+      exportValue: (r) => r.full_name,
       render: (r) => (
         <button
           onClick={() => navigate(`/students/${r.id}`)}
@@ -216,6 +217,7 @@ export default function StudentsTab() {
     {
       key: "admissionNumber",
       header: "Admission No",
+      exportValue: (r) => r.admission_number,
       className: "font-mono text-xs",
       render: (r) => r.admission_number,
     },
@@ -227,11 +229,13 @@ export default function StudentsTab() {
     {
       key: "batch",
       header: "Batch",
+      exportValue: (r) => r.batch_attempt,
       render: (r) => <span className="capitalize">{r.batch_attempt}</span>,
     },
     {
       key: "contact",
       header: "Contact",
+      exportValue: (r) => `${r.phone_student || ""} ${r.email || ""}`,
       render: (r) => (
         <div className="text-xs">
           <div>{r.phone_student}</div>
@@ -242,6 +246,7 @@ export default function StudentsTab() {
     {
       key: "status",
       header: "Status",
+      exportValue: (r) => r.status_display || r.status,
       render: (r) => {
         let bg = "bg-gray-100",
           text = "text-gray-700";
@@ -320,7 +325,7 @@ export default function StudentsTab() {
       <DataTable 
         columns={cols} 
         data={filteredStudents} 
-        exportable={isSuperAdmin || user?.role === "branch_manager"} 
+        exportable={isSuperAdmin} 
         onRowClick={(r) => navigate(`/students/${r.id}`)}
       />
 

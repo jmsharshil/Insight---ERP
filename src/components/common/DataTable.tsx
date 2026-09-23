@@ -19,6 +19,7 @@ export interface DataTableColumn<T> {
   key: keyof T | string;
   header: string;
   render?: (row: T) => React.ReactNode;
+  exportValue?: (row: T) => string | number;
   className?: string;
 }
 
@@ -31,6 +32,10 @@ interface DataTableProps<T> {
   emptyTitle?: string;
   onRowClick?: (row: T) => void;
   loading?: boolean;
+  serverPagination?: boolean;
+  currentPage?: number;
+  totalCount?: number;
+  onPageChange?: (page: number) => void;
 }
 
 export default function DataTable<T extends Record<string, any>>({
@@ -42,9 +47,22 @@ export default function DataTable<T extends Record<string, any>>({
   emptyTitle = "No records found",
   onRowClick,
   loading = false,
+  serverPagination = false,
+  currentPage,
+  totalCount,
+  onPageChange,
 }: DataTableProps<T>) {
   const [query, setQuery] = useState("");
-  const [page, setPage] = useState(1);
+  const [localPage, setLocalPage] = useState(1);
+  const page = serverPagination && currentPage !== undefined ? currentPage : localPage;
+
+  const handlePageChange = (p: number) => {
+    if (serverPagination && onPageChange) {
+      onPageChange(p);
+    } else {
+      setLocalPage(p);
+    }
+  };
 
   const filtered = useMemo(() => {
     if (!query) return data;
@@ -54,13 +72,28 @@ export default function DataTable<T extends Record<string, any>>({
     );
   }, [data, query]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const totalPages = serverPagination
+    ? Math.max(1, Math.ceil((totalCount || 0) / pageSize))
+    : Math.max(1, Math.ceil(filtered.length / pageSize));
+  
+  const paged = serverPagination
+    ? filtered
+    : filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const exportCsv = () => {
     const headers = columns.map((c) => c.header).join(",");
     const rows = filtered.map((row) =>
-      columns.map((c) => `"${String(row[c.key as keyof T] ?? "")}"`).join(","),
+      columns.map((c) => {
+        let val = "";
+        if (c.exportValue) {
+          val = String(c.exportValue(row) ?? "");
+        } else {
+          val = String(row[c.key as keyof T] ?? "");
+        }
+        // Escape quotes and wrap in quotes
+        val = val.replace(/"/g, '""');
+        return `"${val}"`;
+      }).join(","),
     );
     const csv = [headers, ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -80,7 +113,7 @@ export default function DataTable<T extends Record<string, any>>({
               <Input
                 placeholder="Search..."
                 value={query}
-                onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+                onChange={(e) => { setQuery(e.target.value); handlePageChange(1); }}
                 className="pl-9 bg-card"
               />
             </div>
@@ -137,14 +170,14 @@ export default function DataTable<T extends Record<string, any>>({
             </Table>
           </div>
 
-          {filtered.length > pageSize && (
+          {(serverPagination ? (totalCount || 0) > pageSize : filtered.length > pageSize) && (
             <div className="flex items-center justify-between text-sm text-muted-foreground mt-3">
-              <span>Page {page} of {totalPages} · {filtered.length} records</span>
+              <span>Page {page} of {totalPages} · {serverPagination ? totalCount : filtered.length} records</span>
               <div className="flex gap-1">
-                <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+                <Button variant="outline" size="sm" disabled={page === 1} onClick={() => handlePageChange(page - 1)}>
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
-                <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>
+                <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => handlePageChange(page + 1)}>
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>

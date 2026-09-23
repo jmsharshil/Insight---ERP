@@ -513,7 +513,7 @@ export default function LevelDetailPage() {
                 <CardTitle>General Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-1">
                     <Label htmlFor="level-name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Level Name</Label>
                     <Input
@@ -521,17 +521,6 @@ export default function LevelDetailPage() {
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
                       placeholder="e.g. CSEET"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label htmlFor="level-order" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Sequence Order</Label>
-                    <Input
-                      id="level-order"
-                      type="number"
-                      min="1"
-                      value={form.order}
-                      onChange={(e) => setForm({ ...form, order: Number(e.target.value) })}
                     />
                   </div>
                 </div>
@@ -557,29 +546,6 @@ export default function LevelDetailPage() {
                 <CardTitle>Level Parameters</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-
-                <div className="space-y-1">
-                  <Label htmlFor="level-duration" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Duration (Months)</Label>
-                  <Input
-                    id="level-duration"
-                    type="number"
-                    min="0"
-                    value={form.duration_months}
-                    onChange={(e) => setForm({ ...form, duration_months: Number(e.target.value) })}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor="level-fees" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Fee Amount</Label>
-                  <Input
-                    id="level-fees"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={form.fee_amount}
-                    onChange={(e) => setForm({ ...form, fee_amount: e.target.value })}
-                  />
-                </div>
 
                 <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 bg-muted/30">
                   <Label htmlFor="level-active" className="text-xs font-semibold text-text-primary cursor-pointer">
@@ -859,38 +825,7 @@ export default function LevelDetailPage() {
               </Card>
             )}
 
-            <Card className="shadow-sm border-border">
-              <CardHeader className="bg-muted/30 border-b border-border/50 pb-4">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 text-primary" /> Key Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6 pt-6">
-                <div className="grid grid-cols-1 gap-6">
-                  <div className="space-y-1.5">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Sequence Order</p>
-                    <p className="text-base font-medium flex items-center gap-2">
-                      <span className="w-6 h-6 rounded bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">{level.order}</span>
-                      Level {level.order}
-                    </p>
-                  </div>
 
-                  <div className="space-y-1.5">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold flex items-center gap-1.5">
-                      <Clock className="w-4 h-4 text-primary" /> Duration
-                    </p>
-                    <p className="text-base font-medium">{level.duration_months ?? 0} Months</p>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold flex items-center gap-1.5">
-                      <Wallet className="w-4 h-4 text-primary" /> Fee Amount
-                    </p>
-                    <p className="text-2xl font-bold text-text-primary tracking-tight">₹{Number(level.fee_amount || 0).toLocaleString("en-IN")}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </motion.div>
       )}
@@ -915,15 +850,9 @@ export default function LevelDetailPage() {
               <Label htmlFor="sub-name">Subject Name <span className="text-destructive">*</span></Label>
               <Input id="sub-name" value={subjectForm.name} onChange={(e) => setSubjectForm({ ...subjectForm, name: e.target.value })} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="sub-code">Code</Label>
-                <Input id="sub-code" value={subjectForm.code} onChange={(e) => setSubjectForm({ ...subjectForm, code: e.target.value })} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="sub-hours">Total Hours</Label>
-                <Input id="sub-hours" type="number" min="0" value={subjectForm.total_hours} onChange={(e) => setSubjectForm({ ...subjectForm, total_hours: Number(e.target.value) })} />
-              </div>
+            <div className="space-y-1">
+              <Label htmlFor="sub-hours">Total Hours</Label>
+              <Input id="sub-hours" type="number" min="0" value={subjectForm.total_hours} onChange={(e) => setSubjectForm({ ...subjectForm, total_hours: Number(e.target.value) })} />
             </div>
             <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 bg-muted/30 mt-2">
               <Label htmlFor="sub-active" className="text-sm font-medium cursor-pointer">Active Status</Label>

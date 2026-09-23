@@ -124,6 +124,8 @@ export default function CoursesBatchesPage() {
   };
   const [courseSheetOpen, setCourseSheetOpen] = useState(false);
   const [courseUpdateLoading, setCourseUpdateLoading] = useState(false);
+  const [courseDeleteConfirmOpen, setCourseDeleteConfirmOpen] = useState(false);
+  const [courseToDelete, setCourseToDelete] = useState<any>(null);
 
   // Batch Management States
   const [batches, setBatches] = useState<any[]>([]);
@@ -558,6 +560,25 @@ export default function CoursesBatchesPage() {
       },
     });
   }
+  function handleDeleteCourse() {
+    if (!courseToDelete) return;
+    dispatch({
+      type: courseAction.DELETE_COURSE,
+      method: "DELETE",
+      endPoint: API.COURSES.DELETE(courseToDelete.id),
+      auth: true,
+      getResponse: () => {
+        dispatch(setCourses(courses.filter((c: any) => c.id !== courseToDelete.id)));
+        toast.success("Course deleted successfully.");
+        setCourseDeleteConfirmOpen(false);
+        setCourseToDelete(null);
+      },
+      getError: (err: any) => {
+        const msg = err?.response?.data?.message || err?.message || "Failed to delete course";
+        toast.error(msg);
+      },
+    });
+  }
 
   useEffect(() => {
     if (activeSubTab === "courses") {
@@ -709,6 +730,14 @@ export default function CoursesBatchesPage() {
               loading={coursesLoading || (isStudent && studentDetailLoading)}
               error={coursesError}
               onCourseClick={handleCourseCardClick}
+              canDelete={!!canDelete}
+              onCourseDelete={(id) => {
+                const course = courses.find((c) => c.id === id);
+                if (course) {
+                  setCourseToDelete(course);
+                  setCourseDeleteConfirmOpen(true);
+                }
+              }}
               onRetry={() => {
                 dispatch({
                   type: courseAction.GET_COURSES,
@@ -840,6 +869,18 @@ export default function CoursesBatchesPage() {
         description="This action cannot be undone. All timetable scheduling slots for this classroom will be affected."
         confirmLabel="Delete"
         onConfirm={handleDeleteClassroom}
+      />
+
+      <ConfirmDialog
+        open={courseDeleteConfirmOpen}
+        onOpenChange={(op) => {
+          setCourseDeleteConfirmOpen(op);
+          if (!op) setCourseToDelete(null);
+        }}
+        title={`Delete "${courseToDelete?.name}"?`}
+        description="This action cannot be undone. All levels, subjects, and batches under this course may be affected."
+        confirmLabel="Delete"
+        onConfirm={handleDeleteCourse}
       />
     </div>
   );

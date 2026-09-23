@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { BookOpen, Calendar, DollarSign, Search, AlertTriangle, Loader2, ChevronRight } from "lucide-react";
+import { BookOpen, Calendar, DollarSign, Search, AlertTriangle, Loader2, ChevronRight, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,6 +22,8 @@ interface CoursesTabProps {
   loading: boolean;
   error: string | null;
   onCourseClick: (courseId: string) => void;
+  onCourseDelete?: (courseId: string) => void;
+  canDelete?: boolean;
   onRetry: () => void;
 }
 
@@ -30,6 +32,8 @@ export default function CoursesTab({
   loading,
   error,
   onCourseClick,
+  onCourseDelete,
+  canDelete,
   onRetry,
 }: CoursesTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -117,13 +121,12 @@ export default function CoursesTab({
               key={c.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              onClick={() => onCourseClick(c.id)}
-              className="rounded-xl border border-border bg-card shadow-sm hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group cursor-pointer"
+              className="rounded-xl border border-border bg-card shadow-sm flex flex-col justify-between overflow-hidden"
             >
               <div className="p-5 space-y-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h4 className="font-semibold text-lg text-text-primary group-hover:text-primary transition-colors">
+                    <h4 className="font-semibold text-lg text-text-primary">
                       {c.name}
                     </h4>
                     {/* <p className="text-xs text-muted-foreground mt-0.5 capitalize">
@@ -165,6 +168,21 @@ export default function CoursesTab({
                   </div> */}
                 </div>
               </div>
+              {canDelete && (
+                <div className="bg-muted/30 px-5 py-3 border-t border-border flex items-center justify-end gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onCourseDelete) onCourseDelete(c.id);
+                    }}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
+                  </Button>
+                </div>
+              )}
             </motion.div>
           ))}
         </div>

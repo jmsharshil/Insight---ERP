@@ -337,6 +337,7 @@ export default function UsersPage() {
     aadhar_number: "",
     work_start_time: "",
     work_end_time: "",
+    working_hours: "",
     per_paper_rate: "",
     accessible_modules: [] as string[],
   });
@@ -456,6 +457,7 @@ export default function UsersPage() {
         aadhar_number: selectedUser.aadhar_number || "",
         work_start_time: selectedUser.work_start_time || "",
         work_end_time: selectedUser.work_end_time || "",
+        working_hours: selectedUser.working_hours || "",
         per_paper_rate:
           selectedUser.per_paper_rate !== undefined && selectedUser.per_paper_rate !== null
             ? String(selectedUser.per_paper_rate)
@@ -557,6 +559,7 @@ export default function UsersPage() {
       aadhar_number: "",
       work_start_time: "",
       work_end_time: "",
+      working_hours: "",
       per_paper_rate: "",
       accessible_modules: [],
     });
@@ -598,6 +601,7 @@ export default function UsersPage() {
       aadhar_number: editForm.aadhar_number,
       work_start_time: editForm.work_start_time,
       work_end_time: editForm.work_end_time,
+      working_hours: editForm.working_hours,
       per_paper_rate: editForm.per_paper_rate ? Number(editForm.per_paper_rate) : null,
       accessible_modules: editForm.accessible_modules,
     };
@@ -673,6 +677,7 @@ export default function UsersPage() {
       aadhar_number: selectedUser.aadhar_number || "",
       work_start_time: selectedUser.work_start_time || "",
       work_end_time: selectedUser.work_end_time || "",
+      working_hours: selectedUser.working_hours || "",
       per_paper_rate:
         selectedUser.per_paper_rate !== undefined && selectedUser.per_paper_rate !== null
           ? String(selectedUser.per_paper_rate)
@@ -756,6 +761,7 @@ export default function UsersPage() {
     if (editForm.aadhar_number !== undefined) formData.append("aadhar_number", editForm.aadhar_number);
     if (editForm.work_start_time !== undefined) formData.append("work_start_time", editForm.work_start_time);
     if (editForm.work_end_time !== undefined) formData.append("work_end_time", editForm.work_end_time);
+    if (editForm.working_hours !== undefined) formData.append("working_hours", editForm.working_hours);
     if (editForm.per_paper_rate !== undefined && editForm.per_paper_rate !== "") formData.append("per_paper_rate", editForm.per_paper_rate);
 
     // --- ACCESSIBLE MODULES ---
@@ -821,6 +827,7 @@ export default function UsersPage() {
   const hasRole = (role: string) => allActiveRoles.includes(role);
 
   const isEmployee = allActiveRoles.length > 0 && !allActiveRoles.every((r) => r === "student" || r === "parents");
+  const showWorkingHours = hasRole("cmo") || hasRole("sales_executive") || hasRole("sales_senior_executive") || hasRole("counsellor");
   const isFaculty = hasRole("faculty");
   const isPartTimeOrVisiting =
     isFaculty &&
@@ -1619,45 +1626,69 @@ export default function UsersPage() {
                         )}
                       </div>
 
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                          Work Start Time
-                        </Label>
-                        {isEditing ? (
-                          <Input
-                            type="time"
-                            value={editForm.work_start_time}
-                            onChange={(e) =>
-                              setEditForm((f) => ({ ...f, work_start_time: e.target.value }))
-                            }
-                            className="bg-background"
-                          />
-                        ) : (
-                          <div className="text-sm font-medium text-text-primary pt-0.5">
-                            {selectedUser?.work_start_time || "N/A"}
+                      {showWorkingHours ? (
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                            Working Hours
+                          </Label>
+                          {isEditing ? (
+                            <Input
+                              value={editForm.working_hours}
+                              onChange={(e) =>
+                                setEditForm((f) => ({ ...f, working_hours: e.target.value }))
+                              }
+                              placeholder="e.g. 8"
+                              className="bg-background"
+                            />
+                          ) : (
+                            <div className="text-sm font-medium text-text-primary pt-0.5">
+                              {selectedUser?.working_hours || "N/A"}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                              Work Start Time
+                            </Label>
+                            {isEditing ? (
+                              <Input
+                                type="time"
+                                value={editForm.work_start_time}
+                                onChange={(e) =>
+                                  setEditForm((f) => ({ ...f, work_start_time: e.target.value }))
+                                }
+                                className="bg-background"
+                              />
+                            ) : (
+                              <div className="text-sm font-medium text-text-primary pt-0.5">
+                                {selectedUser?.work_start_time || "N/A"}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
 
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                          Work End Time
-                        </Label>
-                        {isEditing ? (
-                          <Input
-                            type="time"
-                            value={editForm.work_end_time}
-                            onChange={(e) =>
-                              setEditForm((f) => ({ ...f, work_end_time: e.target.value }))
-                            }
-                            className="bg-background"
-                          />
-                        ) : (
-                          <div className="text-sm font-medium text-text-primary pt-0.5">
-                            {selectedUser?.work_end_time || "N/A"}
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                              Work End Time
+                            </Label>
+                            {isEditing ? (
+                              <Input
+                                type="time"
+                                value={editForm.work_end_time}
+                                onChange={(e) =>
+                                  setEditForm((f) => ({ ...f, work_end_time: e.target.value }))
+                                }
+                                className="bg-background"
+                              />
+                            ) : (
+                              <div className="text-sm font-medium text-text-primary pt-0.5">
+                                {selectedUser?.work_end_time || "N/A"}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
+                        </>
+                      )}
                     </>
                   )}
 

@@ -21,12 +21,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import DataTable, { DataTableColumn } from "@/components/common/DataTable";
 
 export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const toast = useToast();
-  const { faculty, facultyLoading } = useSelector((s: RootState) => s.attendance);
+  const { faculty, facultyLoading, facultyCount = 0 } = useSelector((s: RootState) => s.attendance);
   const { user } = useAuth();
 
   const branches =
@@ -51,12 +52,17 @@ export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
     to_date: "",
     status: "",
   });
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 50;
+  const totalPages = Math.max(1, Math.ceil(facultyCount / pageSize));
 
-  const fetchFaculty = () => {
+  const fetchFaculty = (page = currentPage) => {
     const p = new URLSearchParams();
     Object.entries(f).forEach(([k, v]) => {
       if (v) p.set(k, v);
     });
+    p.set("page", page.toString());
     dispatch({
       type: attendanceActions.GET_FACULTY,
       method: "GET",
@@ -73,7 +79,7 @@ export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
   };
 
   useEffect(() => {
-    fetchFaculty();
+    fetchFaculty(1);
   }, []);
 
   const pct = (v: number) =>
@@ -82,6 +88,96 @@ export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
       : v >= 50
         ? "bg-yellow-100 text-yellow-700"
         : "bg-red-100 text-red-700";
+
+  const columns: DataTableColumn<any>[] = [
+    {
+      key: "employee",
+      header: "Employee",
+      render: (fac: any) => (
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-semibold">
+            {(fac.user_name || "??").slice(0, 2).toUpperCase()}
+          </div>
+          <span className="font-medium text-foreground">
+            {fac.user_name}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: "employee_id",
+      header: "Employee ID",
+      render: (fac: any) => (
+        <span className="font-mono text-xs text-muted-foreground">
+          {fac.employee_id || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "branch_name",
+      header: "Branch",
+      render: (fac: any) => <span className="text-xs">{fac.branch_name}</span>,
+    },
+    {
+      key: "date",
+      header: "Date",
+      render: (fac: any) => <span className="text-xs">{fac.date}</span>,
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (fac: any) => (
+        <Badge
+          className={`text-xs font-semibold ${
+            fac.status === "present"
+              ? "bg-green-100 text-green-700"
+              : fac.status === "late"
+                ? "bg-yellow-100 text-yellow-700"
+                : fac.status === "half_day"
+                  ? "bg-orange-100 text-orange-700"
+                  : fac.status === "absent"
+                    ? "bg-red-100 text-red-700"
+                    : "bg-muted text-muted-foreground"
+          }`}
+        >
+          {fac.status_display || fac.status}
+        </Badge>
+      ),
+    },
+    {
+      key: "checked_in_at",
+      header: "Check In",
+      render: (fac: any) => (
+        <span className="text-xs text-muted-foreground">
+          {fac.checked_in_at ? new Date(fac.checked_in_at).toLocaleTimeString() : "—"}
+        </span>
+      ),
+    },
+    {
+      key: "checked_out_at",
+      header: "Check Out",
+      render: (fac: any) => (
+        <span className="text-xs text-muted-foreground">
+          {fac.checked_out_at ? new Date(fac.checked_out_at).toLocaleTimeString() : "—"}
+        </span>
+      ),
+    },
+    {
+      key: "action",
+      header: "Action",
+      className: "text-right",
+      render: (fac: any) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 text-xs font-semibold hover:bg-muted"
+          onClick={() => navigate(`/attendance/faculty/${fac.user_id || fac.user || fac.id}`)}
+        >
+          <Eye className="w-4 h-4 mr-1.5" /> View
+        </Button>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -152,7 +248,10 @@ export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
           />
         </div>
         <Button
-          onClick={fetchFaculty}
+          onClick={() => {
+            setCurrentPage(1);
+            fetchFaculty(1);
+          }}
           className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm"
         >
           Apply
@@ -160,118 +259,37 @@ export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
         <Button
           variant="outline"
           className="h-9 text-sm"
-          onClick={() =>
+          onClick={() => {
             setF({
               search: "",
               branch_id: user && user.role === "branch_manager" && user.branch ? user.branch : "",
               from_date: "",
               to_date: "",
               status: "",
-            })
-          }
+            });
+            setCurrentPage(1);
+          }}
         >
           <X className="w-3 h-3 mr-1" />
           Clear
         </Button>
       </div>
 
-      {facultyLoading ? (
-        <TableSkeleton columns={6} rows={5} className="mt-0" />
-      ) : (
-        <div className="bg-white rounded-xl border border-border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/40 border-b border-border">
-              <tr>
-                {[
-                  "Employee",
-                  "Employee ID",
-                  "Branch",
-                  "Date",
-                  "Status",
-                  "Check In",
-                  "Check Out",
-                  "Action",
-                ].map((h) => (
-                  <th
-                    key={h}
-                    className="px-4 py-3 text-left text-xs font-medium text-muted-foreground"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {faculty.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">
-                    No employee attendance records found.
-                  </td>
-                </tr>
-              ) : (
-                faculty.map((fac, i) => (
-                  <motion.tr
-                    key={fac.id}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.03 }}
-                    className="border-b border-border/50 hover:bg-muted/20 transition-colors"
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-semibold">
-                          {(fac.user_name || "??")
-                            .slice(0, 2)
-                            .toUpperCase()}
-                        </div>
-                        <span className="font-medium text-foreground">
-                          {fac.user_name}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                      {fac.employee_id || "—"}
-                    </td>
-                    <td className="px-4 py-3 text-xs">
-                      {fac.branch_name}
-                    </td>
-                    <td className="px-4 py-3 text-xs">
-                      {fac.date}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge className={`text-xs font-semibold ${
-                        fac.status === "present" ? "bg-green-100 text-green-700" :
-                        fac.status === "late" ? "bg-yellow-100 text-yellow-700" :
-                        fac.status === "half_day" ? "bg-orange-100 text-orange-700" :
-                        fac.status === "absent" ? "bg-red-100 text-red-700" :
-                        "bg-muted text-muted-foreground"
-                      }`}>
-                        {fac.status_display || fac.status}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {fac.checked_in_at ? new Date(fac.checked_in_at).toLocaleTimeString() : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {fac.checked_out_at ? new Date(fac.checked_out_at).toLocaleTimeString() : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 text-xs font-semibold hover:bg-muted"
-                        onClick={() => navigate(`/attendance/faculty/${fac.user_id || fac.user || fac.id}`)}
-                      >
-                        <Eye className="w-4 h-4 mr-1.5" /> View
-                      </Button>
-                    </td>
-                  </motion.tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <DataTable
+        columns={columns}
+        data={faculty}
+        searchable={false}
+        exportable={false}
+        loading={facultyLoading}
+        emptyTitle="No employee attendance records found."
+        serverPagination={true}
+        currentPage={currentPage}
+        totalCount={facultyCount}
+        onPageChange={(page) => {
+          setCurrentPage(page);
+          fetchFaculty(page);
+        }}
+      />
     </div>
   );
 }
