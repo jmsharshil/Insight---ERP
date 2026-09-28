@@ -357,47 +357,49 @@ export default function CRMPage() {
       />
 
       {/* ─── Stat cards ─────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
-        <StatCard title="Total Leads" value={stats.total} icon={Users} />
-        <StatCard title="New" value={stats.new} icon={UserPlus} />
-        <StatCard title="Contacted" value={stats.contacted} icon={Phone} />
-        <StatCard
-          title={<span className="flex flex-wrap items-center gap-1.5">Interested <span className="inline-flex shrink-0 items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 uppercase tracking-wider leading-none">🔥 Hot</span></span>}
-          value={stats.interested}
-          icon={TrendingUp}
-          iconBgClassName="bg-red-100"
-          iconClassName="text-red-700"
-        />
-        <StatCard
-          title={<span className="flex flex-wrap items-center gap-1.5">Visit <span className="inline-flex shrink-0 items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider leading-none">🌡️ Warm</span></span>}
-          value={stats.visit}
-          icon={MapPin}
-          iconBgClassName="bg-amber-100"
-          iconClassName="text-amber-700"
-        />
-        <StatCard
-          title={<span className="flex flex-wrap items-center gap-1.5">Visited <span className="inline-flex shrink-0 items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider leading-none">🌡️ Warm</span></span>}
-          value={stats.visited}
-          icon={CheckCircle2}
-          iconBgClassName="bg-amber-100"
-          iconClassName="text-amber-700"
-        />
-        <StatCard
-          title={<span className="flex flex-wrap items-center gap-1.5">Follow Up <span className="inline-flex shrink-0 items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider leading-none">🌡️ Warm</span></span>}
-          value={stats.follow_up}
-          icon={Clock}
-          iconBgClassName="bg-amber-100"
-          iconClassName="text-amber-700"
-        />
-        <StatCard title="Converted" value={stats.converted} icon={CheckCircle2} trendType="up" />
-        <StatCard
-          title={<span className="flex flex-wrap items-center gap-1.5">Lost <span className="inline-flex shrink-0 items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 uppercase tracking-wider leading-none">🧊 Cold</span></span>}
-          value={stats.lost}
-          icon={XCircle}
-          iconBgClassName="bg-blue-100"
-          iconClassName="text-blue-700"
-        />
-      </div>
+      {tab !== "field-activities" && tab !== "transfer-requests" && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
+          <StatCard title="Total Leads" value={stats.total} icon={Users} />
+          <StatCard title="New" value={stats.new} icon={UserPlus} />
+          <StatCard title="Contacted" value={stats.contacted} icon={Phone} />
+          <StatCard
+            title={<span className="flex flex-wrap items-center gap-1.5">Interested <span className="inline-flex shrink-0 items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 uppercase tracking-wider leading-none">🔥 Hot</span></span>}
+            value={stats.interested}
+            icon={TrendingUp}
+            iconBgClassName="bg-red-100"
+            iconClassName="text-red-700"
+          />
+          <StatCard
+            title={<span className="flex flex-wrap items-center gap-1.5">Visit <span className="inline-flex shrink-0 items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider leading-none">🌡️ Warm</span></span>}
+            value={stats.visit}
+            icon={MapPin}
+            iconBgClassName="bg-amber-100"
+            iconClassName="text-amber-700"
+          />
+          <StatCard
+            title={<span className="flex flex-wrap items-center gap-1.5">Visited <span className="inline-flex shrink-0 items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider leading-none">🌡️ Warm</span></span>}
+            value={stats.visited}
+            icon={CheckCircle2}
+            iconBgClassName="bg-amber-100"
+            iconClassName="text-amber-700"
+          />
+          <StatCard
+            title={<span className="flex flex-wrap items-center gap-1.5">Follow Up <span className="inline-flex shrink-0 items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider leading-none">🌡️ Warm</span></span>}
+            value={stats.follow_up}
+            icon={Clock}
+            iconBgClassName="bg-amber-100"
+            iconClassName="text-amber-700"
+          />
+          <StatCard title="Converted" value={stats.converted} icon={CheckCircle2} trendType="up" />
+          <StatCard
+            title={<span className="flex flex-wrap items-center gap-1.5">Lost <span className="inline-flex shrink-0 items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 uppercase tracking-wider leading-none">🧊 Cold</span></span>}
+            value={stats.lost}
+            icon={XCircle}
+            iconBgClassName="bg-blue-100"
+            iconClassName="text-blue-700"
+          />
+        </div>
+      )}
 
       {/* ─── Tabs ────────────────────────────────────────────── */}
       <Tabs value={tab} onValueChange={setTab}>
