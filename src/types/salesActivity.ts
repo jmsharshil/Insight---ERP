@@ -34,6 +34,7 @@ export interface EventPhotoSlot {
   photo_id: string | null;
   photo_url: string | null;
   is_filled: boolean;
+  timing?: string | null;
 }
 
 export interface SalesDailyActivity {

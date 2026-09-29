@@ -894,6 +894,11 @@ export default function SalesActivitiesTab() {
                                     <span className="truncate">{p.photo_type_display || PHOTO_TYPE_LABELS[p.photo_type as keyof typeof PHOTO_TYPE_LABELS] || p.photo_type}</span>
                                     <Badge variant="outline" className="text-[9px] h-3.5 px-1 py-0 bg-primary/5 ml-1 leading-none shrink-0 border-primary/20 text-primary">S{slot.slot}</Badge>
                                   </div>
+                                  {slot.timing && (
+                                    <div className="text-[9px] text-muted-foreground flex items-center gap-1">
+                                      <Clock className="w-2.5 h-2.5 shrink-0" /> {slot.timing}
+                                    </div>
+                                  )}
                                   {(p as any).odometer_kms && (
                                     <div className="text-[10px] text-primary font-bold flex items-center gap-1">
                                       <Gauge className="w-3 h-3" /> {(p as any).odometer_kms} km
@@ -936,7 +941,12 @@ export default function SalesActivitiesTab() {
                               <div className="text-[10px] font-semibold text-muted-foreground truncate">
                                 {PHOTO_TYPE_LABELS[slot.type as SalesPhotoType] || slot.type}
                               </div>
-                              <div className="text-[9px] text-muted-foreground/70">Missing (Slot {slot.slot})</div>
+                              <div className="text-[9px] text-muted-foreground/70 mb-1">Missing (Slot {slot.slot})</div>
+                              {slot.timing && (
+                                <div className="text-[9px] text-muted-foreground/70 flex items-center justify-center gap-1">
+                                  <Clock className="w-2.5 h-2.5 shrink-0" /> <span className="truncate">{slot.timing}</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         )
@@ -1031,6 +1041,28 @@ export default function SalesActivitiesTab() {
                           <p className="text-xs text-muted-foreground mt-1">
                             {totalKms} km reported ({actOdoReading?.start_kms || startOdo?.odometer_kms || "0"} - {actOdoReading?.end_kms || endOdo?.odometer_kms || "0"})
                           </p>
+                          <div className="flex items-center gap-4 mt-3">
+                            {(actOdoReading?.start_odometer_photo || startOdo?.photo) && (
+                              <div 
+                                className="relative group cursor-pointer shrink-0" 
+                                onClick={() => setPreviewPhoto((startOdo || { id: "start", photo: actOdoReading?.start_odometer_photo, photo_type_display: "Start Odometer", photo_type: "start_odometer", created_at: actOdoReading?.created_at }) as any)}
+                              >
+                                <img src={actOdoReading?.start_odometer_photo || startOdo?.photo} alt="Start Odometer" className="w-14 h-14 rounded-lg object-cover border border-border/60 shadow-sm group-hover:scale-105 transition-transform" />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-lg transition-opacity"><Eye className="w-4 h-4 text-white"/></div>
+                                <Badge className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-[8px] font-bold px-1.5 py-0 h-4 min-h-0 bg-muted text-muted-foreground border-border shadow-sm">START</Badge>
+                              </div>
+                            )}
+                            {(actOdoReading?.end_odometer_photo || endOdo?.photo) && (
+                              <div 
+                                className="relative group cursor-pointer shrink-0" 
+                                onClick={() => setPreviewPhoto((endOdo || { id: "end", photo: actOdoReading?.end_odometer_photo, photo_type_display: "End Odometer", photo_type: "end_odometer", created_at: actOdoReading?.created_at }) as any)}
+                              >
+                                <img src={actOdoReading?.end_odometer_photo || endOdo?.photo} alt="End Odometer" className="w-14 h-14 rounded-lg object-cover border border-border/60 shadow-sm group-hover:scale-105 transition-transform" />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-lg transition-opacity"><Eye className="w-4 h-4 text-white"/></div>
+                                <Badge className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-[8px] font-bold px-1.5 py-0 h-4 min-h-0 bg-muted text-muted-foreground border-border shadow-sm">END</Badge>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center gap-3">
                           <Badge

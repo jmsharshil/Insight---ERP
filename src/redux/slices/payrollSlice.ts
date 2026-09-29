@@ -43,6 +43,9 @@ export interface PaySlip {
   payroll_month?: string;
   payroll_year?: string;
   payroll_status?: string;
+  reimbursements_amount?: number;
+  reimbursement_note?: string;
+  salary?: number | string;
 }
 
 export interface LatePolicy {

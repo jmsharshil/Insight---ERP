@@ -41,13 +41,17 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
   const parts: string[] = [];
   let current = "";
   row.deduction_note.split(/,\s*/).forEach((chunk: string) => {
-    if (current) current += ", " + chunk;
-    else current = chunk;
+    const isStartOfNew = /^Absent/.test(chunk) || /^Late check-in\/out/.test(chunk) || /^Leave/.test(chunk);
 
-    // Check if the chunk ends with a deduction amount (e.g. ": -16500.00")
-    if (/:\s*-?\d+(\.\d+)?\s*$/.test(chunk)) {
+    if (current && /:\s*-?\d+(\.\d+)?\s*$/.test(current)) {
       parts.push(current);
-      current = "";
+      current = chunk;
+    } else if (isStartOfNew && current) {
+      parts.push(current);
+      current = chunk;
+    } else {
+      if (current) current += ", " + chunk;
+      else current = chunk;
     }
   });
   if (current) parts.push(current);
@@ -72,39 +76,57 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
             <div className="space-y-3">
               {parts.map((part, idx) => {
                 const match = part.match(/^(.*?):\s*(-?\d+(\.\d+)?)\s*$/);
+                let text = part;
+                let amount: string | null = null;
+
                 if (match) {
-                  const text = match[1];
-                  const amount = match[2];
-                  
-                  let title = text;
-                  let dates: string[] = [];
-                  const absenceMatch = text.match(/^Absent(?: \(\d+ days?\))? on (.*)/);
-                  if (absenceMatch) {
-                    title = "Absence Deductions";
-                    dates = absenceMatch[1].split(/,\s*/);
-                  }
-                  
-                  const parsedAmount = Math.abs(Number(amount));
-                  
+                  text = match[1].trim();
+                  amount = match[2];
+                } else {
+                  text = text.trim();
+                }
+
+                let title = text;
+                let dates: string[] = [];
+                let subtitle = "";
+
+                const absenceMatch = text.match(/^Absent(?: \(\d+ days?\))? on (.*)/);
+                const lateMatch = text.match(/^Late check-in\/out on (.*?)(?:\s*\(([^)]+)\))?$/);
+
+                if (absenceMatch) {
+                  title = "Absence Deductions";
+                  dates = absenceMatch[1].split(/,\s*/);
+                  subtitle = `${dates.length} day${dates.length > 1 ? "s" : ""} absent`;
+                } else if (lateMatch) {
+                  title = "Late Check-in/Out";
+                  dates = lateMatch[1].split(/,\s*/);
+                  subtitle = lateMatch[2] || `${dates.length} instance${dates.length > 1 ? "s" : ""}`;
+                }
+
+                if (amount !== null || absenceMatch || lateMatch) {
+                  const parsedAmount = amount ? Math.abs(Number(amount)) : null;
+
                   return (
                     <div key={idx} className="bg-white p-4 rounded-lg border border-border shadow-sm">
                       <div className="flex justify-between items-start gap-4">
                         <div>
                           <h4 className="font-medium text-sm text-foreground">{title}</h4>
-                          {dates.length > 0 && (
+                          {subtitle && (
                             <p className="text-xs text-muted-foreground mt-0.5 mb-3">
-                              {dates.length} day{dates.length > 1 ? 's' : ''} absent
+                              {subtitle}
                             </p>
                           )}
                         </div>
-                        <span className="font-mono text-sm text-red-600 font-medium shrink-0 bg-red-50 px-2 py-1 rounded-md border border-red-100">
-                          - ₹{parsedAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
+                        {parsedAmount !== null && (
+                          <span className="font-mono text-sm text-red-600 font-medium shrink-0 bg-red-50 px-2 py-1 rounded-md border border-red-100">
+                            - ₹{parsedAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        )}
                       </div>
                       {dates.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 mt-1">
-                          {dates.map(d => (
-                            <Badge key={d} variant="outline" className="text-[11px] font-normal bg-slate-50 text-slate-600 border-slate-200">
+                          {dates.map((d, i) => (
+                            <Badge key={`${d}-${i}`} variant="outline" className="text-[11px] font-normal bg-slate-50 text-slate-600 border-slate-200">
                               {d}
                             </Badge>
                           ))}
@@ -113,6 +135,7 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
                     </div>
                   );
                 }
+
                 return (
                   <div key={idx} className="bg-white p-4 rounded-lg border border-border shadow-sm text-sm text-muted-foreground">
                     {part}
