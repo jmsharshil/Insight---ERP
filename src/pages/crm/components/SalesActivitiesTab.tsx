@@ -556,7 +556,6 @@ export default function SalesActivitiesTab() {
                 setUserIdFilter("all");
                 setStatusFilter("all");
                 setIsPaidFilter("all");
-                setTimeout(fetchPlans, 0); // Trigger fetch after clear
               }}
             >
               Clear
@@ -679,7 +678,9 @@ export default function SalesActivitiesTab() {
                       </span>
                       <Badge variant="outline" className="text-xs font-medium gap-1 bg-primary/5 text-primary">
                         <Calendar className="w-3 h-3" />
-                        {plan.plan_date}
+                        {plan.from_date && plan.to_date && plan.from_date !== plan.to_date 
+                          ? `${plan.from_date} to ${plan.to_date}` 
+                          : plan.plan_date}
                       </Badge>
                       {plan.type && (
                         <Badge variant="secondary" className="text-xs font-medium capitalize bg-secondary/50">
@@ -689,7 +690,20 @@ export default function SalesActivitiesTab() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground pt-1 pb-1">
-                      {(plan.start_time || plan.end_time) && (
+                      {plan.timings && plan.timings.length > 0 ? (
+                        <div className="flex flex-col gap-1.5 w-full mt-1 mb-1">
+                          {plan.timings.map((t: any, idx: number) => (
+                            <div key={idx} className="flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5 text-primary/70" />
+                              <span>
+                                <span className="font-medium mr-1">{t.date}:</span>
+                                {t.start_time ? t.start_time.substring(0, 5) : "--:--"}
+                                {t.end_time ? ` to ${t.end_time.substring(0, 5)}` : ""}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (plan.start_time || plan.end_time) ? (
                         <div className="flex items-center gap-1.5">
                           <Clock className="w-3.5 h-3.5 text-primary/70" />
                           <span>
@@ -697,7 +711,7 @@ export default function SalesActivitiesTab() {
                             {plan.end_time ? ` to ${plan.end_time.substring(0, 5)}` : ""}
                           </span>
                         </div>
-                      )}
+                      ) : null}
                       {plan.place && (
                         <div className="flex items-center gap-1.5">
                           <MapPin className="w-3.5 h-3.5 text-primary/70" />
@@ -837,10 +851,108 @@ export default function SalesActivitiesTab() {
                             <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                               <Camera className="w-4 h-4 text-primary/70" /> Geo-Tagged Evidence
                             </h4>
-                            <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-bold rounded-md bg-muted text-muted-foreground">{act.photos.length}</Badge>
+                            <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-bold rounded-md bg-muted text-muted-foreground">
+                              {act.event_photo_slots ? `${act.event_photo_slots.filter(s => s.is_filled).length}/${act.event_photo_slots.length}` : act.photos.length}
+                            </Badge>
                           </div>
 
-                  {act.photos.length === 0 ? (
+                  {act.event_photo_slots ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                      {act.event_photo_slots.map((slot) => (
+                        slot.is_filled ? (
+                          (() => {
+                            const p = act.photos?.find((ph) => ph.id === slot.photo_id) || {
+                              id: slot.photo_id as string,
+                              photo: slot.photo_url as string,
+                              photo_type: slot.type,
+                              photo_type_display: PHOTO_TYPE_LABELS[slot.type as SalesPhotoType] || slot.type,
+                              latitude: "",
+                              longitude: "",
+                              created_at: new Date().toISOString()
+                            };
+                            return (
+                              <div
+                                key={slot.slot}
+                                className="group relative rounded-lg border border-border/80 bg-background overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                                onClick={() => p.id && setPreviewPhoto(p as any)}
+                              >
+                                <div className="aspect-video w-full bg-muted/40 relative flex items-center justify-center overflow-hidden">
+                                  <img
+                                    src={p.photo}
+                                    alt={p.photo_type_display || p.photo_type}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                    onError={(e) => {
+                                      (e.target as any).src = "https://placehold.co/400x300?text=Photo+Unavailable";
+                                    }}
+                                  />
+                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                    <Eye className="w-5 h-5" />
+                                  </div>
+                                </div>
+                                <div className="p-2 space-y-1">
+                                  <div className="text-[11px] font-semibold truncate text-foreground flex items-center justify-between">
+                                    <span className="truncate">{p.photo_type_display || PHOTO_TYPE_LABELS[p.photo_type as keyof typeof PHOTO_TYPE_LABELS] || p.photo_type}</span>
+                                    <Badge variant="outline" className="text-[9px] h-3.5 px-1 py-0 bg-primary/5 ml-1 leading-none shrink-0 border-primary/20 text-primary">S{slot.slot}</Badge>
+                                  </div>
+                                  {slot.timing && (
+                                    <div className="text-[9px] text-muted-foreground flex items-center gap-1">
+                                      <Clock className="w-2.5 h-2.5 shrink-0" /> {slot.timing}
+                                    </div>
+                                  )}
+                                  {(p as any).odometer_kms && (
+                                    <div className="text-[10px] text-primary font-bold flex items-center gap-1">
+                                      <Gauge className="w-3 h-3" /> {(p as any).odometer_kms} km
+                                    </div>
+                                  )}
+                                  {p.latitude && p.longitude ? (
+                                    <a
+                                      href={`https://www.google.com/maps?q=${p.latitude},${p.longitude}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-[10px] text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 truncate group/loc w-fit max-w-full"
+                                      onClick={(e) => e.stopPropagation()}
+                                      title="Open location in Google Maps"
+                                    >
+                                      <MapPin className="w-2.5 h-2.5 text-red-500 shrink-0 group-hover/loc:scale-110 transition-transform" />
+                                      <span className="underline underline-offset-2 truncate">
+                                        {Number(p.latitude).toFixed(4)}, {Number(p.longitude).toFixed(4)}
+                                      </span>
+                                      <ExternalLink className="w-2 h-2 opacity-0 group-hover/loc:opacity-100 transition-opacity shrink-0" />
+                                    </a>
+                                  ) : (
+                                    <div className="text-[10px] text-muted-foreground flex items-center gap-1 truncate">
+                                      <MapPin className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
+                                      <span>No GPS</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })()
+                        ) : (
+                          <div
+                            key={slot.slot}
+                            className="group relative rounded-lg border border-dashed border-border bg-muted/20 flex flex-col items-center justify-center gap-2 p-4"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center">
+                              <Camera className="w-4 h-4 text-muted-foreground/50" />
+                            </div>
+                            <div className="text-center w-full">
+                              <div className="text-[10px] font-semibold text-muted-foreground truncate">
+                                {PHOTO_TYPE_LABELS[slot.type as SalesPhotoType] || slot.type}
+                              </div>
+                              <div className="text-[9px] text-muted-foreground/70 mb-1">Missing (Slot {slot.slot})</div>
+                              {slot.timing && (
+                                <div className="text-[9px] text-muted-foreground/70 flex items-center justify-center gap-1">
+                                  <Clock className="w-2.5 h-2.5 shrink-0" /> <span className="truncate">{slot.timing}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      ))}
+                    </div>
+                  ) : act.photos.length === 0 ? (
                     <div className="text-xs text-muted-foreground italic bg-muted/30 border border-dashed border-border/60 rounded-lg p-4 text-center">
                       No verification photos uploaded yet for this activity.
                     </div>
@@ -929,6 +1041,28 @@ export default function SalesActivitiesTab() {
                           <p className="text-xs text-muted-foreground mt-1">
                             {totalKms} km reported ({actOdoReading?.start_kms || startOdo?.odometer_kms || "0"} - {actOdoReading?.end_kms || endOdo?.odometer_kms || "0"})
                           </p>
+                          <div className="flex items-center gap-4 mt-3">
+                            {(actOdoReading?.start_odometer_photo || startOdo?.photo) && (
+                              <div 
+                                className="relative group cursor-pointer shrink-0" 
+                                onClick={() => setPreviewPhoto((startOdo || { id: "start", photo: actOdoReading?.start_odometer_photo, photo_type_display: "Start Odometer", photo_type: "start_odometer", created_at: actOdoReading?.created_at }) as any)}
+                              >
+                                <img src={actOdoReading?.start_odometer_photo || startOdo?.photo} alt="Start Odometer" className="w-14 h-14 rounded-lg object-cover border border-border/60 shadow-sm group-hover:scale-105 transition-transform" />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-lg transition-opacity"><Eye className="w-4 h-4 text-white"/></div>
+                                <Badge className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-[8px] font-bold px-1.5 py-0 h-4 min-h-0 bg-muted text-muted-foreground border-border shadow-sm">START</Badge>
+                              </div>
+                            )}
+                            {(actOdoReading?.end_odometer_photo || endOdo?.photo) && (
+                              <div 
+                                className="relative group cursor-pointer shrink-0" 
+                                onClick={() => setPreviewPhoto((endOdo || { id: "end", photo: actOdoReading?.end_odometer_photo, photo_type_display: "End Odometer", photo_type: "end_odometer", created_at: actOdoReading?.created_at }) as any)}
+                              >
+                                <img src={actOdoReading?.end_odometer_photo || endOdo?.photo} alt="End Odometer" className="w-14 h-14 rounded-lg object-cover border border-border/60 shadow-sm group-hover:scale-105 transition-transform" />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-lg transition-opacity"><Eye className="w-4 h-4 text-white"/></div>
+                                <Badge className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-[8px] font-bold px-1.5 py-0 h-4 min-h-0 bg-muted text-muted-foreground border-border shadow-sm">END</Badge>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center gap-3">
                           <Badge

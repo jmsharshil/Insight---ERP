@@ -5,7 +5,9 @@ export type SalesPhotoType =
   | "school_exterior"
   | "exhibition"
   | "end_odometer"
-  | "end_selfie";
+  | "end_selfie"
+  | "event_start_selfie"
+  | "event_end_selfie";
 
 export interface SalesActivityPhoto {
   id: string;
@@ -20,6 +22,21 @@ export interface SalesActivityPhoto {
   created_at: string;
 }
 
+export interface SalesDailyActivityTiming {
+  date: string;
+  start_time: string;
+  end_time: string;
+}
+
+export interface EventPhotoSlot {
+  slot: number;
+  type: SalesPhotoType;
+  photo_id: string | null;
+  photo_url: string | null;
+  is_filled: boolean;
+  timing?: string | null;
+}
+
 export interface SalesDailyActivity {
   id: string;
   user: string;
@@ -27,6 +44,10 @@ export interface SalesDailyActivity {
   plan: string;
   name?: string;
   activity_date: string;
+  from_date?: string;
+  to_date?: string;
+  timings?: SalesDailyActivityTiming[];
+  event_photo_slots?: EventPhotoSlot[];
   students_expected: number | null;
   students_attended: number | null;
   notes: string;
@@ -51,6 +72,8 @@ export const PHOTO_TYPE_LABELS: Record<SalesPhotoType, string> = {
   exhibition: "Exhibition",
   end_odometer: "End of Day Odometer",
   end_selfie: "End of Day Selfie",
+  event_start_selfie: "Event Start Selfie",
+  event_end_selfie: "Event End Selfie",
 };
 
 export interface OdometerReading {
@@ -86,6 +109,9 @@ export interface SalesDailyPlan {
   user: string;
   user_name: string;
   plan_date: string;
+  from_date?: string;
+  to_date?: string;
+  timings?: SalesDailyActivityTiming[];
   type?: string;
   start_time?: string;
   end_time?: string;
