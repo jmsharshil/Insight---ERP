@@ -96,6 +96,18 @@ export const API = {
         `/api/v1/courses/${courseId}/levels/${levelId}/`,
       DELETE: (courseId: string | number, levelId: string | number) =>
         `/api/v1/courses/${courseId}/levels/${levelId}/`,
+      SYLLABUSES: {
+        LIST: (courseId: string | number, levelId: string | number) =>
+          `/api/v1/courses/${courseId}/levels/${levelId}/syllabuses/`,
+        CREATE: (courseId: string | number, levelId: string | number) =>
+          `/api/v1/courses/${courseId}/levels/${levelId}/syllabuses/`,
+        DETAIL: (courseId: string | number, levelId: string | number, syllabusId: string | number) =>
+          `/api/v1/courses/${courseId}/levels/${levelId}/syllabuses/${syllabusId}/`,
+        UPDATE: (courseId: string | number, levelId: string | number, syllabusId: string | number) =>
+          `/api/v1/courses/${courseId}/levels/${levelId}/syllabuses/${syllabusId}/`,
+        DELETE: (courseId: string | number, levelId: string | number, syllabusId: string | number) =>
+          `/api/v1/courses/${courseId}/levels/${levelId}/syllabuses/${syllabusId}/`,
+      },
     },
   },
 

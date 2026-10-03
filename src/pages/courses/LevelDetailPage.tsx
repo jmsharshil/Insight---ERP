@@ -45,7 +45,7 @@ import {
 
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
-import { levelActions, subjectAction, chapterAction, subjectPaperAction, userActions } from "@/redux/actions";
+import { levelActions, subjectAction, chapterAction, subjectPaperAction, userActions, syllabusActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import { cn } from "@/lib/utils";
 import { updateLevelInList, removeLevelFromList } from "@/redux/slices/levelsSlice";
@@ -108,6 +108,7 @@ export default function LevelDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [updateLoading, setUpdateLoading] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [syllabusActionLoading, setSyllabusActionLoading] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -119,6 +120,17 @@ export default function LevelDetailPage() {
   });
 
   // Modals State
+  const [syllabusModalOpen, setSyllabusModalOpen] = useState(false);
+  const [editingSyllabus, setEditingSyllabus] = useState<any>(null);
+  const [deleteSyllabusId, setDeleteSyllabusId] = useState<string | null>(null);
+
+  const [syllabusForm, setSyllabusForm] = useState({
+    name: "",
+    year: new Date().getFullYear(),
+    description: "",
+    is_active: true,
+  });
+
   const [subjectModalOpen, setSubjectModalOpen] = useState(false);
   const [chapterModalOpen, setChapterModalOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState<any>(null);
@@ -142,6 +154,7 @@ export default function LevelDetailPage() {
     name: "",
     code: "",
     total_hours: 0,
+    syllabus: "",
     is_active: true,
   });
 
@@ -281,18 +294,77 @@ export default function LevelDetailPage() {
     });
   };
 
-  const openSubjectModal = (subject: any = null) => {
+  const openSyllabusModal = (syllabus: any = null) => {
+    if (syllabus) {
+      setEditingSyllabus(syllabus);
+      setSyllabusForm({
+        name: syllabus.name || "",
+        year: syllabus.year || new Date().getFullYear(),
+        description: syllabus.description || "",
+        is_active: syllabus.is_active !== false,
+      });
+    } else {
+      setEditingSyllabus(null);
+      setSyllabusForm({ name: "", year: new Date().getFullYear(), description: "", is_active: true });
+    }
+    setSyllabusModalOpen(true);
+  };
+
+  const saveSyllabus = () => {
+    if (!syllabusForm.name.trim()) return toast.error("Syllabus name is required");
+    const payload = {
+      level: levelId,
+      name: syllabusForm.name.trim(),
+      year: Number(syllabusForm.year),
+      description: syllabusForm.description.trim(),
+      is_active: syllabusForm.is_active,
+    };
+    const isEdit = !!editingSyllabus;
+    dispatch({
+      type: isEdit ? syllabusActions.UPDATE_SYLLABUS : syllabusActions.CREATE_SYLLABUS,
+      method: isEdit ? "PATCH" : "POST",
+      endPoint: isEdit ? API.COURSES.LEVELS.SYLLABUSES.UPDATE(courseId!, levelId!, editingSyllabus.id) : API.COURSES.LEVELS.SYLLABUSES.CREATE(courseId!, levelId!),
+      body: payload,
+      auth: true,
+      setLoading: setSyllabusActionLoading,
+      getResponse: () => {
+        toast.success(`Syllabus ${isEdit ? "updated" : "created"} successfully`);
+        setSyllabusModalOpen(false);
+        fetchLevelDetail();
+      },
+      getError: (err: any) => toast.error(err?.response?.data?.message || err?.message || "Failed to save syllabus")
+    });
+  };
+
+  const deleteSyllabus = () => {
+    if (!deleteSyllabusId) return;
+    dispatch({
+      type: syllabusActions.DELETE_SYLLABUS,
+      method: "DELETE",
+      endPoint: API.COURSES.LEVELS.SYLLABUSES.DELETE(courseId!, levelId!, deleteSyllabusId),
+      auth: true,
+      getResponse: () => {
+        toast.success("Syllabus deleted successfully");
+        setDeleteSyllabusId(null);
+        fetchLevelDetail();
+      },
+      getError: (err: any) => toast.error("Failed to delete syllabus")
+    });
+  };
+
+  const openSubjectModal = (subject: any = null, defaultSyllabus: string = "") => {
     if (subject) {
       setEditingSubject(subject);
       setSubjectForm({
         name: subject.name || "",
         code: subject.code || "",
         total_hours: subject.total_hours || 0,
+        syllabus: subject.syllabus || "",
         is_active: subject.is_active !== false,
       });
     } else {
       setEditingSubject(null);
-      setSubjectForm({ name: "", code: "", total_hours: 0, is_active: true });
+      setSubjectForm({ name: "", code: "", total_hours: 0, syllabus: defaultSyllabus, is_active: true });
     }
     setSubjectModalOpen(true);
   };
@@ -301,6 +373,7 @@ export default function LevelDetailPage() {
     if (!subjectForm.name.trim()) return toast.error("Subject name is required");
     const payload = {
       level: levelId,
+      syllabus: subjectForm.syllabus || null,
       name: subjectForm.name.trim(),
       code: subjectForm.code.trim(),
       total_hours: Number(subjectForm.total_hours),
@@ -604,228 +677,184 @@ export default function LevelDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Subjects List */}
-            {level.subjects && level.subjects.length > 0 && (
-              <Card className="border-none shadow-sm bg-transparent">
-                <CardHeader className="px-0 pt-0 flex flex-row items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-xl">
-                    <BookOpen className="w-5 h-5 text-primary" />
-                    Curriculum Subjects
-                  </CardTitle>
-                  {canEdit && !isEditing && (
-                    <Button onClick={() => openSubjectModal()} className="bg-primary hover:bg-primary-dark">
-                      <Plus className="w-4 h-4 mr-1.5" /> Add Subject
-                    </Button>
-                  )}
-                </CardHeader>
-                <CardContent className="px-0 space-y-4">
-                  {level.subjects.map((subject: any) => (
-                    <Card key={subject.id} className="overflow-hidden border border-border hover:border-primary/30 transition-all duration-200">
-                      <div className="p-5 bg-card">
-                        <div className="flex justify-between items-start">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-3">
-                              <h4 className="font-semibold text-lg text-text-primary">{subject.name}</h4>
-                              <Badge variant={subject.is_active ? "default" : "secondary"} className={subject.is_active ? "bg-green-500/10 text-green-700 hover:bg-green-500/20" : ""}>
-                                {subject.is_active ? "Active" : "Inactive"}
-                              </Badge>
-                            </div>
-                            <div className="text-sm text-muted-foreground flex gap-4">
-                              {subject.code && <span className="font-medium text-primary/80">Code: {subject.code}</span>}
-                              {subject.total_hours !== undefined && <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {subject.total_hours} Hours</span>}
-                            </div>
-                          </div>
-                          
-                          {canEdit && !isEditing && (
-                            <div className="flex items-center gap-1">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="h-8 text-xs mr-2 border-primary/20 hover:bg-primary/5 text-primary" 
-                                onClick={() => navigate(`/courses-batches/${courseId}/level/${levelId}/subject/${subject.id}/questions`)}
-                              >
-                                <Database className="w-3.5 h-3.5 mr-1.5" /> Question Bank
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10" onClick={() => openSubjectModal(subject)}>
-                                <Pencil className="w-4 h-4" />
-                              </Button>
-                              {canDelete && (
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteSubjectId(subject.id)}>
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="mt-4">
-                          <Accordion type="single" collapsible className="w-full">
-                            <AccordionItem value="chapters" className="border-0">
-                              <AccordionTrigger className="py-2.5 px-4 rounded-lg bg-muted/40 hover:bg-muted/60 hover:no-underline text-sm font-semibold text-muted-foreground transition-colors">
-                                <div className="flex items-center gap-2">
-                                  <Layers className="w-4 h-4" />
-                                  <span>Chapters ({subject.chapters ? subject.chapters.length : 0})</span>
-                                </div>
-                              </AccordionTrigger>
-                              <AccordionContent className="pt-4 pb-0">
-                                <div className="flex justify-end mb-3">
-                                  {canEdit && !isEditing && (
-                                    <Button variant="outline" size="sm" className="h-8 text-xs border-primary/20 hover:bg-primary/5 text-primary" onClick={() => openChapterModal(subject.id)}>
-                                      <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Chapter
-                                    </Button>
-                                  )}
-                                </div>
-                                {subject.chapters && subject.chapters.length > 0 ? (
-                                  <div className="space-y-3">
-                                    {subject.chapters.map((chapter: any) => (
-                                      <div key={chapter.id} className="group relative flex items-start justify-between p-4 rounded-xl bg-background border border-border/60 hover:border-primary/40 hover:shadow-sm transition-all">
-                                        <div className="space-y-1.5">
-                                          <div className="flex items-center gap-2.5">
-                                            <span className="font-semibold text-text-primary text-base">
-                                              {chapter.name}
-                                            </span>
-                                            <Badge variant={chapter.is_active ? "outline" : "secondary"} className={cn("text-[10px] px-2 py-0 h-5", chapter.is_active && "border-green-500/30 text-green-600 bg-green-500/5")}>
-                                              {chapter.is_active ? "Active" : "Inactive"}
-                                            </Badge>
-                                          </div>
-                                          {chapter.description && (
-                                            <p className="text-muted-foreground text-sm pl-8">
-                                              {chapter.description}
-                                            </p>
-                                          )}
-                                          <p className="text-xs font-medium text-muted-foreground/80 pl-8 flex items-center gap-1">
-                                            <Clock className="w-3 h-3" /> {chapter.duration_hours > 0 ? `${chapter.duration_hours} duration hours` : "Not Defined"}
-                                          </p>
-                                          {chapter.faculties_details && chapter.faculties_details.length > 0 && (
-                                            <div className="pl-8 pt-1 flex flex-wrap gap-1">
-                                              {chapter.faculties_details.map((faculty: any) => (
-                                                <Badge key={faculty.id} variant="secondary" className="text-[10px] py-0 h-5 bg-primary/5 text-primary-dark">
-                                                  {faculty.name}
-                                                </Badge>
-                                              ))}
-                                            </div>
-                                          )}
-                                        </div>
-                                        {canEdit && !isEditing && (
-                                          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-background/80 backdrop-blur-sm rounded-lg p-1">
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openChapterModal(subject.id, chapter)}>
-                                              <Pencil className="w-4 h-4" />
-                                            </Button>
-                                            {canDelete && (
-                                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => { setActiveSubjectId(subject.id); setDeleteChapterId(chapter.id); }}>
-                                                <Trash2 className="w-4 h-4" />
-                                              </Button>
-                                            )}
-                                          </div>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <div className="text-center py-6 text-sm text-muted-foreground bg-background rounded-xl border border-dashed border-border">
-                                    No chapters added yet.
-                                  </div>
-                                )}
-                              </AccordionContent>
-                            </AccordionItem>
-
-                            {/* <AccordionItem value="papers" className="border-0 mt-2">
-                              <AccordionTrigger className="py-2.5 px-4 rounded-lg bg-muted/40 hover:bg-muted/60 hover:no-underline text-sm font-semibold text-muted-foreground transition-colors">
-                                <div className="flex items-center gap-2">
-                                  <FileText className="w-4 h-4" />
-                                  <span>Papers ({subject.papers ? subject.papers.length : 0})</span>
-                                </div>
-                              </AccordionTrigger>
-                              <AccordionContent className="pt-4 pb-0">
-                                <div className="flex justify-end mb-3">
-                                  {canEdit && !isEditing && (
-                                    <Button variant="outline" size="sm" className="h-8 text-xs border-primary/20 hover:bg-primary/5 text-primary" onClick={() => openPaperModal(subject.id)}>
-                                      <Upload className="w-3.5 h-3.5 mr-1.5" /> Upload Paper
-                                    </Button>
-                                  )}
-                                </div>
-                                {subject.papers && subject.papers.length > 0 ? (
-                                  <div className="space-y-3">
-                                    {subject.papers.map((paper: any) => (
-                                      <div key={paper.id} className="group relative flex items-start justify-between p-4 rounded-xl bg-background border border-border/60 hover:border-primary/40 hover:shadow-sm transition-all">
-                                        <div className="space-y-1.5">
-                                          <div className="flex items-center gap-2.5">
-                                            <span className="font-semibold text-text-primary text-base">
-                                              {paper.set_name}
-                                            </span>
-                                            {paper.no_of_questions > 0 && (
-                                              <Badge variant="outline" className="text-xs py-0 h-5 text-muted-foreground bg-muted/20">
-                                                {paper.no_of_questions} Qs
-                                              </Badge>
-                                            )}
-                                          </div>
-                                          <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground mt-2">
-                                            {paper.file && (
-                                              <a href={paper.file} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-primary transition-colors">
-                                                <Download className="w-3.5 h-3.5" /> Question Paper
-                                              </a>
-                                            )}
-                                            {paper.answer_key && (
-                                              <a href={paper.answer_key} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-primary transition-colors">
-                                                <Download className="w-3.5 h-3.5" /> Answer Key
-                                              </a>
-                                            )}
-                                          </div>
-                                        </div>
-                                        {canEdit && !isEditing && (
-                                          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-background/80 backdrop-blur-sm rounded-lg p-1">
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openPaperModal(subject.id, paper)}>
-                                              <Pencil className="w-4 h-4" />
-                                            </Button>
-                                            {canDelete && (
-                                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => { setActiveSubjectId(subject.id); setDeletePaperId(paper.id); }}>
-                                                <Trash2 className="w-4 h-4" />
-                                              </Button>
-                                            )}
-                                          </div>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <div className="text-center py-6 text-sm text-muted-foreground bg-background rounded-xl border border-dashed border-border">
-                                    No papers uploaded yet.
-                                  </div>
-                                )}
-                              </AccordionContent>
-                            </AccordionItem> */}
-                          </Accordion>
-                        </div>
+            {/* Syllabuses List */}
+            {level.syllabuses && level.syllabuses.length > 0 && (
+              <div className="space-y-6">
+                {level.syllabuses.map((syllabus: any) => (
+                  <Card key={syllabus.id} className="border-none shadow-sm bg-transparent">
+                    <CardHeader className="px-0 pt-0 flex flex-row items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2 text-xl">
+                          <BookOpen className="w-5 h-5 text-primary" />
+                          {syllabus.name} {syllabus.year ? `(${syllabus.year})` : ""}
+                        </CardTitle>
+                        {syllabus.description && (
+                          <p className="text-sm text-muted-foreground mt-1">{syllabus.description}</p>
+                        )}
                       </div>
-                    </Card>
-                  ))}
-                </CardContent>
-              </Card>
+                      <div className="flex gap-2">
+                        {canEdit && !isEditing && (
+                          <>
+                            {/* <Button variant="outline" size="sm" onClick={() => openSyllabusModal(syllabus)}>
+                              <Pencil className="w-4 h-4 mr-1.5" /> Edit Syllabus
+                            </Button>
+                            {canDelete && (
+                              <Button variant="outline" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => { setDeleteSyllabusId(syllabus.id); }}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )} */}
+                            <Button onClick={() => openSubjectModal(null, syllabus.id)} className="bg-primary hover:bg-primary-dark">
+                              <Plus className="w-4 h-4 mr-1.5" /> Add Subject
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="px-0 space-y-4">
+                      {syllabus.subjects && syllabus.subjects.length > 0 ? (
+                        syllabus.subjects.map((subject: any) => (
+                          <Card key={subject.id} className="overflow-hidden border border-border hover:border-primary/30 transition-all duration-200">
+                            <div className="p-5 bg-card">
+                              <div className="flex justify-between items-start">
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-3">
+                                    <h4 className="font-semibold text-lg text-text-primary">{subject.name}</h4>
+                                    <Badge variant={subject.is_active ? "default" : "secondary"} className={subject.is_active ? "bg-green-500/10 text-green-700 hover:bg-green-500/20" : ""}>
+                                      {subject.is_active ? "Active" : "Inactive"}
+                                    </Badge>
+                                  </div>
+                                  <div className="text-sm text-muted-foreground flex gap-4">
+                                    {subject.code && <span className="font-medium text-primary/80">Code: {subject.code}</span>}
+                                    {subject.total_hours !== undefined && <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {subject.total_hours} Hours</span>}
+                                  </div>
+                                </div>
+                                
+                                {canEdit && !isEditing && (
+                                  <div className="flex items-center gap-1">
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      className="h-8 text-xs mr-2 border-primary/20 hover:bg-primary/5 text-primary" 
+                                      onClick={() => navigate(`/courses-batches/${courseId}/level/${levelId}/subject/${subject.id}/questions`)}
+                                    >
+                                      <Database className="w-3.5 h-3.5 mr-1.5" /> Question Bank
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10" onClick={() => openSubjectModal(subject, syllabus.id)}>
+                                      <Pencil className="w-4 h-4" />
+                                    </Button>
+                                    {canDelete && (
+                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteSubjectId(subject.id)}>
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div className="mt-4">
+                                <Accordion type="single" collapsible className="w-full">
+                                  <AccordionItem value="chapters" className="border-0">
+                                    <AccordionTrigger className="py-2.5 px-4 rounded-lg bg-muted/40 hover:bg-muted/60 hover:no-underline text-sm font-semibold text-muted-foreground transition-colors">
+                                      <div className="flex items-center gap-2">
+                                        <Layers className="w-4 h-4" />
+                                        <span>Chapters ({subject.chapters ? subject.chapters.length : 0})</span>
+                                      </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="pt-4 pb-0">
+                                      <div className="flex justify-end mb-3">
+                                        {canEdit && !isEditing && (
+                                          <Button variant="outline" size="sm" className="h-8 text-xs border-primary/20 hover:bg-primary/5 text-primary" onClick={() => openChapterModal(subject.id)}>
+                                            <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Chapter
+                                          </Button>
+                                        )}
+                                      </div>
+                                      {subject.chapters && subject.chapters.length > 0 ? (
+                                        <div className="space-y-3">
+                                          {subject.chapters.map((chapter: any) => (
+                                            <div key={chapter.id} className="group relative flex items-start justify-between p-4 rounded-xl bg-background border border-border/60 hover:border-primary/40 hover:shadow-sm transition-all">
+                                              <div className="space-y-1.5">
+                                                <div className="flex items-center gap-2.5">
+                                                  <span className="font-semibold text-text-primary text-base">
+                                                    {chapter.name}
+                                                  </span>
+                                                  <Badge variant={chapter.is_active ? "outline" : "secondary"} className={cn("text-[10px] px-2 py-0 h-5", chapter.is_active && "border-green-500/30 text-green-600 bg-green-500/5")}>
+                                                    {chapter.is_active ? "Active" : "Inactive"}
+                                                  </Badge>
+                                                </div>
+                                                {chapter.description && (
+                                                  <p className="text-muted-foreground text-sm pl-8">
+                                                    {chapter.description}
+                                                  </p>
+                                                )}
+                                                <p className="text-xs font-medium text-muted-foreground/80 pl-8 flex items-center gap-1">
+                                                  <Clock className="w-3 h-3" /> {chapter.duration_hours > 0 ? `${chapter.duration_hours} duration hours` : "Not Defined"}
+                                                </p>
+                                                {chapter.faculties_details && chapter.faculties_details.length > 0 && (
+                                                  <div className="pl-8 pt-1 flex flex-wrap gap-1">
+                                                    {chapter.faculties_details.map((faculty: any) => (
+                                                      <Badge key={faculty.id} variant="secondary" className="text-[10px] py-0 h-5 bg-primary/5 text-primary-dark">
+                                                        {faculty.name}
+                                                      </Badge>
+                                                    ))}
+                                                  </div>
+                                                )}
+                                              </div>
+                                              {canEdit && !isEditing && (
+                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-background/80 backdrop-blur-sm rounded-lg p-1">
+                                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openChapterModal(subject.id, chapter)}>
+                                                    <Pencil className="w-4 h-4" />
+                                                  </Button>
+                                                  {canDelete && (
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => { setActiveSubjectId(subject.id); setDeleteChapterId(chapter.id); }}>
+                                                      <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                  )}
+                                                </div>
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <div className="text-center py-6 text-sm text-muted-foreground bg-background rounded-xl border border-dashed border-border">
+                                          No chapters added yet.
+                                        </div>
+                                      )}
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                </Accordion>
+                              </div>
+                            </div>
+                          </Card>
+                        ))
+                      ) : (
+                        <div className="text-center py-6 text-sm text-muted-foreground bg-background rounded-xl border border-dashed border-border">
+                          No subjects added to this syllabus yet.
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             )}
           </div>
 
-          {/* Sidebar Parameters */}
           <div className="space-y-6">
-            {level.subjects?.length === 0 && canEdit && !isEditing && (
-              <Card className="border-dashed border-2 bg-muted/20 border-border">
-                <CardContent className="flex flex-col items-center justify-center p-8 text-center space-y-4">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <BookOpen className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-lg text-text-primary">No Subjects Yet</h3>
-                    <p className="text-sm text-muted-foreground max-w-[200px] mt-1">
-                      Start building the curriculum for this level.
-                    </p>
-                  </div>
-                  <Button onClick={() => openSubjectModal()} className="mt-2 bg-primary hover:bg-primary-dark">
-                    <Plus className="w-4 h-4 mr-2" /> Add First Subject
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-
-
+            <Card className="border-dashed border-2 bg-muted/20 border-border">
+              <CardContent className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <BookOpen className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg text-text-primary">Curriculum Structure</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Manage syllabuses and subjects for this level.
+                  </p>
+                </div>
+                <Button onClick={() => openSyllabusModal()} className="mt-2 bg-primary hover:bg-primary-dark">
+                  <Plus className="w-4 h-4 mr-2" /> Add Syllabus
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </motion.div>
       )}
@@ -850,10 +879,7 @@ export default function LevelDetailPage() {
               <Label htmlFor="sub-name">Subject Name <span className="text-destructive">*</span></Label>
               <Input id="sub-name" value={subjectForm.name} onChange={(e) => setSubjectForm({ ...subjectForm, name: e.target.value })} />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="sub-hours">Total Hours</Label>
-              <Input id="sub-hours" type="number" min="0" value={subjectForm.total_hours} onChange={(e) => setSubjectForm({ ...subjectForm, total_hours: Number(e.target.value) })} />
-            </div>
+
             <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 bg-muted/30 mt-2">
               <Label htmlFor="sub-active" className="text-sm font-medium cursor-pointer">Active Status</Label>
               <Switch id="sub-active" checked={subjectForm.is_active} onCheckedChange={(c) => setSubjectForm({ ...subjectForm, is_active: c })} />
@@ -908,7 +934,7 @@ export default function LevelDetailPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-[380px] max-h-60 overflow-y-auto">
-                  {facultyOptions.filter(fac => fac.levels.includes(levelId)).map((fac) => (
+                  {facultyOptions.filter(fac => fac.levels.includes(levelId!)).map((fac) => (
                     <DropdownMenuCheckboxItem
                       key={fac.id}
                       checked={chapterForm.faculties.includes(fac.id)}
@@ -925,7 +951,7 @@ export default function LevelDetailPage() {
                       {fac.name}
                     </DropdownMenuCheckboxItem>
                   ))}
-                  {facultyOptions.filter(fac => fac.levels.includes(levelId)).length === 0 && (
+                  {facultyOptions.filter(fac => fac.levels.includes(levelId!)).length === 0 && (
                     <div className="p-2 text-sm text-muted-foreground text-center">No faculties found for this level</div>
                   )}
                 </DropdownMenuContent>
@@ -999,6 +1025,62 @@ export default function LevelDetailPage() {
         description="Are you sure you want to delete this paper? This action cannot be undone."
         confirmLabel="Delete"
         onConfirm={deletePaper}
+      />
+      <Dialog open={syllabusModalOpen} onOpenChange={setSyllabusModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingSyllabus ? "Edit Syllabus" : "Add Syllabus"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-1">
+              <Label>Syllabus Name</Label>
+              <Input
+                value={syllabusForm.name}
+                onChange={(e) => setSyllabusForm({ ...syllabusForm, name: e.target.value })}
+                placeholder="e.g. 2024 Syllabus"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Year</Label>
+              <Input
+                type="number"
+                value={syllabusForm.year}
+                onChange={(e) => setSyllabusForm({ ...syllabusForm, year: Number(e.target.value) })}
+                placeholder="e.g. 2024"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Description</Label>
+              <Textarea
+                value={syllabusForm.description}
+                onChange={(e) => setSyllabusForm({ ...syllabusForm, description: e.target.value })}
+                placeholder="Brief description"
+              />
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <Switch
+                checked={syllabusForm.is_active}
+                onCheckedChange={(c) => setSyllabusForm({ ...syllabusForm, is_active: c })}
+              />
+              <Label>Active</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSyllabusModalOpen(false)} disabled={syllabusActionLoading}>Cancel</Button>
+            <Button onClick={saveSyllabus} disabled={syllabusActionLoading}>
+              {syllabusActionLoading ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteSyllabusId}
+        onOpenChange={(o) => !o && setDeleteSyllabusId(null)}
+        title="Delete Syllabus"
+        description="Are you sure you want to delete this syllabus? All associated subjects might be affected."
+        confirmLabel="Delete"
+        onConfirm={deleteSyllabus}
       />
     </div>
   );

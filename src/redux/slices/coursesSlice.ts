@@ -8,6 +8,8 @@ export interface SubjectRecord {
   code: string;
   total_hours: number;
   is_active: boolean;
+  syllabus?: string;
+  syllabus_name?: string;
 }
 
 export interface CourseRecord {

@@ -37,6 +37,11 @@ export interface EventPhotoSlot {
   timing?: string | null;
 }
 
+export interface EventPhotoSlotGroup {
+  date: string;
+  slots: EventPhotoSlot[];
+}
+
 export interface SalesDailyActivity {
   id: string;
   user: string;
@@ -47,7 +52,7 @@ export interface SalesDailyActivity {
   from_date?: string;
   to_date?: string;
   timings?: SalesDailyActivityTiming[];
-  event_photo_slots?: EventPhotoSlot[];
+  event_photo_slots?: EventPhotoSlotGroup[];
   students_expected: number | null;
   students_attended: number | null;
   notes: string;
@@ -59,7 +64,9 @@ export interface SalesDailyActivity {
   target_name?: string;
   target_number?: string;
   photos: SalesActivityPhoto[];
+  allocations?: any[];
   odometer_reading?: OdometerReading;
+  status?: string;
   created_at: string;
   updated_at: string;
 }
@@ -121,6 +128,8 @@ export interface SalesDailyPlan {
   day_of_reminder_sent?: boolean;
   activities: SalesDailyActivity[];
   photos?: SalesActivityPhoto[];
+  allocations?: any[];
+  status?: string;
   created_at: string;
   updated_at: string;
 }

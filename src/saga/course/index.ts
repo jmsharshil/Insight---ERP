@@ -1,5 +1,5 @@
 import { takeLatest } from "redux-saga/effects";
-import { courseAction, levelActions, subjectAction, chapterAction, subjectPaperAction } from "@/redux/actions";
+import { courseAction, levelActions, syllabusActions, subjectAction, chapterAction, subjectPaperAction } from "@/redux/actions";
 import { genericSaga } from "@/saga/createGenericSaga/genericSaga";
 
 export function* watchCourseSaga() {
@@ -15,6 +15,13 @@ export function* watchCourseSaga() {
   yield takeLatest(levelActions.CREATE_LEVEL, genericSaga);
   yield takeLatest(levelActions.UPDATE_LEVEL, genericSaga);
   yield takeLatest(levelActions.DELETE_LEVEL, genericSaga);
+
+  // Syllabus sagas using genericSaga
+  yield takeLatest(syllabusActions.GET_SYLLABUSES, genericSaga);
+  yield takeLatest(syllabusActions.GET_SYLLABUS_DETAILS, genericSaga);
+  yield takeLatest(syllabusActions.CREATE_SYLLABUS, genericSaga);
+  yield takeLatest(syllabusActions.UPDATE_SYLLABUS, genericSaga);
+  yield takeLatest(syllabusActions.DELETE_SYLLABUS, genericSaga);
 
   // Subject sagas using genericSaga
   yield takeLatest(subjectAction.GET_SUBJECTS, genericSaga);

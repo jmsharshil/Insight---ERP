@@ -13,6 +13,19 @@ export interface LevelRecord {
   created_at?: string;
   updated_at?: string;
   is_active?: boolean;
+  syllabuses?: SyllabusRecord[];
+}
+
+export interface SyllabusRecord {
+  id: string;
+  name: string;
+  year?: number;
+  description?: string;
+  is_active?: boolean;
+  level?: string;
+  organization?: string;
+  created_at?: string;
+  subjects?: any[]; // We can import SubjectRecord from coursesSlice, or just use any[] here to avoid circular dependencies if any, but since SubjectRecord is in coursesSlice, let's use any for now or import it. Let's stick to any[] to be safe, or just import it.
 }
 
 interface LevelsState {
