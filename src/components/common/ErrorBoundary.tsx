@@ -13,9 +13,26 @@ export default class ErrorBoundary extends Component<{ children: ReactNode }, St
 
   componentDidCatch(error: Error) {
     console.error("ErrorBoundary caught:", error);
+    
+    // Check if error is due to a new deployment (Vite chunk load error)
+    const isChunkLoadError = error?.name === 'ChunkLoadError' || error?.message?.includes('Failed to fetch dynamically imported module');
+    if (isChunkLoadError) {
+      const reloadCount = parseInt(sessionStorage.getItem('chunk_reload_count') || '0', 10);
+      if (reloadCount < 2) {
+        sessionStorage.setItem('chunk_reload_count', String(reloadCount + 1));
+        window.location.reload();
+      }
+    }
   }
 
-  reset = () => this.setState({ hasError: false, error: undefined });
+  reset = () => {
+    const isChunkLoadError = this.state.error?.name === 'ChunkLoadError' || this.state.error?.message?.includes('Failed to fetch dynamically imported module');
+    if (isChunkLoadError) {
+      window.location.reload();
+    } else {
+      this.setState({ hasError: false, error: undefined });
+    }
+  };
 
   render() {
     if (this.state.hasError) {
