@@ -235,22 +235,16 @@ export default function CoursesBatchesPage() {
   const [selectedBatchDetails, setSelectedBatchDetails] = useState<any>(null);
 
   const [batchForm, setBatchForm] = useState<any>({
-    course: "",
-    name: "",
-    batch_code: "",
-    group_module: "module_1",
-    batch_attempt: "june",
+    fee_structure: "",
     branch: "",
-    start_date: "2026-07-01",
-    end_date: "2027-01-31",
-    max_students: 50,
-    timing: "09:00-12:00",
-    is_active: true,
-    enrolled_students: [],
-    assigned_faculty: [],
+    syllabus: "",
+    max_students: "",
+    start_date: "",
+    end_date: "",
   });
   const [batchDeleteConfirmOpen, setBatchDeleteConfirmOpen] = useState(false);
   const [batchToDelete, setBatchToDelete] = useState<any>(null);
+  const [batchUpdateLoading, setBatchUpdateLoading] = useState(false);
 
   const fetchBatchesList = () => {
     dispatch({
@@ -277,19 +271,12 @@ export default function CoursesBatchesPage() {
 
   const openAddBatchModal = () => {
     setBatchForm({
-      course: courses[0]?.id || "",
-      name: "",
-      batch_code: "",
-      group_module: "module_1",
-      batch_attempt: "june",
+      fee_structure: "",
       branch: "",
+      syllabus: "",
+      max_students: "",
       start_date: new Date().toISOString().split("T")[0],
       end_date: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      max_students: 50,
-      timing: "09:00-12:00",
-      is_active: true,
-      enrolled_students: [],
-      assigned_faculty: [],
     });
     setEditingBatch(null);
     setSheetMode("create");
@@ -388,12 +375,28 @@ export default function CoursesBatchesPage() {
   };
 
   const handleSaveBatch = () => {
-    if (!batchForm.name.trim()) {
-      toast.error("Batch name is required.");
+    if (!batchForm.fee_structure) {
+      toast.error("Fee structure is required.");
       return;
     }
-    if (!batchForm.course.trim()) {
-      toast.error("Course is required.");
+    if (!batchForm.syllabus) {
+      toast.error("Syllabus is required.");
+      return;
+    }
+    if (!batchForm.branch) {
+      toast.error("Branch is required.");
+      return;
+    }
+    if (!batchForm.max_students) {
+      toast.error("Max students is required.");
+      return;
+    }
+    if (!batchForm.start_date) {
+      toast.error("Start date is required.");
+      return;
+    }
+    if (!batchForm.end_date) {
+      toast.error("End date is required.");
       return;
     }
 
@@ -404,6 +407,7 @@ export default function CoursesBatchesPage() {
         endPoint: API.BATCHES.UPDATE(editingBatch.id),
         body: batchForm,
         auth: true,
+        setLoading: setBatchUpdateLoading,
         getResponse: (res: any) => {
           const updated = res?.data ?? res;
           setBatches((prev) =>
@@ -424,6 +428,7 @@ export default function CoursesBatchesPage() {
         endPoint: API.BATCHES.CREATE,
         body: batchForm,
         auth: true,
+        setLoading: setBatchUpdateLoading,
         getResponse: (res: any) => {
           const created = res?.data ?? res;
           setBatches((prev) => [...prev, created]);
@@ -683,14 +688,13 @@ export default function CoursesBatchesPage() {
               </Select>
             )}
             {activeSubTab === "batches" && canEdit ? (
-              // <Button
-              //   variant="outline"
-              //   className="bg-primary hover:bg-primary-dark text-primary-foreground"
-              //   onClick={openAddBatchModal}
-              // >
-              //   <Plus className="w-4 h-4" /> Add Batch
-              // </Button>
-              null
+              <Button
+                variant="outline"
+                className="bg-primary hover:bg-primary-dark text-primary-foreground"
+                onClick={openAddBatchModal}
+              >
+                <Plus className="w-4 h-4" /> Add Batch
+              </Button>
             ) : activeSubTab === "classrooms" && canEdit ? (
               <Button
                 variant="outline"
@@ -836,6 +840,7 @@ export default function CoursesBatchesPage() {
         onRemoveStudent={handleRemoveStudent}
         onAssignFaculty={handleAssignFaculty}
         onRemoveFaculty={handleRemoveFaculty}
+        loading={batchUpdateLoading}
       />
 
       <ConfirmDialog

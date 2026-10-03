@@ -81,58 +81,69 @@ export function ViewFeeStructureDialog({
               <span className="font-semibold">{[ATTEMPT_LABELS[structure.attempt || ""] || structure.attempt, structure.year].filter(Boolean).join(" ")}</span>
             </div>
           )}
-          {(structure.level_name === "CSEET" || structure.level_name === "CS Professional") && (
-            <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
-              <span className="text-muted-foreground font-medium">ICSI Reg. Fees</span>
-              <span className="font-semibold">{formatCurrency(Number(structure.icsi_registration_fees || 0))}</span>
-            </div>
-          )}
+          {(() => {
+            const ln = structure.level_name?.toLowerCase() || "";
+            const isCseet = ln === "cseet";
+            const isCsExecutive = ln === "cs executive" || ln === "cs_executive";
+            const isCsProfessional = ln === "cs professional" || ln === "cs_professional";
 
-          {(structure.level_name === "CSEET" || structure.level_name === "CS Executive" || structure.level_name === "CS Professional") && (
-            <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
-              <span className="text-muted-foreground font-medium">ICSI Exam Fees {structure.level_name !== "CSEET" && "(Per Module)"}</span>
-              <span className="font-semibold">{formatCurrency(Number(structure.icsi_exam_fees || 0))}</span>
-            </div>
-          )}
+            return (
+              <>
+                {(isCseet || isCsProfessional) && (
+                  <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
+                    <span className="text-muted-foreground font-medium">ICSI Reg. Fees</span>
+                    <span className="font-semibold">{formatCurrency(Number(structure.icsi_registration_fees || 0))}</span>
+                  </div>
+                )}
 
-          {structure.level_name === "CS Executive" && (
-            <>
-              <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
-                <span className="text-muted-foreground font-medium">ICSI Reg. Fees (Via CSEET)</span>
-                <span className="font-semibold">{formatCurrency(Number(structure.icsi_registration_fees_via_cseet || 0))}</span>
-              </div>
-              <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
-                <span className="text-muted-foreground font-medium">ICSI Reg. Fees (Direct)</span>
-                <span className="font-semibold">{formatCurrency(Number(structure.icsi_registration_fees_direct || 0))}</span>
-              </div>
-            </>
-          )}
+                {(isCseet || isCsExecutive || isCsProfessional) && (
+                  <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
+                    <span className="text-muted-foreground font-medium">ICSI Exam Fees {!isCseet && "(Per Module)"}</span>
+                    <span className="font-semibold">{formatCurrency(Number(structure.icsi_exam_fees || 0))}</span>
+                  </div>
+                )}
 
-          {(structure.level_name === "CS Executive" || structure.level_name === "CS Professional") && (
-            <>
-              <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
-                <span className="text-muted-foreground font-medium">Institute Fees (Both Modules)</span>
-                <span className="font-semibold">{formatCurrency(Number(structure.institute_fees_both_modules || 0))}</span>
-              </div>
-              <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
-                <span className="text-muted-foreground font-medium">Institute Fees (Module 1)</span>
-                <span className="font-semibold">{formatCurrency(Number(structure.institute_fees_module_1 || 0))}</span>
-              </div>
-              <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
-                <span className="text-muted-foreground font-medium">Institute Fees (Module 2)</span>
-                <span className="font-semibold">{formatCurrency(Number(structure.institute_fees_module_2 || 0))}</span>
-              </div>
-            </>
-          )}
+                {isCsExecutive && (
+                  <>
+                    <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
+                      <span className="text-muted-foreground font-medium">ICSI Reg. Fees (Via CSEET)</span>
+                      <span className="font-semibold">{formatCurrency(Number(structure.icsi_registration_fees_via_cseet || 0))}</span>
+                    </div>
+                    <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
+                      <span className="text-muted-foreground font-medium">ICSI Reg. Fees (Direct)</span>
+                      <span className="font-semibold">{formatCurrency(Number(structure.icsi_registration_fees_direct || 0))}</span>
+                    </div>
+                  </>
+                )}
 
-          {!(structure.level_name === "CS Executive" || structure.level_name === "CS Professional") && (
-            <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
-              <span className="text-muted-foreground font-medium">Institute Fee</span>
-              <span className="font-semibold text-primary">
-                {formatCurrency(Number(structure.total_amount))}
-              </span>
-            </div>
-          )}
+                {(isCsExecutive || isCsProfessional) && (
+                  <>
+                    <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
+                      <span className="text-muted-foreground font-medium">Institute Fees (Both Modules)</span>
+                      <span className="font-semibold">{formatCurrency(Number(structure.institute_fees_both_modules || 0))}</span>
+                    </div>
+                    <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
+                      <span className="text-muted-foreground font-medium">Institute Fees (Module 1)</span>
+                      <span className="font-semibold">{formatCurrency(Number(structure.institute_fees_module_1 || 0))}</span>
+                    </div>
+                    <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
+                      <span className="text-muted-foreground font-medium">Institute Fees (Module 2)</span>
+                      <span className="font-semibold">{formatCurrency(Number(structure.institute_fees_module_2 || 0))}</span>
+                    </div>
+                  </>
+                )}
+
+                {!(isCsExecutive || isCsProfessional) && (
+                  <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
+                    <span className="text-muted-foreground font-medium">Institute Fee</span>
+                    <span className="font-semibold text-primary">
+                      {formatCurrency(Number(structure.total_amount))}
+                    </span>
+                  </div>
+                )}
+              </>
+            );
+          })()}
           {structure.description && (
             <div className="pt-1.5">
               <span className="text-muted-foreground font-medium block mb-1">Description</span>

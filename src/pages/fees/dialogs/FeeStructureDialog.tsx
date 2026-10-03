@@ -65,9 +65,10 @@ export function FeeStructureDialog({
   const [isActive, setIsActive] = useState(true);
 
   const selectedLevelName = levels.find(l => l.id === level)?.name || structure?.level_name || "";
-  const isCseet = selectedLevelName === "CSEET";
-  const isCsExecutive = selectedLevelName === "CS Executive";
-  const isCsProfessional = selectedLevelName === "CS Professional";
+  const ln = selectedLevelName.toLowerCase();
+  const isCseet = ln === "cseet";
+  const isCsExecutive = ln === "cs executive" || ln === "cs_executive";
+  const isCsProfessional = ln === "cs professional" || ln === "cs_professional";
   const isSpecialLevel = isCseet || isCsExecutive || isCsProfessional;
 
   let attemptOptions = [

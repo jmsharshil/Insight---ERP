@@ -456,10 +456,17 @@ export default function AuditLogsPage() {
                 {selected.request_body && (
                   <div>
                     <div className="text-xs font-semibold text-muted-foreground mb-1.5">Request Body</div>
-                    <pre className="bg-slate-50 border border-border rounded-lg p-3 text-xs overflow-x-auto max-h-48 font-mono">
+                    <pre className="bg-slate-50 border border-border rounded-lg p-3 text-xs overflow-x-auto max-h-96 font-mono whitespace-pre-wrap break-all">
                       {(() => {
-                        try { return JSON.stringify(JSON.parse(selected.request_body), null, 2); }
-                        catch { return selected.request_body; }
+                        try {
+                          let parsed = selected.request_body;
+                          while (typeof parsed === "string") {
+                            parsed = JSON.parse(parsed);
+                          }
+                          return JSON.stringify(parsed, null, 2);
+                        } catch {
+                          return selected.request_body;
+                        }
                       })()}
                     </pre>
                   </div>
@@ -469,10 +476,17 @@ export default function AuditLogsPage() {
                 {selected.response_summary && (
                   <div>
                     <div className="text-xs font-semibold text-muted-foreground mb-1.5">Response Summary</div>
-                    <pre className="bg-slate-50 border border-border rounded-lg p-3 text-xs overflow-x-auto max-h-48 font-mono">
+                    <pre className="bg-slate-50 border border-border rounded-lg p-3 text-xs overflow-x-auto max-h-96 font-mono whitespace-pre-wrap break-all">
                       {(() => {
-                        try { return JSON.stringify(JSON.parse(selected.response_summary), null, 2); }
-                        catch { return selected.response_summary; }
+                        try {
+                          let parsed = selected.response_summary;
+                          while (typeof parsed === "string") {
+                            parsed = JSON.parse(parsed);
+                          }
+                          return JSON.stringify(parsed, null, 2);
+                        } catch {
+                          return selected.response_summary;
+                        }
                       })()}
                     </pre>
                   </div>

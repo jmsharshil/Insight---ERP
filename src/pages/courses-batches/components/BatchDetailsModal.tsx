@@ -2,20 +2,16 @@ import { useEffect, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   Users,
-  Calendar,
-  Clock,
   MapPin,
-  BookOpen,
   Edit2,
-  X,
-  Layers,
-  Building2,
+  CreditCard,
+  Calendar,
+  Loader2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -25,30 +21,17 @@ import {
 } from "@/components/ui/select";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/store";
-import { dropdownActions, studentActions, levelActions, branchAction } from "@/redux/actions";
+import { feesActions, levelActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import { useDropdown } from "@/hooks/useDropdown";
 
-interface Course {
-  id: string;
-  name: string;
-  code?: string;
-}
-
 interface BatchForm {
-  course: string;
-  course_level?: string;
-  name: string;
-  batch_code: string;
-  group_module: "full" | "both" | "module_1" | "module_2";
-  batch_attempt: "june" | "oct" | "dec" | "feb";
+  fee_structure: string;
   branch: string;
+  syllabus: string;
+  max_students: number;
   start_date: string;
   end_date: string;
-  max_students: number;
-  timing: string;
-  enrolled_students?: string[];
-  assigned_faculty?: string[];
 }
 
 export type SheetMode = "view" | "edit" | "create" | null;
@@ -61,15 +44,16 @@ interface BatchDetailsSheetProps {
   batchForm: BatchForm;
   setBatchForm: (form: BatchForm) => void;
   onSave: () => void;
-  courses: Course[];
+  courses?: any[];
   canEdit?: boolean;
   onEditClick?: () => void;
-  allStudents?: any[]; // optional if we pass them
-  allFaculty?: any[]; // optional if we pass them
+  allStudents?: any[];
+  allFaculty?: any[];
   onAssignStudent?: (studentId: string) => void;
   onRemoveStudent?: (studentId: string) => void;
   onAssignFaculty?: (facultyId: string) => void;
   onRemoveFaculty?: (facultyId: string) => void;
+  loading?: boolean;
 }
 
 export default function BatchDetailsSheet({
@@ -80,14 +64,9 @@ export default function BatchDetailsSheet({
   batchForm,
   setBatchForm,
   onSave,
-  courses,
   canEdit,
   onEditClick,
-  allStudents = [],
-  onAssignStudent,
-  onRemoveStudent,
-  onAssignFaculty,
-  onRemoveFaculty,
+  loading = false,
 }: BatchDetailsSheetProps) {
   // If mode is null, render nothing or just close sheet
   if (!mode) return null;
@@ -96,36 +75,8 @@ export default function BatchDetailsSheet({
 
   const dispatch = useDispatch<AppDispatch>();
 
-  const [students, setStudents] = useState<any[]>([]);
-  const [facultyList, setFacultyList] = useState<any[]>([]);
-  const [courseLevels, setCourseLevels] = useState<any[]>([]);
-  const [levelsLoading, setLevelsLoading] = useState(false);
-
-  useEffect(() => {
-    // Fetch Subjects
-    dispatch({
-      type: studentActions.GET_STUDENTS,
-      method: "GET",
-      endPoint: "/api/v1/students/",
-      auth: true,
-      getResponse: (res: any) => {
-        const data = res?.data?.results || res?.results || res?.data?.data || res?.data || res;
-        if (Array.isArray(data)) setStudents(data);
-      },
-    });
-
-    // Fetch Faculty
-    dispatch({
-      type: dropdownActions.GET_DROPDOWN,
-      method: "GET",
-      endPoint: "/api/v1/faculty/",
-      auth: true,
-      getResponse: (res: any) => {
-        const data = res?.data || [];
-        setFacultyList(data);
-      },
-    });
-  }, [dispatch]);
+  const [feeStructures, setFeeStructures] = useState<any[]>([]);
+  const [feeStructuresLoading, setFeeStructuresLoading] = useState(false);
 
   const {
     options: branches,
@@ -133,71 +84,74 @@ export default function BatchDetailsSheet({
     fetchOptions: fetchBranches,
   } = useDropdown("branches", false);
 
+  const [syllabuses, setSyllabuses] = useState<any[]>([]);
+  const [syllabusesLoading, setSyllabusesLoading] = useState(false);
+
   useEffect(() => {
     if (open) {
       fetchBranches();
-    }
-  }, [open, fetchBranches]);
 
-  useEffect(() => {
-    if (open && batchForm.course) {
-      setLevelsLoading(true);
+      // Fetch fee structures
+      setFeeStructuresLoading(true);
       dispatch({
-        type: levelActions.GET_LEVELS,
+        type: feesActions.GET_FEE_STRUCTURES,
         method: "GET",
-        endPoint: API.COURSES.LEVELS.LIST(batchForm.course),
+        endPoint: API.FEES.STRUCTURES,
         auth: true,
         getResponse: (res: any) => {
-          const fetchedLevels = res?.data ?? res;
-          if (Array.isArray(fetchedLevels)) {
-            const sortedLevels = [...fetchedLevels].sort(
-              (a: any, b: any) => (a.order || 0) - (b.order || 0),
-            );
-            setCourseLevels(sortedLevels);
+          const data = res?.data?.results || res?.results || res?.data || res;
+          if (Array.isArray(data)) {
+            setFeeStructures(data);
           } else {
-            setCourseLevels([]);
+            setFeeStructures([]);
           }
-          setLevelsLoading(false);
+          setFeeStructuresLoading(false);
         },
-        getError: (err: any) => {
-          console.error("Failed to fetch levels", err);
-          setCourseLevels([]);
-          setLevelsLoading(false);
+        getError: () => {
+          setFeeStructuresLoading(false);
+        },
+      });
+    }
+  }, [open, fetchBranches, dispatch]);
+
+  // Fetch syllabuses when fee_structure changes
+  useEffect(() => {
+    if (!batchForm?.fee_structure || feeStructures.length === 0) {
+      setSyllabuses([]);
+      return;
+    }
+
+    const selectedFeeStructure = feeStructures.find(
+      (fs) => String(fs.id) === String(batchForm.fee_structure)
+    );
+
+    if (selectedFeeStructure && selectedFeeStructure.course && selectedFeeStructure.level) {
+      setSyllabusesLoading(true);
+      dispatch({
+        type: levelActions.GET_LEVEL_DETAILS,
+        method: "GET",
+        endPoint: API.COURSES.LEVELS.DETAIL(selectedFeeStructure.course, selectedFeeStructure.level),
+        auth: true,
+        getResponse: (res: any) => {
+          const levelData = res?.data ?? res;
+          if (levelData?.syllabuses && Array.isArray(levelData.syllabuses)) {
+            setSyllabuses(
+              levelData.syllabuses.map((s: any) => ({ value: String(s.id), label: s.name }))
+            );
+          } else {
+            setSyllabuses([]);
+          }
+          setSyllabusesLoading(false);
+        },
+        getError: () => {
+          setSyllabuses([]);
+          setSyllabusesLoading(false);
         },
       });
     } else {
-      setCourseLevels([]);
+      setSyllabuses([]);
     }
-  }, [open, batchForm.course, dispatch]);
-
-  const selectedLevelName =
-    courseLevels
-      .find((l) => String(l.id) === String(batchForm.course_level))
-      ?.name?.toLowerCase() || "";
-
-  const isCSEET = selectedLevelName.includes("cseet");
-  const isExecutive = selectedLevelName.includes("executive");
-  const isProfessional = selectedLevelName.includes("professional");
-
-  useEffect(() => {
-    if (!batchForm.course_level) return;
-
-    if (isCSEET) {
-      if (batchForm.group_module !== "full") {
-        setBatchForm({ ...batchForm, group_module: "full" });
-      }
-      if (!["june", "oct", "feb"].includes(batchForm.batch_attempt)) {
-        setBatchForm({ ...batchForm, batch_attempt: "june" });
-      }
-    } else if (isExecutive || isProfessional) {
-      if (batchForm.group_module === "full") {
-        setBatchForm({ ...batchForm, group_module: "both" });
-      }
-      if (!["june", "dec"].includes(batchForm.batch_attempt)) {
-        setBatchForm({ ...batchForm, batch_attempt: "june" });
-      }
-    }
-  }, [batchForm.course_level, isCSEET, isExecutive, isProfessional, courseLevels]);
+  }, [batchForm?.fee_structure, feeStructures, dispatch]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -225,407 +179,147 @@ export default function BatchDetailsSheet({
         </SheetHeader>
 
         {isFormMode ? (
-          <div className="space-y-4 py-4">
-            {/* Form Fields */}
+          <div className="space-y-5 py-4">
+            {/* Fee Structure Dropdown */}
             <div className="space-y-1">
               <Label
-                htmlFor="batch-course"
+                htmlFor="batch-fee-structure"
                 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
               >
-                Course Program
+                Fee Structure *
               </Label>
               <Select
-                value={batchForm.course}
-                onValueChange={(val) => setBatchForm({ ...batchForm, course: val })}
+                value={batchForm.fee_structure || ""}
+                onValueChange={(val) => setBatchForm({ ...batchForm, fee_structure: val })}
+                disabled={feeStructuresLoading}
               >
-                <SelectTrigger id="batch-course" className="bg-muted/10">
-                  <SelectValue placeholder="Select a course..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {courses.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name} {c.code ? `(${c.code})` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <Label
-                htmlFor="batch-level"
-                className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-              >
-                Course Level
-              </Label>
-              <Select
-                value={batchForm.course_level || ""}
-                onValueChange={(val) => setBatchForm({ ...batchForm, course_level: val })}
-                disabled={!batchForm.course || levelsLoading || courseLevels.length === 0}
-              >
-                <SelectTrigger id="batch-level" className="bg-muted/10">
+                <SelectTrigger id="batch-fee-structure" className="bg-muted/10">
                   <SelectValue
                     placeholder={
-                      !batchForm.course
-                        ? "Select a course first"
-                        : levelsLoading
-                          ? "Loading levels..."
-                          : courseLevels.length === 0
-                            ? "No levels available"
-                            : "Select a level..."
+                      feeStructuresLoading ? "Loading fee structures..." : "Select fee structure..."
                     }
                   />
                 </SelectTrigger>
                 <SelectContent>
-                  {courseLevels.map((l) => (
-                    <SelectItem key={l.id} value={String(l.id)}>
-                      {l.name} {l.order ? `(Order: ${l.order})` : ""}
+                  {feeStructures.map((fs: any) => (
+                    <SelectItem key={fs.id} value={String(fs.id)}>
+                      {fs.name} {fs.total_amount ? `(₹${fs.total_amount})` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
+            {/* Syllabus Dropdown */}
             <div className="space-y-1">
               <Label
-                htmlFor="batch-name"
+                htmlFor="batch-syllabus"
                 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
               >
-                Batch Name
+                Syllabus *
+              </Label>
+              <Select
+                value={batchForm.syllabus || ""}
+                onValueChange={(val) => setBatchForm({ ...batchForm, syllabus: val })}
+                disabled={syllabusesLoading}
+              >
+                <SelectTrigger id="batch-syllabus" className="bg-muted/10">
+                  <SelectValue
+                    placeholder={syllabusesLoading ? "Loading syllabuses..." : "Select Syllabus"}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {syllabuses.map((s: any) => (
+                    <SelectItem key={s.value} value={String(s.value)}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Max Students */}
+            <div className="space-y-1">
+              <Label
+                htmlFor="batch-max-students"
+                className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+              >
+                Max Students *
               </Label>
               <Input
-                id="batch-name"
-                value={batchForm.name}
-                onChange={(e) => setBatchForm({ ...batchForm, name: e.target.value })}
-                placeholder="e.g. CSEET_OCT_26_101"
+                id="batch-max-students"
+                type="number"
+                min="0"
+                value={batchForm.max_students}
+                onChange={(e) =>
+                  setBatchForm({ ...batchForm, max_students: Number(e.target.value) })
+                }
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label
-                  htmlFor="batch-module"
-                  className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-                >
-                  Group Module
-                </Label>
-                <Select
-                  value={batchForm.group_module}
-                  onValueChange={(val: any) => setBatchForm({ ...batchForm, group_module: val })}
-                >
-                  <SelectTrigger id="batch-module" className="bg-muted/10">
-                    <SelectValue placeholder="Select module" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {isCSEET ? (
-                      <SelectItem value="full">Full</SelectItem>
-                    ) : isExecutive || isProfessional ? (
-                      <>
-                        <SelectItem value="module_1">Module 1</SelectItem>
-                        <SelectItem value="module_2">Module 2</SelectItem>
-                        <SelectItem value="both">Both</SelectItem>
-                      </>
-                    ) : (
-                      <>
-                        <SelectItem value="full">Full</SelectItem>
-                        <SelectItem value="both">Both</SelectItem>
-                        <SelectItem value="module_1">Module 1</SelectItem>
-                        <SelectItem value="module_2">Module 2</SelectItem>
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1">
-                <Label
-                  htmlFor="batch-attempt"
-                  className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-                >
-                  Attempt Month
-                </Label>
-                <Select
-                  value={batchForm.batch_attempt}
-                  onValueChange={(val: any) => setBatchForm({ ...batchForm, batch_attempt: val })}
-                >
-                  <SelectTrigger id="batch-attempt" className="bg-muted/10">
-                    <SelectValue placeholder="Select attempt" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {isCSEET ? (
-                      <>
-                        <SelectItem value="june">June</SelectItem>
-                        <SelectItem value="oct">October</SelectItem>
-                        <SelectItem value="feb">February</SelectItem>
-                      </>
-                    ) : isExecutive || isProfessional ? (
-                      <>
-                        <SelectItem value="june">June</SelectItem>
-                        <SelectItem value="dec">December</SelectItem>
-                      </>
-                    ) : (
-                      <>
-                        <SelectItem value="june">June</SelectItem>
-                        <SelectItem value="oct">October</SelectItem>
-                        <SelectItem value="dec">December</SelectItem>
-                        <SelectItem value="feb">February</SelectItem>
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Branch Name */}
+            <div className="space-y-1">
+              <Label
+                htmlFor="batch-branch"
+                className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+              >
+                Branch Name *
+              </Label>
+              <Select
+                value={batchForm.branch || ""}
+                onValueChange={(val) => setBatchForm({ ...batchForm, branch: val })}
+                disabled={branchesLoading}
+              >
+                <SelectTrigger id="batch-branch" className="bg-muted/10">
+                  <SelectValue
+                    placeholder={branchesLoading ? "Loading branches..." : "Select Branch"}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((b) => (
+                    <SelectItem key={b.value} value={String(b.value)}>
+                      {b.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
+            {/* Dates */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label
-                  htmlFor="batch-start"
+                  htmlFor="batch-start-date"
                   className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
                 >
-                  Start Date
+                  Start Date *
                 </Label>
                 <Input
-                  id="batch-start"
+                  id="batch-start-date"
                   type="date"
                   value={batchForm.start_date}
-                  onChange={(e) => setBatchForm({ ...batchForm, start_date: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label
-                  htmlFor="batch-end"
-                  className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-                >
-                  End Date
-                </Label>
-                <Input
-                  id="batch-end"
-                  type="date"
-                  value={batchForm.end_date}
-                  onChange={(e) => setBatchForm({ ...batchForm, end_date: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label
-                  htmlFor="batch-max-students"
-                  className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-                >
-                  Max Students
-                </Label>
-                <Input
-                  id="batch-max-students"
-                  type="number" min="0"
-                  value={batchForm.max_students}
                   onChange={(e) =>
-                    setBatchForm({ ...batchForm, max_students: Number(e.target.value) })
+                    setBatchForm({ ...batchForm, start_date: e.target.value })
                   }
                 />
               </div>
-
               <div className="space-y-1">
                 <Label
-                  htmlFor="batch-branch"
+                  htmlFor="batch-end-date"
                   className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
                 >
-                  Branch Name
+                  End Date *
                 </Label>
-                <Select
-                  value={batchForm.branch || ""}
-                  onValueChange={(val) => setBatchForm({ ...batchForm, branch: val })}
-                  disabled={branchesLoading}
-                >
-                  <SelectTrigger id="batch-branch" className="bg-muted/10">
-                    <SelectValue placeholder={branchesLoading ? "Loading branches..." : "Select Branch"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {branches.map((b) => (
-                      <SelectItem key={b.value} value={String(b.value)}>
-                        {b.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="batch-end-date"
+                  type="date"
+                  value={batchForm.end_date}
+                  onChange={(e) =>
+                    setBatchForm({ ...batchForm, end_date: e.target.value })
+                  }
+                />
               </div>
             </div>
-
-            {/* <div className="space-y-1">
-              <Label
-                htmlFor="batch-timing"
-                className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-              >
-                Timings
-              </Label>
-              <Input
-                id="batch-timing"
-                value={batchForm.timing}
-                onChange={(e) => setBatchForm({ ...batchForm, timing: e.target.value })}
-                placeholder="e.g. 09:00-12:00"
-              />
-            </div> */}
-
-            <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 bg-muted/30">
-              <Label
-                htmlFor="batch-active"
-                className="text-xs font-semibold text-text-primary cursor-pointer"
-              >
-                Active Status
-              </Label>
-              <Switch
-                id="batch-active"
-                checked={batchForm.is_active}
-                onCheckedChange={(checked) => setBatchForm({ ...batchForm, is_active: checked })}
-              />
-            </div>
-
-            {mode === "edit" && (
-              <div className="space-y-4 pt-4 border-t border-border mt-4">
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Manage Enrolled Students
-                  </Label>
-                  <Select
-                    value=""
-                    onValueChange={(val) => {
-                      const existing = batchForm.enrolled_students?.find(
-                        (s: any) => s.student_id === val,
-                      );
-                      if (!existing) {
-                        const studentName = students.find((s: any) => s.id === val)?.full_name;
-                        if (onAssignStudent) {
-                          onAssignStudent(val, studentName);
-                        } else {
-                          setBatchForm({
-                            ...batchForm,
-                            enrolled_students: [
-                              ...(batchForm.enrolled_students || []),
-                              { student_id: val, student_name: studentName },
-                            ],
-                          });
-                        }
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="bg-muted/10">
-                      <SelectValue placeholder="Add student..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {students.map((opt: any) => (
-                        <SelectItem key={opt.id} value={opt.id}>
-                          {opt.full_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  {batchForm.enrolled_students && batchForm.enrolled_students.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2 max-h-32 overflow-y-auto">
-                      {batchForm.enrolled_students.map((studentObj: any) => {
-                        const sid = studentObj.student_id;
-                        const studentLabel =
-                          studentObj.student_name ||
-                          students.find((o: any) => o.id === sid)?.full_name ||
-                          sid;
-                        return (
-                          <Badge key={sid} variant="secondary" className="flex items-center gap-1">
-                            {studentLabel}
-                            <X
-                              className="w-3 h-3 cursor-pointer hover:text-destructive"
-                              onClick={() => {
-                                if (onRemoveStudent) {
-                                  onRemoveStudent(sid);
-                                } else {
-                                  setBatchForm({
-                                    ...batchForm,
-                                    enrolled_students: batchForm.enrolled_students?.filter(
-                                      (s: any) => s.student_id !== sid,
-                                    ),
-                                  });
-                                }
-                              }}
-                            />
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Manage Assigned Faculty
-                  </Label>
-                  <Select
-                    value=""
-                    onValueChange={(val) => {
-                      const existing = batchForm.assigned_faculty?.find(
-                        (f: any) => f.faculty_id === val,
-                      );
-                      if (!existing) {
-                        const facultyName = facultyList.find((o: any) => o.id === val)?.full_name;
-                        if (onAssignFaculty) {
-                          onAssignFaculty(val, facultyName);
-                        } else {
-                          setBatchForm({
-                            ...batchForm,
-                            assigned_faculty: [
-                              ...(batchForm.assigned_faculty || []),
-                              { faculty_id: val, faculty_name: facultyName },
-                            ],
-                          });
-                        }
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="bg-muted/10">
-                      <SelectValue placeholder="Add faculty..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {facultyList.map((opt: any) => (
-                        <SelectItem key={opt.id} value={opt.id}>
-                          {opt.full_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  {batchForm.assigned_faculty && batchForm.assigned_faculty.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2 max-h-32 overflow-y-auto">
-                      {batchForm.assigned_faculty.map((facultyObj: any) => {
-                        const fid = facultyObj.faculty_id;
-                        const facultyLabel =
-                          facultyObj.faculty_name ||
-                          facultyList.find((o: any) => o.id === fid)?.full_name ||
-                          fid;
-                        return (
-                          <Badge key={fid} variant="secondary" className="flex items-center gap-1">
-                            {facultyLabel}
-                            <X
-                              className="w-3 h-3 cursor-pointer hover:text-destructive"
-                              onClick={() => {
-                                if (onRemoveFaculty) {
-                                  onRemoveFaculty(fid);
-                                } else {
-                                  setBatchForm({
-                                    ...batchForm,
-                                    assigned_faculty: batchForm.assigned_faculty?.filter(
-                                      (f: any) => f.faculty_id !== fid,
-                                    ),
-                                  });
-                                }
-                              }}
-                            />
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
 
             <div className="flex gap-3 pt-4 border-t border-border mt-6">
               <Button
@@ -639,9 +333,11 @@ export default function BatchDetailsSheet({
               <Button
                 type="button"
                 onClick={onSave}
+                disabled={loading}
                 className="flex-1 bg-primary hover:bg-primary-dark text-primary-foreground flex items-center justify-center gap-2"
               >
-                Save
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {loading ? "Saving..." : "Save"}
               </Button>
             </div>
           </div>
@@ -649,162 +345,121 @@ export default function BatchDetailsSheet({
           batch && (
             <div className="space-y-6 py-4">
               {/* View Details Mode */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-1">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase">
-                    Batch Code
+                  <span className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1.5">
+                    <CreditCard className="w-3.5 h-3.5 text-primary" />
+                    Fee Structure
                   </span>
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <BookOpen className="w-4 h-4 text-primary" />
-                    {batch.batch_code}
+                  <div className="text-sm font-medium">
+                    {batch.fee_structure_name || batch.fee_structure || "N/A"}
                   </div>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-primary" />
                     Branch
                   </span>
                   <div className="flex items-center gap-2 text-sm font-medium">
-                    <MapPin className="w-4 h-4 text-primary" />
                     {batch.branch_name || batch.branch || "N/A"}
                   </div>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase">
-                    Group Module
-                  </span>
-                  <div className="text-sm font-medium capitalize">
-                    {batch.group_module_display || batch.group_module?.replace("_", " ")}
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase">
-                    Batch Attempt
-                  </span>
-                  <div className="text-sm font-medium capitalize">
-                    {batch.batch_attempt_display || batch.batch_attempt}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase">
-                    Duration
-                  </span>
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <Calendar className="w-4 h-4 text-primary" />
-                    {batch.start_date} to {batch.end_date}
-                  </div>
-                </div>
-                {/* <div className="space-y-1">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase">
-                    Timing
-                  </span>
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <Clock className="w-4 h-4 text-primary" />
-                    {batch.timing}
-                  </div>
-                </div> */}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-primary" />
                     Max Students
                   </span>
                   <div className="flex items-center gap-2 text-sm font-medium">
-                    <Users className="w-4 h-4 text-primary" />
                     {batch.max_students}
                   </div>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-1">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase">
-                    Course Name
+                  <span className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-primary" />
+                    Duration
                   </span>
-                  <div className="text-sm font-medium truncate" title={batch.course}>
-                    {batch.course_name}
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    {batch.start_date || "N/A"} to {batch.end_date || "N/A"}
                   </div>
                 </div>
               </div>
 
-              {(batch.course_level_name ||
-                batch.level_name ||
-                batch.course_level ||
-                batch.level) && (
-                <div className="grid grid-cols-1 gap-4">
+              {batch.name && (
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <span className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1.5">
-                      <Layers className="w-3.5 h-3.5 text-primary" />
-                      Course Level
+                    <span className="text-xs font-semibold text-muted-foreground uppercase">
+                      Batch Name
                     </span>
-                    <div className="text-sm font-medium text-text-primary">
-                      {batch.course_level_name ||
-                        batch.level_name ||
-                        batch.course_level ||
-                        batch.level}
-                    </div>
+                    <div className="text-sm font-medium">{batch.name}</div>
                   </div>
+                  {batch.course_name && (
+                    <div className="space-y-1">
+                      <span className="text-xs font-semibold text-muted-foreground uppercase">
+                        Course Name
+                      </span>
+                      <div className="text-sm font-medium truncate" title={batch.course_name}>
+                        {batch.course_name}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
-              <div className="space-y-6 pt-2">
-                <div className="space-y-2">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-2">
-                    Enrolled Students ({batch.enrolled_students?.length || 0})
-                  </span>
-                  {batch.enrolled_students?.length > 0 ? (
-                    <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                      {batch.enrolled_students.map((student: any, idx: number) => (
-                        <div
-                          key={student.id || idx}
-                          className="flex flex-col p-2.5 border border-border rounded-lg bg-card"
-                        >
-                          <span className="font-medium text-sm text-text-primary">
-                            {student.student_name}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {student.student_email}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-sm font-medium text-muted-foreground">
-                      No students enrolled.
+              {(batch.enrolled_students?.length > 0 || batch.assigned_faculty?.length > 0) && (
+                <div className="space-y-6 pt-2">
+                  {batch.enrolled_students?.length > 0 && (
+                    <div className="space-y-2">
+                      <span className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-2">
+                        Enrolled Students ({batch.enrolled_students.length})
+                      </span>
+                      <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                        {batch.enrolled_students.map((student: any, idx: number) => (
+                          <div
+                            key={student.id || idx}
+                            className="flex flex-col p-2.5 border border-border rounded-lg bg-card"
+                          >
+                            <span className="font-medium text-sm text-text-primary">
+                              {student.student_name}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {student.student_email}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
-                </div>
 
-                <div className="space-y-2">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-2">
-                    Assigned Faculty ({batch.assigned_faculty?.length || 0})
-                  </span>
-                  {batch.assigned_faculty?.length > 0 ? (
-                    <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                      {batch.assigned_faculty.map((faculty: any, idx: number) => (
-                        <div
-                          key={faculty.id || idx}
-                          className="flex flex-col p-2.5 border border-border rounded-lg bg-card"
-                        >
-                          <span className="font-medium text-sm text-text-primary">
-                            {faculty.faculty_name}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {faculty.subject_name || faculty.phone || "No additional details"}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-sm font-medium text-muted-foreground">
-                      No faculty assigned.
+                  {batch.assigned_faculty?.length > 0 && (
+                    <div className="space-y-2">
+                      <span className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-2">
+                        Assigned Faculty ({batch.assigned_faculty.length})
+                      </span>
+                      <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                        {batch.assigned_faculty.map((faculty: any, idx: number) => (
+                          <div
+                            key={faculty.id || idx}
+                            className="flex flex-col p-2.5 border border-border rounded-lg bg-card"
+                          >
+                            <span className="font-medium text-sm text-text-primary">
+                              {faculty.faculty_name}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {faculty.subject_name || faculty.phone || "No additional details"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
-              </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4 border-t border-border pt-4 mt-2">
                 <div className="space-y-1">

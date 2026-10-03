@@ -9,6 +9,19 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': ['framer-motion', 'gsap', 'lucide-react'],
+          'table-vendor': ['@tanstack/react-table', 'recharts'],
+          'state-vendor': ['@reduxjs/toolkit', 'react-redux', 'redux-saga', 'redux-persist'],
+          'xlsx-vendor': ['xlsx']
+        }
+      }
+    }
+  },
   server: {
     host: "::",
     port: 5173,

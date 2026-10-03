@@ -232,18 +232,6 @@ export default function BatchesTab({
                 </div>
 
                 <div className="bg-muted/30 px-5 py-3 border-t border-border flex items-center justify-between gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs font-semibold text-primary hover:text-primary-dark p-0 h-auto cursor-pointer relative z-10"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onViewTimetable(b.name);
-                    }}
-                  >
-                    View Timetable
-                  </Button>
-
                   {canEdit && (
                     <div className="flex items-center gap-2">
                       <Button
