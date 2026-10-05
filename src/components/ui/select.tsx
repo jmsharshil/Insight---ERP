@@ -124,9 +124,16 @@ const SelectContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
 >(({ className, children, position = "popper", ...props }, ref) => {
   const [search, setSearch] = React.useState("");
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
   const totalItems = React.useMemo(() => countSelectItems(children), [children]);
   const showSearch = totalItems > 1;
+
+  React.useEffect(() => {
+    if (showSearch && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [showSearch]);
 
   const filteredChildren = React.useMemo(() => {
     return filterChildren(children, search);
@@ -154,10 +161,17 @@ const SelectContent = React.forwardRef<
         {showSearch && (
           <div className="p-2 border-b border-border sticky top-0 bg-popover z-10">
             <input
+              ref={inputRef}
               type="text"
               placeholder="Search..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                // Force focus back to input in case Radix tries to steal it after DOM mutation
+                setTimeout(() => {
+                  if (inputRef.current) inputRef.current.focus();
+                }, 0);
+              }}
               onKeyDown={(e) => {
                 e.stopPropagation();
               }}
