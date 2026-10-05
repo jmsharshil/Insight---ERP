@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { FileText, Activity, Lock, PenLine, AlertTriangle, Search, RefreshCw, Eye, Globe, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store";
-import { auditLogActions } from "@/redux/actions";
+import { auditLogActions, userActions } from "@/redux/actions";
 import { setAuditLogs, setAuditLogsLoading, setAuditLogsPagination, type AuditLogEntry } from "@/redux/slices/auditLogSlice";
 import { API } from "@/service/api";
 import PageHeader from "@/components/layout/PageHeader";
@@ -60,10 +60,12 @@ export default function AuditLogsPage() {
   const { logs, loading, count, next, previous, currentPage } = useSelector((state: RootState) => state.auditLog);
 
   const [selected, setSelected] = useState<AuditLogEntry | null>(null);
+  const [userFilter, setUserFilter] = useState("all");
   const [actionFilter, setActionFilter] = useState("all");
   const [methodFilter, setMethodFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [usersOptions, setUsersOptions] = useState<{id: string, name: string}[]>([]);
 
   // ── Fetch logs (server-side paginated) ──────────────────────────────────────
 
@@ -71,6 +73,7 @@ export default function AuditLogsPage() {
     // Build query string with filters + page
     const params = new URLSearchParams();
     params.set("page", String(page));
+    if (userFilter !== "all") params.set("user_id", userFilter);
     if (actionFilter !== "all") params.set("action", actionFilter);
     if (methodFilter !== "all") params.set("method", methodFilter);
     if (dateFilter) {
@@ -118,11 +121,27 @@ export default function AuditLogsPage() {
         toast.error(err?.response?.data?.message || err?.response?.data?.detail || "Failed to fetch audit logs");
       },
     });
-  }, [dispatch, toast, actionFilter, methodFilter, dateFilter, searchQuery]);
+  }, [dispatch, toast, actionFilter, methodFilter, dateFilter, searchQuery, userFilter]);
 
   useEffect(() => {
     fetchLogs(1);
   }, [fetchLogs]);
+
+  useEffect(() => {
+    dispatch({
+      type: userActions.GET_USERS_FOR_ASSIGN,
+      method: "GET",
+      endPoint: API.USERS.LIST,
+      auth: true,
+      getResponse: (res: any) => {
+        const data = Array.isArray(res) ? res : res?.results ?? res?.data ?? [];
+        setUsersOptions(data.map((u: any) => ({
+          id: u.id,
+          name: u.name || u.full_name || u.first_name || u.email || "Unknown"
+        })));
+      },
+    } as any);
+  }, [dispatch]);
 
   // ── Stats (based on current page data) ──────────────────────────────────────
 
@@ -164,6 +183,7 @@ export default function AuditLogsPage() {
   // ── Clear filters ───────────────────────────────────────────────────────────
 
   const clearFilters = () => {
+    setUserFilter("all");
     setActionFilter("all");
     setMethodFilter("all");
     setDateFilter("");
@@ -200,6 +220,15 @@ export default function AuditLogsPage() {
             onChange={e => setSearchQuery(e.target.value)}
           />
         </div>
+        <Select value={userFilter} onValueChange={setUserFilter}>
+          <SelectTrigger className="h-9 text-sm w-40"><SelectValue placeholder="User" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Users</SelectItem>
+            {usersOptions.map(u => (
+              <SelectItem key={u.id} value={String(u.id)}>{u.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select value={actionFilter} onValueChange={setActionFilter}>
           <SelectTrigger className="h-9 text-sm w-36"><SelectValue placeholder="Action" /></SelectTrigger>
           <SelectContent>
