@@ -221,7 +221,11 @@ export default function AuditLogsPage() {
           />
         </div>
         <Select value={userFilter} onValueChange={setUserFilter}>
-          <SelectTrigger className="h-9 text-sm w-40"><SelectValue placeholder="User" /></SelectTrigger>
+          <SelectTrigger className="h-9 text-sm w-40">
+            <SelectValue placeholder="User">
+              {userFilter === "all" ? "All Users" : usersOptions.find(u => String(u.id) === userFilter)?.name || "User"}
+            </SelectValue>
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Users</SelectItem>
             {usersOptions.map(u => (
