@@ -116,31 +116,12 @@ export function ViewFeeStructureDialog({
                   </>
                 )}
 
-                {(isCsExecutive || isCsProfessional) && (
-                  <>
-                    <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
-                      <span className="text-muted-foreground font-medium">Institute Fees (Both Modules)</span>
-                      <span className="font-semibold">{formatCurrency(Number(structure.institute_fees_both_modules || 0))}</span>
-                    </div>
-                    <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
-                      <span className="text-muted-foreground font-medium">Institute Fees (Module 1)</span>
-                      <span className="font-semibold">{formatCurrency(Number(structure.institute_fees_module_1 || 0))}</span>
-                    </div>
-                    <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
-                      <span className="text-muted-foreground font-medium">Institute Fees (Module 2)</span>
-                      <span className="font-semibold">{formatCurrency(Number(structure.institute_fees_module_2 || 0))}</span>
-                    </div>
-                  </>
-                )}
-
-                {!(isCsExecutive || isCsProfessional) && (
-                  <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
-                    <span className="text-muted-foreground font-medium">Institute Fee</span>
-                    <span className="font-semibold text-primary">
-                      {formatCurrency(Number(structure.total_amount))}
-                    </span>
-                  </div>
-                )}
+                <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
+                  <span className="text-muted-foreground font-medium">Institute Fee</span>
+                  <span className="font-semibold text-primary">
+                    {formatCurrency(Number(structure.total_amount))}
+                  </span>
+                </div>
               </>
             );
           })()}

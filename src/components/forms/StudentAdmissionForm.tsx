@@ -1144,7 +1144,7 @@ export default function StudentAdmissionForm() {
                       <SelectItem value="full">Full Syllabus</SelectItem>
                     ) : (
                       <>
-                        <SelectItem value="both">Both</SelectItem>
+                        <SelectItem value="both">All Modules</SelectItem>
                         <SelectItem value="module_1">Module 1</SelectItem>
                         <SelectItem value="module_2">Module 2</SelectItem>
                       </>

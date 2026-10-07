@@ -12,9 +12,14 @@ export interface FeesStructure {
   icsi_exam_fees?: string | number;
   icsi_registration_fees_via_cseet?: string | number;
   icsi_registration_fees_direct?: string | number;
-  institute_fees_both_modules?: string | number;
+  institute_fees_both_modules?: string | number; // legacy
+  institute_fees_all_modules?: string | number;
   institute_fees_module_1?: string | number;
   institute_fees_module_2?: string | number;
+  institute_fees_module_3?: string | number;
+  institute_fees_module_4?: string | number;
+  institute_fees_module_5?: string | number;
+  group_module?: string;
   attempt?: string;
   year?: string;
   is_active: boolean;

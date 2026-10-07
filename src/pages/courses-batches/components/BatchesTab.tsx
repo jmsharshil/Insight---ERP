@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Users, Calendar, Clock, MapPin, Pencil, Trash2, Search, BookOpen, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 interface Course {
@@ -35,6 +36,56 @@ interface Batch {
   timing: string;
   is_active: boolean;
 }
+
+const TruncatedTooltip = ({ 
+  text, 
+  className, 
+  as: Component = "p", 
+  side = "top" 
+}: { 
+  text: string; 
+  className?: string; 
+  as?: any; 
+  side?: "top" | "bottom" | "left" | "right" 
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isTruncated, setIsTruncated] = useState(false);
+
+  useEffect(() => {
+    const checkTruncation = () => {
+      if (containerRef.current) {
+        const el = containerRef.current.firstElementChild as HTMLElement;
+        if (el) {
+          setIsTruncated(el.scrollWidth > el.clientWidth);
+        }
+      }
+    };
+    checkTruncation();
+    window.addEventListener("resize", checkTruncation);
+    return () => window.removeEventListener("resize", checkTruncation);
+  }, [text]);
+
+  const innerContent = <Component className={className}>{text}</Component>;
+
+  if (!isTruncated) {
+    return <div ref={containerRef} className="min-w-0">{innerContent}</div>;
+  }
+
+  return (
+    <div ref={containerRef} className="min-w-0">
+      <TooltipProvider>
+        <Tooltip delayDuration={300}>
+          <TooltipTrigger asChild>
+            {innerContent}
+          </TooltipTrigger>
+          <TooltipContent side={side} className="max-w-[300px] break-words bg-gray-800 text-white border-gray-700">
+            {text}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
+  );
+};
 
 interface BatchesTabProps {
   batches: Batch[];
@@ -187,11 +238,19 @@ export default function BatchesTab({
               >
                 <div className="p-5 space-y-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <h4 className="font-semibold text-lg text-text-primary group-hover:text-primary transition-colors break-all">
-                        {b.name}
-                      </h4>
-                      <p className="text-xs text-muted-foreground mt-0.5 break-words">{courseName}</p>
+                    <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+                      <TruncatedTooltip
+                        text={b.name}
+                        as="h4"
+                        side="top"
+                        className="font-semibold text-lg text-text-primary group-hover:text-primary transition-colors truncate"
+                      />
+                      <TruncatedTooltip
+                        text={courseName}
+                        as="p"
+                        side="bottom"
+                        className="text-xs text-muted-foreground truncate"
+                      />
                     </div>
                     <span
                       className={cn(

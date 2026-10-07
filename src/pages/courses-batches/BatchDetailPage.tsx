@@ -15,7 +15,10 @@ import {
   X,
   ArrowLeft,
   Trash2,
-  CreditCard
+  CreditCard,
+  Hash,
+  Layers,
+  FileText
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -337,29 +340,67 @@ export default function BatchDetailPage() {
                 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   {batch.name && (
-                    <div className="space-y-1">
+                    <div className="space-y-1 min-w-0">
                       <span className="text-sm text-muted-foreground flex items-center gap-2">
-                        <BookOpen className="w-4 h-4 text-primary" />
-                        Batch Name
+                        <BookOpen className="w-4 h-4 text-primary shrink-0" />
+                        <span className="truncate">Batch Name</span>
                       </span>
-                      <p className="font-medium">{batch.name}</p>
+                      <p className="font-medium break-all">{batch.name}</p>
+                    </div>
+                  )}
+                  {batch.batch_code && (
+                    <div className="space-y-1 min-w-0">
+                      <span className="text-sm text-muted-foreground flex items-center gap-2">
+                        <Hash className="w-4 h-4 text-primary shrink-0" />
+                        <span className="truncate">Batch Code</span>
+                      </span>
+                      <p className="font-medium break-all">{batch.batch_code}</p>
                     </div>
                   )}
                   {batch.course_name && (
-                    <div className="space-y-1">
+                    <div className="space-y-1 min-w-0">
                       <span className="text-sm text-muted-foreground flex items-center gap-2">
-                        <BookOpen className="w-4 h-4 text-primary" />
-                        Course
+                        <BookOpen className="w-4 h-4 text-primary shrink-0" />
+                        <span className="truncate">Course</span>
                       </span>
-                      <p className="font-medium">{batch.course_name || "-"}</p>
+                      <p className="font-medium break-words">{batch.course_name || "-"}</p>
                     </div>
                   )}
-                  <div className="space-y-1">
+                  {batch.group_module_display && (
+                    <div className="space-y-1 min-w-0">
+                      <span className="text-sm text-muted-foreground flex items-center gap-2">
+                        <Layers className="w-4 h-4 text-primary shrink-0" />
+                        <span className="truncate">Module</span>
+                      </span>
+                      <p className="font-medium break-words">{batch.group_module_display}</p>
+                    </div>
+                  )}
+                  {(batch.batch_attempt_display || batch.attempt_year) && (
+                    <div className="space-y-1 min-w-0">
+                      <span className="text-sm text-muted-foreground flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-primary shrink-0" />
+                        <span className="truncate">Attempt</span>
+                      </span>
+                      <p className="font-medium break-words">
+                        {batch.batch_attempt_display} {batch.attempt_year}
+                      </p>
+                    </div>
+                  )}
+                  {batch.syllabus_name && (
+                    <div className="space-y-1 min-w-0">
+                      <span className="text-sm text-muted-foreground flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-primary shrink-0" />
+                        <span className="truncate">Syllabus</span>
+                      </span>
+                      <p className="font-medium break-words">{batch.syllabus_name}</p>
+                    </div>
+                  )}
+                  <div className="space-y-1 min-w-0">
                     <span className="text-sm text-muted-foreground flex items-center gap-2">
-                      <CreditCard className="w-4 h-4 text-primary" />
-                      Fee Structure
+                      <CreditCard className="w-4 h-4 text-primary shrink-0" />
+                      <span className="truncate">Fee Structure</span>
                     </span>
-                    <p className="font-medium">{batch.fee_structure_name || batch.fee_structure || "-"}</p>
+                    <p className="font-medium break-words">{batch.fee_structure_name || batch.fee_structure || "-"}</p>
                   </div>
                 </div>
 
@@ -456,13 +497,13 @@ export default function BatchDetailPage() {
       </div>
 
       <ConfirmDialog
-        isOpen={deleteConfirmOpen}
-        onClose={() => setDeleteConfirmOpen(false)}
+        open={deleteConfirmOpen}
+        onOpenChange={(o) => setDeleteConfirmOpen(o)}
         onConfirm={handleDeleteBatch}
         title="Delete Batch"
         description={`Are you sure you want to delete ${batch.name}? This action cannot be undone.`}
-        confirmText="Delete Batch"
-        cancelText="Cancel"
+        confirmLabel="Delete Batch"
+        cancelLabel="Cancel"
         variant="danger"
       />
     </div>

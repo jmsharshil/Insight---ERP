@@ -390,26 +390,70 @@ export default function BatchDetailsSheet({
                 </div>
               </div>
 
-              {batch.name && (
-                <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-6">
+                {batch.batch_code && (
                   <div className="space-y-1">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase">
+                      Batch Code
+                    </span>
+                    <div className="text-sm font-medium">{batch.batch_code}</div>
+                  </div>
+                )}
+                {batch.name && (
+                  <div className="space-y-1 min-w-0">
                     <span className="text-xs font-semibold text-muted-foreground uppercase">
                       Batch Name
                     </span>
-                    <div className="text-sm font-medium">{batch.name}</div>
+                    <div className="text-sm font-medium break-all">{batch.name}</div>
                   </div>
-                  {batch.course_name && (
-                    <div className="space-y-1">
-                      <span className="text-xs font-semibold text-muted-foreground uppercase">
-                        Course Name
-                      </span>
-                      <div className="text-sm font-medium truncate" title={batch.course_name}>
-                        {batch.course_name}
-                      </div>
+                )}
+                {batch.course_name && (
+                  <div className="space-y-1 min-w-0">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase">
+                      Course Name
+                    </span>
+                    <div className="text-sm font-medium truncate" title={batch.course_name}>
+                      {batch.course_name}
                     </div>
-                  )}
+                  </div>
+                )}
+                {batch.group_module_display && (
+                  <div className="space-y-1">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase">
+                      Module
+                    </span>
+                    <div className="text-sm font-medium">{batch.group_module_display}</div>
+                  </div>
+                )}
+                {(batch.batch_attempt_display || batch.attempt_year) && (
+                  <div className="space-y-1">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase">
+                      Attempt
+                    </span>
+                    <div className="text-sm font-medium">
+                      {batch.batch_attempt_display} {batch.attempt_year}
+                    </div>
+                  </div>
+                )}
+                {batch.syllabus_name && (
+                  <div className="space-y-1 min-w-0">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase">
+                      Syllabus
+                    </span>
+                    <div className="text-sm font-medium truncate" title={batch.syllabus_name}>
+                      {batch.syllabus_name}
+                    </div>
+                  </div>
+                )}
+                <div className="space-y-1 min-w-0 col-span-2 sm:col-span-1">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase">
+                    Fee Structure
+                  </span>
+                  <div className="text-sm font-medium truncate" title={batch.fee_structure_name || batch.fee_structure}>
+                    {batch.fee_structure_name || batch.fee_structure || "-"}
+                  </div>
                 </div>
-              )}
+              </div>
 
               {(batch.enrolled_students?.length > 0 || batch.assigned_faculty?.length > 0) && (
                 <div className="space-y-6 pt-2">
