@@ -24,7 +24,7 @@ export default function ConfirmDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-heading">{title}</DialogTitle>
+          <DialogTitle className="font-heading break-all whitespace-pre-wrap">{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
         {children && <div className="py-2">{children}</div>}

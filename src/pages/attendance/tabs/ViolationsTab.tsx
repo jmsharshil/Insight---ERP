@@ -212,7 +212,7 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
             </Select>
           </div>
         )}
-        <Select value={f.violation_type} onValueChange={v => setF(p => ({ ...p, violation_type: v === "all" ? "" : v }))}>
+        {/* <Select value={f.violation_type} onValueChange={v => setF(p => ({ ...p, violation_type: v === "all" ? "" : v }))}>
           <SelectTrigger className="h-9 text-sm w-36"><SelectValue placeholder="Type" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Types</SelectItem>
@@ -221,8 +221,8 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
             <SelectItem value="unauthorized">Unauthorized</SelectItem>
             {violationType === "employee" && <SelectItem value="missing_checkout">Missing Checkout</SelectItem>}
           </SelectContent>
-        </Select>
-        {!isParentOrStudent && (
+        </Select> */}
+        {/* {!isParentOrStudent && (
           <Select value={f.is_resolved} onValueChange={v => setF(p => ({ ...p, is_resolved: v === "all" ? "" : v }))}>
             <SelectTrigger className="h-9 text-sm w-36"><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
@@ -231,7 +231,7 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
               <SelectItem value="false">Unresolved</SelectItem>
             </SelectContent>
           </Select>
-        )}
+        )} */}
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">From</Label>
           <Input type="date" className="h-9 text-sm w-40" value={f.date_from} onChange={e => setF(p => ({ ...p, date_from: e.target.value }))} />
@@ -257,8 +257,8 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
             <thead className="bg-muted/40">
               <tr>
                 {(violationType === "employee" 
-                  ? ["Employee", "Role", "Violation Type", "Date", "Description", "Status", "Created At", "Actions"] 
-                  : ["Student", "Roll No.", "Violation Type", "Date", "Description", "Status", "Created At", "Actions"]
+                  ? ["Employee", "Role", "Violation Type", "Date", "Description", /* "Status", */ "Created At" /*, "Actions"*/] 
+                  : ["Student", "Roll No.", "Violation Type", "Date", "Description", /* "Status", */ "Created At" /*, "Actions"*/]
                 ).map(h => {
                   const hasUnresolved = violations.some((v: any) => !v.is_resolved);
                   const showActions = !isParentOrStudent && hasUnresolved;
@@ -291,7 +291,7 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
                   </td>
                   <td className="px-4 py-3 font-mono text-xs">{v.date}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground max-w-[200px] truncate" title={v.description}>{v.description}</td>
-                  <td className="px-4 py-3">
+                  {/* <td className="px-4 py-3">
                     <div className="flex flex-col gap-1">
                       <Badge className={`text-xs w-max ${v.is_resolved ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                         {v.is_resolved ? "Resolved" : "Unresolved"}
@@ -302,9 +302,9 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
                         </span>
                       )}
                     </div>
-                  </td>
+                  </td> */}
                   <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(v.created_at).toLocaleDateString()}</td>
-                  {(!isParentOrStudent && violations.some((val: any) => !val.is_resolved)) && (
+                  {/* {(!isParentOrStudent && violations.some((val: any) => !val.is_resolved)) && (
                     <td className="px-4 py-3 text-xs">
                       {!v.is_resolved && (
                         <Button
@@ -317,7 +317,7 @@ export default function ViolationsTab({ dropdowns }: { dropdowns?: any }) {
                         </Button>
                       )}
                     </td>
-                  )}
+                  )} */}
                 </motion.tr>
               ))}
             </tbody>

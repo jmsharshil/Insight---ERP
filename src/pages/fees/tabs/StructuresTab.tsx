@@ -154,30 +154,12 @@ export default function StructuresTab({
                         </div>
                       </>
                     )}
-                    {(isCsExecutive || isCsProfessional) && (
-                      <>
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-muted-foreground">Inst. Fees (Both)</span>
-                          <span className="font-medium text-card-foreground">{formatCurrency(Number(fs.institute_fees_both_modules || 0))}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-muted-foreground">Inst. Fees (Mod 1)</span>
-                          <span className="font-medium text-card-foreground">{formatCurrency(Number(fs.institute_fees_module_1 || 0))}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-muted-foreground">Inst. Fees (Mod 2)</span>
-                          <span className="font-medium text-card-foreground">{formatCurrency(Number(fs.institute_fees_module_2 || 0))}</span>
-                        </div>
-                      </>
-                    )}
-                    {!(isCsExecutive || isCsProfessional) && (
-                      <div className="flex justify-between items-center border-t border-dashed pt-2">
-                        <span className="text-xs font-bold text-card-foreground">Institute Fee</span>
-                        <span className="font-mono text-primary text-lg font-bold">
-                          {formatCurrency(Number(fs.total_amount))}
-                        </span>
-                      </div>
-                    )}
+                    <div className="flex justify-between items-center border-t border-dashed pt-2">
+                      <span className="text-xs font-bold text-card-foreground">Institute Fee</span>
+                      <span className="font-mono text-primary text-lg font-bold">
+                        {formatCurrency(Number(fs.total_amount))}
+                      </span>
+                    </div>
                   </>
                 );
               })()}

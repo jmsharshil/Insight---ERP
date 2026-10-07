@@ -23,8 +23,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/useToast";
 import { FileSearch } from "lucide-react";
+import ViolationsTab from "@/pages/attendance/tabs/ViolationsTab";
 
 // ─── Color helpers ────────────────────────────────────────────────────────────
 
@@ -192,10 +194,19 @@ export default function AuditLogsPage() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
+  const [activeTab, setActiveTab] = useState("audit-logs");
+
   return (
     <div>
       <PageHeader title="Audit Logs" subtitle="Immutable, read-only API request history" />
 
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+        <TabsList>
+          <TabsTrigger value="audit-logs">Audit Logs</TabsTrigger>
+          <TabsTrigger value="violations">Violations</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="audit-logs" className="mt-4">
       {/* Read-only banner */}
       <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl bg-blue-50 border border-blue-200 p-3 mb-6 flex items-center gap-3 text-sm text-blue-800">
         <Lock className="w-4 h-4 shrink-0" /> Audit logs are read-only. Every API request is automatically recorded by the server middleware.
@@ -529,6 +540,12 @@ export default function AuditLogsPage() {
           )}
         </SheetContent>
       </Sheet>
+        </TabsContent>
+
+        <TabsContent value="violations" className="mt-4">
+          <ViolationsTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -57,8 +57,14 @@ export function FeeStructureDialog({
   const [icsiRegistrationFeesViaCseet, setIcsiRegistrationFeesViaCseet] = useState("");
   const [icsiRegistrationFeesDirect, setIcsiRegistrationFeesDirect] = useState("");
   const [instituteFeesBothModules, setInstituteFeesBothModules] = useState("");
+  const [instituteFeesAllModules, setInstituteFeesAllModules] = useState("");
   const [instituteFeesModule1, setInstituteFeesModule1] = useState("");
   const [instituteFeesModule2, setInstituteFeesModule2] = useState("");
+  const [instituteFeesModule3, setInstituteFeesModule3] = useState("");
+  const [instituteFeesModule4, setInstituteFeesModule4] = useState("");
+  const [instituteFeesModule5, setInstituteFeesModule5] = useState("");
+  const [visibleModulesCount, setVisibleModulesCount] = useState(2);
+  const [groupModule, setGroupModule] = useState("");
   const [attempt, setAttempt] = useState("");
   const [year, setYear] = useState(new Date().getFullYear().toString());
   const [description, setDescription] = useState("");
@@ -129,8 +135,19 @@ export function FeeStructureDialog({
       setIcsiRegistrationFeesViaCseet(String(structure.icsi_registration_fees_via_cseet || ""));
       setIcsiRegistrationFeesDirect(String(structure.icsi_registration_fees_direct || ""));
       setInstituteFeesBothModules(String(structure.institute_fees_both_modules || ""));
+      setInstituteFeesAllModules(String(structure.institute_fees_all_modules ?? ""));
       setInstituteFeesModule1(String(structure.institute_fees_module_1 || ""));
       setInstituteFeesModule2(String(structure.institute_fees_module_2 || ""));
+      setInstituteFeesModule3(String(structure.institute_fees_module_3 || ""));
+      setInstituteFeesModule4(String(structure.institute_fees_module_4 || ""));
+      setInstituteFeesModule5(String(structure.institute_fees_module_5 || ""));
+      
+      if (structure.institute_fees_module_5) setVisibleModulesCount(5);
+      else if (structure.institute_fees_module_4) setVisibleModulesCount(4);
+      else if (structure.institute_fees_module_3) setVisibleModulesCount(3);
+      else setVisibleModulesCount(2);
+
+      setGroupModule(structure.group_module || "");
       setAttempt(structure.attempt || "");
       setYear(structure.year ? String(structure.year) : new Date().getFullYear().toString());
       setDescription(structure.description || "");
@@ -145,8 +162,14 @@ export function FeeStructureDialog({
       setIcsiRegistrationFeesViaCseet("");
       setIcsiRegistrationFeesDirect("");
       setInstituteFeesBothModules("");
+      setInstituteFeesAllModules("");
       setInstituteFeesModule1("");
       setInstituteFeesModule2("");
+      setInstituteFeesModule3("");
+      setInstituteFeesModule4("");
+      setInstituteFeesModule5("");
+      setVisibleModulesCount(2);
+      setGroupModule("");
       setAttempt("");
       setYear(new Date().getFullYear().toString());
       setDescription("");
@@ -160,23 +183,52 @@ export function FeeStructureDialog({
     if (!name.trim() || !course) {
       return;
     }
-    // For CSEET, total_amount (Institute Fee) is required
-    if (isCseet && !totalAmount) {
-      return;
+    // For CSEET, we can fallback to sum of other fees if total amount is blank
+    let finalTotalAmount = 0;
+    let finalAllModules = 0;
+
+    if (isCsExecutive || isCsProfessional) {
+      const m1 = parseFloat(instituteFeesModule1 || "0");
+      const m2 = parseFloat(instituteFeesModule2 || "0");
+      const m3 = parseFloat(instituteFeesModule3 || "0");
+      const m4 = parseFloat(instituteFeesModule4 || "0");
+      const m5 = parseFloat(instituteFeesModule5 || "0");
+      
+      // If a specific bulk amount is provided, use it (Scenario B), else sum modules (Scenario A)
+      if (instituteFeesAllModules !== "") {
+        finalAllModules = parseFloat(instituteFeesAllModules);
+        finalTotalAmount = finalAllModules;
+      } else {
+        const sum = m1 + m2 + m3 + m4 + m5;
+        finalAllModules = sum;
+        finalTotalAmount = sum;
+      }
+    } else {
+      // CSEET
+      if (totalAmount) {
+        finalTotalAmount = parseFloat(totalAmount);
+      } else {
+        finalTotalAmount = parseFloat(icsiRegistrationFees || "0") + parseFloat(icsiExamFees || "0");
+      }
     }
 
     const payload: any = {
       name,
       course,
       level: level || null,
-      total_amount: (isCsExecutive || isCsProfessional) ? 0 : parseFloat(totalAmount || "0"),
+      total_amount: finalTotalAmount,
       icsi_registration_fees: (isCseet || isCsProfessional) ? parseFloat(icsiRegistrationFees || "0") : 0,
       icsi_exam_fees: isSpecialLevel ? parseFloat(icsiExamFees || "0") : 0,
       icsi_registration_fees_via_cseet: isCsExecutive ? parseFloat(icsiRegistrationFeesViaCseet || "0") : 0,
       icsi_registration_fees_direct: isCsExecutive ? parseFloat(icsiRegistrationFeesDirect || "0") : 0,
       institute_fees_both_modules: (isCsExecutive || isCsProfessional) ? parseFloat(instituteFeesBothModules || "0") : 0,
+      institute_fees_all_modules: (isCsExecutive || isCsProfessional) ? finalAllModules : 0,
       institute_fees_module_1: (isCsExecutive || isCsProfessional) ? parseFloat(instituteFeesModule1 || "0") : 0,
       institute_fees_module_2: (isCsExecutive || isCsProfessional) ? parseFloat(instituteFeesModule2 || "0") : 0,
+      institute_fees_module_3: (isCsExecutive || isCsProfessional) ? parseFloat(instituteFeesModule3 || "0") : 0,
+      institute_fees_module_4: (isCsExecutive || isCsProfessional) ? parseFloat(instituteFeesModule4 || "0") : 0,
+      institute_fees_module_5: (isCsExecutive || isCsProfessional) ? parseFloat(instituteFeesModule5 || "0") : 0,
+      group_module: (isCsExecutive || isCsProfessional) ? (groupModule || null) : null,
       attempt,
       year,
       description,
@@ -213,7 +265,12 @@ export function FeeStructureDialog({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Course *</Label>
-              <Select value={course} onValueChange={setCourse}>
+              <Select value={course} onValueChange={(val) => {
+                setCourse(val);
+                setLevel("");
+                setAttempt("");
+                setGroupModule("");
+              }}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select Course" />
                 </SelectTrigger>
@@ -379,19 +436,20 @@ export function FeeStructureDialog({
           {(isCsExecutive || isCsProfessional) && (
             <div className="space-y-3">
               <div>
-                <Label htmlFor="fs-inst-both">Institute Fees (Both Modules)</Label>
+                <Label htmlFor="fs-inst-all">Institute Fees (All Modules Bulk Price)</Label>
                 <Input
-                  id="fs-inst-both"
+                  id="fs-inst-all"
                   type="number" min="0"
-                  value={instituteFeesBothModules}
-                  onChange={(e) => setInstituteFeesBothModules(e.target.value)}
-                  placeholder="0.00"
+                  value={instituteFeesAllModules}
+                  onChange={(e) => setInstituteFeesAllModules(e.target.value)}
+                  placeholder="Leave blank to auto-calculate from modules below"
                   className="mt-1"
                 />
+                <p className="text-[10px] text-muted-foreground mt-1">If provided, this overrides the sum of individual modules for the Total Amount.</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label htmlFor="fs-inst-mod1">Institute Fees (Module 1)</Label>
+                  <Label htmlFor="fs-inst-mod1">Module 1</Label>
                   <Input
                     id="fs-inst-mod1"
                     type="number" min="0"
@@ -402,7 +460,7 @@ export function FeeStructureDialog({
                   />
                 </div>
                 <div>
-                  <Label htmlFor="fs-inst-mod2">Institute Fees (Module 2)</Label>
+                  <Label htmlFor="fs-inst-mod2">Module 2</Label>
                   <Input
                     id="fs-inst-mod2"
                     type="number" min="0"
@@ -412,7 +470,74 @@ export function FeeStructureDialog({
                     className="mt-1"
                   />
                 </div>
+                {visibleModulesCount >= 3 && (
+                  <div>
+                    <Label htmlFor="fs-inst-mod3">Module 3</Label>
+                    <Input
+                      id="fs-inst-mod3"
+                      type="number" min="0"
+                      value={instituteFeesModule3}
+                      onChange={(e) => setInstituteFeesModule3(e.target.value)}
+                      placeholder="0.00"
+                      className="mt-1"
+                    />
+                  </div>
+                )}
+                {visibleModulesCount >= 4 && (
+                  <div>
+                    <Label htmlFor="fs-inst-mod4">Module 4</Label>
+                    <Input
+                      id="fs-inst-mod4"
+                      type="number" min="0"
+                      value={instituteFeesModule4}
+                      onChange={(e) => setInstituteFeesModule4(e.target.value)}
+                      placeholder="0.00"
+                      className="mt-1"
+                    />
+                  </div>
+                )}
+                {visibleModulesCount >= 5 && (
+                  <div>
+                    <Label htmlFor="fs-inst-mod5">Module 5</Label>
+                    <Input
+                      id="fs-inst-mod5"
+                      type="number" min="0"
+                      value={instituteFeesModule5}
+                      onChange={(e) => setInstituteFeesModule5(e.target.value)}
+                      placeholder="0.00"
+                      className="mt-1"
+                    />
+                  </div>
+                )}
               </div>
+              {/* {visibleModulesCount < 5 && (
+                <div className="flex justify-end -mt-1">
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="p-0 h-auto text-xs text-primary"
+                    onClick={() => setVisibleModulesCount(prev => prev + 1)}
+                  >
+                    + Add module
+                  </Button>
+                </div>
+              )} */}
+            </div>
+          )}
+
+          {(isCsExecutive || isCsProfessional) && (
+            <div className="space-y-1.5">
+              <Label>Group / Module</Label>
+              <Select value={groupModule} onValueChange={setGroupModule}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select Module" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Modules</SelectItem>
+                  <SelectItem value="module_1">Module 1</SelectItem>
+                  <SelectItem value="module_2">Module 2</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           )}
 

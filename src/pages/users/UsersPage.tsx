@@ -436,7 +436,7 @@ export default function UsersPage() {
         specialization: selectedUser.specialization || "",
         subject_expertise: selectedUser.subject_expertise || "",
         // level: selectedUser.level || "",
-        levels: Array.isArray(selectedUser.levels) ? selectedUser.levels.map((l: any) => typeof l === "object" && l !== null ? l.id : l) : (selectedUser.level ? [selectedUser.level as string] : []),
+        levels: Array.isArray(selectedUser.levels) ? selectedUser.levels.map((l: any) => typeof l === "object" && l !== null ? l.id : l) : [],
         employment_type: selectedUser.employment_type || "",
         joining_date: selectedUser.joining_date || "",
         hourly_rate:
@@ -656,7 +656,7 @@ export default function UsersPage() {
       specialization: selectedUser.specialization || "",
       subject_expertise: selectedUser.subject_expertise || "",
       // level: selectedUser.level || "",
-      levels: Array.isArray(selectedUser.levels) ? selectedUser.levels.map((l: any) => typeof l === "object" && l !== null ? l.id : l) : (selectedUser.level ? [selectedUser.level as string] : []),
+      levels: Array.isArray(selectedUser.levels) ? selectedUser.levels.map((l: any) => typeof l === "object" && l !== null ? l.id : l) : [],
       employment_type: selectedUser.employment_type || "",
       joining_date: selectedUser.joining_date || "",
       hourly_rate:
@@ -820,9 +820,9 @@ export default function UsersPage() {
     },
   });
 
-  const activeRole = isAdding ? editForm.role : selectedUser?.role || editForm.role;
-  const activeAdditionalRoles = isAdding ? editForm.additional_roles : selectedUser?.additional_roles || editForm.additional_roles || [];
-  const allActiveRoles = [activeRole, ...(Array.isArray(activeAdditionalRoles) ? activeAdditionalRoles : [])].filter(Boolean);
+  const activeRole = editForm.role;
+  const activeAdditionalRoles = Array.isArray(editForm.additional_roles) ? editForm.additional_roles : [];
+  const allActiveRoles = [activeRole, ...activeAdditionalRoles].filter(Boolean);
 
   const hasRole = (role: string) => allActiveRoles.includes(role);
 

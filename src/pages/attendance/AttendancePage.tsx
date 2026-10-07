@@ -55,7 +55,7 @@ export default function AttendancePage() {
       getResponse: (res: any) => {
         const data = res?.data || res;
         if (data) {
-          setDropdowns(prev => ({
+          setDropdowns((prev: any) => ({
             ...prev,
             ...data,
           }));
@@ -196,7 +196,7 @@ export default function AttendancePage() {
           {!isParentOrStudent && !hideMainTabs && <TabsTrigger value="faculty">Staff</TabsTrigger>}
           {!isParentOrStudent && !hideMainTabs && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
           {/* {!isParentOrStudent && !hideMainTabs && <TabsTrigger value="defaulters">Defaulters</TabsTrigger>} */}
-          {showViolations && <TabsTrigger value="violations">Violations</TabsTrigger>}
+          {/* {showViolations && <TabsTrigger value="violations">Violations</TabsTrigger>} */}
         </TabsList>
 
         {!isParentOrStudent && !hideMainTabs && (
@@ -251,15 +251,15 @@ export default function AttendancePage() {
           </TabsContent>
         )}
 
-        {!isParentOrStudent && !hideMainTabs && (
+        {/* {!isParentOrStudent && !hideMainTabs && (
           <TabsContent value="defaulters" className="mt-4">
             <DefaultersTab dropdowns={dropdowns} />
           </TabsContent>
-        )}
+        )} */}
 
-        <TabsContent value="violations" className="mt-4">
+        {/* <TabsContent value="violations" className="mt-4">
           <ViolationsTab dropdowns={dropdowns} />
-        </TabsContent>
+        </TabsContent> */}
       </Tabs>
     </div>
   );
