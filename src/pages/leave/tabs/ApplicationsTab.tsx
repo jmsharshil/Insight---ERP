@@ -50,9 +50,7 @@ const STATUS_BADGE: Record<string, string> = {
 const LEAVE_TYPE_OPTS = [
   { value: "paid", label: "Paid Leave" },
   { value: "sick", label: "Sick Leave" },
-  { value: "casual", label: "Casual Leave" },
-  { value: "club", label: "Club Leave" },
-  { value: "unpaid", label: "Unpaid Leave" },
+  { value: "casual", label: "Unpaid/Casual Leave" },
 ];
 
 const STUDENT_LEAVE_TYPE_OPTS = [
@@ -64,15 +62,20 @@ const STUDENT_LEAVE_TYPE_OPTS = [
   { value: "uniform", label: "Uniform Leave" },
 ];
 
+const STUDENT_LEAVE_ADMIN_ROLES = ["super_admin", "branch_manager", "parents", "parent"];
 const ADMIN_ROLES = ["super_admin", "branch_manager", "cmo", "head_coordinator"];
 const APPLY_ROLES = [
-  "admin_senior_executive",
+  "super_admin",
   "branch_manager",
+  "cmo",
+  "head_coordinator",
+  "admin_senior_executive",
   "faculty",
   "front_desk",
   "counsellor",
   "student",
   "parents",
+  "parent",
   "sales_senior_executive",
   "sales_executive",
   "tele_caller",
@@ -90,6 +93,15 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
       <p className="text-xs font-medium text-right">{value}</p>
     </div>
   );
+}
+
+function isStudentApplication(app?: Partial<LeaveApplication> | null): boolean {
+  if (!app) return false;
+  if (app.student_name || app.student || (app as any).student_id) return true;
+  const applicantRole = app.applied_by_role || app.user_role;
+  if (applicantRole === "student" || applicantRole === "parents" || applicantRole === "parent") return true;
+  if (["medical", "emergency", "exam", "mobile_usage", "uniform"].includes(app.leave_type ?? "")) return true;
+  return false;
 }
 
 function LeaveApplicationDetail({
@@ -194,7 +206,11 @@ function LeaveApplicationDetail({
   );
 }
 
-export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_leaves" | "all_leaves" }) {
+export default function ApplicationsTab({
+  mode = "all_leaves",
+}: {
+  mode?: "my_leaves" | "all_leaves" | "staff_leaves" | "student_leaves";
+}) {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
   const { user } = useAuth();
@@ -205,8 +221,24 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
   const role = user?.role ?? "";
   const isSuperAdmin = role === "super_admin";
   const isAdmin = ADMIN_ROLES.includes(role);
-  const canApply = APPLY_ROLES.includes(role);
+  const isStudentUser = role === "student" || role === "parents" || role === "parent";
+  const canApply = APPLY_ROLES.includes(role) || isSuperAdmin;
   const canApprove = APPROVE_ROLES.includes(role);
+  const canManageStudentLeaves = STUDENT_LEAVE_ADMIN_ROLES.includes(role);
+
+  // ── Filters & Subtabs ───────────────────────────────────────────────────
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
+  const [activeTab, setActiveTab] = useState<"staff" | "student">(
+    mode === "student_leaves" ? "student" : "staff"
+  );
+
+  const isStudentContext =
+    mode === "student_leaves" ||
+    activeTab === "student" ||
+    (mode === "my_leaves" && isStudentUser) ||
+    (isStudentUser && mode !== "staff_leaves");
 
   // ── Dropdown data ────────────────────────────────────────────────────────
   const [branches, setBranches] = useState<{ id: string; name: string; city: string }[]>([]);
@@ -228,12 +260,6 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
     }
   }, [isSuperAdmin]);
 
-  // ── Filters ──────────────────────────────────────────────────────────────
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
-  const [activeTab, setActiveTab] = useState<"staff" | "student">("staff");
-
   useEffect(() => {
     setStatusFilter("");
     setTypeFilter("");
@@ -249,8 +275,7 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
     setDrawerOpen(true);
     setDrawerItem(null);
     setDrawerLoading(true);
-    const isStudentLeave =
-      role === "student" || role === "parents" || activeTab === "student";
+    const isStudentLeave = isStudentContext || isStudentApplication(app);
     dispatch({
       type: leaveActions.GET_LEAVE_DETAIL,
       method: "GET",
@@ -271,7 +296,7 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
   const [applyOpen, setApplyOpen] = useState(false);
   const [applyLoading, setApplyLoading] = useState(false);
   const [applyForm, setApplyForm] = useState({
-    leave_type: "casual",
+    leave_type: isStudentContext ? "casual" : "casual",
     from_date: "",
     to_date: "",
     is_half_day: false,
@@ -308,7 +333,7 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
     if (typeFilter) params.append("leave_type", typeFilter);
     if (search) params.append("search", search);
     const qs = params.toString() ? "?" + params.toString() : "";
-    const isStudentFetch = role === "student" || role === "parents" || activeTab === "student";
+    const isStudentFetch = isStudentContext;
 
     dispatch({
       type: leaveActions.GET_LEAVES,
@@ -328,29 +353,30 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
 
   useEffect(() => {
     fetchApplications();
-  }, [statusFilter, typeFilter, activeTab]);
+  }, [statusFilter, typeFilter, activeTab, isStudentContext]);
 
   // ── Submit leave — FIXED branch_id ───────────────────────────────────────
   const handleApply = () => {
+    const isStudentSubmit =
+      isStudentContext ||
+      isStudentUser ||
+      ["medical", "emergency", "exam", "mobile_usage", "uniform"].includes(applyForm.leave_type) ||
+      Boolean(applyForm.student_id);
+
     const formData = new FormData();
     formData.append("leave_type", applyForm.leave_type);
     formData.append("from_date", applyForm.from_date);
     formData.append("to_date", applyForm.to_date);
     formData.append("reason", applyForm.reason);
 
-    if (role === "student" || role === "parents") {
-      if (role === "parents") {
-        const studentId = applyForm.student_id;
-        if (studentId) formData.append("student_id", studentId);
-      }
+    if (isStudentSubmit) {
+      if (applyForm.student_id) formData.append("student_id", applyForm.student_id);
       if (applyForm.from_time) formData.append("from_time", applyForm.from_time);
       if (applyForm.to_time) formData.append("to_time", applyForm.to_time);
       const isCapableOfProof =
         ["medical", "emergency", "exam"].includes(applyForm.leave_type) ||
-        !!applyForm.supporting_document;
+        Boolean(applyForm.supporting_document);
       formData.append("is_capable_of_proof", String(isCapableOfProof));
-      // formData.append("parent_consulted", String(applyForm.parent_consulted));
-      // if (applyForm.parent_signature_date) formData.append("parent_signature_date", applyForm.parent_signature_date);
       if (applyForm.supporting_document)
         formData.append("proof_document", applyForm.supporting_document);
     } else {
@@ -368,7 +394,7 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
     dispatch({
       type: leaveActions.SUBMIT_LEAVE,
       method: "POST",
-      endPoint: role === "student" || role === "parents" ? API.LEAVE.STUDENT_LIST : API.LEAVE.LIST,
+      endPoint: isStudentSubmit ? API.LEAVE.STUDENT_LIST : API.LEAVE.LIST,
       body: formData,
       auth: true,
       setLoading: (v: boolean) => setApplyLoading(v),
@@ -378,7 +404,7 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
           toast.success("Leave application submitted.");
           setApplyOpen(false);
           setApplyForm({
-            leave_type: "casual",
+            leave_type: isStudentSubmit ? "casual" : "casual",
             from_date: "",
             to_date: "",
             is_half_day: false,
@@ -392,7 +418,10 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
             parent_signature_date: "",
             student_id: user?.linked_students?.[0] || "",
           });
-        } else toast.error("Failed to submit application.");
+          fetchApplications();
+        } else {
+          toast.error("Failed to submit application.");
+        }
       },
       getError: (err: any) =>
         toast.error(err?.response?.data?.message || "Failed to submit leave application"),
@@ -402,8 +431,7 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
   // ── Edit ──────────────────────────────────────────────────────────────────
   const handleEdit = () => {
     if (!editTarget) return;
-    const isStudentLeave =
-      role === "student" || role === "parents" || activeTab === "student";
+    const isStudentLeave = isStudentContext || isStudentApplication(editTarget);
     dispatch({
       type: leaveActions.UPDATE_LEAVE,
       method: "PATCH",
@@ -432,8 +460,7 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
   // ── Cancel ────────────────────────────────────────────────────────────────
   const handleCancel = () => {
     if (!cancelTarget) return;
-    const isStudentLeave =
-      role === "student" || role === "parents" || activeTab === "student";
+    const isStudentLeave = isStudentContext || isStudentApplication(cancelTarget);
     dispatch({
       type: leaveActions.CANCEL_LEAVE,
       method: "DELETE",
@@ -453,8 +480,7 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
   // ── Approve ───────────────────────────────────────────────────────────────
   const handleApprove = () => {
     if (!approveTarget) return;
-    const isStudentLeave =
-      role === "student" || role === "parents" || activeTab === "student";
+    const isStudentLeave = isStudentContext || isStudentApplication(approveTarget);
     dispatch({
       type: leaveActions.APPROVE_LEAVE,
       method: "POST",
@@ -475,8 +501,7 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
   // ── Reject ────────────────────────────────────────────────────────────────
   const handleReject = () => {
     if (!rejectTarget) return;
-    const isStudentLeave =
-      role === "student" || role === "parents" || activeTab === "student";
+    const isStudentLeave = isStudentContext || isStudentApplication(rejectTarget);
     dispatch({
       type: leaveActions.REJECT_LEAVE,
       method: "POST",
@@ -496,22 +521,41 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
 
   const filtered = applications.filter((a) => {
     const sId = typeof a.student === "string" ? a.student : ((a as any).student_id || (a.student as any)?.id);
+    const applicantId = typeof a.applied_by === "object" ? (a.applied_by as any)?.id : a.applied_by;
     const isMine =
+      applicantId === user?.id ||
       a.applied_by === user?.id ||
       (!!sId && sId === user?.id) ||
       (!!sId && Array.isArray(user?.linked_students) && user.linked_students.includes(sId));
 
+    const applicantRole = a.applied_by_role || a.user_role;
+    const isStudentLeaveItem = isStudentContext || isStudentApplication(a);
+
+    // Other than STUDENT_LEAVE_ADMIN_ROLES and student viewing own leave, no roles can view student leaves
+    if (isStudentLeaveItem && !canManageStudentLeaves && role !== "student") {
+      return false;
+    }
+
+    // In student_leaves mode, only show student leaves
+    if (mode === "student_leaves" && !isStudentLeaveItem) {
+      return false;
+    }
+
+    // In staff_leaves mode, only show staff leaves
+    if (mode === "staff_leaves" && isStudentLeaveItem) {
+      return false;
+    }
+
     if (mode === "my_leaves") {
-      const isStudentOrParent = role === "student" || role === "parents";
+      const isStudentOrParent = isStudentUser;
       if (!isStudentOrParent && !isMine) {
         return false;
       }
     }
-    if (mode === "all_leaves" && isMine) {
+    if ((mode === "all_leaves" || mode === "staff_leaves") && isMine && activeTab === "staff") {
       return false;
     }
 
-    const applicantRole = a.applied_by_role || a.user_role;
     if (role === "admin_senior_executive" && applicantRole === "branch_manager") {
       return false;
     }
@@ -545,43 +589,13 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
         </div>
       )}
 
-      {/* Tabs */}
-      {isAdmin && mode === "all_leaves" && (
-        <div className="flex bg-muted p-1 rounded-lg w-fit">
-          <button
-            onClick={() => setActiveTab("staff")}
-            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === "staff" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            Staff Leaves
-          </button>
-          {role !== "head_coordinator" && (
-            <button
-              onClick={() => setActiveTab("student")}
-              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === "student" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              Student Leaves
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Warning for staff members on My Leaves */}
-      {mode === "my_leaves" && role !== "student" && role !== "parents" && (
-        <div className="bg-orange-50 border border-orange-200 text-orange-800 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-          <p>
-            Leave applications for the upcoming week must be submitted before 12:00 PM on Friday of the preceding week.
-          </p>
-        </div>
-      )}
-
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2 justify-between">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search applicant / reason..."
+              placeholder={isStudentContext ? "Search student / reason..." : "Search applicant / reason..."}
               className="pl-8 h-9 text-sm w-56"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -593,7 +607,7 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
-              {activeTab === "student" || role === "student" || role === "parents" ? (
+              {isStudentContext ? (
                 <SelectItem value="pending">Pending</SelectItem>
               ) : (
                 <SelectItem value="approval_pending">Pending</SelectItem>
@@ -603,14 +617,29 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
-          {role !== "student" && role !== "parents" && (
+          {!isStudentContext && (
             <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v === "all" ? "" : v)}>
               <SelectTrigger className="h-9 text-sm w-40">
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                {(activeTab === "student" ? STUDENT_LEAVE_TYPE_OPTS : LEAVE_TYPE_OPTS).map((o) => (
+                {LEAVE_TYPE_OPTS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {isStudentContext && (
+            <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v === "all" ? "" : v)}>
+              <SelectTrigger className="h-9 text-sm w-40">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                {STUDENT_LEAVE_TYPE_OPTS.map((o) => (
                   <SelectItem key={o.value} value={o.value}>
                     {o.label}
                   </SelectItem>
@@ -642,7 +671,11 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
       </div>
 
       <p className="text-xs text-muted-foreground">
-        {applicationsCount} application(s) total · {filtered.length} shown
+        {mode === "my_leaves"
+          ? `${filtered.length} personal application${filtered.length === 1 ? "" : "s"}`
+          : mode === "student_leaves"
+          ? `${applicationsCount} student application(s) total · ${filtered.length} shown`
+          : `${applicationsCount} application(s) total · ${filtered.length} shown`}
       </p>
 
       {/* Table */}
@@ -654,13 +687,17 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
             <thead className="bg-muted/50">
               <tr>
                 {[
-                  "Applicant",
+                  mode === "my_leaves"
+                    ? "Applicant (Me)"
+                    : isStudentContext
+                    ? "Student"
+                    : "Applicant",
                   "Type",
                   "From",
                   "To",
                   "Days",
                   "Status",
-                  "1st Approval",
+                  isStudentContext ? "Review Status" : "1st Approval",
                   "Actions",
                 ].map((h) => (
                   <th
@@ -676,23 +713,36 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="text-center py-10 text-muted-foreground text-sm">
-                    No applications found.
+                    {mode === "my_leaves"
+                      ? "You haven't submitted any leave applications yet."
+                      : mode === "student_leaves"
+                      ? "No student leave applications found."
+                      : "No staff leave applications found."}
                   </td>
                 </tr>
               ) : (
                 filtered.map((app, i) => {
-                  const applicantRole = app.applied_by_role || app.user_role;
-                  const isOwnLeave = app.applied_by === user?.id;
+                  const applicantRole = app.applied_by_role || app.user_role || "";
+                  const applicantId = typeof app.applied_by === "object" ? (app.applied_by as any)?.id : app.applied_by;
+                  const isOwnLeave = applicantId === user?.id || app.applied_by === user?.id;
 
                   let canApproveThis = false;
-                  const isStudentLeaveType = activeTab === "student" || role === "student" || role === "parents" || applicantRole === "student" || applicantRole === "parents" || !!app.student_name;
+                  const isStudentLeaveType = isStudentContext || isStudentApplication(app);
 
-                  if (canApprove && !isOwnLeave) {
+                  if (isStudentLeaveType) {
+                    if (canManageStudentLeaves && !isOwnLeave) {
+                      if (role === "super_admin") {
+                        canApproveThis = true;
+                      } else if (role === "branch_manager") {
+                        canApproveThis = app.parent_consulted === true;
+                      } else if (role === "parents") {
+                        canApproveThis = app.status === "pending" && app.parent_consulted === false;
+                      }
+                    }
+                  } else if (canApprove && !isOwnLeave) {
                     if (role === "super_admin") {
                       canApproveThis = true;
-                    } else if (isStudentLeaveType) {
-                      canApproveThis = app.parent_consulted ? role === "branch_manager" : false;
-                    } else if (["counsellor", "sales_senior_executive", "sales_executive"].includes(applicantRole)) {
+                    } else if (["cmo", "associate_bdm", "senior_bdm", "deputy_bdm", "sales_executive", "sales_senior_executive", "counsellor", "tele_caller"].includes(applicantRole)) {
                       canApproveThis = !app.is_first_approval_done ? role === "cmo" : false;
                     } else if (applicantRole === "head_coordinator") {
                       canApproveThis = !app.is_first_approval_done ? role === "branch_manager" : false;
@@ -838,7 +888,7 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
           ) : drawerItem ? (
             <LeaveApplicationDetail
               item={drawerItem}
-              isStudentLeave={role === "student" || role === "parents" || activeTab === "student"}
+              isStudentLeave={isStudentContext || isStudentApplication(drawerItem)}
             />
           ) : (
             <p className="text-sm text-muted-foreground mt-4">No data found.</p>
@@ -853,7 +903,7 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
             <DialogTitle>Apply for Leave</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            {role === "student" || role === "parents" ? (
+            {isStudentContext || ["medical", "emergency", "exam", "mobile_usage", "uniform"].includes(applyForm.leave_type) ? (
               <div className="space-y-3">
                 {role === "parents" && user?.linked_students && user.linked_students.length > 1 && (
                   <div>
@@ -948,7 +998,7 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
                 />
               </div>
             </div>
-            {role === "student" || role === "parents" ? (
+            {isStudentContext || ["medical", "emergency", "exam", "mobile_usage", "uniform"].includes(applyForm.leave_type) ? (
               <>
                 {applyForm.from_date &&
                   applyForm.to_date &&
@@ -976,24 +1026,6 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
                       </div>
                     </div>
                   )}
-                {/* <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-3">
-                    <input type="checkbox" id="capable_proof" checked={applyForm.is_capable_of_proof}
-                      onChange={e => setApplyForm(f => ({ ...f, is_capable_of_proof: e.target.checked }))}
-                      className="w-4 h-4 accent-primary" />
-                    <Label htmlFor="capable_proof" className="text-sm cursor-pointer">Capable of providing proof?</Label>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <input type="checkbox" id="parent_consulted" checked={applyForm.parent_consulted}
-                      onChange={e => setApplyForm(f => ({ ...f, parent_consulted: e.target.checked }))}
-                      className="w-4 h-4 accent-primary" />
-                    <Label htmlFor="parent_consulted" className="text-sm cursor-pointer">Parent Consulted?</Label>
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-xs mb-1 block">Parent Signature Date</Label>
-                  <Input type="date" value={applyForm.parent_signature_date} onChange={e => setApplyForm(f => ({ ...f, parent_signature_date: e.target.value }))} className="h-9 text-sm" />
-                </div> */}
               </>
             ) : (
               (!applyForm.from_date || !applyForm.to_date || applyForm.from_date === applyForm.to_date) && (
@@ -1042,12 +1074,12 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
             </div>
             {(applyForm.leave_type === "sick" ||
               applyForm.leave_type === "medical" ||
-              role === "student" ||
-              role === "parents" ||
+              isStudentContext ||
+              isStudentUser ||
               applyForm.is_capable_of_proof) && (
               <div>
                 <Label className="text-xs mb-1 block">
-                  {role === "student" || role === "parents"
+                  {isStudentContext || isStudentUser
                     ? "Proof Document"
                     : "Supporting Document (required if > 2 days)"}
                 </Label>
@@ -1077,7 +1109,7 @@ export default function ApplicationsTab({ mode = "all_leaves" }: { mode?: "my_le
                 !applyForm.to_date ||
                 !applyForm.reason.trim() ||
                 (isSuperAdmin && !selectedBranch) ||
-                (role === "parents" && !applyForm.student_id)
+                (role === "parents" && !applyForm.student_id && Boolean(user?.linked_students?.length))
               }
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >

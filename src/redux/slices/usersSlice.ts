@@ -35,6 +35,7 @@ export interface UserRecord {
   aadhar_number?: string;
   work_start_time?: string;
   work_end_time?: string;
+  working_hours?: string;
   per_paper_rate?: number | string;
   accessible_modules?: string[];
   canDelete?: boolean;

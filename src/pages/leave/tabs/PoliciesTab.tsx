@@ -20,7 +20,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { dropdownActions } from "@/redux/actions";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 
-const LEAVE_TYPE_OPTS = ["paid", "sick", "casual", "club", "unpaid"];
+const LEAVE_TYPE_OPTS = [
+  { value: "paid", label: "Paid Leave" },
+  { value: "sick", label: "Sick Leave" },
+  { value: "casual", label: "Unpaid/Casual Leave" },
+];
 
 const blankForm = () => ({
   leave_type: "casual",
@@ -280,7 +284,7 @@ export default function PoliciesTab() {
               <Label className="text-xs mb-1 block">Leave Type *</Label>
               <Select value={form.leave_type} onValueChange={v => setForm(f => ({ ...f, leave_type: v }))}>
                 <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>{LEAVE_TYPE_OPTS.map(o => <SelectItem key={o} value={o} className="capitalize">{o}</SelectItem>)}</SelectContent>
+                <SelectContent>{LEAVE_TYPE_OPTS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">

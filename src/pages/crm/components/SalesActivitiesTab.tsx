@@ -787,6 +787,40 @@ export default function SalesActivitiesTab() {
                             ? (Number(endOdo) - Number(startOdo)).toFixed(1)
                             : null;
                             
+                        const usedPhotoIds = new Set<string>();
+                        const mappedSlotPhotos = new Map<string, any>();
+                        
+                        if (act.event_photo_slots) {
+                          act.event_photo_slots.forEach((group) => {
+                            group.slots.forEach((slot: any) => {
+                              const slotKey = `${group.date}-${slot.slot}`;
+                              if (slot.is_filled && slot.photo_id) {
+                                const photo = act.photos?.find((ph) => ph.id === slot.photo_id);
+                                if (photo) {
+                                  mappedSlotPhotos.set(slotKey, photo);
+                                  usedPhotoIds.add(photo.id);
+                                } else {
+                                  mappedSlotPhotos.set(slotKey, {
+                                    id: slot.photo_id as string,
+                                    photo: slot.photo_url as string,
+                                    photo_type: slot.type,
+                                    photo_type_display: PHOTO_TYPE_LABELS[slot.type as SalesPhotoType] || slot.type,
+                                    latitude: "",
+                                    longitude: "",
+                                    created_at: new Date().toISOString()
+                                  });
+                                }
+                              } else {
+                                const match = act.photos?.find((p) => p.photo_type === slot.type && !usedPhotoIds.has(p.id));
+                                if (match) {
+                                  mappedSlotPhotos.set(slotKey, match);
+                                  usedPhotoIds.add(match.id);
+                                }
+                              }
+                            });
+                          });
+                        }
+
                         return (
                           <div key={act.id} className="bg-card/40 border border-border/60 rounded-xl overflow-hidden hover:bg-card/80 hover:shadow-sm hover:border-border/80 transition-all">
                             <div className="p-4 border-b border-border/50 bg-muted/20 flex flex-wrap items-center justify-between gap-3">
@@ -924,11 +958,9 @@ export default function SalesActivitiesTab() {
                             <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-bold rounded-md bg-muted text-muted-foreground">
                               {act.event_photo_slots
                                 ? (() => {
-                                    const slotFilled = act.event_photo_slots.reduce((acc, group) => acc + group.slots.filter((s: any) => s.is_filled).length, 0);
                                     const slotTotal = act.event_photo_slots.reduce((acc, group) => acc + group.slots.length, 0);
-                                    const slotPhotoIds = new Set<string>();
-                                    act.event_photo_slots.forEach(g => g.slots.forEach(s => { if (s.photo_id) slotPhotoIds.add(s.photo_id); }));
-                                    const extraCount = act.photos.filter(p => !slotPhotoIds.has(p.id)).length;
+                                    const slotFilled = mappedSlotPhotos.size;
+                                    const extraCount = act.photos.filter((p) => !usedPhotoIds.has(p.id)).length;
                                     return `${slotFilled + extraCount}/${slotTotal + extraCount}`;
                                   })()
                                 : act.photos.length}
@@ -954,80 +986,69 @@ export default function SalesActivitiesTab() {
                             </span>
                           </h5>
                           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                            {group.slots.map((slot) => (
-                              slot.is_filled ? (
-                                (() => {
-                                  const p = act.photos?.find((ph) => ph.id === slot.photo_id) || {
-                                    id: slot.photo_id as string,
-                                    photo: slot.photo_url as string,
-                                    photo_type: slot.type,
-                                    photo_type_display: PHOTO_TYPE_LABELS[slot.type as SalesPhotoType] || slot.type,
-                                    latitude: "",
-                                    longitude: "",
-                                    created_at: new Date().toISOString()
-                                  };
-                                  return (
-                                    <div
-                                      key={`${group.date}-${slot.slot}`}
-                                      className="group relative rounded-lg border border-border/80 bg-background overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-                                      onClick={() => p.id && setPreviewPhoto(p as any)}
-                                    >
-                                      <div className="aspect-video w-full bg-muted/40 relative flex items-center justify-center overflow-hidden">
-                                        <img
-                                          src={p.photo}
-                                          alt={p.photo_type_display || p.photo_type}
-                                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                                          onError={(e) => {
-                                            (e.target as any).src = "https://placehold.co/400x300?text=Photo+Unavailable";
-                                          }}
-                                        />
-                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                                          <Eye className="w-5 h-5" />
-                                        </div>
-                                      </div>
-                                      <div className="p-2 space-y-1">
-                                        <div className="text-[11px] font-semibold truncate text-foreground flex items-center justify-between">
-                                          <span className="truncate">{p.photo_type_display || PHOTO_TYPE_LABELS[p.photo_type as keyof typeof PHOTO_TYPE_LABELS] || p.photo_type}</span>
-                                          <Badge variant="outline" className="text-[9px] h-3.5 px-1 py-0 bg-primary/5 ml-1 leading-none shrink-0 border-primary/20 text-primary">S{slot.slot}</Badge>
-                                        </div>
-                                        {slot.timing && (
-                                          <div className="text-[9px] text-muted-foreground flex items-center gap-1">
-                                            <Clock className="w-2.5 h-2.5 shrink-0" /> {slot.timing}
-                                          </div>
-                                        )}
-                                        {(p as any).odometer_kms && (
-                                          <div className="text-[10px] text-primary font-bold flex items-center gap-1">
-                                            <Gauge className="w-3 h-3" /> {(p as any).odometer_kms} km
-                                          </div>
-                                        )}
-                                        {p.latitude && p.longitude ? (
-                                          <a
-                                            href={`https://www.google.com/maps?q=${p.latitude},${p.longitude}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-[10px] text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 truncate group/loc w-fit max-w-full"
-                                            onClick={(e) => e.stopPropagation()}
-                                            title="Open location in Google Maps"
-                                          >
-                                            <MapPin className="w-2.5 h-2.5 text-red-500 shrink-0 group-hover/loc:scale-110 transition-transform" />
-                                            <span className="underline underline-offset-2 truncate">
-                                              {Number(p.latitude).toFixed(4)}, {Number(p.longitude).toFixed(4)}
-                                            </span>
-                                            <ExternalLink className="w-2 h-2 opacity-0 group-hover/loc:opacity-100 transition-opacity shrink-0" />
-                                          </a>
-                                        ) : (
-                                          <div className="text-[10px] text-muted-foreground flex items-center gap-1 truncate">
-                                            <MapPin className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
-                                            <span>No GPS</span>
-                                          </div>
-                                        )}
-                                      </div>
+                            {group.slots.map((slot) => {
+                              const slotKey = `${group.date}-${slot.slot}`;
+                              const p = mappedSlotPhotos.get(slotKey);
+                              return p ? (
+                                <div
+                                  key={slotKey}
+                                  className="group relative rounded-lg border border-border/80 bg-background overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                                  onClick={() => p.id && setPreviewPhoto(p as any)}
+                                >
+                                  <div className="aspect-video w-full bg-muted/40 relative flex items-center justify-center overflow-hidden">
+                                    <img
+                                      src={p.photo}
+                                      alt={p.photo_type_display || p.photo_type}
+                                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                      onError={(e) => {
+                                        (e.target as any).src = "https://placehold.co/400x300?text=Photo+Unavailable";
+                                      }}
+                                    />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                      <Eye className="w-5 h-5" />
                                     </div>
-                                  );
-                                })()
+                                  </div>
+                                  <div className="p-2 space-y-1">
+                                    <div className="text-[11px] font-semibold truncate text-foreground flex items-center justify-between">
+                                      <span className="truncate">{p.photo_type_display || PHOTO_TYPE_LABELS[p.photo_type as keyof typeof PHOTO_TYPE_LABELS] || p.photo_type}</span>
+                                      <Badge variant="outline" className="text-[9px] h-3.5 px-1 py-0 bg-primary/5 ml-1 leading-none shrink-0 border-primary/20 text-primary">S{slot.slot}</Badge>
+                                    </div>
+                                    {slot.timing && (
+                                      <div className="text-[9px] text-muted-foreground flex items-center gap-1">
+                                        <Clock className="w-2.5 h-2.5 shrink-0" /> {slot.timing}
+                                      </div>
+                                    )}
+                                    {(p as any).odometer_kms && (
+                                      <div className="text-[10px] text-primary font-bold flex items-center gap-1">
+                                        <Gauge className="w-3 h-3" /> {(p as any).odometer_kms} km
+                                      </div>
+                                    )}
+                                    {p.latitude && p.longitude ? (
+                                      <a
+                                        href={`https://www.google.com/maps?q=${p.latitude},${p.longitude}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[10px] text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 truncate group/loc w-fit max-w-full"
+                                        onClick={(e) => e.stopPropagation()}
+                                        title="Open location in Google Maps"
+                                      >
+                                        <MapPin className="w-2.5 h-2.5 text-red-500 shrink-0 group-hover/loc:scale-110 transition-transform" />
+                                        <span className="underline underline-offset-2 truncate">
+                                          {Number(p.latitude).toFixed(4)}, {Number(p.longitude).toFixed(4)}
+                                        </span>
+                                        <ExternalLink className="w-2 h-2 opacity-0 group-hover/loc:opacity-100 transition-opacity shrink-0" />
+                                      </a>
+                                    ) : (
+                                      <div className="text-[10px] text-muted-foreground flex items-center gap-1 truncate">
+                                        <MapPin className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
+                                        <span>No GPS</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
                               ) : (
                                 <div
-                                  key={`${group.date}-${slot.slot}`}
+                                  key={slotKey}
                                   className="group relative rounded-lg border border-dashed border-border bg-muted/20 flex flex-col items-center justify-center gap-2 p-4"
                                 >
                                   <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center">
@@ -1045,8 +1066,8 @@ export default function SalesActivitiesTab() {
                                     )}
                                   </div>
                                 </div>
-                              )
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                         );
@@ -1054,13 +1075,7 @@ export default function SalesActivitiesTab() {
 
                       {/* Render any photos from act.photos that are NOT covered by event_photo_slots */}
                       {(() => {
-                        const slotPhotoIds = new Set<string>();
-                        act.event_photo_slots!.forEach(group => {
-                          group.slots.forEach(slot => {
-                            if (slot.photo_id) slotPhotoIds.add(slot.photo_id);
-                          });
-                        });
-                        const extraPhotos = act.photos.filter(p => !slotPhotoIds.has(p.id));
+                        const extraPhotos = act.photos.filter(p => !usedPhotoIds.has(p.id));
                         if (extraPhotos.length === 0) return null;
                         return (
                           <div className="mt-4 pt-3 border-t border-border/40">

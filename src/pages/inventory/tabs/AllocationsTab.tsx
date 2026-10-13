@@ -200,7 +200,7 @@ export default function AllocationsTab() {
                 ? json
                 : [];
 
-          const SALES_ROLES = ["sales_senior_executive", "sales_executive", "tele_caller"];
+          const SALES_ROLES = ["cmo", "associate_bdm", "senior_bdm", "deputy_bdm", "sales_executive", "sales_senior_executive", "counsellor", "tele_caller"];
 
           const hasSalesRole = (u: any) => {
             if (u.role && SALES_ROLES.includes(u.role)) return true;

@@ -284,9 +284,6 @@ export default function FacultyAttendanceDetailPage() {
                                     <MapPin className="w-3.5 h-3.5" />
                                     <span className="text-xs font-medium">View on Map</span>
                                   </a>
-                                  <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-4 min-h-0 ${day.location_details.location_verified ? 'text-green-600 bg-green-50 border-green-200' : 'text-red-600 bg-red-50 border-red-200'}`}>
-                                    {day.location_details.location_verified ? 'Verified Location' : 'Unverified Location'}
-                                  </Badge>
                                 </div>
                               ) : <span className="text-muted-foreground text-xs">—</span>}
                             </td>
