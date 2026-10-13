@@ -427,8 +427,8 @@ export default function UsersPage() {
         branches: Array.isArray(selectedUser.branches) ? selectedUser.branches.map((b: any) => typeof b === "object" && b !== null ? String(b.id || b.value || "") : String(b)) : (selectedUser.branches ? [String(selectedUser.branches)] : []),
         additional_roles: Array.isArray(selectedUser.additional_roles) ? selectedUser.additional_roles.map((r: any) => typeof r === "object" && r !== null ? String(r.id || r.value || "") : String(r)) : (selectedUser.additional_roles ? [String(selectedUser.additional_roles)] : []),
         salary_retention_percentage:
-          selectedUser.salary_retention_percentage !== undefined
-            ? String(selectedUser.salary_retention_percentage)
+          selectedUser.salary_retention_percentage !== undefined && selectedUser.salary_retention_percentage !== null
+            ? String(Number(selectedUser.salary_retention_percentage))
             : "0",
         is_active: selectedUser.is_active ?? true,
         employee_id: selectedUser.employee_id || "",
@@ -647,8 +647,8 @@ export default function UsersPage() {
       role: selectedUser.role || "",
       additional_roles: Array.isArray(selectedUser.additional_roles) ? selectedUser.additional_roles.map((r: any) => typeof r === "object" && r !== null ? String(r.id || r.value || "") : String(r)) : (selectedUser.additional_roles ? [String(selectedUser.additional_roles)] : []),
       salary_retention_percentage:
-        selectedUser.salary_retention_percentage !== undefined
-          ? String(selectedUser.salary_retention_percentage)
+        selectedUser.salary_retention_percentage !== undefined && selectedUser.salary_retention_percentage !== null
+          ? String(Number(selectedUser.salary_retention_percentage))
           : "0",
       is_active: selectedUser.is_active,
       employee_id: selectedUser.employee_id || "",
@@ -827,7 +827,7 @@ export default function UsersPage() {
   const hasRole = (role: string) => allActiveRoles.includes(role);
 
   const isEmployee = allActiveRoles.length > 0 && !allActiveRoles.every((r) => r === "student" || r === "parents");
-  const showWorkingHours = hasRole("cmo") || hasRole("sales_executive") || hasRole("sales_senior_executive") || hasRole("counsellor");
+  const showWorkingHours = ["cmo", "associate_bdm", "senior_bdm", "deputy_bdm", "sales_executive", "sales_senior_executive", "counsellor", "tele_caller"].includes(activeRole);
   const isFaculty = hasRole("faculty");
   const isPartTimeOrVisiting =
     isFaculty &&
@@ -1507,8 +1507,8 @@ export default function UsersPage() {
                       </Select>
                     ) : (
                       <div className="text-sm font-medium text-text-primary pt-0.5">
-                        {selectedUser?.salary_retention_percentage !== undefined
-                          ? `${selectedUser.salary_retention_percentage}%`
+                        {selectedUser?.salary_retention_percentage !== undefined && selectedUser?.salary_retention_percentage !== null
+                          ? `${Number(selectedUser.salary_retention_percentage)}%`
                           : "0%"}
                       </div>
                     )}

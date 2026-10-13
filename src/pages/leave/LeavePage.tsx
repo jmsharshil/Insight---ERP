@@ -16,12 +16,33 @@ const TAB_CONFIG = [
   {
     value: "my_leaves",
     label: "My Leaves",
-    roles: ["branch_manager", "admin_senior_executive","admin_executive", "faculty", "front_desk", "counsellor", "student", "parents", "accountant", "sales_executive", "sales_senior_executive", "tele_caller", "head_coordinator"],
+    roles: [
+      "branch_manager",
+      "cmo",
+      "head_coordinator",
+      "admin_senior_executive",
+      "admin_executive",
+      "faculty",
+      "front_desk",
+      "counsellor",
+      "student",
+      "parents",
+      "accountant",
+      "sales_executive",
+      "sales_senior_executive",
+      "tele_caller",
+      "exam_supervisor",
+    ],
   },
   {
     value: "applications",
-    label: "All Leaves",
+    label: "Staff Leaves",
     roles: ["super_admin", "branch_manager", "cmo", "head_coordinator"],
+  },
+  {
+    value: "student_leaves",
+    label: "Student Leaves",
+    roles: ["super_admin", "branch_manager", "parents", "parent"],
   },
   {
     value: "policies",
@@ -59,7 +80,7 @@ export default function LeavePage() {
 
   const role        = user?.role ?? "faculty";
   const visibleTabs = getVisibleTabs(role);
-  const defaultTab  = visibleTabs[0]?.value ?? "applications";
+  const defaultTab  = visibleTabs[0]?.value ?? "my_leaves";
 
   useEffect(() => {
     setPageTitle("Leave Management");
@@ -83,9 +104,14 @@ export default function LeavePage() {
           <ApplicationsTab mode="my_leaves" />
         </TabsContent>
 
-        {/* All Leaves */}
+        {/* Staff Leaves */}
         <TabsContent value="applications" className="mt-4">
-          <ApplicationsTab mode="all_leaves" />
+          <ApplicationsTab mode="staff_leaves" />
+        </TabsContent>
+
+        {/* Student Leaves */}
+        <TabsContent value="student_leaves" className="mt-4">
+          <ApplicationsTab mode="student_leaves" />
         </TabsContent>
 
         {/* Policies — super_admin / branch_manager only */}

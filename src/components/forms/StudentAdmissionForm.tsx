@@ -368,35 +368,136 @@ export default function StudentAdmissionForm() {
     }
   }, [availableYears, formData.attempt_year]);
 
-  const [matchedFee, setMatchedFee] = useState<FeesStructure | null>(null);
+  /* ─── Fee Structure Helper Calculations ───────────────────────── */
+  const getInstituteFee = (fee: FeesStructure | null, course: string, groupModule: string): number => {
+    if (!fee) return 0;
 
-  /* ─── Fetch Matching Fee Structure ──────────────────────────── */
+    if (course === "cseet") {
+      return Number(fee.total_amount || fee.institute_fees_all_modules || 0);
+    }
+
+    if (groupModule === "both" || groupModule === "all") {
+      return Number(
+        fee.institute_fees_all_modules ||
+        fee.institute_fees_both_modules ||
+        fee.total_amount ||
+        0
+      );
+    }
+
+    if (groupModule === "module_1") {
+      const m1 = Number(fee.institute_fees_module_1 || 0);
+      if (m1 > 0) return m1;
+      if (
+        fee.group_module === "module_1" ||
+        (fee.name && /module\s*1|module_1/i.test(fee.name))
+      ) {
+        return Number(fee.total_amount || fee.institute_fees_all_modules || 0);
+      }
+      return Number(fee.total_amount || 0);
+    }
+
+    if (groupModule === "module_2") {
+      const m2 = Number(fee.institute_fees_module_2 || 0);
+      if (m2 > 0) return m2;
+      if (
+        fee.group_module === "module_2" ||
+        (fee.name && /module\s*2|module_2/i.test(fee.name))
+      ) {
+        return Number(fee.total_amount || fee.institute_fees_all_modules || 0);
+      }
+      return Number(fee.total_amount || 0);
+    }
+
+    if (groupModule === "module_3") {
+      const m3 = Number(fee.institute_fees_module_3 || 0);
+      if (m3 > 0) return m3;
+      if (
+        fee.group_module === "module_3" ||
+        (fee.name && /module\s*3|module_3/i.test(fee.name))
+      ) {
+        return Number(fee.total_amount || fee.institute_fees_all_modules || 0);
+      }
+      return Number(fee.total_amount || 0);
+    }
+
+    return Number(fee.total_amount || 0);
+  };
+
+  const getIcsiRegFees = (
+    fee: FeesStructure | null,
+    qualification: string,
+    course: string,
+    candidates: FeesStructure[] = []
+  ): number => {
+    if (!fee) return 0;
+    if (course === "cseet" || course === "cs_professional") {
+      const val = Number(fee.icsi_registration_fees || 0);
+      if (val > 0) return val;
+      const fallback = candidates.find((c) => Number(c.icsi_registration_fees || 0) > 0);
+      return Number(fallback?.icsi_registration_fees || 0);
+    }
+    if (course === "cs_executive") {
+      if (qualification === "cseet_pass") {
+        const val = Number(fee.icsi_registration_fees_via_cseet || 0);
+        if (val > 0) return val;
+        const fallback = candidates.find((c) => Number(c.icsi_registration_fees_via_cseet || 0) > 0);
+        return Number(fallback?.icsi_registration_fees_via_cseet || 0);
+      }
+      if (["graduate", "post_graduate"].includes(qualification)) {
+        const val = Number(fee.icsi_registration_fees_direct || 0);
+        if (val > 0) return val;
+        const fallback = candidates.find((c) => Number(c.icsi_registration_fees_direct || 0) > 0);
+        return Number(fallback?.icsi_registration_fees_direct || 0);
+      }
+    }
+    return 0;
+  };
+
+  const getIcsiExamFees = (
+    fee: FeesStructure | null,
+    candidates: FeesStructure[] = []
+  ): number => {
+    if (!fee) return 0;
+    const val = Number(fee.icsi_exam_fees || 0);
+    if (val > 0) return val;
+    const fallback = candidates.find((c) => Number(c.icsi_exam_fees || 0) > 0);
+    return Number(fallback?.icsi_exam_fees || 0);
+  };
+
+  const [feeStructuresList, setFeeStructuresList] = useState<FeesStructure[]>([]);
+  const [feeCandidates, setFeeCandidates] = useState<FeesStructure[]>([]);
+  const [matchedFee, setMatchedFee] = useState<FeesStructure | null>(null);
+  const [loadingFees, setLoadingFees] = useState(false);
+
+  /* ─── Fetch Fee Structures ───────────────────────────────────── */
   useEffect(() => {
     let isMounted = true;
 
     const fetchFees = async () => {
       try {
+        setLoadingFees(true);
         const response = await axiosRequest({
           baseURL: import.meta.env.VITE_APP_BASE_URL,
           url: API.FEES.STRUCTURES,
           method: "GET",
         });
-        
+
         if (!isMounted) return;
 
-        const data: FeesStructure[] = response.data?.data || response.data?.results || (Array.isArray(response.data) ? response.data : []);
-        
-        const match = data.find(
-          (fs) =>
-            fs.is_active &&
-            fs.level_name?.toLowerCase().includes(formData.course.toLowerCase().replace("_", " ")) &&
-            fs.attempt === formData.batch_attempt &&
-            (String(fs.year) === formData.attempt_year || fs.name?.includes(formData.attempt_year))
-        );
-        setMatchedFee(match || null);
+        const data: FeesStructure[] =
+          response.data?.data ||
+          response.data?.results ||
+          (Array.isArray(response.data) ? response.data : []);
+
+        setFeeStructuresList(data);
       } catch (error) {
         if (isMounted) {
           console.error("Failed to fetch fees", error);
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingFees(false);
         }
       }
     };
@@ -406,7 +507,119 @@ export default function StudentAdmissionForm() {
     return () => {
       isMounted = false;
     };
-  }, [formData.course, formData.batch_attempt, formData.attempt_year, formData.group_module]);
+  }, []);
+
+  /* ─── Filter & Match Fee Structure Based on Form State ───────── */
+  useEffect(() => {
+    if (!feeStructuresList || feeStructuresList.length === 0) {
+      setMatchedFee(null);
+      setFeeCandidates([]);
+      return;
+    }
+
+    const courseKey = formData.course.toLowerCase().replace(/_/g, " ");
+    const attemptKey = (formData.batch_attempt || "").toLowerCase();
+    const yearKey = String(formData.attempt_year || "");
+
+    const candidates = feeStructuresList.filter((fs) => {
+      if (!fs.is_active) return false;
+
+      const levelName = (fs.level_name || "").toLowerCase();
+      const fsName = (fs.name || "").toLowerCase();
+
+      const levelMatch =
+        levelName.includes(courseKey) ||
+        fsName.includes(courseKey) ||
+        (formData.course === "cs_executive" &&
+          (levelName.includes("executive") || fsName.includes("executive"))) ||
+        (formData.course === "cs_professional" &&
+          (levelName.includes("professional") || fsName.includes("professional"))) ||
+        (formData.course === "cseet" &&
+          (levelName.includes("cseet") || fsName.includes("cseet")));
+
+      if (!levelMatch) return false;
+
+      const attemptVal = (fs.attempt || "").toLowerCase();
+      const attemptDisplay = (fs.attempt_display || "").toLowerCase();
+      const attemptMatch =
+        attemptVal === attemptKey ||
+        attemptDisplay === attemptKey ||
+        fsName.includes(attemptKey);
+
+      if (!attemptMatch) return false;
+
+      const yearMatch =
+        String(fs.year || "") === yearKey ||
+        fsName.includes(yearKey);
+
+      return yearMatch;
+    });
+
+    setFeeCandidates(candidates);
+
+    if (candidates.length === 0) {
+      setMatchedFee(null);
+      return;
+    }
+
+    let match: FeesStructure | null = null;
+
+    if (formData.course === "cseet") {
+      match =
+        candidates.find(
+          (fs) =>
+            !fs.group_module ||
+            fs.group_module === "" ||
+            fs.group_module === "full" ||
+            fs.group_module === "all"
+        ) || candidates[0];
+    } else {
+      const group = formData.group_module; // "both", "module_1", "module_2"
+
+      if (group === "both") {
+        match =
+          candidates.find(
+            (fs) =>
+              fs.group_module === "all" ||
+              fs.group_module === "both" ||
+              (fs.name && /both|all\s*module/i.test(fs.name))
+          ) ||
+          candidates.find(
+            (fs) =>
+              Number(fs.institute_fees_all_modules || fs.institute_fees_both_modules || 0) > 0
+          ) ||
+          candidates[0];
+      } else if (group === "module_1") {
+        match =
+          candidates.find(
+            (fs) =>
+              fs.group_module === "module_1" ||
+              (fs.name && /module\s*1|module_1/i.test(fs.name))
+          ) ||
+          candidates.find((fs) => Number(fs.institute_fees_module_1 || 0) > 0) ||
+          candidates[0];
+      } else if (group === "module_2") {
+        match =
+          candidates.find(
+            (fs) =>
+              fs.group_module === "module_2" ||
+              (fs.name && /module\s*2|module_2/i.test(fs.name))
+          ) ||
+          candidates.find((fs) => Number(fs.institute_fees_module_2 || 0) > 0) ||
+          candidates[0];
+      } else {
+        match = candidates.find((fs) => fs.group_module === group) || candidates[0];
+      }
+    }
+
+    setMatchedFee(match || null);
+  }, [
+    feeStructuresList,
+    formData.course,
+    formData.batch_attempt,
+    formData.attempt_year,
+    formData.group_module,
+  ]);
 
 
   const nextStep = () => { setCurrentStep(p => min(p + 1, 3)); window.scrollTo({ top: 0, behavior: 'smooth' }); };
@@ -1239,7 +1452,12 @@ export default function StudentAdmissionForm() {
           {/* ════════════════════════════════════════════════════════ */}
           <SectionCard icon={CreditCard} title="Fee Breakdown">
             <div className="space-y-4">
-              {matchedFee ? (
+              {loadingFees && !matchedFee ? (
+                <div className="flex items-center justify-center py-8 gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="w-5 h-5 animate-spin" style={{ color: T.primaryDark }} />
+                  <span>Loading fee structure...</span>
+                </div>
+              ) : matchedFee ? (
                 <>
                   {/* Level & Structure Info Header */}
                   <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/40">
@@ -1265,7 +1483,9 @@ export default function StudentAdmissionForm() {
                       {formData.course === "cseet" && (
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-muted-foreground">Institute Fee</span>
-                          <span className="font-medium text-foreground">{formatCurrency(Number(matchedFee.total_amount || 0))}</span>
+                          <span className="font-medium text-foreground">
+                            {formatCurrency(getInstituteFee(matchedFee, formData.course, formData.group_module))}
+                          </span>
                         </div>
                       )}
 
@@ -1275,19 +1495,33 @@ export default function StudentAdmissionForm() {
                           {formData.group_module === "both" && (
                             <div className="flex justify-between items-center text-sm">
                               <span className="text-muted-foreground">Institute Fee (Both Modules)</span>
-                              <span className="font-medium text-foreground">{formatCurrency(Number(matchedFee.institute_fees_both_modules || 0))}</span>
+                              <span className="font-medium text-foreground">
+                                {formatCurrency(getInstituteFee(matchedFee, formData.course, formData.group_module))}
+                              </span>
                             </div>
                           )}
                           {formData.group_module === "module_1" && (
                             <div className="flex justify-between items-center text-sm">
                               <span className="text-muted-foreground">Institute Fee (Module 1)</span>
-                              <span className="font-medium text-foreground">{formatCurrency(Number(matchedFee.institute_fees_module_1 || 0))}</span>
+                              <span className="font-medium text-foreground">
+                                {formatCurrency(getInstituteFee(matchedFee, formData.course, formData.group_module))}
+                              </span>
                             </div>
                           )}
                           {formData.group_module === "module_2" && (
                             <div className="flex justify-between items-center text-sm">
                               <span className="text-muted-foreground">Institute Fee (Module 2)</span>
-                              <span className="font-medium text-foreground">{formatCurrency(Number(matchedFee.institute_fees_module_2 || 0))}</span>
+                              <span className="font-medium text-foreground">
+                                {formatCurrency(getInstituteFee(matchedFee, formData.course, formData.group_module))}
+                              </span>
+                            </div>
+                          )}
+                          {formData.group_module === "module_3" && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-muted-foreground">Institute Fee (Module 3)</span>
+                              <span className="font-medium text-foreground">
+                                {formatCurrency(getInstituteFee(matchedFee, formData.course, formData.group_module))}
+                              </span>
                             </div>
                           )}
                         </>
@@ -1300,11 +1534,15 @@ export default function StudentAdmissionForm() {
                             <>
                               <div className="flex justify-between items-center text-sm">
                                 <span className="text-muted-foreground">ICSI Registration Fees</span>
-                                <span className="font-medium text-foreground">{formatCurrency(Number(matchedFee.icsi_registration_fees || 0))}</span>
+                                <span className="font-medium text-foreground">
+                                  {formatCurrency(getIcsiRegFees(matchedFee, formData.qualification, formData.course, feeCandidates))}
+                                </span>
                               </div>
                               <div className="flex justify-between items-center text-sm">
                                 <span className="text-muted-foreground">ICSI Exam Fees</span>
-                                <span className="font-medium text-foreground">{formatCurrency(Number(matchedFee.icsi_exam_fees || 0))}</span>
+                                <span className="font-medium text-foreground">
+                                  {formatCurrency(getIcsiExamFees(matchedFee, feeCandidates))}
+                                </span>
                               </div>
                             </>
                           )}
@@ -1313,13 +1551,17 @@ export default function StudentAdmissionForm() {
                               {formData.qualification === "cseet_pass" && (
                                 <div className="flex justify-between items-center text-sm">
                                   <span className="text-muted-foreground">ICSI Reg. Fees (Via CSEET)</span>
-                                  <span className="font-medium text-foreground">{formatCurrency(Number(matchedFee.icsi_registration_fees_via_cseet || 0))}</span>
+                                  <span className="font-medium text-foreground">
+                                    {formatCurrency(getIcsiRegFees(matchedFee, formData.qualification, formData.course, feeCandidates))}
+                                  </span>
                                 </div>
                               )}
                               {["graduate", "post_graduate"].includes(formData.qualification) && (
                                 <div className="flex justify-between items-center text-sm">
                                   <span className="text-muted-foreground">ICSI Reg. Fees (Direct Entry)</span>
-                                  <span className="font-medium text-foreground">{formatCurrency(Number(matchedFee.icsi_registration_fees_direct || 0))}</span>
+                                  <span className="font-medium text-foreground">
+                                    {formatCurrency(getIcsiRegFees(matchedFee, formData.qualification, formData.course, feeCandidates))}
+                                  </span>
                                 </div>
                               )}
                             </>
@@ -1327,13 +1569,17 @@ export default function StudentAdmissionForm() {
                           {formData.course === "cs_professional" && (
                             <div className="flex justify-between items-center text-sm">
                               <span className="text-muted-foreground">ICSI Registration Fees</span>
-                              <span className="font-medium text-foreground">{formatCurrency(Number(matchedFee.icsi_registration_fees || 0))}</span>
+                              <span className="font-medium text-foreground">
+                                {formatCurrency(getIcsiRegFees(matchedFee, formData.qualification, formData.course, feeCandidates))}
+                              </span>
                             </div>
                           )}
                           {formData.course !== "cseet" && (
                             <div className="flex justify-between items-center text-sm">
                               <span className="text-muted-foreground">ICSI Exam Fees (Per Module)</span>
-                              <span className="font-medium text-foreground">{formatCurrency(Number(matchedFee.icsi_exam_fees || 0) * (formData.group_module === "both" ? 2 : 1))}</span>
+                              <span className="font-medium text-foreground">
+                                {formatCurrency(getIcsiExamFees(matchedFee, feeCandidates) * (formData.group_module === "both" ? 2 : 1))}
+                              </span>
                             </div>
                           )}
                         </>
@@ -1344,26 +1590,11 @@ export default function StudentAdmissionForm() {
                         <span className="text-sm font-semibold text-foreground">Total Payable to Institute</span>
                         <span className="text-base font-bold" style={{ color: T.primaryDark }}>
                           {(() => {
-                            let total = 0;
-                            if (formData.course === "cseet") {
-                              total += Number(matchedFee.total_amount || 0);
-                            } else {
-                              if (formData.group_module === "both") total += Number(matchedFee.institute_fees_both_modules || 0);
-                              if (formData.group_module === "module_1") total += Number(matchedFee.institute_fees_module_1 || 0);
-                              if (formData.group_module === "module_2") total += Number(matchedFee.institute_fees_module_2 || 0);
-                            }
+                            let total = getInstituteFee(matchedFee, formData.course, formData.group_module);
                             if (formData.icsi_fees_payment === "pay_through_institute") {
-                              if (formData.course === "cseet") {
-                                total += Number(matchedFee.icsi_registration_fees || 0) + Number(matchedFee.icsi_exam_fees || 0);
-                              } else if (formData.course === "cs_executive") {
-                                total += formData.qualification === "cseet_pass"
-                                  ? Number(matchedFee.icsi_registration_fees_via_cseet || 0)
-                                  : Number(matchedFee.icsi_registration_fees_direct || 0);
-                                total += Number(matchedFee.icsi_exam_fees || 0) * (formData.group_module === "both" ? 2 : 1);
-                              } else if (formData.course === "cs_professional") {
-                                total += Number(matchedFee.icsi_registration_fees || 0);
-                                total += Number(matchedFee.icsi_exam_fees || 0) * (formData.group_module === "both" ? 2 : 1);
-                              }
+                              const regFee = getIcsiRegFees(matchedFee, formData.qualification, formData.course, feeCandidates);
+                              const examFee = getIcsiExamFees(matchedFee, feeCandidates) * (formData.course !== "cseet" && formData.group_module === "both" ? 2 : 1);
+                              total += regFee + examFee;
                             }
                             return formatCurrency(total);
                           })()}
@@ -1388,11 +1619,15 @@ export default function StudentAdmissionForm() {
                           <>
                             <div className="flex justify-between items-center text-sm">
                               <span className="text-amber-800/70 dark:text-amber-300/70">ICSI Registration Fees</span>
-                              <span className="font-medium text-amber-800 dark:text-amber-300">{formatCurrency(Number(matchedFee.icsi_registration_fees || 0))}</span>
+                              <span className="font-medium text-amber-800 dark:text-amber-300">
+                                {formatCurrency(getIcsiRegFees(matchedFee, formData.qualification, formData.course, feeCandidates))}
+                              </span>
                             </div>
                             <div className="flex justify-between items-center text-sm">
                               <span className="text-amber-800/70 dark:text-amber-300/70">ICSI Exam Fees</span>
-                              <span className="font-medium text-amber-800 dark:text-amber-300">{formatCurrency(Number(matchedFee.icsi_exam_fees || 0))}</span>
+                              <span className="font-medium text-amber-800 dark:text-amber-300">
+                                {formatCurrency(getIcsiExamFees(matchedFee, feeCandidates))}
+                              </span>
                             </div>
                           </>
                         )}
@@ -1401,13 +1636,17 @@ export default function StudentAdmissionForm() {
                             {formData.qualification === "cseet_pass" && (
                               <div className="flex justify-between items-center text-sm">
                                 <span className="text-amber-800/70 dark:text-amber-300/70">ICSI Reg. Fees (Via CSEET)</span>
-                                <span className="font-medium text-amber-800 dark:text-amber-300">{formatCurrency(Number(matchedFee.icsi_registration_fees_via_cseet || 0))}</span>
+                                <span className="font-medium text-amber-800 dark:text-amber-300">
+                                  {formatCurrency(getIcsiRegFees(matchedFee, formData.qualification, formData.course, feeCandidates))}
+                                </span>
                               </div>
                             )}
                             {["graduate", "post_graduate"].includes(formData.qualification) && (
                               <div className="flex justify-between items-center text-sm">
                                 <span className="text-amber-800/70 dark:text-amber-300/70">ICSI Reg. Fees (Direct Entry)</span>
-                                <span className="font-medium text-amber-800 dark:text-amber-300">{formatCurrency(Number(matchedFee.icsi_registration_fees_direct || 0))}</span>
+                                <span className="font-medium text-amber-800 dark:text-amber-300">
+                                  {formatCurrency(getIcsiRegFees(matchedFee, formData.qualification, formData.course, feeCandidates))}
+                                </span>
                               </div>
                             )}
                           </>
@@ -1415,13 +1654,17 @@ export default function StudentAdmissionForm() {
                         {formData.course === "cs_professional" && (
                           <div className="flex justify-between items-center text-sm">
                             <span className="text-amber-800/70 dark:text-amber-300/70">ICSI Registration Fees</span>
-                            <span className="font-medium text-amber-800 dark:text-amber-300">{formatCurrency(Number(matchedFee.icsi_registration_fees || 0))}</span>
+                            <span className="font-medium text-amber-800 dark:text-amber-300">
+                              {formatCurrency(getIcsiRegFees(matchedFee, formData.qualification, formData.course, feeCandidates))}
+                            </span>
                           </div>
                         )}
                         {formData.course !== "cseet" && (
                           <div className="flex justify-between items-center text-sm">
                             <span className="text-amber-800/70 dark:text-amber-300/70">ICSI Exam Fees (Per Module)</span>
-                            <span className="font-medium text-amber-800 dark:text-amber-300">{formatCurrency(Number(matchedFee.icsi_exam_fees || 0) * (formData.group_module === "both" ? 2 : 1))}</span>
+                            <span className="font-medium text-amber-800 dark:text-amber-300">
+                              {formatCurrency(getIcsiExamFees(matchedFee, feeCandidates) * (formData.group_module === "both" ? 2 : 1))}
+                            </span>
                           </div>
                         )}
                         <div className="flex items-start gap-2 pt-2 mt-1 border-t border-amber-500/20">

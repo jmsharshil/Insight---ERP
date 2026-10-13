@@ -85,7 +85,7 @@ export default function AssignLeadDialog({
   }, [open, dispatch, toast]);
 
   /* ─── Allowed CRM Roles ───────────────────────────────────── */
-  const ALLOWED_ROLES = ["counsellor", "tele_caller", "sales_senior_executive", "sales_executive"];
+  const ALLOWED_ROLES = ["cmo", "associate_bdm", "senior_bdm", "deputy_bdm", "sales_executive", "sales_senior_executive", "counsellor", "tele_caller"];
 
   /* ─── Filtered users ──────────────────────────────────────── */
   const filtered = users.filter((u) => {
