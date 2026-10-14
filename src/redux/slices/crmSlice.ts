@@ -89,6 +89,11 @@ interface CRMState {
   leadsLoading: boolean;
   loading: boolean;
   error: string | null;
+  count: number;
+  pageSize: number;
+  next: string | null;
+  previous: string | null;
+  currentPage: number;
 }
 
 const initialState: CRMState = {
@@ -97,6 +102,11 @@ const initialState: CRMState = {
   leadsLoading: false,
   loading: false,
   error: null,
+  count: 0,
+  pageSize: 50,
+  next: null,
+  previous: null,
+  currentPage: 1,
 };
 
 /* ─── Slice ──────────────────────────────────────────────────── */
@@ -122,6 +132,22 @@ const crmSlice = createSlice({
     setLeadsLoading(state, action: PayloadAction<boolean>) {
       state.leadsLoading = action.payload;
     },
+    setLeadsPagination(
+      state,
+      action: PayloadAction<{
+        count: number;
+        pageSize?: number;
+        next?: string | null;
+        previous?: string | null;
+        currentPage: number;
+      }>
+    ) {
+      state.count = action.payload.count;
+      if (action.payload.pageSize) state.pageSize = action.payload.pageSize;
+      state.next = action.payload.next ?? null;
+      state.previous = action.payload.previous ?? null;
+      state.currentPage = action.payload.currentPage;
+    },
   },
 });
 
@@ -131,5 +157,6 @@ export const {
   setCRMError,
   setLeads,
   setLeadsLoading,
+  setLeadsPagination,
 } = crmSlice.actions;
 export default crmSlice.reducer;

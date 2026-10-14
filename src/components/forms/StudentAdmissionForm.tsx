@@ -208,7 +208,7 @@ export default function StudentAdmissionForm() {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
   const [searchParams] = useSearchParams();
-  const admissionId = searchParams.get("id") || "";
+  const admissionId = searchParams.get("id") || searchParams.get("admission_id") || "";
 
   const [savedAdmissionId, setSavedAdmissionId] = useState<string | null>(admissionId || null);
 
@@ -247,6 +247,7 @@ export default function StudentAdmissionForm() {
     attempt_year: new Date().getFullYear().toString(),
     payment_type: "full_payment",
     icsi_fees_payment: "pay_yourself",
+    fee_structure: "",
     first_name: "",
     surname: "",
     father_name: "",
@@ -613,6 +614,10 @@ export default function StudentAdmissionForm() {
     }
 
     setMatchedFee(match || null);
+    setFormData((prev) => ({
+      ...prev,
+      fee_structure: match?.id ? String(match.id) : "",
+    }));
   }, [
     feeStructuresList,
     formData.course,
@@ -647,6 +652,11 @@ export default function StudentAdmissionForm() {
 
     // Append text fields (always)
     Object.entries(formData).forEach(([key, value]) => {
+      if (key === "fee_structure") {
+        const id = value || (matchedFee?.id ? String(matchedFee.id) : "");
+        if (id) payload.append(key, String(id));
+        return;
+      }
       if (key === "reference_name") {
         if (value) payload.append(key, String(value));
         return;
@@ -665,6 +675,11 @@ export default function StudentAdmissionForm() {
       }
     });
 
+    // Ensure selected fee structure is attached to payload
+    if (!payload.has("fee_structure") && matchedFee?.id) {
+      payload.append("fee_structure", String(matchedFee.id));
+    }
+
     // Append documents ONLY on final step
     if (isFinalStep) {
       if (docSignature) payload.append("doc_signature", docSignature);
@@ -679,7 +694,7 @@ export default function StudentAdmissionForm() {
 
     setLoading(true);
 
-    const method = savedAdmissionId ? "PATCH" : "POST";
+    const method = isFinalStep ? "POST" : (savedAdmissionId ? "PATCH" : "POST");
     const endpoint = savedAdmissionId
       ? API.ADMISSIONS.SUBMIT(savedAdmissionId)
       : API.ADMISSIONS.CREATE;
@@ -693,9 +708,10 @@ export default function StudentAdmissionForm() {
       isFormData: true,
       setLoading: (val: boolean) => setLoading(val),
       getResponse: (res: any) => {
-        // If it was a POST, save the new ID
-        if (!savedAdmissionId && res?.data?.id) {
-          setSavedAdmissionId(String(res.data.id));
+        // If an ID is returned, save it
+        const newId = res?.data?.id || res?.id || res?.data?.data?.id;
+        if (!savedAdmissionId && newId) {
+          setSavedAdmissionId(String(newId));
         }
 
         if (isFinalStep) {
@@ -706,11 +722,16 @@ export default function StudentAdmissionForm() {
         }
       },
       getError: (err: any) => {
-        const msg =
+        let msg =
           err?.response?.data?.message ||
           err?.response?.data?.error ||
-          err?.message ||
-          "Failed to save data. Please try again.";
+          err?.response?.data?.detail;
+        if (!msg && err?.response?.data && typeof err.response.data === "object") {
+          const firstKey = Object.keys(err.response.data)[0];
+          const val = err.response.data[firstKey];
+          msg = Array.isArray(val) ? `${firstKey}: ${val[0]}` : String(val);
+        }
+        if (!msg) msg = err?.message || "Failed to save data. Please try again.";
         toast.error(msg);
       },
     });
@@ -789,13 +810,13 @@ export default function StudentAdmissionForm() {
           <p className="mt-2 text-sm sm:text-base max-w-md mx-auto" style={{ color: T.textMuted }}>
             Complete the registration form below to confirm your admission
           </p>
-          {admissionId && (
+          {(savedAdmissionId || admissionId) && (
             <div
               className="inline-flex items-center gap-2 mt-3 px-4 py-1.5 rounded-full text-xs font-semibold"
               style={{ background: `${T.primary}15`, color: T.primaryDark }}
             >
               <ClipboardList className="w-3.5 h-3.5" />
-              Application ID: #{admissionId}
+              Application ID: #{savedAdmissionId || admissionId}
             </div>
           )}
         </div>
@@ -1460,12 +1481,45 @@ export default function StudentAdmissionForm() {
               ) : matchedFee ? (
                 <>
                   {/* Level & Structure Info Header */}
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/40">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg bg-muted/30 border border-border/40">
                     <div className="flex items-center gap-2">
                       <GraduationCap className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">Level</span>
+                      <span className="text-sm font-medium text-muted-foreground">Fee Structure</span>
                     </div>
-                    <span className="text-sm font-semibold text-foreground">{matchedFee.level_name || "—"}</span>
+                    {feeCandidates.length > 1 ? (
+                      <Select
+                        value={String(matchedFee.id)}
+                        onValueChange={(val) => {
+                          const chosen = feeCandidates.find((c) => String(c.id) === String(val));
+                          if (chosen) {
+                            setMatchedFee(chosen);
+                            setFormData((prev) => ({ ...prev, fee_structure: String(chosen.id) }));
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-xs sm:text-sm font-semibold w-auto min-w-[200px] bg-background">
+                          <SelectValue placeholder="Select Fee Structure" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {feeCandidates.map((c) => (
+                            <SelectItem key={c.id} value={String(c.id)}>
+                              {c.name || c.level_name || `Structure #${c.id}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="text-left sm:text-right">
+                        <span className="text-sm font-semibold text-foreground">
+                          {matchedFee.name || matchedFee.level_name || "—"}
+                        </span>
+                        {matchedFee.name && matchedFee.level_name && (
+                          <span className="text-xs text-muted-foreground block">
+                            Level: {matchedFee.level_name}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* ── Pay to Institute Section ── */}

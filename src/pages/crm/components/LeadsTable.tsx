@@ -22,9 +22,24 @@ interface LeadsTableProps {
   onView: (l: APILead) => void;
   onChangeStage?: (l: APILead, stage: LeadStatus) => void;
   onAssignSuccess?: (lead: APILead, assignedToName: string) => void;
+  currentPage?: number;
+  totalCount?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
+  loading?: boolean;
 }
 
-export default function LeadsTable({ leads, onView, onChangeStage, onAssignSuccess }: LeadsTableProps) {
+export default function LeadsTable({
+  leads,
+  onView,
+  onChangeStage,
+  onAssignSuccess,
+  currentPage,
+  totalCount,
+  pageSize = 50,
+  onPageChange,
+  loading = false,
+}: LeadsTableProps) {
   const STAGES = Object.keys(LEAD_STATUS_META) as LeadStatus[];
   const { user } = useAuth();
   const canReassign = ["sales_senior_executive", "branch_manager", "super_admin"].includes(user?.role || "");
@@ -198,7 +213,18 @@ export default function LeadsTable({ leads, onView, onChangeStage, onAssignSucce
   return (
     <>
       <div className="mt-3">
-        <DataTable columns={cols} data={leads} exportable onRowClick={onView} />
+        <DataTable
+          columns={cols}
+          data={leads}
+          exportable
+          onRowClick={onView}
+          serverPagination={true}
+          currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={onPageChange}
+          loading={loading}
+        />
       </div>
 
       {/* Assign Lead Dialog */}

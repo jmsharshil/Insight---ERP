@@ -1,7 +1,19 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
-import { Phone, Mail, MapPin, UserCheck, RefreshCw, ArrowRightLeft } from "lucide-react";
+import {
+  Phone,
+  Mail,
+  MapPin,
+  UserCheck,
+  RefreshCw,
+  ArrowRightLeft,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  Loader2,
+  X,
+} from "lucide-react";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 
@@ -9,6 +21,7 @@ import { APILead, LeadStatus } from "@/types/crm";
 import { STAGE_COLORS, LEAD_STATUS_META } from "@/constants/dummy/crm";
 import { formatDate, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import AssignLeadDialog from "./AssignLeadDialog";
 import TransferRequestDialog from "./TransferRequestDialog";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,6 +40,12 @@ interface KanbanBoardProps {
   onDragEnd: (result: DropResult) => void;
   onView: (lead: APILead) => void;
   onAssignSuccess?: (lead: APILead, assignedToName: string) => void;
+
+  currentPage?: number;
+  totalCount?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
+  stageTotals?: Record<string, number>;
 }
 
 function KanbanCardSkeleton() {
@@ -76,11 +95,55 @@ function KanbanColumnSkeleton({ meta, colors }: any) {
   );
 }
 
-export default function KanbanBoard({ leads, leadsLoading, stages, onDragEnd, onView, onAssignSuccess }: KanbanBoardProps) {
+export default function KanbanBoard({
+  leads,
+  leadsLoading,
+  stages,
+  onDragEnd,
+  onView,
+  onAssignSuccess,
+  currentPage,
+  totalCount,
+  pageSize = 50,
+  onPageChange,
+  stageTotals,
+}: KanbanBoardProps) {
   const [assignLead, setAssignLead] = useState<APILead | null>(null);
   const [transferLead, setTransferLead] = useState<APILead | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const { user } = useAuth();
   const canReassign = ["sales_senior_executive", "branch_manager", "super_admin"].includes(user?.role || "");
+
+  const total = totalCount ?? leads.length;
+  const size = pageSize ?? 50;
+  const page = currentPage ?? 1;
+  const totalPages = Math.max(1, Math.ceil(total / size));
+  const startItem = total === 0 ? 0 : (page - 1) * size + 1;
+  const endItem = Math.min(page * size, total);
+
+  const visibleLeads = useMemo(() => {
+    if (!searchQuery.trim()) return leads;
+    const q = searchQuery.toLowerCase().trim();
+    return leads.filter((lead) => {
+      const fullName = `${lead.first_name || ""} ${lead.surname || ""}`.toLowerCase();
+      const phone = lead.phone_student || "";
+      const email = (lead.email || "").toLowerCase();
+      const course = (lead.course || "").toLowerCase();
+      const formType = (lead.form_type_display || "").toLowerCase();
+      const assigned = (lead.assigned_to_name || "").toLowerCase();
+      const id = String(lead.id);
+
+      return (
+        fullName.includes(q) ||
+        phone.includes(q) ||
+        email.includes(q) ||
+        course.includes(q) ||
+        formType.includes(q) ||
+        assigned.includes(q) ||
+        id.includes(q)
+      );
+    });
+  }, [leads, searchQuery]);
 
   if (leadsLoading && leads.length === 0) {
     return (
@@ -96,53 +159,165 @@ export default function KanbanBoard({ leads, leadsLoading, stages, onDragEnd, on
 
   return (
     <>
-    <DragDropContext onDragEnd={onDragEnd}>
-      <div className="flex gap-3 overflow-x-auto pb-4 mt-3 -mx-1 px-1">
-        {stages.map((stage, stageIdx) => {
-          const stageLeads = leads.filter((l) => l.current_stage === stage);
-          const meta = LEAD_STATUS_META[stage];
-          const colors = STAGE_COLORS[stage] || STAGE_COLORS.new;
+      {/* ─── Kanban Pagination & Pipeline Header ─────────────── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mt-3 px-3.5 py-2.5 bg-card rounded-xl border border-border shadow-xs">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
+            <span className="font-semibold text-foreground">Pipeline View</span>
+            <span className="text-muted-foreground/40">•</span>
+            <span>
+              Showing <strong className="text-foreground">{startItem}–{endItem}</strong> of{" "}
+              <strong className="text-foreground">{total}</strong> leads
+            </span>
+            {totalPages > 1 && (
+              <span className="text-xs bg-muted text-muted-foreground font-medium px-2 py-0.5 rounded-full">
+                Page {page} of {totalPages}
+              </span>
+            )}
+            {leadsLoading && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-primary font-medium">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Updating...
+              </span>
+            )}
+          </div>
+        </div>
 
-          return (
-            <motion.div
-              key={stage}
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: stageIdx * 0.05 }}
-              className="flex-shrink-0 w-[280px]"
-            >
-              <div
-                className={cn(
-                  "flex items-center justify-between px-3 py-2.5 rounded-t-xl border border-b-0 border-border",
-                  colors.header,
-                )}
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Quick filter in board */}
+          <div className="relative w-48 sm:w-56">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Filter current page..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-8 pl-8 pr-7 text-xs bg-background"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full"
-                    style={{ backgroundColor: colors.accent }}
-                  />
-                  <span className="font-heading font-semibold text-sm">{meta?.label || stage}</span>
-                  {stage === "interested" && (
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 uppercase tracking-wider leading-none">🔥 Hot</span>
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && onPageChange && (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page <= 1 || leadsLoading}
+                onClick={() => onPageChange(page - 1)}
+                className="h-8 px-2.5 text-xs gap-1"
+                title="Previous page"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" /> Prev
+              </Button>
+
+              {(() => {
+                const pages: number[] = [];
+                const start = Math.max(1, page - 2);
+                const end = Math.min(totalPages, page + 2);
+                for (let i = start; i <= end; i++) pages.push(i);
+                return pages.map((p) => (
+                  <Button
+                    key={p}
+                    variant={p === page ? "default" : "outline"}
+                    size="sm"
+                    disabled={leadsLoading}
+                    className="h-8 w-8 p-0 text-xs font-medium"
+                    onClick={() => onPageChange(p)}
+                  >
+                    {p}
+                  </Button>
+                ));
+              })()}
+
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages || leadsLoading}
+                onClick={() => onPageChange(page + 1)}
+                className="h-8 px-2.5 text-xs gap-1"
+                title="Next page"
+              >
+                Next <ChevronRight className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <DragDropContext onDragEnd={onDragEnd}>
+        <div
+          className={cn(
+            "flex gap-3 overflow-x-auto pb-4 mt-3 -mx-1 px-1 transition-opacity duration-200",
+            leadsLoading && "opacity-60 pointer-events-none"
+          )}
+        >
+          {stages.map((stage, stageIdx) => {
+            const stageLeads = visibleLeads.filter((l) => l.current_stage === stage);
+            const meta = LEAD_STATUS_META[stage];
+            const colors = STAGE_COLORS[stage] || STAGE_COLORS.new;
+
+            return (
+              <motion.div
+                key={stage}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: stageIdx * 0.05 }}
+                className="flex-shrink-0 w-[280px]"
+              >
+                <div
+                  className={cn(
+                    "flex items-center justify-between px-3 py-2.5 rounded-t-xl border border-b-0 border-border",
+                    colors.header,
                   )}
-                  {["visit", "visited", "follow_up"].includes(stage) && (
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider leading-none">🌡️ Warm</span>
-                  )}
-                  {stage === "lost" && (
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 uppercase tracking-wider leading-none">🧊 Cold</span>
-                  )}
-                </div>
-                <span
-                  className="text-xs font-bold px-2 py-0.5 rounded-full"
-                  style={{
-                    backgroundColor: colors.accent + "18",
-                    color: colors.accent,
-                  }}
                 >
-                  {stageLeads.length}
-                </span>
-              </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ backgroundColor: colors.accent }}
+                    />
+                    <span className="font-heading font-semibold text-sm">{meta?.label || stage}</span>
+                    {stage === "interested" && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 uppercase tracking-wider leading-none">🔥 Hot</span>
+                    )}
+                    {["visit", "visited", "follow_up"].includes(stage) && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider leading-none">🌡️ Warm</span>
+                    )}
+                    {stage === "lost" && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 uppercase tracking-wider leading-none">🧊 Cold</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className="text-xs font-bold px-2 py-0.5 rounded-full"
+                      style={{
+                        backgroundColor: colors.accent + "18",
+                        color: colors.accent,
+                      }}
+                      title={
+                        stageTotals?.[stage] !== undefined && stageTotals[stage] !== stageLeads.length
+                          ? `${stageLeads.length} leads on this page (${stageTotals[stage]} total across pipeline)`
+                          : `${stageLeads.length} leads`
+                      }
+                    >
+                      {stageLeads.length}
+                    </span>
+                    {stageTotals?.[stage] !== undefined && stageTotals[stage] !== stageLeads.length && (
+                      <span
+                        className="text-[10px] text-muted-foreground font-medium"
+                        title={`${stageTotals[stage]} total across all pages`}
+                      >
+                        of {stageTotals[stage]}
+                      </span>
+                    )}
+                  </div>
+                </div>
 
               <Droppable droppableId={stage}>
                 {(provided, snapshot) => (
@@ -300,7 +475,7 @@ export default function KanbanBoard({ leads, leadsLoading, stages, onDragEnd, on
 
                     {stageLeads.length === 0 && !snapshot.isDraggingOver && (
                       <div className="text-center py-10 text-xs text-muted-foreground">
-                        No leads
+                        {searchQuery ? "No matching leads" : "No leads"}
                       </div>
                     )}
                   </div>
@@ -311,6 +486,53 @@ export default function KanbanBoard({ leads, leadsLoading, stages, onDragEnd, on
         })}
       </div>
     </DragDropContext>
+
+      {/* ─── Bottom Pagination Controls ──────────────────────── */}
+      {totalPages > 1 && onPageChange && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground mt-3 px-1">
+          <span>
+            Page {page} of {totalPages} · {total} total leads
+          </span>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1 || leadsLoading}
+              onClick={() => onPageChange(page - 1)}
+              className="h-8 px-2.5 text-xs gap-1"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" /> Prev
+            </Button>
+            {(() => {
+              const pages: number[] = [];
+              const start = Math.max(1, page - 2);
+              const end = Math.min(totalPages, page + 2);
+              for (let i = start; i <= end; i++) pages.push(i);
+              return pages.map((p) => (
+                <Button
+                  key={p}
+                  variant={p === page ? "default" : "outline"}
+                  size="sm"
+                  disabled={leadsLoading}
+                  className="h-8 w-8 p-0 text-xs font-medium"
+                  onClick={() => onPageChange(p)}
+                >
+                  {p}
+                </Button>
+              ));
+            })()}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages || leadsLoading}
+              onClick={() => onPageChange(page + 1)}
+              className="h-8 px-2.5 text-xs gap-1"
+            >
+              Next <ChevronRight className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Assign Lead Dialog */}
       <AssignLeadDialog
