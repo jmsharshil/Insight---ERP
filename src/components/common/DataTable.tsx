@@ -172,12 +172,31 @@ export default function DataTable<T extends Record<string, any>>({
 
           {(serverPagination ? (totalCount || 0) > pageSize : filtered.length > pageSize) && (
             <div className="flex items-center justify-between text-sm text-muted-foreground mt-3">
-              <span>Page {page} of {totalPages} · {serverPagination ? totalCount : filtered.length} records</span>
-              <div className="flex gap-1">
-                <Button variant="outline" size="sm" disabled={page === 1} onClick={() => handlePageChange(page - 1)}>
+              <span>
+                Page {page} of {totalPages} · {serverPagination ? (query ? `${filtered.length} matching on page ${page} (${totalCount} total)` : `${totalCount} records`) : `${filtered.length} records`}
+              </span>
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => handlePageChange(page - 1)} className="h-8 w-8 p-0">
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
-                <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => handlePageChange(page + 1)}>
+                {(() => {
+                  const pages: number[] = [];
+                  const start = Math.max(1, page - 2);
+                  const end = Math.min(totalPages, page + 2);
+                  for (let i = start; i <= end; i++) pages.push(i);
+                  return pages.map((p) => (
+                    <Button
+                      key={p}
+                      variant={p === page ? "default" : "outline"}
+                      size="sm"
+                      className="h-8 w-8 p-0 text-xs font-medium"
+                      onClick={() => handlePageChange(p)}
+                    >
+                      {p}
+                    </Button>
+                  ));
+                })()}
+                <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => handlePageChange(page + 1)} className="h-8 w-8 p-0">
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>

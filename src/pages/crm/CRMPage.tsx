@@ -32,6 +32,7 @@ import {
   setCRMError,
   setLeads,
   setLeadsLoading,
+  setLeadsPagination,
   type CRMAnalytics,
   type APILead,
 } from "@/redux/slices/crmSlice";
@@ -97,7 +98,9 @@ export default function CRMPage() {
   const { user } = useAuth();
   const toast = useToast();
   const dispatch = useDispatch<AppDispatch>();
-  const { analytics, leads, leadsLoading } = useSelector((state: RootState) => state.crm);
+  const { analytics, leads, leadsLoading, count, pageSize, currentPage } = useSelector(
+    (state: RootState) => state.crm
+  );
 
   const canReviewTransfers = ["super_admin", "branch_manager", "sales_senior_executive"].includes(
     user?.role || ""
@@ -126,7 +129,7 @@ export default function CRMPage() {
   }, [setPageTitle]);
 
   /* ─── Fetch analytics ──────────────────────────────────────── */
-  useEffect(() => {
+  const fetchAnalytics = useCallback(() => {
     const endPoint =
       user && user.role === "branch_manager" && user.branch
         ? `${API.REPORTS.LEADS}${API.REPORTS.LEADS.includes("?") ? "&" : "?"}branch_id=${user.branch}`
@@ -146,32 +149,52 @@ export default function CRMPage() {
         toast.error("Failed to load CRM analytics");
       },
     });
-  }, [dispatch, toast]);
-
-  /* ─── Fetch leads list ─────────────────────────────────────── */
-  const fetchLeads = useCallback(() => {
-    const endPoint =
-      user && user.role === "branch_manager" && user.branch
-        ? `${API.LEADS.LIST}${API.LEADS.LIST.includes("?") ? "&" : "?"}branch_id=${user.branch}`
-        : API.LEADS.LIST;
-
-    dispatch({
-      type: leadActions.GET_LEADS,
-      method: "GET",
-      endPoint: endPoint,
-      auth: true,
-      setLoading: (val: boolean) => dispatch(setLeadsLoading(val)),
-      getResponse: (res: any) => {
-        if (res.data) dispatch(setLeads(res.data));
-      },
-      getError: (err: any) => {
-        toast.error("Failed to load leads");
-      },
-    });
-  }, [dispatch, toast]);
+  }, [dispatch, toast, user]);
 
   useEffect(() => {
-    fetchLeads();
+    fetchAnalytics();
+  }, [fetchAnalytics]);
+
+  /* ─── Fetch leads list ─────────────────────────────────────── */
+  const fetchLeads = useCallback(
+    (page: number = 1) => {
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      if (user && user.role === "branch_manager" && user.branch) {
+        params.set("branch_id", user.branch);
+      }
+
+      const endPoint = `${API.LEADS.LIST}?${params.toString()}`;
+
+      dispatch({
+        type: leadActions.GET_LEADS,
+        method: "GET",
+        endPoint: endPoint,
+        auth: true,
+        setLoading: (val: boolean) => dispatch(setLeadsLoading(val)),
+        getResponse: (res: any) => {
+          const leadsData = Array.isArray(res) ? res : (res?.data ?? res?.results ?? []);
+          dispatch(setLeads(leadsData));
+          dispatch(
+            setLeadsPagination({
+              count: res?.count ?? leadsData.length,
+              pageSize: res?.page_size ?? 50,
+              next: res?.next ?? null,
+              previous: res?.previous ?? null,
+              currentPage: page,
+            })
+          );
+        },
+        getError: (err: any) => {
+          toast.error("Failed to load leads");
+        },
+      });
+    },
+    [dispatch, toast, user],
+  );
+
+  useEffect(() => {
+    fetchLeads(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -216,19 +239,19 @@ export default function CRMPage() {
         lost: analytics.lost,
       };
     }
-    const count = (stage: string) => filteredLeads.filter((l) => l.current_stage === stage).length;
+    const countByStage = (stage: string) => filteredLeads.filter((l) => l.current_stage === stage).length;
     return {
-      total: filteredLeads.length,
-      new: count("new"),
-      contacted: count("contacted"),
-      interested: count("interested"),
-      visit: count("visit"),
-      visited: count("visited"),
-      follow_up: count("follow_up"),
-      converted: count("converted"),
-      lost: count("lost"),
+      total: count || filteredLeads.length,
+      new: countByStage("new"),
+      contacted: countByStage("contacted"),
+      interested: countByStage("interested"),
+      visit: countByStage("visit"),
+      visited: countByStage("visited"),
+      follow_up: countByStage("follow_up"),
+      converted: countByStage("converted"),
+      lost: countByStage("lost"),
     };
-  }, [analytics, leads]);
+  }, [analytics, filteredLeads, count]);
 
   /* ─── Drag & Drop handler ──────────────────────────────────── */
   const onDragEnd = useCallback((result: DropResult) => {
@@ -281,6 +304,9 @@ export default function CRMPage() {
       endPoint: API.LEADS.STATUS(leadId),
       auth: true,
       body,
+      getResponse: () => {
+        fetchAnalytics();
+      },
       getError: () => {
         toast.error("Failed to update lead status");
         dispatch(setLeads(leads));
@@ -291,7 +317,7 @@ export default function CRMPage() {
     setMoveNote("");
     setFollowUpDate("");
     setVisitDate("");
-  }, [pendingMove, moveNote, followUpDate, visitDate, leads, dispatch, toast]);
+  }, [pendingMove, moveNote, followUpDate, visitDate, leads, dispatch, toast, fetchAnalytics]);
 
   const pendingLead = pendingMove ? leads.find((l) => String(l.id) === pendingMove.leadId) : null;
   const pendingTitle =
@@ -344,7 +370,15 @@ export default function CRMPage() {
               <UserPlus className="w-4 h-4" />
               Inquiry Form
             </Button>
-            <Button onClick={fetchLeads} variant="outline" disabled={leadsLoading} className="gap-2">
+            <Button
+              onClick={() => {
+                fetchAnalytics();
+                fetchLeads(currentPage);
+              }}
+              variant="outline"
+              disabled={leadsLoading}
+              className="gap-2"
+            >
               {leadsLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
@@ -415,7 +449,7 @@ export default function CRMPage() {
 
         {/* Table View */}
         <TabsContent value="table">
-          {leadsLoading ? (
+          {leadsLoading && leads.length === 0 ? (
             <TableSkeleton rows={10} columns={8} className="mt-3" />
           ) : (
             <LeadsTable
@@ -427,7 +461,15 @@ export default function CRMPage() {
               onChangeStage={(lead, stage) => {
                 setPendingMove({ leadId: String(lead.id), stage });
               }}
-              onAssignSuccess={() => fetchLeads()}
+              onAssignSuccess={() => {
+                fetchLeads(currentPage);
+                fetchAnalytics();
+              }}
+              currentPage={currentPage}
+              totalCount={count}
+              pageSize={pageSize}
+              onPageChange={(p) => fetchLeads(p)}
+              loading={leadsLoading}
             />
           )}
         </TabsContent>
@@ -443,7 +485,15 @@ export default function CRMPage() {
               setSelectedLead(lead);
               fetchLeadDetails(lead);
             }}
-            onAssignSuccess={() => fetchLeads()}
+            onAssignSuccess={() => {
+              fetchLeads(currentPage);
+              fetchAnalytics();
+            }}
+            currentPage={currentPage}
+            totalCount={count}
+            pageSize={pageSize}
+            onPageChange={(p) => fetchLeads(p)}
+            stageTotals={stats}
           />
         </TabsContent>
 
@@ -482,7 +532,8 @@ export default function CRMPage() {
         open={isEditLeadOpen}
         onOpenChange={setIsEditLeadOpen}
         onSuccess={() => {
-          fetchLeads();
+          fetchLeads(currentPage);
+          fetchAnalytics();
           if (selectedLead) {
             fetchLeadDetails(selectedLead);
           }

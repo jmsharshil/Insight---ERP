@@ -21,6 +21,9 @@ export interface FeesStructure {
   institute_fees_module_5?: string | number;
   group_module?: string;
   attempt?: string;
+  attempt_display?: string;
+  batch?: string | null;
+  batch_name?: string | null;
   year?: string;
   is_active: boolean;
   created_at: string;
