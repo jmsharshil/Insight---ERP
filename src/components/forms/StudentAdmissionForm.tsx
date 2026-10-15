@@ -22,6 +22,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   CheckCircle2,
   GraduationCap,
   MapPin,
@@ -46,6 +54,9 @@ import {
   BadgeCheck,
   AlertCircle,
   Info,
+  ExternalLink,
+  FileEdit,
+  Search,
 } from "lucide-react";
 
 import { THEME } from "@/config/theme";
@@ -124,12 +135,14 @@ function FileUploadField({
   icon: Icon,
   file,
   onFileChange,
+  existingUrl,
   required = false,
 }: {
   label: string;
   icon: React.ElementType;
   file: File | null;
   onFileChange: (file: File | null) => void;
+  existingUrl?: string | null;
   required?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -141,7 +154,7 @@ function FileUploadField({
       </Label>
       <div
         className="relative rounded-xl border-2 border-dashed p-4 text-center transition-all duration-200 cursor-pointer hover:border-amber-400 hover:bg-amber-50/30"
-        style={{ borderColor: file ? T.success : T.border }}
+        style={{ borderColor: file ? T.success : existingUrl ? T.primary : T.border }}
         onClick={() => inputRef.current?.click()}
       >
         <input
@@ -168,7 +181,7 @@ function FileUploadField({
                 {file.name}
               </p>
               <p className="text-xs" style={{ color: T.textMuted }}>
-                {(file.size / 1024).toFixed(1)} KB
+                {(file.size / 1024).toFixed(1)} KB (New file)
               </p>
             </div>
             <button
@@ -182,6 +195,32 @@ function FileUploadField({
             >
               <X className="w-4 h-4" style={{ color: T.error }} />
             </button>
+          </div>
+        ) : existingUrl ? (
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-lg flex items-center justify-center"
+              style={{ background: `${T.primary}15` }}
+            >
+              <CheckCircle2 className="w-5 h-5" style={{ color: T.primaryDark }} />
+            </div>
+            <div className="flex-1 text-left min-w-0">
+              <p className="text-xs font-semibold text-emerald-600">
+                Uploaded Document on File
+              </p>
+              <a
+                href={existingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 mt-0.5 truncate max-w-[200px]"
+              >
+                <ExternalLink className="w-3 h-3" /> View Document
+              </a>
+            </div>
+            <span className="text-[11px] font-medium text-amber-800 bg-amber-100/70 px-2 py-1 rounded-md">
+              Click to replace
+            </span>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 py-2">
@@ -207,7 +246,7 @@ function FileUploadField({
 export default function StudentAdmissionForm() {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const admissionId = searchParams.get("id") || searchParams.get("admission_id") || "";
 
   const [savedAdmissionId, setSavedAdmissionId] = useState<string | null>(admissionId || null);
@@ -216,6 +255,11 @@ export default function StudentAdmissionForm() {
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
+  // Resume Incomplete Admission Form state
+  const [isResumeModalOpen, setIsResumeModalOpen] = useState(false);
+  const [inputAppId, setInputAppId] = useState(admissionId || "");
+  const [loadingExisting, setLoadingExisting] = useState(false);
+  const [existingDocs, setExistingDocs] = useState<Record<string, string | null>>({});
 
   // Fetch locations dropdown
   const {
@@ -227,6 +271,117 @@ export default function StudentAdmissionForm() {
   useEffect(() => {
     fetchLocations();
   }, [fetchLocations]);
+
+  /* ─── Fetch Admission by Application ID ────────────────────── */
+  const loadAdmissionById = (idToLoad: string, showToast = true) => {
+    const trimmedId = idToLoad.trim();
+    if (!trimmedId) {
+      toast.error("Please enter a valid Application ID.");
+      return;
+    }
+
+    setLoadingExisting(true);
+    dispatch({
+      type: admissionActions.GET_ADMISSION_DETAIL,
+      method: "GET",
+      endPoint: API.ADMISSIONS.GET(trimmedId),
+      auth: false,
+      setLoading: (val: boolean) => setLoadingExisting(val),
+      getResponse: (res: any) => {
+        const data = res?.data?.data || res?.data || res;
+        if (!data || (!data.id && !data.first_name && !data.email)) {
+          toast.error(`No admission record found for Application ID #${trimmedId}`);
+          return;
+        }
+
+        const validId = String(data.id || trimmedId);
+        setSavedAdmissionId(validId);
+        setSearchParams({ id: validId });
+
+        // Populate form data
+        setFormData((prev) => ({
+          ...prev,
+          form_type: data.form_type || prev.form_type,
+          course: data.course || prev.course,
+          group_module: data.group_module || prev.group_module,
+          batch_attempt: data.batch_attempt || prev.batch_attempt,
+          attempt_year: data.attempt_year ? String(data.attempt_year) : prev.attempt_year,
+          payment_type: data.payment_type || prev.payment_type,
+          icsi_fees_payment: data.icsi_fees_payment || prev.icsi_fees_payment,
+          fee_structure: data.fee_structure
+            ? typeof data.fee_structure === "object"
+              ? String(data.fee_structure.id || "")
+              : String(data.fee_structure)
+            : prev.fee_structure,
+          first_name: data.first_name || "",
+          surname: data.surname || "",
+          father_name: data.father_name || "",
+          mother_name: data.mother_name || "",
+          street: data.street || "",
+          city: data.city || "",
+          state: data.state || "",
+          pincode: data.pincode || "",
+          country: data.country || "India",
+          dob: data.dob ? data.dob.split("T")[0] : "",
+          category: data.category ? data.category.toLowerCase() : "gen",
+          phone_student: data.phone_student || "",
+          phone_father: data.phone_father || "",
+          email: data.email || "",
+          email_parent: data.email_parent || "",
+          qualification: data.qualification || prev.qualification,
+          tenth_medium: data.tenth_medium || prev.tenth_medium,
+          tenth_school: data.tenth_school || "",
+          tenth_percentage: data.tenth_percentage != null ? String(data.tenth_percentage) : "",
+          tenth_percentile: data.tenth_percentile != null ? String(data.tenth_percentile) : "",
+          twelfth_medium: data.twelfth_medium || prev.twelfth_medium,
+          twelfth_school: data.twelfth_school || "",
+          tenth_coaching: data.tenth_coaching || "",
+          twelfth_coaching: data.twelfth_coaching || "",
+          twelfth_percentage: data.twelfth_percentage != null ? String(data.twelfth_percentage) : "",
+          twelfth_percentile: data.twelfth_percentile != null ? String(data.twelfth_percentile) : "",
+          reference: data.reference || prev.reference,
+          reference_name: data.reference_name || "",
+          inquiry_date: data.inquiry_date ? data.inquiry_date.split("T")[0] : prev.inquiry_date,
+          location: data.location || (data.branch?.name || ""),
+          consent: data.consent !== undefined ? Boolean(data.consent) : true,
+        }));
+
+        // Populate existing documents if available
+        setExistingDocs({
+          doc_signature: data.doc_signature || null,
+          doc_photo: data.doc_photo || null,
+          doc_id_card: data.doc_id_card || null,
+          doc_pan_card: data.doc_pan_card || null,
+          doc_dob_certificate: data.doc_dob_certificate || null,
+          doc_twelfth_receipt: data.doc_twelfth_receipt || null,
+          doc_twelfth_marksheet: data.doc_twelfth_marksheet || null,
+          doc_category_cert: data.doc_category_cert || null,
+        });
+
+        setIsResumeModalOpen(false);
+
+        if (showToast) {
+          toast.success(`Application #${validId} loaded successfully!`);
+        }
+      },
+      getError: (err: any) => {
+        const msg =
+          err?.response?.data?.message ||
+          err?.response?.data?.detail ||
+          err?.message ||
+          `Failed to find Application #${trimmedId}. Please check the ID.`;
+        toast.error(msg);
+      },
+    });
+  };
+
+  // If application ID is in URL on mount, auto-load it
+  useEffect(() => {
+    if (admissionId) {
+      loadAdmissionById(admissionId, false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ─── Document state ──────────────────────────────────────── */
   const [docSignature, setDocSignature] = useState<File | null>(null);
@@ -302,10 +457,15 @@ export default function StudentAdmissionForm() {
   };
 
   useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
-      group_module: prev.course === "cseet" ? "full" : "module_1",
-    }));
+    setFormData((prev) => {
+      if (prev.course === "cseet") {
+        return prev.group_module === "full" ? prev : { ...prev, group_module: "full" };
+      }
+      if (prev.group_module === "full") {
+        return { ...prev, group_module: "module_1" };
+      }
+      return prev;
+    });
   }, [formData.course]);
 
   /* ─── Auto-set Course based on Qualification ───────────────── */
@@ -795,11 +955,11 @@ export default function StudentAdmissionForm() {
     >
       <div className="max-w-4xl mx-auto">
         {/* ── Header ── */}
-        <div className="text-center mb-8 sm:mb-10">
+        <div className="text-center mb-6 sm:mb-8">
           <img
             src={logo}
             alt="Insight ERP"
-            className="h-16 sm:h-20 object-contain mx-auto mb-5 sm:mb-6"
+            className="h-16 sm:h-20 object-contain mx-auto mb-4 sm:mb-5"
           />
           <h1
             className="text-2xl sm:text-3xl font-bold tracking-tight"
@@ -810,51 +970,156 @@ export default function StudentAdmissionForm() {
           <p className="mt-2 text-sm sm:text-base max-w-md mx-auto" style={{ color: T.textMuted }}>
             Complete the registration form below to confirm your admission
           </p>
-          {(savedAdmissionId || admissionId) && (
-            <div
-              className="inline-flex items-center gap-2 mt-3 px-4 py-1.5 rounded-full text-xs font-semibold"
-              style={{ background: `${T.primary}15`, color: T.primaryDark }}
+
+          {/* ── Incomplete Admission Form Banner / Trigger ── */}
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                setInputAppId(savedAdmissionId || "");
+                setIsResumeModalOpen(true);
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 shadow-sm hover:shadow cursor-pointer"
             >
-              <ClipboardList className="w-3.5 h-3.5" />
-              Application ID: #{savedAdmissionId || admissionId}
-            </div>
-          )}
+              <FileEdit className="w-4 h-4 text-amber-600" />
+              <span>Incomplete admission form? <strong>Enter Application ID</strong></span>
+            </button>
+
+            {(savedAdmissionId || admissionId) && (
+              <div
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200"
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>Application ID: <strong>#{savedAdmissionId || admissionId}</strong></span>
+              </div>
+            )}
+          </div>
         </div>
 
-                {/* ── Stepper ── */}
+        {/* ── Resume Incomplete Admission Form Modal ── */}
+        <Dialog open={isResumeModalOpen} onOpenChange={setIsResumeModalOpen}>
+          <DialogContent className="sm:max-w-md bg-white">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base sm:text-lg font-bold" style={{ color: T.navy, fontFamily: T.headingFont }}>
+                <ClipboardList className="w-5 h-5 text-amber-600" />
+                Resume Incomplete Admission Form
+              </DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm text-gray-600 pt-1">
+                Enter your <strong>Application ID</strong> below to retrieve your previously saved details and continue your admission form.
+              </DialogDescription>
+            </DialogHeader>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                loadAdmissionById(inputAppId);
+              }}
+              className="space-y-4 py-2"
+            >
+              <div className="space-y-1.5">
+                <Label htmlFor="resume_application_id" className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  Application ID <span style={{ color: T.error }}>*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="resume_application_id"
+                    type="text"
+                    required
+                    placeholder="e.g. 1042"
+                    value={inputAppId}
+                    onChange={(e) => setInputAppId(e.target.value)}
+                    disabled={loadingExisting}
+                    className="h-11 pl-9 text-sm font-semibold"
+                    autoFocus
+                  />
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3.5 pointer-events-none" />
+                </div>
+                <p className="text-[11px] text-gray-500">
+                  Tip: Your Application ID is assigned after completing Step 1.
+                </p>
+              </div>
+
+              <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={loadingExisting}
+                  onClick={() => setIsResumeModalOpen(false)}
+                  className="h-10 px-4 text-xs font-semibold"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={loadingExisting || !inputAppId.trim()}
+                  className="h-10 px-5 text-xs font-semibold text-black"
+                  style={{ background: T.primary }}
+                >
+                  {loadingExisting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Loading Application...
+                    </>
+                  ) : (
+                    "Load Application"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* ── Stepper ── */}
         <div className="flex items-center justify-center mb-8">
           <div className="flex items-center space-x-2 sm:space-x-4">
             {[
               { num: 1, label: "Personal Info" },
               { num: 2, label: "Course Info" },
               { num: 3, label: "Documents" },
-            ].map((step, idx) => (
-              <React.Fragment key={step.num}>
-                <div className="flex flex-col items-center">
+            ].map((step, idx) => {
+              const isClickable = Boolean(savedAdmissionId) || step.num <= currentStep;
+              return (
+                <React.Fragment key={step.num}>
                   <div
-                    className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-sm sm:text-base transition-colors duration-300 ${
-                      currentStep >= step.num
-                        ? 'bg-amber-500 text-white shadow-md'
-                        : 'bg-gray-200 !text-white !important'
-                    }`}
-                    style={{ background: currentStep >= step.num ? T.primary : T.grayLight, color: currentStep >= step.num ? T.black : T.textMuted }}
+                    className={`flex flex-col items-center ${isClickable ? "cursor-pointer" : "cursor-default"}`}
+                    onClick={() => {
+                      if (isClickable) {
+                        setCurrentStep(step.num);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }
+                    }}
                   >
-                    {step.num}
+                    <div
+                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-sm sm:text-base transition-colors duration-300 ${
+                        currentStep >= step.num
+                          ? 'bg-amber-500 text-white shadow-md'
+                          : 'bg-gray-200 !text-white !important'
+                      }`}
+                      style={{
+                        background: currentStep >= step.num ? T.primary : T.grayLight,
+                        color: currentStep >= step.num ? T.black : T.textMuted,
+                      }}
+                    >
+                      {step.num}
+                    </div>
+                    <span
+                      className="text-xs sm:text-sm mt-1.5 font-medium hidden sm:block"
+                      style={{ color: currentStep >= step.num ? T.black : T.textMuted }}
+                    >
+                      {step.label}
+                    </span>
                   </div>
-                  <span className="text-xs sm:text-sm mt-1.5 font-medium hidden sm:block" style={{ color: currentStep >= step.num ? T.black : T.textMuted }}>
-                    {step.label}
-                  </span>
-                </div>
-                {idx < 2 && (
-                  <div
-                    className={`w-8 sm:w-16 h-1 rounded-full transition-colors duration-300 mb-5 sm:mb-6 ${
-                      currentStep > step.num ? 'bg-amber-500' : 'bg-gray-200'
-                    }`}
-                    style={{ background: currentStep > step.num ? T.primary : T.grayLight }}
-                  />
-                )}
-              </React.Fragment>
-            ))}
+                  {idx < 2 && (
+                    <div
+                      className={`w-8 sm:w-16 h-1 rounded-full transition-colors duration-300 mb-5 sm:mb-6 ${
+                        currentStep > step.num ? 'bg-amber-500' : 'bg-gray-200'
+                      }`}
+                      style={{ background: currentStep > step.num ? T.primary : T.grayLight }}
+                    />
+                  )}
+                </React.Fragment>
+              );
+            })}
           </div>
         </div>
 
@@ -1770,6 +2035,7 @@ export default function StudentAdmissionForm() {
                 icon={PenTool}
                 file={docSignature}
                 onFileChange={setDocSignature}
+                existingUrl={existingDocs.doc_signature}
                 // required
               />
               <FileUploadField
@@ -1777,6 +2043,7 @@ export default function StudentAdmissionForm() {
                 icon={Camera}
                 file={docPhoto}
                 onFileChange={setDocPhoto}
+                existingUrl={existingDocs.doc_photo}
                 // required
               />
               <FileUploadField
@@ -1784,6 +2051,7 @@ export default function StudentAdmissionForm() {
                 icon={CreditCard}
                 file={docIdCard}
                 onFileChange={setDocIdCard}
+                existingUrl={existingDocs.doc_id_card}
                 // required
               />
               <FileUploadField
@@ -1791,6 +2059,7 @@ export default function StudentAdmissionForm() {
                 icon={CreditCard}
                 file={docPanCard}
                 onFileChange={setDocPanCard}
+                existingUrl={existingDocs.doc_pan_card}
                 // required
               />
               <FileUploadField
@@ -1798,6 +2067,7 @@ export default function StudentAdmissionForm() {
                 icon={Baby}
                 file={docDobCertificate}
                 onFileChange={setDocDobCertificate}
+                existingUrl={existingDocs.doc_dob_certificate}
                 // required
               />
               <FileUploadField
@@ -1805,6 +2075,7 @@ export default function StudentAdmissionForm() {
                 icon={FileCheck}
                 file={doc12thReceipt}
                 onFileChange={setDoc12thReceipt}
+                existingUrl={existingDocs.doc_twelfth_receipt}
                 // required
               />
               <FileUploadField
@@ -1812,6 +2083,7 @@ export default function StudentAdmissionForm() {
                 icon={GraduationCap}
                 file={doc12thMarkSheet}
                 onFileChange={setDoc12thMarkSheet}
+                existingUrl={existingDocs.doc_twelfth_marksheet}
                 // required
               />
               <FileUploadField
@@ -1819,6 +2091,7 @@ export default function StudentAdmissionForm() {
                 icon={BadgeCheck}
                 file={docCategoryCertificate}
                 onFileChange={setDocCategoryCertificate}
+                existingUrl={existingDocs.doc_category_cert}
                 // required
               />
             </div>

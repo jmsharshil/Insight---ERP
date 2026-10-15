@@ -111,6 +111,40 @@ export const API = {
     },
   },
 
+  /** Syllabus & Module endpoints */
+  SYLLABUSES: {
+    DETAIL: (syllabusId: string | number) => `/api/v1/syllabuses/${syllabusId}/`,
+    MODULES: {
+      LIST: (syllabusId: string | number) => `/api/v1/syllabuses/${syllabusId}/modules/`,
+      CREATE: (syllabusId: string | number) => `/api/v1/syllabuses/${syllabusId}/modules/`,
+      DETAIL: (syllabusId: string | number, moduleId: string | number) =>
+        `/api/v1/syllabuses/${syllabusId}/modules/${moduleId}/`,
+      UPDATE: (syllabusId: string | number, moduleId: string | number) =>
+        `/api/v1/syllabuses/${syllabusId}/modules/${moduleId}/`,
+      DELETE: (syllabusId: string | number, moduleId: string | number) =>
+        `/api/v1/syllabuses/${syllabusId}/modules/${moduleId}/`,
+      CHAPTERS: {
+        LIST: (syllabusId: string | number, moduleId: string | number) =>
+          `/api/v1/syllabuses/${syllabusId}/modules/${moduleId}/chapters/`,
+        CREATE: (syllabusId: string | number, moduleId: string | number) =>
+          `/api/v1/syllabuses/${syllabusId}/modules/${moduleId}/chapters/`,
+        UPDATE: (syllabusId: string | number, moduleId: string | number, chapterId: string | number) =>
+          `/api/v1/syllabuses/${syllabusId}/modules/${moduleId}/chapters/${chapterId}/`,
+        DELETE: (syllabusId: string | number, moduleId: string | number, chapterId: string | number) =>
+          `/api/v1/syllabuses/${syllabusId}/modules/${moduleId}/chapters/${chapterId}/`,
+      },
+    },
+    CHAPTERS: {
+      LIST: (syllabusId: string | number, params?: string) =>
+        `/api/v1/syllabuses/${syllabusId}/chapters/${params ? `?${params}` : ""}`,
+      CREATE: (syllabusId: string | number) => `/api/v1/syllabuses/${syllabusId}/chapters/`,
+      UPDATE: (syllabusId: string | number, chapterId: string | number) =>
+        `/api/v1/syllabuses/${syllabusId}/chapters/${chapterId}/`,
+      DELETE: (syllabusId: string | number, chapterId: string | number) =>
+        `/api/v1/syllabuses/${syllabusId}/chapters/${chapterId}/`,
+    },
+  },
+
   /** Batches endpoints */
 BATCHES: {
     LIST: "/api/v1/batches/",
