@@ -36,6 +36,7 @@ import {
   Pencil,
   Save,
   XCircle,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -377,6 +378,24 @@ export default function StudentAdmissionDetailedPage() {
             >
               {admission.status_display || admission.status.replace(/_/g, " ")}
             </Badge>
+            {admission.payment_type && (
+              <Badge
+                variant="outline"
+                className={
+                  admission.payment_type === "token"
+                    ? "border-amber-400 bg-amber-50 text-amber-800"
+                    : admission.payment_type === "full_payment"
+                      ? "border-emerald-400 bg-emerald-50 text-emerald-800"
+                      : "border-blue-400 bg-blue-50 text-blue-800"
+                }
+              >
+                {admission.payment_type === "token"
+                  ? "Token Plan"
+                  : admission.payment_type === "full_payment"
+                    ? "Full Payment"
+                    : "Finance"}
+              </Badge>
+            )}
           </div>
           <p className="text-muted-foreground font-medium">
             <span className="capitalize">{admission.course?.replace(/_/g, " ")}</span> (
@@ -719,48 +738,156 @@ export default function StudentAdmissionDetailedPage() {
 
         <TabsContent value="payment" className="space-y-6">
           <div className="grid md:grid-cols-2 gap-6">
-            <Card title="Payment Status">
+            <Card title="Payment Plan & Status">
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   {admission.status === "payment_submitted" || admission.status === "active" ? (
-                    <CheckCircle2 className="w-8 h-8 text-green-500" />
+                    <CheckCircle2 className="w-8 h-8 text-green-500 shrink-0" />
+                  ) : admission.status === "approval_pending" ? (
+                    <BadgeCheck className="w-8 h-8 text-blue-500 shrink-0" />
                   ) : (
-                    <AlertCircle className="w-8 h-8 text-amber-500" />
+                    <AlertCircle className="w-8 h-8 text-amber-500 shrink-0" />
                   )}
                   <div>
                     <p className="font-medium text-lg capitalize">
-                      {admission.status.replace(/_/g, " ")}
+                      {admission.status_display || admission.status.replace(/_/g, " ")}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {admission.status === "payment_pending"
-                        ? "Waiting for student to upload payment details."
-                        : "Payment details submitted."}
+                        ? "Waiting for student to complete payment."
+                        : admission.status === "approval_pending"
+                          ? "Payment verified. Approval pending."
+                          : "Payment details confirmed."}
                     </p>
                   </div>
                 </div>
 
+                <div className="pt-2 border-t border-border/40 space-y-1">
+                  <Row
+                    icon={<CreditCard className="w-4 h-4" />}
+                    label="Payment Type"
+                    value={
+                      <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                        <Badge
+                          variant="outline"
+                          className={
+                            admission.payment_type === "token"
+                              ? "border-amber-400 bg-amber-50 text-amber-800"
+                              : admission.payment_type === "full_payment"
+                                ? "border-emerald-400 bg-emerald-50 text-emerald-800"
+                                : "border-blue-400 bg-blue-50 text-blue-800"
+                          }
+                        >
+                          {admission.payment_type === "token"
+                            ? "Token Payment"
+                            : admission.payment_type === "full_payment"
+                              ? "Full Payment"
+                              : admission.payment_type === "finance"
+                                ? "Finance Assistance"
+                                : admission.payment_type || "Standard"}
+                        </Badge>
+                        {admission.payment_type === "token" && admission.payment_mode && (
+                          <Badge variant="secondary" className="text-[10px] uppercase font-mono">
+                            {admission.payment_mode}
+                          </Badge>
+                        )}
+                      </div>
+                    }
+                  />
+
+                  {admission.fee_structure && (
+                    <Row
+                      icon={<GraduationCap className="w-4 h-4" />}
+                      label="Fee Structure"
+                      value={
+                        typeof admission.fee_structure === "object"
+                          ? admission.fee_structure.name || `#${admission.fee_structure.id}`
+                          : `Structure #${admission.fee_structure}`
+                      }
+                    />
+                  )}
+
+                  {admission.remaining_fees !== undefined && admission.remaining_fees !== null && (
+                    <Row
+                      label="Remaining Fees"
+                      value={
+                        <span className="font-bold text-amber-700 dark:text-amber-400 text-sm">
+                          {formatCurrency(Number(admission.remaining_fees))}
+                        </span>
+                      }
+                    />
+                  )}
+                </div>
+
+                {/* Token Payment 15-Day Policy Notice */}
+                {(admission.payment_type === "token" || Number(admission.remaining_fees || 0) > 0) && (
+                  <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-3.5 space-y-1 text-amber-900 dark:text-amber-200">
+                    <div className="flex items-center gap-2 font-semibold text-xs sm:text-sm">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>Important Notice Regarding Remaining Fees</span>
+                    </div>
+                    <p className="text-xs sm:text-sm leading-relaxed text-amber-800 dark:text-amber-300">
+                      {admission.token_payment_terms_note ||
+                        `In 15 days you have to pay remaining fees (${formatCurrency(Number(admission.remaining_fees || 0))}) otherwise it will be considered as Finance.`}
+                    </p>
+                  </div>
+                )}
+
+                {/* Razorpay Short URL Link if present */}
+                {admission.razorpay_payment_link && (
+                  <div className="bg-muted/40 p-3 rounded-lg border border-border/50 text-xs space-y-1">
+                    <span className="text-muted-foreground font-medium block">Razorpay Payment Link:</span>
+                    <a
+                      href={admission.razorpay_payment_link}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-primary-dark font-mono underline break-all flex items-center gap-1"
+                    >
+                      {admission.razorpay_payment_link} <ExternalLink className="w-3 h-3 shrink-0" />
+                    </a>
+                  </div>
+                )}
+
                 {admission.status === "payment_pending" && (
-                  <div className="bg-blue-50 text-blue-800 p-3 rounded text-sm mt-4">
-                    The student has been sent a link to upload their payment details.
+                  <div className="bg-blue-50 text-blue-800 p-3 rounded-lg text-xs leading-relaxed border border-blue-200">
+                    Offline bank transfer upload link for student:
                     <br />
-                    Link: <code>/insight/student/payment-upload?id={admission.id}</code>
+                    <code>/insight/student/payment-upload?id={admission.id}</code>
                   </div>
                 )}
               </div>
             </Card>
 
-            {(admission.payment_screenshot ||
-              admission.transaction_id ||
-              admission.payment_amount) && (
-              <Card title="Payment Details">
+            <Card title="Payment & Transaction Details">
+              <div className="space-y-1">
                 <Row
                   label="Transaction ID"
                   value={
-                    <span className="font-mono bg-muted px-1 py-0.5 rounded text-xs">
-                      {admission.transaction_id || "N/A"}
+                    <span className="font-mono bg-muted px-2 py-0.5 rounded text-xs">
+                      {admission.transaction_id || "None / Pending"}
                     </span>
                   }
                 />
+                {admission.payment_mode && (
+                  <Row
+                    label="Payment Mode"
+                    value={
+                      <span className="capitalize font-semibold text-foreground">
+                        {admission.payment_mode.replace(/_/g, " ")}
+                      </span>
+                    }
+                  />
+                )}
+                {admission.cheque_no && (
+                  <Row
+                    label="Cheque Number"
+                    value={
+                      <span className="font-mono text-xs font-semibold text-foreground">
+                        {admission.cheque_no}
+                      </span>
+                    }
+                  />
+                )}
                 <Row
                   label="Submitted At"
                   value={
@@ -769,14 +896,28 @@ export default function StudentAdmissionDetailedPage() {
                       : "—"
                   }
                 />
-                {admission.payment_amount ? (
-                  <div className="flex flex-col sm:flex-row sm:items-center py-2 border-b border-border/40 last:border-0 gap-1 sm:gap-43">
-                    <span className="text-sm text-muted-foreground block mb-1">Amount Paid:</span>
-                    <span className="text-sm font-bold text-card-foreground">
-                      {formatCurrency(Number(admission.payment_amount))}
-                    </span>
-                  </div>
-                ) : null}
+                <Row
+                  label="Amount Paid"
+                  value={
+                    admission.payment_amount ? (
+                      <span className="text-sm font-bold text-foreground">
+                        {formatCurrency(Number(admission.payment_amount))}
+                      </span>
+                    ) : (
+                      "—"
+                    )
+                  }
+                />
+                {admission.remaining_fees !== undefined && admission.remaining_fees !== null && (
+                  <Row
+                    label="Remaining Balance"
+                    value={
+                      <span className="text-sm font-bold text-amber-600">
+                        {formatCurrency(Number(admission.remaining_fees))}
+                      </span>
+                    }
+                  />
+                )}
                 <div className="pt-2">
                   <span className="text-sm text-muted-foreground block mb-2">Screenshot:</span>
                   {admission.payment_screenshot ? (
@@ -788,17 +929,19 @@ export default function StudentAdmissionDetailedPage() {
                       />
                     </a>
                   ) : (
-                    <span className="text-sm">No screenshot provided.</span>
+                    <span className="text-xs text-muted-foreground">No screenshot uploaded.</span>
                   )}
                 </div>
                 {admission.payment_note && (
-                  <div className="pt-4">
-                    <span className="text-sm text-muted-foreground block mb-1">Student Note:</span>
-                    <p className="text-sm bg-muted/30 p-2 rounded-md">{admission.payment_note}</p>
+                  <div className="pt-3">
+                    <span className="text-xs text-muted-foreground block mb-1">Payment Note:</span>
+                    <p className="text-xs bg-muted/40 p-2.5 rounded-lg border border-border/40 whitespace-pre-wrap">
+                      {admission.payment_note}
+                    </p>
                   </div>
                 )}
-              </Card>
-            )}
+              </div>
+            </Card>
           </div>
         </TabsContent>
       </Tabs>

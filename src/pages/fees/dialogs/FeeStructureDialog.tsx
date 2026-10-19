@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useDispatch } from "react-redux";
-import { levelActions } from "@/redux/actions";
+import { levelActions, syllabusActions, moduleActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import { AppDispatch } from "@/store";
 import {
@@ -22,7 +22,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Plus, Minus } from "lucide-react";
 import { type FeesStructure } from "@/redux/slices/feesSlice";
+import { getAvailableYears } from "@/lib/utils";
 
 interface FeeStructureDialogProps {
   open: boolean;
@@ -45,6 +47,13 @@ export function FeeStructureDialog({
   const [name, setName] = useState("");
   const [course, setCourse] = useState("");
   const [level, setLevel] = useState("");
+  const [syllabus, setSyllabus] = useState("");
+  const [syllabuses, setSyllabuses] = useState<any[]>([]);
+  const [syllabusesLoading, setSyllabusesLoading] = useState(false);
+  const [syllabusModules, setSyllabusModules] = useState<any[]>([]);
+  const [modulesLoading, setModulesLoading] = useState(false);
+  const [manualModuleCount, setManualModuleCount] = useState(2);
+
   const [levelsByCourse, setLevelsByCourse] = useState<Record<string, any[]>>({});
   const [fetchingLevels, setFetchingLevels] = useState<Record<string, boolean>>({});
   const fetchedRef = useRef<Set<string>>(new Set());
@@ -52,46 +61,74 @@ export function FeeStructureDialog({
   const levels = course ? (levelsByCourse[course] || []) : [];
   const levelsLoading = course ? (fetchingLevels[course] && !levelsByCourse[course]) : false;
   const [totalAmount, setTotalAmount] = useState("");
+  const [tokenAmount, setTokenAmount] = useState("");
+  const [instituteFeesModule1, setInstituteFeesModule1] = useState("");
+  const [instituteFeesModule2, setInstituteFeesModule2] = useState("");
+  const [instituteFeesModule3, setInstituteFeesModule3] = useState("");
+  const [instituteFeesModule4, setInstituteFeesModule4] = useState("");
+  const [instituteFeesModule5, setInstituteFeesModule5] = useState("");
   const [icsiRegistrationFees, setIcsiRegistrationFees] = useState("");
   const [icsiExamFees, setIcsiExamFees] = useState("");
   const [icsiRegistrationFeesViaCseet, setIcsiRegistrationFeesViaCseet] = useState("");
   const [icsiRegistrationFeesDirect, setIcsiRegistrationFeesDirect] = useState("");
-  const [instituteFeesBothModules, setInstituteFeesBothModules] = useState("");
-  const [instituteFeesAllModules, setInstituteFeesAllModules] = useState("");
-  const [instituteFeesModule1, setInstituteFeesModule1] = useState("");
-  const [instituteFeesModule2, setInstituteFeesModule2] = useState("");
-  const [groupModule, setGroupModule] = useState("");
-  const [attempt, setAttempt] = useState("");
-  const [year, setYear] = useState(new Date().getFullYear().toString());
+  const [attempt, setAttempt] = useState("june");
+  const [year, setYear] = useState(() => getAvailableYears("other", "june")[0]);
   const [description, setDescription] = useState("");
   const [isActive, setIsActive] = useState(true);
 
-  const selectedLevelName = levels.find(l => l.id === level)?.name || structure?.level_name || "";
+  const selectedCourseObj = courses?.find(c => String(c.id) === String(course));
+  const selectedLevelName = levels.find(l => String(l.id) === String(level))?.name || structure?.level_name || "";
   const ln = selectedLevelName.toLowerCase();
-  const isCseet = ln === "cseet";
-  const isCsExecutive = ln === "cs executive" || ln === "cs_executive";
-  const isCsProfessional = ln === "cs professional" || ln === "cs_professional";
-  const isSpecialLevel = isCseet || isCsExecutive || isCsProfessional;
+  const cn = (selectedCourseObj?.name || structure?.course_name || "").toLowerCase();
+  const ct = (selectedCourseObj?.course_type || "").toLowerCase();
 
-  let attemptOptions = [
-    { value: "jan", label: "January" },
-    { value: "feb", label: "February" },
-    { value: "mar", label: "March" },
-    { value: "apr", label: "April" },
-    { value: "may", label: "May" },
-    { value: "june", label: "June" },
-    { value: "jul", label: "July" },
-    { value: "aug", label: "August" },
-    { value: "sep", label: "September" },
-    { value: "oct", label: "October" },
-    { value: "nov", label: "November" },
-    { value: "dec", label: "December" }
-  ];
-  if (isCseet) {
-    attemptOptions = attemptOptions.filter(o => ["feb", "june", "oct"].includes(o.value));
-  } else if (isCsExecutive || isCsProfessional) {
-    attemptOptions = attemptOptions.filter(o => ["june", "dec"].includes(o.value));
-  }
+  const isCseet = ln === "cseet" || ln.includes("cseet") || ct === "cseet" || cn === "cseet";
+  const isCsExecutive = ln === "cs executive" || ln === "cs_executive" || ln.includes("executive") || ct === "cs_executive" || cn.includes("executive");
+  const isCsProfessional = ln === "cs professional" || ln === "cs_professional" || ln.includes("professional") || ct === "cs_professional" || cn.includes("professional");
+  const isSpecialLevel = isCseet || isCsExecutive || isCsProfessional;
+  const hasModules = isCsExecutive || isCsProfessional || Boolean(Number(structure?.institute_fees_module_1 || 0) > 0 || Number(structure?.institute_fees_module_2 || 0) > 0) || (!isCseet && !!course);
+
+  const attemptOptions = isCseet
+    ? [
+        { value: "june", label: "June" },
+        { value: "oct", label: "October" },
+        { value: "feb", label: "February" }
+      ]
+    : [
+        { value: "june", label: "June" },
+        { value: "dec", label: "December" }
+      ];
+
+  const computedAvailableYears = useMemo(() => {
+    return getAvailableYears(isCseet ? "cseet" : "other", attempt || "june");
+  }, [isCseet, attempt]);
+
+  const availableYears = useMemo(() => {
+    if (structure?.year && !computedAvailableYears.includes(String(structure.year))) {
+      return [String(structure.year), ...computedAvailableYears];
+    }
+    return computedAvailableYears;
+  }, [computedAvailableYears, structure?.year]);
+
+  // Keep attempt valid based on course type
+  useEffect(() => {
+    if (isCseet) {
+      if (!["june", "oct", "feb"].includes(attempt)) {
+        setAttempt("june");
+      }
+    } else {
+      if (!["june", "dec"].includes(attempt)) {
+        setAttempt("june");
+      }
+    }
+  }, [isCseet, attempt]);
+
+  // Keep year valid based on availableYears
+  useEffect(() => {
+    if (!availableYears.includes(year)) {
+      setYear(availableYears[0]);
+    }
+  }, [availableYears, year]);
 
   // Pre-fetch levels for all courses to avoid loading delays when selecting a course
   useEffect(() => {
@@ -118,118 +155,286 @@ export function FeeStructureDialog({
     });
   }, [courses, dispatch]);
 
+  // Fetch syllabuses when course and level are selected
+  useEffect(() => {
+    if (course && level) {
+      setSyllabusesLoading(true);
+      dispatch({
+        type: syllabusActions.GET_SYLLABUSES,
+        method: "GET",
+        endPoint: API.COURSES.LEVELS.SYLLABUSES.LIST(course, level),
+        auth: true,
+        getResponse: (res: any) => {
+          let list: any[] = [];
+          if (Array.isArray(res?.data)) list = res.data;
+          else if (Array.isArray(res?.results)) list = res.results;
+          else if (Array.isArray(res)) list = res;
+          else if (res?.data?.syllabuses && Array.isArray(res.data.syllabuses)) list = res.data.syllabuses;
+          setSyllabuses(list);
+          setSyllabusesLoading(false);
+        },
+        getError: () => {
+          // Fallback to level detail which often includes syllabuses array
+          dispatch({
+            type: levelActions.GET_LEVEL_DETAILS,
+            method: "GET",
+            endPoint: API.COURSES.LEVELS.DETAIL(course, level),
+            auth: true,
+            getResponse: (lRes: any) => {
+              const lData = lRes?.data ?? lRes;
+              if (lData?.syllabuses && Array.isArray(lData.syllabuses)) {
+                setSyllabuses(lData.syllabuses);
+              } else {
+                setSyllabuses([]);
+              }
+              setSyllabusesLoading(false);
+            },
+            getError: () => {
+              setSyllabuses([]);
+              setSyllabusesLoading(false);
+            }
+          });
+        }
+      });
+    } else {
+      setSyllabuses([]);
+      setSyllabus("");
+      setSyllabusModules([]);
+    }
+  }, [course, level, dispatch]);
 
+  // Inspect syllabus modules when syllabus is selected
+  useEffect(() => {
+    if (syllabus) {
+      const selectedSyl = syllabuses.find((s) => String(s.id) === String(syllabus));
+      if (selectedSyl?.modules && Array.isArray(selectedSyl.modules) && selectedSyl.modules.length > 0) {
+        setSyllabusModules(selectedSyl.modules);
+        return;
+      }
+
+      setModulesLoading(true);
+      dispatch({
+        type: syllabusActions.GET_SYLLABUS_DETAILS,
+        method: "GET",
+        endPoint: API.SYLLABUSES.DETAIL(syllabus),
+        auth: true,
+        getResponse: (res: any) => {
+          const data = res?.data ?? res;
+          if (data?.modules && Array.isArray(data.modules)) {
+            setSyllabusModules(data.modules);
+          } else if (Array.isArray(data)) {
+            setSyllabusModules(data);
+          } else if (data?.modules_count) {
+            const count = Math.min(Number(data.modules_count) || 2, 5);
+            setSyllabusModules(
+              Array.from({ length: count }, (_, i) => ({
+                id: String(i + 1),
+                name: `Module ${i + 1}`,
+                order: i + 1,
+              }))
+            );
+          } else {
+            // Try syllabus modules list endpoint
+            dispatch({
+              type: moduleActions.GET_MODULES,
+              method: "GET",
+              endPoint: API.SYLLABUSES.MODULES.LIST(syllabus),
+              auth: true,
+              getResponse: (mRes: any) => {
+                const mList = Array.isArray(mRes?.data) ? mRes.data : Array.isArray(mRes) ? mRes : [];
+                setSyllabusModules(mList);
+                setModulesLoading(false);
+              },
+              getError: () => {
+                setSyllabusModules([]);
+                setModulesLoading(false);
+              },
+            });
+            return;
+          }
+          setModulesLoading(false);
+        },
+        getError: () => {
+          setSyllabusModules([]);
+          setModulesLoading(false);
+        },
+      });
+    } else {
+      setSyllabusModules([]);
+    }
+  }, [syllabus, syllabuses, dispatch]);
 
   useEffect(() => {
     if (structure) {
       setName(structure.name || "");
       setCourse(structure.course || "");
       setLevel(structure.level || "");
-      setTotalAmount(String(structure.total_amount) || "");
+      setSyllabus(structure.syllabus ? String(structure.syllabus) : "");
+      setTotalAmount(
+        structure.total_amount !== undefined && structure.total_amount !== null
+          ? String(structure.total_amount)
+          : String(structure.institute_fees_all_modules ?? structure.institute_fees_both_modules ?? "")
+      );
+      setInstituteFeesModule1(
+        structure.institute_fees_module_1 !== undefined && structure.institute_fees_module_1 !== null && Number(structure.institute_fees_module_1) > 0
+          ? String(structure.institute_fees_module_1)
+          : ""
+      );
+      setInstituteFeesModule2(
+        structure.institute_fees_module_2 !== undefined && structure.institute_fees_module_2 !== null && Number(structure.institute_fees_module_2) > 0
+          ? String(structure.institute_fees_module_2)
+          : ""
+      );
+      setInstituteFeesModule3(
+        structure.institute_fees_module_3 !== undefined && structure.institute_fees_module_3 !== null && Number(structure.institute_fees_module_3) > 0
+          ? String(structure.institute_fees_module_3)
+          : ""
+      );
+      setInstituteFeesModule4(
+        structure.institute_fees_module_4 !== undefined && structure.institute_fees_module_4 !== null && Number(structure.institute_fees_module_4) > 0
+          ? String(structure.institute_fees_module_4)
+          : ""
+      );
+      setInstituteFeesModule5(
+        structure.institute_fees_module_5 !== undefined && structure.institute_fees_module_5 !== null && Number(structure.institute_fees_module_5) > 0
+          ? String(structure.institute_fees_module_5)
+          : ""
+      );
+      let c = 2;
+      if (Number(structure.institute_fees_module_5 || 0) > 0) c = 5;
+      else if (Number(structure.institute_fees_module_4 || 0) > 0) c = 4;
+      else if (Number(structure.institute_fees_module_3 || 0) > 0) c = 3;
+      setManualModuleCount(c);
+
       setIcsiRegistrationFees(String(structure.icsi_registration_fees || ""));
       setIcsiExamFees(String(structure.icsi_exam_fees || ""));
       setIcsiRegistrationFeesViaCseet(String(structure.icsi_registration_fees_via_cseet || ""));
       setIcsiRegistrationFeesDirect(String(structure.icsi_registration_fees_direct || ""));
-      setInstituteFeesBothModules(String(structure.institute_fees_both_modules || ""));
-      setInstituteFeesAllModules(String(structure.institute_fees_all_modules ?? ""));
-      setInstituteFeesModule1(String(structure.institute_fees_module_1 || ""));
-      setInstituteFeesModule2(String(structure.institute_fees_module_2 || ""));
-
-      const mod = structure.group_module || (
-        Number(structure.institute_fees_module_1) > 0 && !Number(structure.institute_fees_module_2)
-          ? "module_1"
-          : Number(structure.institute_fees_module_2) > 0 && !Number(structure.institute_fees_module_1)
-          ? "module_2"
-          : "all"
+      setTokenAmount(
+        structure.token_amount !== undefined && structure.token_amount !== null && Number(structure.token_amount) > 0
+          ? String(structure.token_amount)
+          : ""
       );
-      setGroupModule(mod);
-
-      // If specific module had empty module field but total_amount had the value
-      if (mod === "module_1" && !structure.institute_fees_module_1 && structure.total_amount) {
-        setInstituteFeesModule1(String(structure.total_amount));
-      } else if (mod === "module_2" && !structure.institute_fees_module_2 && structure.total_amount) {
-        setInstituteFeesModule2(String(structure.total_amount));
-      } else if (mod === "all" && !structure.institute_fees_all_modules && structure.total_amount) {
-        setInstituteFeesAllModules(String(structure.total_amount));
-      }
-
-      setAttempt(structure.attempt || "");
-      setYear(structure.year ? String(structure.year) : new Date().getFullYear().toString());
+      setAttempt(structure.attempt || "june");
+      setYear(structure.year ? String(structure.year) : getAvailableYears("other", "june")[0]);
       setDescription(structure.description || "");
       setIsActive(structure.is_active !== false);
     } else {
       setName("");
       setCourse("");
       setLevel("");
+      setSyllabus("");
+      setSyllabusModules([]);
       setTotalAmount("");
+      setInstituteFeesModule1("");
+      setInstituteFeesModule2("");
+      setInstituteFeesModule3("");
+      setInstituteFeesModule4("");
+      setInstituteFeesModule5("");
+      setManualModuleCount(2);
+      setTokenAmount("");
       setIcsiRegistrationFees("");
       setIcsiExamFees("");
       setIcsiRegistrationFeesViaCseet("");
       setIcsiRegistrationFeesDirect("");
-      setInstituteFeesBothModules("");
-      setInstituteFeesAllModules("");
-      setInstituteFeesModule1("");
-      setInstituteFeesModule2("");
-      setGroupModule("all");
-      setAttempt("");
-      setYear(new Date().getFullYear().toString());
+      setAttempt("june");
+      setYear(getAvailableYears("other", "june")[0]);
       setDescription("");
       setIsActive(true);
     }        
   }, [structure, open]);
 
+  // Determine dynamic or manual module inputs to display
+  const renderedModules = useMemo(() => {
+    if (syllabusModules && syllabusModules.length > 0) {
+      return syllabusModules.slice(0, 5).map((m, idx) => ({
+        index: idx + 1,
+        name: m.name || `Module ${idx + 1}`,
+      }));
+    }
+
+    const count = Math.max(
+      manualModuleCount,
+      Number(instituteFeesModule5 || 0) > 0 ? 5 : 0,
+      Number(instituteFeesModule4 || 0) > 0 ? 4 : 0,
+      Number(instituteFeesModule3 || 0) > 0 ? 3 : 0,
+      2
+    );
+
+    return Array.from({ length: Math.min(count, 5) }, (_, i) => ({
+      index: i + 1,
+      name: `Module ${i + 1}`,
+    }));
+  }, [syllabusModules, manualModuleCount, instituteFeesModule3, instituteFeesModule4, instituteFeesModule5]);
+
+  const getModuleVal = (idx: number) => {
+    if (idx === 1) return instituteFeesModule1;
+    if (idx === 2) return instituteFeesModule2;
+    if (idx === 3) return instituteFeesModule3;
+    if (idx === 4) return instituteFeesModule4;
+    if (idx === 5) return instituteFeesModule5;
+    return "";
+  };
+
+  const setModuleVal = (idx: number, val: string) => {
+    if (idx === 1) setInstituteFeesModule1(val);
+    else if (idx === 2) setInstituteFeesModule2(val);
+    else if (idx === 3) setInstituteFeesModule3(val);
+    else if (idx === 4) setInstituteFeesModule4(val);
+    else if (idx === 5) setInstituteFeesModule5(val);
+  };
+
+  const handleModuleBlur = () => {
+    const modSum =
+      parseFloat(instituteFeesModule1 || "0") +
+      parseFloat(instituteFeesModule2 || "0") +
+      parseFloat(instituteFeesModule3 || "0") +
+      parseFloat(instituteFeesModule4 || "0") +
+      parseFloat(instituteFeesModule5 || "0");
+    if (!totalAmount || parseFloat(totalAmount) === 0) {
+      if (modSum > 0) {
+        setTotalAmount(modSum.toString());
+      }
+    }
+  };
+
   const isEdit = !!structure;
 
   const handleSave = () => {
-    if (!name.trim() || !course) {
+    const mod1 = parseFloat(instituteFeesModule1 || "0");
+    const mod2 = parseFloat(instituteFeesModule2 || "0");
+    const mod3 = parseFloat(instituteFeesModule3 || "0");
+    const mod4 = parseFloat(instituteFeesModule4 || "0");
+    const mod5 = parseFloat(instituteFeesModule5 || "0");
+    const modSum = mod1 + mod2 + mod3 + mod4 + mod5;
+    const enteredTotal = parseFloat(totalAmount || "0");
+    // Scenario A: If bulk/all modules is blank, use sum of modules
+    // Scenario B: If bulk/all modules is provided, use entered bulk amount
+    const finalTotalAmount = enteredTotal > 0 ? enteredTotal : modSum;
+
+    if (!course || finalTotalAmount <= 0) {
       return;
-    }
-    let finalTotalAmount = 0;
-    let finalAllModules = 0;
-
-    const effectiveGroup = (isCsExecutive || isCsProfessional) ? (groupModule || "all") : null;
-
-    if (isCsExecutive || isCsProfessional) {
-      if (effectiveGroup === "module_1") {
-        const m1 = parseFloat(instituteFeesModule1 || "0");
-        finalTotalAmount = m1;
-        finalAllModules = m1;
-      } else if (effectiveGroup === "module_2") {
-        const m2 = parseFloat(instituteFeesModule2 || "0");
-        finalTotalAmount = m2;
-        finalAllModules = m2;
-      } else {
-        // "all"
-        const bulk = parseFloat(instituteFeesAllModules || "0");
-        finalAllModules = bulk;
-        finalTotalAmount = bulk;
-      }
-    } else {
-      // CSEET
-      if (totalAmount) {
-        finalTotalAmount = parseFloat(totalAmount);
-      } else {
-        finalTotalAmount = parseFloat(icsiRegistrationFees || "0") + parseFloat(icsiExamFees || "0");
-      }
     }
 
     const payload: any = {
       name,
       course,
       level: level || null,
+      syllabus: syllabus || null,
       total_amount: finalTotalAmount,
+      token_amount: parseFloat(tokenAmount || "0"),
       icsi_registration_fees: (isCseet || isCsProfessional) ? parseFloat(icsiRegistrationFees || "0") : 0,
       icsi_exam_fees: isSpecialLevel ? parseFloat(icsiExamFees || "0") : 0,
       icsi_registration_fees_via_cseet: isCsExecutive ? parseFloat(icsiRegistrationFeesViaCseet || "0") : 0,
       icsi_registration_fees_direct: isCsExecutive ? parseFloat(icsiRegistrationFeesDirect || "0") : 0,
-      institute_fees_both_modules: (isCsExecutive || isCsProfessional) ? finalAllModules : 0,
-      institute_fees_all_modules: (isCsExecutive || isCsProfessional) ? finalAllModules : 0,
-      institute_fees_module_1: (isCsExecutive || isCsProfessional) && effectiveGroup === "module_1" ? parseFloat(instituteFeesModule1 || "0") : 0,
-      institute_fees_module_2: (isCsExecutive || isCsProfessional) && effectiveGroup === "module_2" ? parseFloat(instituteFeesModule2 || "0") : 0,
-      institute_fees_module_3: 0,
-      institute_fees_module_4: 0,
-      institute_fees_module_5: 0,
-      group_module: effectiveGroup,
+      institute_fees_both_modules: finalTotalAmount,
+      institute_fees_all_modules: finalTotalAmount,
+      institute_fees_module_1: mod1,
+      institute_fees_module_2: mod2,
+      institute_fees_module_3: mod3,
+      institute_fees_module_4: mod4,
+      institute_fees_module_5: mod5,
+      group_module: null,
       attempt,
       year,
       description,
@@ -238,6 +443,16 @@ export function FeeStructureDialog({
 
     onSubmit(payload);
   };
+
+  const canSave =
+    !loading &&
+    !!course &&
+    (parseFloat(totalAmount || "0") > 0 ||
+      parseFloat(instituteFeesModule1 || "0") > 0 ||
+      parseFloat(instituteFeesModule2 || "0") > 0 ||
+      parseFloat(instituteFeesModule3 || "0") > 0 ||
+      parseFloat(instituteFeesModule4 || "0") > 0 ||
+      parseFloat(instituteFeesModule5 || "0") > 0);
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
@@ -253,16 +468,6 @@ export function FeeStructureDialog({
           </SheetDescription>
         </SheetHeader>
         <div className="space-y-4 py-2">
-          <div>
-            <Label htmlFor="fs-name">Structure Name *</Label>
-            <Input
-              id="fs-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Class 10 - Standard Science Batch 2026"
-              className="mt-1"
-            />
-          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Course *</Label>
@@ -270,7 +475,6 @@ export function FeeStructureDialog({
                 setCourse(val);
                 setLevel("");
                 setAttempt("");
-                setGroupModule("");
               }}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select Course" />
@@ -286,7 +490,15 @@ export function FeeStructureDialog({
             </div>
             <div>
               <Label>Level</Label>
-              <Select value={level} onValueChange={setLevel} disabled={!course || levelsLoading}>
+              <Select
+                value={level}
+                onValueChange={(val) => {
+                  setLevel(val);
+                  setSyllabus("");
+                  setSyllabusModules([]);
+                }}
+                disabled={!course || levelsLoading}
+              >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder={levelsLoading ? "Loading..." : "Select Level"} />
                 </SelectTrigger>
@@ -300,20 +512,40 @@ export function FeeStructureDialog({
               </Select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+
+          {!isCseet && (
             <div>
-              <Label>Year</Label>
-              <Select value={year} onValueChange={setYear}>
+              <Label>Syllabus</Label>
+              <Select
+                value={syllabus}
+                onValueChange={(val) => {
+                  setSyllabus(val);
+                }}
+                disabled={!level || syllabusesLoading}
+              >
                 <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select Year" />
+                  <SelectValue
+                    placeholder={
+                      !level
+                        ? "Select Level First"
+                        : syllabusesLoading
+                        ? "Loading syllabuses..."
+                        : "Select Syllabus (Optional)"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  {["2024", "2025", "2026", "2027", "2028", "2029", "2030"].map((y) => (
-                    <SelectItem key={y} value={y}>{y}</SelectItem>
+                  {syllabuses.map((s) => (
+                    <SelectItem key={s.id} value={String(s.id)}>
+                      {s.name} {s.modules_count ? `(${s.modules_count} Modules)` : ""}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Attempt</Label>
               <Select value={attempt} onValueChange={setAttempt}>
@@ -323,6 +555,19 @@ export function FeeStructureDialog({
                 <SelectContent>
                   {attemptOptions.map((o) => (
                     <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Year</Label>
+              <Select value={year} onValueChange={setYear}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableYears.map((y) => (
+                    <SelectItem key={y} value={y}>{y}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -400,9 +645,17 @@ export function FeeStructureDialog({
                   type="number" min="0"
                   value={icsiExamFees}
                   onChange={(e) => setIcsiExamFees(e.target.value)}
-                  placeholder="0.00"
+                  placeholder="0.00 (per module)"
                   className="mt-1"
                 />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Exam fee charged per module.
+                  {parseFloat(icsiExamFees || "0") > 0 && renderedModules.length > 0 && (
+                    <span className="font-medium text-foreground ml-1">
+                      (Total: ₹{(parseFloat(icsiExamFees) * renderedModules.length).toLocaleString("en-IN")} for all {renderedModules.length} modules)
+                    </span>
+                  )}
+                </p>
               </div>
             </div>
           )}
@@ -427,89 +680,91 @@ export function FeeStructureDialog({
                   type="number" min="0"
                   value={icsiExamFees}
                   onChange={(e) => setIcsiExamFees(e.target.value)}
-                  placeholder="0.00"
+                  placeholder="0.00 (per module)"
                   className="mt-1"
                 />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Exam fee charged per module.
+                  {parseFloat(icsiExamFees || "0") > 0 && renderedModules.length > 0 && (
+                    <span className="font-medium text-foreground ml-1">
+                      (Total: ₹{(parseFloat(icsiExamFees) * renderedModules.length).toLocaleString("en-IN")} for all {renderedModules.length} modules)
+                    </span>
+                  )}
+                </p>
               </div>
             </div>
           )}
 
-          {(isCsExecutive || isCsProfessional) && (
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>Group / Module *</Label>
-                <Select value={groupModule || "all"} onValueChange={setGroupModule}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select Module" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Modules</SelectItem>
-                    <SelectItem value="module_1">Module 1</SelectItem>
-                    <SelectItem value="module_2">Module 2</SelectItem>
-                  </SelectContent>
-                </Select>
+          {hasModules && (
+            <div className="space-y-3 p-3 bg-muted/20 rounded-lg border border-border/60">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Module Breakdown Fees
+                  </h4>
+                  <p className="text-[11px] text-muted-foreground">
+                    {syllabusModules.length > 0
+                      ? `Dynamic modules from syllabus (${syllabusModules.length} Modules)`
+                      : "Enter individual module fees. All Modules fee will auto-calculate."}
+                  </p>
+                </div>
               </div>
 
-              {(!groupModule || groupModule === "all") && (
-                <div>
-                  <Label htmlFor="fs-inst-all">Institute Fees (All Modules) *</Label>
-                  <Input
-                    id="fs-inst-all"
-                    type="number"
-                    min="0"
-                    value={instituteFeesAllModules}
-                    onChange={(e) => setInstituteFeesAllModules(e.target.value)}
-                    placeholder="0.00"
-                    className="mt-1"
-                  />
-                </div>
-              )}
-
-              {groupModule === "module_1" && (
-                <div>
-                  <Label htmlFor="fs-inst-mod1">Institute Fees (Module 1) *</Label>
-                  <Input
-                    id="fs-inst-mod1"
-                    type="number"
-                    min="0"
-                    value={instituteFeesModule1}
-                    onChange={(e) => setInstituteFeesModule1(e.target.value)}
-                    placeholder="0.00"
-                    className="mt-1"
-                  />
-                </div>
-              )}
-
-              {groupModule === "module_2" && (
-                <div>
-                  <Label htmlFor="fs-inst-mod2">Institute Fees (Module 2) *</Label>
-                  <Input
-                    id="fs-inst-mod2"
-                    type="number"
-                    min="0"
-                    value={instituteFeesModule2}
-                    onChange={(e) => setInstituteFeesModule2(e.target.value)}
-                    placeholder="0.00"
-                    className="mt-1"
-                  />
-                </div>
-              )}
+              <div className="grid grid-cols-2 gap-3">
+                {renderedModules.map((m) => (
+                  <div key={m.index}>
+                    <Label htmlFor={`fs-inst-mod${m.index}`}>{m.name} Fee</Label>
+                    <Input
+                      id={`fs-inst-mod${m.index}`}
+                      type="number"
+                      min="0"
+                      value={getModuleVal(m.index)}
+                      onChange={(e) => setModuleVal(m.index, e.target.value)}
+                      onBlur={handleModuleBlur}
+                      placeholder="0.00"
+                      className="mt-1"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
-          {!(isCsExecutive || isCsProfessional) && (
-            <div>
-              <Label htmlFor="fs-amount">Institute Fee *</Label>
-              <Input
-                id="fs-amount"
-                type="number" min="0"
-                value={totalAmount}
-                onChange={(e) => setTotalAmount(e.target.value)}
-                placeholder="0.00"
-                className="mt-1"
-              />
-            </div>
-          )}
+          <div>
+            <Label htmlFor="fs-amount">
+              {hasModules ? "All Modules Fee *" : "Institute Fee *"}
+            </Label>
+            <Input
+              id="fs-amount"
+              type="number"
+              min="0"
+              value={totalAmount}
+              onChange={(e) => setTotalAmount(e.target.value)}
+              placeholder="0.00"
+              className="mt-1"
+            />
+            {hasModules && (
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Auto-calculated from individual modules or enter a discounted bulk package fee.
+              </p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="fs-token-amount">Token Amount</Label>
+            <Input
+              id="fs-token-amount"
+              type="number"
+              min="0"
+              value={tokenAmount}
+              onChange={(e) => setTokenAmount(e.target.value)}
+              placeholder="0.00"
+              className="mt-1"
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Token amount collected during online admission. Students choosing Token Payment receive a Razorpay link for this amount, with the remaining balance due within 15 days.
+            </p>
+          </div>
 
           <div className="flex items-center gap-2 mt-2">
             <input
@@ -530,18 +785,7 @@ export function FeeStructureDialog({
           </Button>
           <Button
             onClick={handleSave}
-            disabled={
-              loading ||
-              !name.trim() ||
-              !course ||
-              (isCsExecutive || isCsProfessional
-                ? (groupModule === "module_1"
-                    ? !instituteFeesModule1
-                    : groupModule === "module_2"
-                    ? !instituteFeesModule2
-                    : !instituteFeesAllModules)
-                : !totalAmount)
-            }
+            disabled={!canSave}
             className="bg-primary hover:bg-primary-dark text-primary-foreground"
           >
             {loading ? "Saving..." : "Save"}

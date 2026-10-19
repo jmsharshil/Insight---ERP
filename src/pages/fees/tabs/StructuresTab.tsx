@@ -103,6 +103,15 @@ export default function StructuresTab({
                   {fs.level_name || "—"}
                 </span>
               </div>
+              {(fs.syllabus_name || fs.syllabus) && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <BookOpen className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="font-medium">Syllabus:</span>
+                  <span className="text-card-foreground font-semibold truncate">
+                    {fs.syllabus_name || fs.syllabus}
+                  </span>
+                </div>
+              )}
               {(fs.attempt || fs.year) && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
@@ -127,6 +136,7 @@ export default function StructuresTab({
                 const isCseet = ln === "cseet";
                 const isCsExecutive = ln === "cs executive" || ln === "cs_executive";
                 const isCsProfessional = ln === "cs professional" || ln === "cs_professional";
+                const hasAnyModule = [1, 2, 3, 4, 5].some((m) => Number((fs as any)[`institute_fees_module_${m}`] || 0) > 0);
                 
                 return (
                   <>
@@ -138,7 +148,9 @@ export default function StructuresTab({
                     )}
                     {(isCseet || isCsExecutive || isCsProfessional) && (
                       <div className="flex justify-between items-center text-xs">
-                        <span className="text-muted-foreground">ICSI Exam Fees {!isCseet && "(Per Module)"}</span>
+                        <span className="text-muted-foreground">
+                          ICSI Exam Fees {(isCsExecutive || isCsProfessional) ? "(Per Module)" : ""}
+                        </span>
                         <span className="font-medium text-card-foreground">{formatCurrency(Number(fs.icsi_exam_fees || 0))}</span>
                       </div>
                     )}
@@ -154,8 +166,38 @@ export default function StructuresTab({
                         </div>
                       </>
                     )}
+                    {(() => {
+                      const activeModules = [1, 2, 3, 4, 5].filter(
+                        (m) => Number((fs as any)[`institute_fees_module_${m}`] || 0) > 0
+                      );
+                      if (activeModules.length === 0) return null;
+                      return (
+                        <div className="grid grid-cols-2 gap-2 text-xs bg-muted/40 p-2 rounded-lg border border-border/50">
+                          {activeModules.map((mNum) => (
+                            <div key={mNum}>
+                              <span className="text-muted-foreground block text-[10px]">Module {mNum}</span>
+                              <span className="font-semibold text-card-foreground">
+                                {formatCurrency(Number((fs as any)[`institute_fees_module_${mNum}`] || 0))}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                    {Number(fs.token_amount || 0) > 0 && (
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-muted-foreground">Token Amount</span>
+                        <span className="font-medium text-card-foreground">
+                          {formatCurrency(Number(fs.token_amount))}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between items-center border-t border-dashed pt-2">
-                      <span className="text-xs font-bold text-card-foreground">Institute Fee</span>
+                      <span className="text-xs font-bold text-card-foreground">
+                        {isCsExecutive || isCsProfessional || hasAnyModule
+                          ? "All Modules Fee"
+                          : "Institute Fee"}
+                      </span>
                       <span className="font-mono text-primary text-lg font-bold">
                         {formatCurrency(Number(fs.total_amount))}
                       </span>

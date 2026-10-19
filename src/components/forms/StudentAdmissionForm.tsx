@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { useToast } from "@/hooks/useToast";
@@ -21,6 +21,16 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   CheckCircle2,
   GraduationCap,
@@ -46,6 +56,15 @@ import {
   BadgeCheck,
   AlertCircle,
   Info,
+  ExternalLink,
+  FileEdit,
+  Search,
+  Receipt,
+  History,
+  Printer,
+  Link2,
+  ArrowUpRight,
+  Clock,
 } from "lucide-react";
 
 import { THEME } from "@/config/theme";
@@ -124,13 +143,17 @@ function FileUploadField({
   icon: Icon,
   file,
   onFileChange,
+  existingUrl,
   required = false,
+  accept = "image/*,.pdf,application/pdf",
 }: {
   label: string;
   icon: React.ElementType;
   file: File | null;
   onFileChange: (file: File | null) => void;
+  existingUrl?: string | null;
   required?: boolean;
+  accept?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -141,13 +164,13 @@ function FileUploadField({
       </Label>
       <div
         className="relative rounded-xl border-2 border-dashed p-4 text-center transition-all duration-200 cursor-pointer hover:border-amber-400 hover:bg-amber-50/30"
-        style={{ borderColor: file ? T.success : T.border }}
+        style={{ borderColor: file ? T.success : existingUrl ? T.primary : T.border }}
         onClick={() => inputRef.current?.click()}
       >
         <input
           ref={inputRef}
           type="file"
-          accept="image/*"
+          accept={accept}
           className="hidden"
           required={required}
           onChange={(e) => {
@@ -168,7 +191,7 @@ function FileUploadField({
                 {file.name}
               </p>
               <p className="text-xs" style={{ color: T.textMuted }}>
-                {(file.size / 1024).toFixed(1)} KB
+                {(file.size / 1024).toFixed(1)} KB (New file)
               </p>
             </div>
             <button
@@ -182,6 +205,32 @@ function FileUploadField({
             >
               <X className="w-4 h-4" style={{ color: T.error }} />
             </button>
+          </div>
+        ) : existingUrl ? (
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-lg flex items-center justify-center"
+              style={{ background: `${T.primary}15` }}
+            >
+              <CheckCircle2 className="w-5 h-5" style={{ color: T.primaryDark }} />
+            </div>
+            <div className="flex-1 text-left min-w-0">
+              <p className="text-xs font-semibold text-emerald-600">
+                Uploaded Document on File
+              </p>
+              <a
+                href={existingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 mt-0.5 truncate max-w-[200px]"
+              >
+                <ExternalLink className="w-3 h-3" /> View Document
+              </a>
+            </div>
+            <span className="text-[11px] font-medium text-amber-800 bg-amber-100/70 px-2 py-1 rounded-md">
+              Click to replace
+            </span>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 py-2">
@@ -207,7 +256,7 @@ function FileUploadField({
 export default function StudentAdmissionForm() {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const admissionId = searchParams.get("id") || searchParams.get("admission_id") || "";
 
   const [savedAdmissionId, setSavedAdmissionId] = useState<string | null>(admissionId || null);
@@ -216,6 +265,28 @@ export default function StudentAdmissionForm() {
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
+  // Step 4: Payment proof & transaction state
+  const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
+  const [existingPaymentScreenshot, setExistingPaymentScreenshot] = useState<string | null>(null);
+  const [transactionId, setTransactionId] = useState<string>("");
+  const [paymentNote, setPaymentNote] = useState<string>("");
+  const [paymentAmount, setPaymentAmount] = useState<string>("");
+  const [paymentSubmittedAt, setPaymentSubmittedAt] = useState<string>("");
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
+  const [paymentProofSubmitting, setPaymentProofSubmitting] = useState<boolean>(false);
+  const [paymentProofSuccess, setPaymentProofSuccess] = useState<boolean>(false);
+  const [razorpayPaymentLink, setRazorpayPaymentLink] = useState<string | null>(null);
+  const [admissionStatus, setAdmissionStatus] = useState<string | null>(null);
+  const [admissionStatusDisplay, setAdmissionStatusDisplay] = useState<string | null>(null);
+  const [totalFeesAmount, setTotalFeesAmount] = useState<string | number | null>(null);
+  const [remainingFeesAmount, setRemainingFeesAmount] = useState<string | number | null>(null);
+  const [tokenTermsNote, setTokenTermsNote] = useState<string | null>(null);
+
+  // Resume Incomplete Admission Form state
+  const [isResumeModalOpen, setIsResumeModalOpen] = useState(false);
+  const [inputAppId, setInputAppId] = useState(admissionId || "");
+  const [loadingExisting, setLoadingExisting] = useState(false);
+  const [existingDocs, setExistingDocs] = useState<Record<string, string | null>>({});
 
   // Fetch locations dropdown
   const {
@@ -227,6 +298,140 @@ export default function StudentAdmissionForm() {
   useEffect(() => {
     fetchLocations();
   }, [fetchLocations]);
+
+  /* ─── Fetch Admission by Application ID ────────────────────── */
+  const loadAdmissionById = (idToLoad: string, showToast = true) => {
+    const trimmedId = idToLoad.trim();
+    if (!trimmedId) {
+      toast.error("Please enter a valid Application ID.");
+      return;
+    }
+
+    setLoadingExisting(true);
+    dispatch({
+      type: admissionActions.GET_ADMISSION_DETAIL,
+      method: "GET",
+      endPoint: API.ADMISSIONS.GET(trimmedId),
+      auth: false,
+      setLoading: (val: boolean) => setLoadingExisting(val),
+      getResponse: (res: any) => {
+        const data = res?.data?.data || res?.data || res;
+        if (!data || (!data.id && !data.first_name && !data.email)) {
+          toast.error(`No admission record found for Application ID #${trimmedId}`);
+          return;
+        }
+
+        const validId = String(data.id || trimmedId);
+        setSavedAdmissionId(validId);
+        setSearchParams({ id: validId });
+
+        // Populate form data
+        setFormData((prev) => ({
+          ...prev,
+          form_type: data.form_type || prev.form_type,
+          course: data.course || prev.course,
+          group_module: data.group_module || prev.group_module,
+          batch_attempt: data.batch_attempt || prev.batch_attempt,
+          attempt_year: data.attempt_year ? String(data.attempt_year) : prev.attempt_year,
+          payment_type: data.payment_type || prev.payment_type,
+          payment_mode: data.payment_choice || data.payment_mode || prev.payment_mode || "online",
+          cheque_no: data.cheque_no || "",
+          icsi_fees_payment: data.icsi_fees_payment || prev.icsi_fees_payment,
+          fee_structure: data.fee_structure
+            ? typeof data.fee_structure === "object"
+              ? String(data.fee_structure.id || "")
+              : String(data.fee_structure)
+            : prev.fee_structure,
+          first_name: data.first_name || "",
+          surname: data.surname || "",
+          father_name: data.father_name || "",
+          mother_name: data.mother_name || "",
+          street: data.street || "",
+          city: data.city || "",
+          state: data.state || "",
+          pincode: data.pincode || "",
+          country: data.country || "India",
+          dob: data.dob ? data.dob.split("T")[0] : "",
+          category: data.category ? data.category.toLowerCase() : "gen",
+          phone_student: data.phone_student || "",
+          phone_father: data.phone_father || "",
+          email: data.email || "",
+          email_parent: data.email_parent || "",
+          qualification: data.qualification || prev.qualification,
+          tenth_medium: data.tenth_medium || prev.tenth_medium,
+          tenth_school: data.tenth_school || "",
+          tenth_percentage: data.tenth_percentage != null ? String(data.tenth_percentage) : "",
+          tenth_percentile: data.tenth_percentile != null ? String(data.tenth_percentile) : "",
+          twelfth_medium: data.twelfth_medium || prev.twelfth_medium,
+          twelfth_school: data.twelfth_school || "",
+          tenth_coaching: data.tenth_coaching || "",
+          twelfth_coaching: data.twelfth_coaching || "",
+          twelfth_percentage: data.twelfth_percentage != null ? String(data.twelfth_percentage) : "",
+          twelfth_percentile: data.twelfth_percentile != null ? String(data.twelfth_percentile) : "",
+          reference: data.reference || prev.reference,
+          reference_name: data.reference_name || "",
+          inquiry_date: data.inquiry_date ? data.inquiry_date.split("T")[0] : prev.inquiry_date,
+          location: data.location || (data.branch?.name || ""),
+          consent: data.consent !== undefined ? Boolean(data.consent) : true,
+        }));
+
+        // Populate existing documents if available
+        setExistingDocs({
+          doc_signature: data.doc_signature || null,
+          doc_photo: data.doc_photo || null,
+          doc_id_card: data.doc_id_card || null,
+          doc_pan_card: data.doc_pan_card || null,
+          doc_dob_certificate: data.doc_dob_certificate || null,
+          doc_twelfth_receipt: data.doc_twelfth_receipt || null,
+          doc_twelfth_marksheet: data.doc_twelfth_marksheet || null,
+          doc_category_cert: data.doc_category_cert || null,
+        });
+
+        // Populate existing payment proof details if available
+        if (data.transaction_id) setTransactionId(data.transaction_id);
+        if (data.payment_note) setPaymentNote(data.payment_note);
+        if (data.payment_amount != null) setPaymentAmount(String(data.payment_amount));
+        if (data.payment_submitted_at) setPaymentSubmittedAt(data.payment_submitted_at);
+        if (data.payment_screenshot) {
+          setExistingPaymentScreenshot(data.payment_screenshot);
+          setPaymentProofSuccess(true);
+        }
+        if (Array.isArray(data.payment_history)) {
+          setPaymentHistory(data.payment_history);
+        }
+        if (data.razorpay_payment_link) {
+          setRazorpayPaymentLink(data.razorpay_payment_link);
+        }
+        if (data.total_fees != null) setTotalFeesAmount(data.total_fees);
+        if (data.remaining_fees != null) setRemainingFeesAmount(data.remaining_fees);
+        if (data.status) setAdmissionStatus(data.status);
+        if (data.status_display) setAdmissionStatusDisplay(data.status_display);
+        if (data.token_payment_terms_note) setTokenTermsNote(data.token_payment_terms_note);
+
+        setIsResumeModalOpen(false);
+
+        if (showToast) {
+          toast.success(`Application #${validId} loaded successfully!`);
+        }
+      },
+      getError: (err: any) => {
+        const msg =
+          err?.response?.data?.message ||
+          err?.response?.data?.detail ||
+          err?.message ||
+          `Failed to find Application #${trimmedId}. Please check the ID.`;
+        toast.error(msg);
+      },
+    });
+  };
+
+  // If application ID is in URL on mount, auto-load it
+  useEffect(() => {
+    if (admissionId) {
+      loadAdmissionById(admissionId, false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ─── Document state ──────────────────────────────────────── */
   const [docSignature, setDocSignature] = useState<File | null>(null);
@@ -246,6 +451,8 @@ export default function StudentAdmissionForm() {
     batch_attempt: "june",
     attempt_year: new Date().getFullYear().toString(),
     payment_type: "full_payment",
+    payment_mode: "online",
+    cheque_no: "",
     icsi_fees_payment: "pay_yourself",
     fee_structure: "",
     first_name: "",
@@ -284,6 +491,9 @@ export default function StudentAdmissionForm() {
   const handleChange = (field: string, value: string | boolean) => {
     setFormData((prev) => {
       const updated = { ...prev, [field]: value };
+      if (field === "payment_type" && value === "token" && !prev.payment_mode) {
+        updated.payment_mode = "online";
+      }
       if (field === "course") {
         if (value === "cseet") {
           updated.group_module = "full";
@@ -302,10 +512,15 @@ export default function StudentAdmissionForm() {
   };
 
   useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
-      group_module: prev.course === "cseet" ? "full" : "module_1",
-    }));
+    setFormData((prev) => {
+      if (prev.course === "cseet") {
+        return prev.group_module === "full" ? prev : { ...prev, group_module: "full" };
+      }
+      if (prev.group_module === "full") {
+        return { ...prev, group_module: "module_1" };
+      }
+      return prev;
+    });
   }, [formData.course]);
 
   /* ─── Auto-set Course based on Qualification ───────────────── */
@@ -342,14 +557,14 @@ export default function StudentAdmissionForm() {
       }
     } else {
       if (attempt === "june") {
-        if (groupModule === "both" || groupModule === "full") {
+        if (groupModule === "both" || groupModule === "full" || groupModule === "all") {
           if (currentMonth > 10) firstValidYear = currentYear + 2;
           else firstValidYear = currentYear + 1;
         } else {
           if (currentMonth > 0) firstValidYear = currentYear + 1;
         }
       } else if (attempt === "dec") {
-        if (groupModule === "both" || groupModule === "full") {
+        if (groupModule === "both" || groupModule === "full" || groupModule === "all") {
           if (currentMonth > 4) firstValidYear = currentYear + 1;
         } else {
           if (currentMonth > 6) firstValidYear = currentYear + 1;
@@ -416,6 +631,30 @@ export default function StudentAdmissionForm() {
       if (
         fee.group_module === "module_3" ||
         (fee.name && /module\s*3|module_3/i.test(fee.name))
+      ) {
+        return Number(fee.total_amount || fee.institute_fees_all_modules || 0);
+      }
+      return Number(fee.total_amount || 0);
+    }
+
+    if (groupModule === "module_4") {
+      const m4 = Number(fee.institute_fees_module_4 || 0);
+      if (m4 > 0) return m4;
+      if (
+        fee.group_module === "module_4" ||
+        (fee.name && /module\s*4|module_4/i.test(fee.name))
+      ) {
+        return Number(fee.total_amount || fee.institute_fees_all_modules || 0);
+      }
+      return Number(fee.total_amount || 0);
+    }
+
+    if (groupModule === "module_5") {
+      const m5 = Number(fee.institute_fees_module_5 || 0);
+      if (m5 > 0) return m5;
+      if (
+        fee.group_module === "module_5" ||
+        (fee.name && /module\s*5|module_5/i.test(fee.name))
       ) {
         return Number(fee.total_amount || fee.institute_fees_all_modules || 0);
       }
@@ -577,7 +816,7 @@ export default function StudentAdmissionForm() {
     } else {
       const group = formData.group_module; // "both", "module_1", "module_2"
 
-      if (group === "both") {
+      if (group === "both" || group === "all") {
         match =
           candidates.find(
             (fs) =>
@@ -590,23 +829,15 @@ export default function StudentAdmissionForm() {
               Number(fs.institute_fees_all_modules || fs.institute_fees_both_modules || 0) > 0
           ) ||
           candidates[0];
-      } else if (group === "module_1") {
+      } else if (group.startsWith("module_")) {
+        const modKey = `institute_fees_${group}` as keyof FeesStructure;
         match =
           candidates.find(
             (fs) =>
-              fs.group_module === "module_1" ||
-              (fs.name && /module\s*1|module_1/i.test(fs.name))
+              fs.group_module === group ||
+              (fs.name && new RegExp(group.replace("_", "\\s*"), "i").test(fs.name))
           ) ||
-          candidates.find((fs) => Number(fs.institute_fees_module_1 || 0) > 0) ||
-          candidates[0];
-      } else if (group === "module_2") {
-        match =
-          candidates.find(
-            (fs) =>
-              fs.group_module === "module_2" ||
-              (fs.name && /module\s*2|module_2/i.test(fs.name))
-          ) ||
-          candidates.find((fs) => Number(fs.institute_fees_module_2 || 0) > 0) ||
+          candidates.find((fs) => Number((fs as any)[modKey] || 0) > 0) ||
           candidates[0];
       } else {
         match = candidates.find((fs) => fs.group_module === group) || candidates[0];
@@ -626,8 +857,143 @@ export default function StudentAdmissionForm() {
     formData.group_module,
   ]);
 
+interface ModuleOption {
+  value: string;
+  label: string;
+}
 
-  const nextStep = () => { setCurrentStep(p => min(p + 1, 3)); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  /* ─── Available Modules based on Course & Fee Structures ─────── */
+  const availableModuleOptions: ModuleOption[] = useMemo<ModuleOption[]>(() => {
+    if (formData.course === "cseet") {
+      return [{ value: "full", label: "Full Syllabus" }];
+    }
+
+    const courseKey = formData.course.toLowerCase().replace(/_/g, " ");
+    const attemptKey = (formData.batch_attempt || "").toLowerCase();
+    const yearKey = String(formData.attempt_year || "");
+
+    // 1. Look for active fee structures matching course, attempt, and year
+    const exactCandidates = feeStructuresList.filter((fs) => {
+      if (!fs.is_active) return false;
+      const levelName = (fs.level_name || "").toLowerCase();
+      const fsName = (fs.name || "").toLowerCase();
+      const levelMatch =
+        levelName.includes(courseKey) ||
+        fsName.includes(courseKey) ||
+        (formData.course === "cs_executive" &&
+          (levelName.includes("executive") || fsName.includes("executive"))) ||
+        (formData.course === "cs_professional" &&
+          (levelName.includes("professional") || fsName.includes("professional")));
+
+      if (!levelMatch) return false;
+
+      const attemptVal = (fs.attempt || "").toLowerCase();
+      const attemptDisplay = (fs.attempt_display || "").toLowerCase();
+      const attemptMatch =
+        attemptVal === attemptKey ||
+        attemptDisplay === attemptKey ||
+        fsName.includes(attemptKey);
+      if (!attemptMatch) return false;
+
+      const yearMatch = String(fs.year || "") === yearKey || fsName.includes(yearKey);
+      return yearMatch;
+    });
+
+    // 2. Fallback to any active fee structures for this course
+    const relevantStructures =
+      exactCandidates.length > 0
+        ? exactCandidates
+        : feeStructuresList.filter((fs) => {
+            if (!fs.is_active) return false;
+            const levelName = (fs.level_name || "").toLowerCase();
+            const fsName = (fs.name || "").toLowerCase();
+            return (
+              levelName.includes(courseKey) ||
+              fsName.includes(courseKey) ||
+              (formData.course === "cs_executive" &&
+                (levelName.includes("executive") || fsName.includes("executive"))) ||
+              (formData.course === "cs_professional" &&
+                (levelName.includes("professional") || fsName.includes("professional")))
+            );
+          });
+
+    // 3. Detect which module numbers exist in the fee structures
+    const detectedModules: number[] = [];
+    for (let i = 1; i <= 5; i++) {
+      const hasModule = relevantStructures.some((fs) => {
+        const fee = Number((fs as any)[`institute_fees_module_${i}`] || 0);
+        if (fee > 0) return true;
+        if (fs.group_module === `module_${i}`) return true;
+        if (fs.name && new RegExp(`module\\s*${i}|module_${i}`, "i").test(fs.name)) return true;
+        if (typeof fs.modules_count === "number" && fs.modules_count >= i) return true;
+        return false;
+      });
+      if (hasModule) {
+        detectedModules.push(i);
+      }
+    }
+
+    // Default module numbers if no modules configured in fee structure yet
+    const moduleNumbers =
+      detectedModules.length > 0
+        ? detectedModules
+        : formData.course === "cs_executive"
+        ? [1, 2]
+        : formData.course === "cs_professional"
+        ? [1, 2]
+        : [1, 2];
+
+    const options: ModuleOption[] = [];
+
+    // Aggregate option for all / both modules
+    if (moduleNumbers.length > 1) {
+      if (moduleNumbers.length === 2) {
+        options.push({ value: "both", label: "Both Modules" });
+      } else {
+        options.push({ value: "both", label: `All Modules (${moduleNumbers.length} Modules)` });
+      }
+    }
+
+    // Individual module options
+    moduleNumbers.forEach((num) => {
+      options.push({ value: `module_${num}`, label: `Module ${num}` });
+    });
+
+    return options;
+  }, [
+    formData.course,
+    formData.batch_attempt,
+    formData.attempt_year,
+    feeStructuresList,
+  ]);
+
+  const detectedModuleCount = useMemo(() => {
+    const modOpts = availableModuleOptions.filter((opt: ModuleOption) => opt.value.startsWith("module_"));
+    return modOpts.length > 0 ? modOpts.length : 2;
+  }, [availableModuleOptions]);
+
+  // Synchronize group_module with available options
+  useEffect(() => {
+    if (availableModuleOptions.length === 0) return;
+    const validValues = availableModuleOptions.map((opt: ModuleOption) => opt.value);
+
+    // If currently "all" and "both" is valid, normalize to "both"
+    if (formData.group_module === "all" && validValues.includes("both")) {
+      setFormData((prev) => ({ ...prev, group_module: "both" }));
+      return;
+    }
+
+    // If current selection is not valid, reset to first option or "module_1"
+    if (!validValues.includes(formData.group_module)) {
+      const preferred = validValues.includes("module_1")
+        ? "module_1"
+        : validValues[0];
+      setFormData((prev) => ({ ...prev, group_module: preferred }));
+    }
+  }, [availableModuleOptions, formData.group_module]);
+
+
+  const nextStep = () => { setCurrentStep(p => min(p + 1, 4)); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const prevStep = () => { setCurrentStep(p => max(p - 1, 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const min = Math.min;
   const max = Math.max;
@@ -636,12 +1002,12 @@ export default function StudentAdmissionForm() {
     e.preventDefault();
     if (currentStep < 3) {
       submitData(false);
-    } else {
+    } else if (currentStep === 3) {
       submitData(true);
     }
   };
 
-  /* ── Submit ── */
+  /* ── Submit Steps 1-3 ── */
   const submitData = (isFinalStep: boolean) => {
     if (isFinalStep && !formData.consent) {
       toast.error("Please accept the consent to proceed.");
@@ -655,6 +1021,10 @@ export default function StudentAdmissionForm() {
       if (key === "fee_structure") {
         const id = value || (matchedFee?.id ? String(matchedFee.id) : "");
         if (id) payload.append(key, String(id));
+        return;
+      }
+      if (key === "payment_mode") {
+        if (value) payload.append("payment_choice", String(value));
         return;
       }
       if (key === "reference_name") {
@@ -680,7 +1050,7 @@ export default function StudentAdmissionForm() {
       payload.append("fee_structure", String(matchedFee.id));
     }
 
-    // Append documents ONLY on final step
+    // Append documents ONLY on step 3 (final application step before payment proof)
     if (isFinalStep) {
       if (docSignature) payload.append("doc_signature", docSignature);
       if (docPhoto) payload.append("doc_photo", docPhoto);
@@ -710,13 +1080,31 @@ export default function StudentAdmissionForm() {
       getResponse: (res: any) => {
         // If an ID is returned, save it
         const newId = res?.data?.id || res?.id || res?.data?.data?.id;
-        if (!savedAdmissionId && newId) {
-          setSavedAdmissionId(String(newId));
+        const validId = String(newId || savedAdmissionId || "");
+        if (validId) {
+          setSavedAdmissionId(validId);
+          setSearchParams({ id: validId });
         }
 
         if (isFinalStep) {
           setIsSubmitted(true);
-          toast.success("Your admission form has been submitted successfully!");
+          toast.success("Application details submitted successfully! Please proceed with payment proof.");
+
+          // Pre-populate expected payment amount if empty
+          const instFee = getInstituteFee(matchedFee, formData.course, formData.group_module);
+          const tokenAmt = Number(matchedFee?.token_amount || 0);
+          if (formData.payment_type === "token" && tokenAmt > 0) {
+            setPaymentAmount((prev) => prev || String(tokenAmt));
+          } else if (formData.payment_type === "full_payment" && instFee > 0) {
+            setPaymentAmount((prev) => prev || String(instFee));
+          }
+          if (!paymentSubmittedAt) {
+            setPaymentSubmittedAt(new Date().toISOString().slice(0, 16));
+          }
+
+          // Advance to Step 4
+          setCurrentStep(4);
+          window.scrollTo({ top: 0, behavior: "smooth" });
         } else {
           nextStep();
         }
@@ -737,50 +1125,76 @@ export default function StudentAdmissionForm() {
     });
   };
 
-  /* ────────────────────────────────────────────────────────────
-     SUCCESS SCREEN
-     ──────────────────────────────────────────────────────────── */
-  if (isSubmitted) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center p-4"
-        style={{
-          background: `linear-gradient(180deg, ${T.surface} 0%, ${T.primaryLight}50 100%)`,
-          fontFamily: T.bodyFont,
-        }}
-      >
-        <div
-          className="max-w-lg w-full rounded-3xl p-8 sm:p-12 text-center animate-in fade-in zoom-in duration-500"
-          style={{ background: T.card, boxShadow: "0 20px 60px rgba(0,33,71,0.12)" }}
-        >
-          <img src={logo} alt="Insight ERP" className="h-12 sm:h-14 object-contain mx-auto mb-10" />
+  /* ── Submit Payment Proof (Step 4 PATCH Request) ── */
+  const handlePatchPaymentProof = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const targetId = savedAdmissionId || admissionId;
+    if (!targetId) {
+      toast.error("Application ID is missing. Please save Step 1-3 first.");
+      return;
+    }
 
-          <div
-            className="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-8"
-            style={{
-              background: `linear-gradient(135deg, ${T.success}15 0%, ${T.success}25 100%)`,
-            }}
-          >
-            <CheckCircle2 className="w-12 h-12" style={{ color: T.success }} />
-          </div>
+    if (!paymentAmount && !transactionId.trim() && !paymentScreenshot && !existingPaymentScreenshot) {
+      toast.error("Please enter a payment amount, transaction ID, or upload a receipt screenshot.");
+      return;
+    }
 
-          <h2
-            className="text-2xl sm:text-3xl font-bold mb-3"
-            style={{ color: T.black, fontFamily: T.headingFont }}
-          >
-            Admission Submitted!
-          </h2>
-          <p className="text-base sm:text-lg mb-2" style={{ color: T.text }}>
-            Your registration form has been received successfully.
-          </p>
-          <p className="text-sm mb-10 max-w-sm mx-auto" style={{ color: T.textMuted }}>
-            Our admissions team will verify your documents and get in touch with you within 48
-            hours. Thank you for choosing Insight!
-          </p>
-        </div>
-      </div>
-    );
-  }
+    const payload = new FormData();
+    if (transactionId.trim()) {
+      payload.append("transaction_id", transactionId.trim());
+    }
+    if (paymentAmount) {
+      payload.append("payment_amount", String(paymentAmount));
+    }
+    if (paymentNote.trim()) {
+      payload.append("payment_note", paymentNote.trim());
+    }
+
+    const submittedTime = paymentSubmittedAt
+      ? new Date(paymentSubmittedAt).toISOString()
+      : new Date().toISOString();
+    payload.append("payment_submitted_at", submittedTime);
+
+    if (paymentScreenshot) {
+      payload.append("payment_screenshot", paymentScreenshot);
+    }
+
+    setPaymentProofSubmitting(true);
+
+    dispatch({
+      type: admissionActions.SUBMIT_ADMISSION,
+      method: "PATCH",
+      endPoint: API.ADMISSIONS.SUBMIT(targetId),
+      body: payload,
+      auth: false,
+      isFormData: true,
+      setLoading: (val: boolean) => setPaymentProofSubmitting(val),
+      getResponse: (res: any) => {
+        const data = res?.data?.data || res?.data || res;
+        setPaymentProofSuccess(true);
+        if (data?.payment_screenshot) {
+          setExistingPaymentScreenshot(data.payment_screenshot);
+        }
+        if (Array.isArray(data?.payment_history)) {
+          setPaymentHistory(data.payment_history);
+        }
+        toast.success("Payment proof and transaction details submitted successfully!");
+      },
+      getError: (err: any) => {
+        let msg =
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          err?.response?.data?.detail;
+        if (!msg && err?.response?.data && typeof err.response.data === "object") {
+          const firstKey = Object.keys(err.response.data)[0];
+          const val = err.response.data[firstKey];
+          msg = Array.isArray(val) ? `${firstKey}: ${val[0]}` : String(val);
+        }
+        if (!msg) msg = err?.message || "Failed to submit payment details. Please try again.";
+        toast.error(msg);
+      },
+    });
+  };
 
   /* ────────────────────────────────────────────────────────────
      FORM
@@ -795,11 +1209,11 @@ export default function StudentAdmissionForm() {
     >
       <div className="max-w-4xl mx-auto">
         {/* ── Header ── */}
-        <div className="text-center mb-8 sm:mb-10">
+        <div className="text-center mb-6 sm:mb-8">
           <img
             src={logo}
             alt="Insight ERP"
-            className="h-16 sm:h-20 object-contain mx-auto mb-5 sm:mb-6"
+            className="h-16 sm:h-20 object-contain mx-auto mb-4 sm:mb-5"
           />
           <h1
             className="text-2xl sm:text-3xl font-bold tracking-tight"
@@ -810,55 +1224,161 @@ export default function StudentAdmissionForm() {
           <p className="mt-2 text-sm sm:text-base max-w-md mx-auto" style={{ color: T.textMuted }}>
             Complete the registration form below to confirm your admission
           </p>
-          {(savedAdmissionId || admissionId) && (
-            <div
-              className="inline-flex items-center gap-2 mt-3 px-4 py-1.5 rounded-full text-xs font-semibold"
-              style={{ background: `${T.primary}15`, color: T.primaryDark }}
+
+          {/* ── Incomplete Admission Form Banner / Trigger ── */}
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                setInputAppId(savedAdmissionId || "");
+                setIsResumeModalOpen(true);
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 shadow-sm hover:shadow cursor-pointer"
             >
-              <ClipboardList className="w-3.5 h-3.5" />
-              Application ID: #{savedAdmissionId || admissionId}
-            </div>
-          )}
+              <FileEdit className="w-4 h-4 text-amber-600" />
+              <span>Incomplete admission form? <strong>Enter Application ID</strong></span>
+            </button>
+
+            {(savedAdmissionId || admissionId) && (
+              <div
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200"
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>Application ID: <strong>#{savedAdmissionId || admissionId}</strong></span>
+              </div>
+            )}
+          </div>
         </div>
 
-                {/* ── Stepper ── */}
+        {/* ── Resume Incomplete Admission Form Modal ── */}
+        <Dialog open={isResumeModalOpen} onOpenChange={setIsResumeModalOpen}>
+          <DialogContent className="sm:max-w-md bg-white">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base sm:text-lg font-bold" style={{ color: T.navy, fontFamily: T.headingFont }}>
+                <ClipboardList className="w-5 h-5 text-amber-600" />
+                Resume Incomplete Admission Form
+              </DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm text-gray-600 pt-1">
+                Enter your <strong>Application ID</strong> below to retrieve your previously saved details and continue your admission form.
+              </DialogDescription>
+            </DialogHeader>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                loadAdmissionById(inputAppId);
+              }}
+              className="space-y-4 py-2"
+            >
+              <div className="space-y-1.5">
+                <Label htmlFor="resume_application_id" className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  Application ID <span style={{ color: T.error }}>*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="resume_application_id"
+                    type="text"
+                    required
+                    placeholder="e.g. 1042"
+                    value={inputAppId}
+                    onChange={(e) => setInputAppId(e.target.value)}
+                    disabled={loadingExisting}
+                    className="h-11 pl-9 text-sm font-semibold"
+                    autoFocus
+                  />
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3.5 pointer-events-none" />
+                </div>
+                <p className="text-[11px] text-gray-500">
+                  Tip: Your Application ID is assigned after completing Step 1.
+                </p>
+              </div>
+
+              <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={loadingExisting}
+                  onClick={() => setIsResumeModalOpen(false)}
+                  className="h-10 px-4 text-xs font-semibold"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={loadingExisting || !inputAppId.trim()}
+                  className="h-10 px-5 text-xs font-semibold text-black"
+                  style={{ background: T.primary }}
+                >
+                  {loadingExisting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Loading Application...
+                    </>
+                  ) : (
+                    "Load Application"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* ── Stepper ── */}
         <div className="flex items-center justify-center mb-8">
-          <div className="flex items-center space-x-2 sm:space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4">
             {[
               { num: 1, label: "Personal Info" },
               { num: 2, label: "Course Info" },
               { num: 3, label: "Documents" },
-            ].map((step, idx) => (
-              <React.Fragment key={step.num}>
-                <div className="flex flex-col items-center">
+              { num: 4, label: "Payment Proof" },
+            ].map((step, idx) => {
+              const isClickable = Boolean(savedAdmissionId) || step.num <= currentStep;
+              return (
+                <React.Fragment key={step.num}>
                   <div
-                    className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-sm sm:text-base transition-colors duration-300 ${
-                      currentStep >= step.num
-                        ? 'bg-amber-500 text-white shadow-md'
-                        : 'bg-gray-200 !text-white !important'
-                    }`}
-                    style={{ background: currentStep >= step.num ? T.primary : T.grayLight, color: currentStep >= step.num ? T.black : T.textMuted }}
+                    className={`flex flex-col items-center ${isClickable ? "cursor-pointer" : "cursor-default"}`}
+                    onClick={() => {
+                      if (isClickable) {
+                        setCurrentStep(step.num);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }
+                    }}
                   >
-                    {step.num}
+                    <div
+                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-sm sm:text-base transition-colors duration-300 ${
+                        currentStep >= step.num
+                          ? 'bg-amber-500 text-white shadow-md'
+                          : 'bg-gray-200 !text-white !important'
+                      }`}
+                      style={{
+                        background: currentStep >= step.num ? T.primary : T.grayLight,
+                        color: currentStep >= step.num ? T.black : T.textMuted,
+                      }}
+                    >
+                      {step.num}
+                    </div>
+                    <span
+                      className="text-xs sm:text-sm mt-1.5 font-medium hidden sm:block"
+                      style={{ color: currentStep >= step.num ? T.black : T.textMuted }}
+                    >
+                      {step.label}
+                    </span>
                   </div>
-                  <span className="text-xs sm:text-sm mt-1.5 font-medium hidden sm:block" style={{ color: currentStep >= step.num ? T.black : T.textMuted }}>
-                    {step.label}
-                  </span>
-                </div>
-                {idx < 2 && (
-                  <div
-                    className={`w-8 sm:w-16 h-1 rounded-full transition-colors duration-300 mb-5 sm:mb-6 ${
-                      currentStep > step.num ? 'bg-amber-500' : 'bg-gray-200'
-                    }`}
-                    style={{ background: currentStep > step.num ? T.primary : T.grayLight }}
-                  />
-                )}
-              </React.Fragment>
-            ))}
+                  {idx < 3 && (
+                    <div
+                      className={`w-6 sm:w-10 md:w-16 h-1 rounded-full transition-colors duration-300 mb-5 sm:mb-6 ${
+                        currentStep > step.num ? 'bg-amber-500' : 'bg-gray-200'
+                      }`}
+                      style={{ background: currentStep > step.num ? T.primary : T.grayLight }}
+                    />
+                  )}
+                </React.Fragment>
+              );
+            })}
           </div>
         </div>
 
-        <form onSubmit={handleNext} className="space-y-5 sm:space-y-6">
+        <form onSubmit={currentStep === 4 ? handlePatchPaymentProof : handleNext} className="space-y-5 sm:space-y-6">
           {/* ════════════════════════════════════════════════════════ */}
           {/*  STEP 1: PERSONAL INFO                                 */}
           {/* ════════════════════════════════════════════════════════ */}
@@ -1364,30 +1884,6 @@ export default function StudentAdmissionForm() {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                  Group Module
-                </Label>
-                <Select
-                  value={formData.group_module}
-                  onValueChange={(val) => handleChange("group_module", val)}
-                >
-                  <SelectTrigger className="h-10 sm:h-11 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {formData.course === "cseet" ? (
-                      <SelectItem value="full">Full Syllabus</SelectItem>
-                    ) : (
-                      <>
-                        <SelectItem value="both">All Modules</SelectItem>
-                        <SelectItem value="module_1">Module 1</SelectItem>
-                        <SelectItem value="module_2">Module 2</SelectItem>
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
                   Batch Attempt
                 </Label>
                 <Select
@@ -1433,6 +1929,26 @@ export default function StudentAdmissionForm() {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  Group Module
+                </Label>
+                <Select
+                  value={formData.group_module}
+                  onValueChange={(val) => handleChange("group_module", val)}
+                >
+                  <SelectTrigger className="h-10 sm:h-11 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableModuleOptions.map((opt: ModuleOption) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
                   Payment Type <span style={{ color: T.error }}>*</span>
                 </Label>
                 <Select
@@ -1444,10 +1960,31 @@ export default function StudentAdmissionForm() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="full_payment">Full Payment</SelectItem>
+                    <SelectItem value="token">Token Payment</SelectItem>
                     <SelectItem value="finance">Finance</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+              {formData.payment_type === "token" && (
+                <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                    Token Payment Mode <span style={{ color: T.error }}>*</span>
+                  </Label>
+                  <Select
+                    value={formData.payment_mode || "online"}
+                    onValueChange={(val) => handleChange("payment_mode", val)}
+                  >
+                    <SelectTrigger className="h-10 sm:h-11 text-sm">
+                      <SelectValue placeholder="Select Payment Mode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="cheque">Cheque</SelectItem>
+                      <SelectItem value="online">Online Payment</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
                   ICSI Fees Payment <span style={{ color: T.error }}>*</span>
@@ -1545,40 +2082,19 @@ export default function StudentAdmissionForm() {
 
                       {/* CS Exec / Prof: Module-based Institute Fees */}
                       {formData.course !== "cseet" && (
-                        <>
-                          {formData.group_module === "both" && (
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-muted-foreground">Institute Fee (Both Modules)</span>
-                              <span className="font-medium text-foreground">
-                                {formatCurrency(getInstituteFee(matchedFee, formData.course, formData.group_module))}
-                              </span>
-                            </div>
-                          )}
-                          {formData.group_module === "module_1" && (
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-muted-foreground">Institute Fee (Module 1)</span>
-                              <span className="font-medium text-foreground">
-                                {formatCurrency(getInstituteFee(matchedFee, formData.course, formData.group_module))}
-                              </span>
-                            </div>
-                          )}
-                          {formData.group_module === "module_2" && (
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-muted-foreground">Institute Fee (Module 2)</span>
-                              <span className="font-medium text-foreground">
-                                {formatCurrency(getInstituteFee(matchedFee, formData.course, formData.group_module))}
-                              </span>
-                            </div>
-                          )}
-                          {formData.group_module === "module_3" && (
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-muted-foreground">Institute Fee (Module 3)</span>
-                              <span className="font-medium text-foreground">
-                                {formatCurrency(getInstituteFee(matchedFee, formData.course, formData.group_module))}
-                              </span>
-                            </div>
-                          )}
-                        </>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">
+                            Institute Fee (
+                            {availableModuleOptions.find((o: ModuleOption) => o.value === formData.group_module)?.label ||
+                              (formData.group_module === "both"
+                                ? (detectedModuleCount === 2 ? "Both Modules" : "All Modules")
+                                : formData.group_module.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()))}
+                            )
+                          </span>
+                          <span className="font-medium text-foreground">
+                            {formatCurrency(getInstituteFee(matchedFee, formData.course, formData.group_module))}
+                          </span>
+                        </div>
                       )}
 
                       {/* ICSI fees included when paying through institute */}
@@ -1632,28 +2148,105 @@ export default function StudentAdmissionForm() {
                             <div className="flex justify-between items-center text-sm">
                               <span className="text-muted-foreground">ICSI Exam Fees (Per Module)</span>
                               <span className="font-medium text-foreground">
-                                {formatCurrency(getIcsiExamFees(matchedFee, feeCandidates) * (formData.group_module === "both" ? 2 : 1))}
+                                {formatCurrency(getIcsiExamFees(matchedFee, feeCandidates) * (formData.course !== "cseet" && (formData.group_module === "both" || formData.group_module === "all") ? detectedModuleCount : 1))}
                               </span>
                             </div>
                           )}
                         </>
                       )}
 
-                      {/* ── Total Payable ── */}
-                      <div className="flex justify-between items-center pt-3 mt-1 border-t border-border/50">
-                        <span className="text-sm font-semibold text-foreground">Total Payable to Institute</span>
-                        <span className="text-base font-bold" style={{ color: T.primaryDark }}>
-                          {(() => {
-                            let total = getInstituteFee(matchedFee, formData.course, formData.group_module);
-                            if (formData.icsi_fees_payment === "pay_through_institute") {
-                              const regFee = getIcsiRegFees(matchedFee, formData.qualification, formData.course, feeCandidates);
-                              const examFee = getIcsiExamFees(matchedFee, feeCandidates) * (formData.course !== "cseet" && formData.group_module === "both" ? 2 : 1);
-                              total += regFee + examFee;
-                            }
-                            return formatCurrency(total);
-                          })()}
-                        </span>
-                      </div>
+                      {/* ── Total Payable / Payment Breakdown ── */}
+                      {(() => {
+                        const instituteFee = getInstituteFee(matchedFee, formData.course, formData.group_module);
+                        let totalPayable = instituteFee;
+                        if (formData.icsi_fees_payment === "pay_through_institute") {
+                          const regFee = getIcsiRegFees(matchedFee, formData.qualification, formData.course, feeCandidates);
+                          const examFee = getIcsiExamFees(matchedFee, feeCandidates) * (formData.course !== "cseet" && (formData.group_module === "both" || formData.group_module === "all") ? detectedModuleCount : 1);
+                          totalPayable += regFee + examFee;
+                        }
+                        const tokenAmt = Number(matchedFee?.token_amount || 0);
+                        const remainingFees = Math.max(0, instituteFee - tokenAmt);
+
+                        if (formData.payment_type === "token") {
+                          return (
+                            <div className="pt-3 mt-1 border-t border-border/50 space-y-3">
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-muted-foreground">Institute Course Fee</span>
+                                <span className="font-medium text-foreground">{formatCurrency(instituteFee)}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-sm bg-amber-500/10 dark:bg-amber-500/20 px-3 py-2 rounded-lg border border-amber-300/60">
+                                <div>
+                                  <span className="font-semibold text-amber-900 dark:text-amber-200 block">Token Amount (Payable Now)</span>
+                                  <span className="text-[11px] text-amber-800/80 dark:text-amber-300/80">
+                                    {formData.payment_mode === "cash"
+                                      ? "Cash payment at branch office"
+                                      : formData.payment_mode === "cheque"
+                                        ? "Cheque payment at branch office"
+                                        : "Via Razorpay link sent to Email & WhatsApp"}
+                                  </span>
+                                </div>
+                                <span className="text-base font-bold text-amber-700 dark:text-amber-300">
+                                  {formatCurrency(tokenAmt)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center text-sm">
+                                <div>
+                                  <span className="font-semibold text-foreground block">Remaining Fees</span>
+                                  <span className="text-[11px] text-muted-foreground">Institute Fee − Token Amount</span>
+                                </div>
+                                <span className="text-base font-bold text-foreground">
+                                  {formatCurrency(remainingFees)}
+                                </span>
+                              </div>
+                              <div className="rounded-xl border border-amber-400 bg-amber-50 dark:bg-amber-950/40 p-3.5 space-y-1">
+                                <div className="flex items-center gap-2 font-semibold text-amber-900 dark:text-amber-200 text-xs sm:text-sm">
+                                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                                  <span>15-Day Policy Notice</span>
+                                </div>
+                                <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                                  In 15 days you have to pay remaining fees (<strong>{formatCurrency(remainingFees)}</strong>) otherwise it will be considered as Finance.
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        if (formData.payment_type === "finance") {
+                          return (
+                            <div className="pt-3 mt-1 border-t border-border/50 space-y-3">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-semibold text-foreground">Total Course Fee</span>
+                                <span className="text-base font-bold" style={{ color: T.primaryDark }}>
+                                  {formatCurrency(totalPayable)}
+                                </span>
+                              </div>
+                              <div className="rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-950/30 p-3.5 space-y-1">
+                                <div className="flex items-center gap-2 font-semibold text-blue-900 dark:text-blue-200 text-xs sm:text-sm">
+                                  <Info className="w-4 h-4 text-blue-600 shrink-0" />
+                                  <span>Finance / Loan Option</span>
+                                </div>
+                                <p className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+                                  No online payment link will be generated. Our admissions team will contact you to assist with EMI / loan documentation and approval.
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="pt-3 mt-1 border-t border-border/50 space-y-2">
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <span className="text-sm font-semibold text-foreground block">Total Payable to Institute</span>
+                                <span className="text-[11px] text-muted-foreground">Full payment Razorpay link will be emailed</span>
+                              </div>
+                              <span className="text-base font-bold" style={{ color: T.primaryDark }}>
+                                {formatCurrency(totalPayable)}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
 
@@ -1717,7 +2310,7 @@ export default function StudentAdmissionForm() {
                           <div className="flex justify-between items-center text-sm">
                             <span className="text-amber-800/70 dark:text-amber-300/70">ICSI Exam Fees (Per Module)</span>
                             <span className="font-medium text-amber-800 dark:text-amber-300">
-                              {formatCurrency(getIcsiExamFees(matchedFee, feeCandidates) * (formData.group_module === "both" ? 2 : 1))}
+                              {formatCurrency(getIcsiExamFees(matchedFee, feeCandidates) * (formData.course !== "cseet" && (formData.group_module === "both" || formData.group_module === "all") ? detectedModuleCount : 1))}
                             </span>
                           </div>
                         )}
@@ -1770,6 +2363,7 @@ export default function StudentAdmissionForm() {
                 icon={PenTool}
                 file={docSignature}
                 onFileChange={setDocSignature}
+                existingUrl={existingDocs.doc_signature}
                 // required
               />
               <FileUploadField
@@ -1777,6 +2371,7 @@ export default function StudentAdmissionForm() {
                 icon={Camera}
                 file={docPhoto}
                 onFileChange={setDocPhoto}
+                existingUrl={existingDocs.doc_photo}
                 // required
               />
               <FileUploadField
@@ -1784,6 +2379,7 @@ export default function StudentAdmissionForm() {
                 icon={CreditCard}
                 file={docIdCard}
                 onFileChange={setDocIdCard}
+                existingUrl={existingDocs.doc_id_card}
                 // required
               />
               <FileUploadField
@@ -1791,6 +2387,7 @@ export default function StudentAdmissionForm() {
                 icon={CreditCard}
                 file={docPanCard}
                 onFileChange={setDocPanCard}
+                existingUrl={existingDocs.doc_pan_card}
                 // required
               />
               <FileUploadField
@@ -1798,6 +2395,7 @@ export default function StudentAdmissionForm() {
                 icon={Baby}
                 file={docDobCertificate}
                 onFileChange={setDocDobCertificate}
+                existingUrl={existingDocs.doc_dob_certificate}
                 // required
               />
               <FileUploadField
@@ -1805,6 +2403,7 @@ export default function StudentAdmissionForm() {
                 icon={FileCheck}
                 file={doc12thReceipt}
                 onFileChange={setDoc12thReceipt}
+                existingUrl={existingDocs.doc_twelfth_receipt}
                 // required
               />
               <FileUploadField
@@ -1812,6 +2411,7 @@ export default function StudentAdmissionForm() {
                 icon={GraduationCap}
                 file={doc12thMarkSheet}
                 onFileChange={setDoc12thMarkSheet}
+                existingUrl={existingDocs.doc_twelfth_marksheet}
                 // required
               />
               <FileUploadField
@@ -1819,6 +2419,7 @@ export default function StudentAdmissionForm() {
                 icon={BadgeCheck}
                 file={docCategoryCertificate}
                 onFileChange={setDocCategoryCertificate}
+                existingUrl={existingDocs.doc_category_cert}
                 // required
               />
             </div>
@@ -1865,12 +2466,12 @@ export default function StudentAdmissionForm() {
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Submitting...
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Submitting Application...
                 </>
               ) : (
                 <>
                   <ShieldCheck className="w-5 h-5 mr-2" />
-                  Submit Admission Form
+                  Submit Application & Proceed to Payment Proof
                 </>
               )}
             </Button>
@@ -1881,6 +2482,505 @@ export default function StudentAdmissionForm() {
                 </Button>
               </div>
             </>
+          )}
+
+          {/* ════════════════════════════════════════════════════════ */}
+          {/*  STEP 4: PAYMENT PROOF & CONFIRMATION                  */}
+          {/* ════════════════════════════════════════════════════════ */}
+          {currentStep === 4 && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              {/* ── Confirmation Summary Header Card ── */}
+              <div
+                className="rounded-3xl p-6 sm:p-10 text-center relative overflow-hidden"
+                style={{ background: T.card, border: `1px solid ${T.border}`, boxShadow: "0 10px 40px rgba(0,33,71,0.08)" }}
+              >
+                <div
+                  className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
+                  style={{
+                    background: `linear-gradient(135deg, ${T.success}15 0%, ${T.success}25 100%)`,
+                  }}
+                >
+                  <CheckCircle2 className="w-10 h-10" style={{ color: T.success }} />
+                </div>
+
+                <h2
+                  className="text-2xl sm:text-3xl font-bold mb-2"
+                  style={{ color: T.black, fontFamily: T.headingFont }}
+                >
+                  Admission Submitted!
+                </h2>
+                <p className="text-sm sm:text-base mb-6" style={{ color: T.text }}>
+                  Your registration form has been received successfully.
+                </p>
+
+                {/* Application Details Summary */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-muted/30 border border-border/60 text-xs sm:text-sm text-left max-w-lg mx-auto space-y-2">
+                  <div className="flex justify-between items-center pb-2 border-b border-border/40">
+                    <span className="text-muted-foreground font-medium">Application ID</span>
+                    <span className="font-mono font-bold text-foreground text-sm">#{savedAdmissionId || "Submitted"}</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-2 border-b border-border/40">
+                    <span className="text-muted-foreground font-medium">Course & Attempt</span>
+                    <span className="font-semibold text-foreground uppercase">
+                      {formData.course?.replace(/_/g, " ")} ({formData.batch_attempt} {formData.attempt_year})
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground font-medium">Payment Plan</span>
+                    <span className="font-semibold capitalize text-foreground">
+                      {formData.payment_type === "token"
+                        ? `Token Payment (${formData.payment_mode === "cash" ? "Cash" : formData.payment_mode === "cheque" ? "Cheque" : "Online"})`
+                        : formData.payment_type === "full_payment"
+                          ? "Full Payment"
+                          : "Finance Assistance"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Conditional Payment Guidance Card */}
+                {(() => {
+                  const instFee = getInstituteFee(matchedFee, formData.course, formData.group_module);
+                  const tokenAmt = Number(matchedFee?.token_amount || 0);
+                  const remFees = Math.max(0, instFee - tokenAmt);
+                  let fullTotal = instFee;
+                  if (formData.icsi_fees_payment === "pay_through_institute") {
+                    const regFee = getIcsiRegFees(matchedFee, formData.qualification, formData.course, feeCandidates);
+                    const examFee = getIcsiExamFees(matchedFee, feeCandidates) * (formData.course !== "cseet" && (formData.group_module === "both" || formData.group_module === "all") ? detectedModuleCount : 1);
+                    fullTotal += regFee + examFee;
+                  }
+
+                  if (formData.payment_type === "token") {
+                    const isCash = formData.payment_mode === "cash";
+                    const isCheque = formData.payment_mode === "cheque";
+
+                    return (
+                      <div className="rounded-2xl border border-amber-300 bg-amber-50/80 p-4 text-left my-4 max-w-lg mx-auto space-y-2.5">
+                        <div className="flex items-center gap-2 font-semibold text-amber-900 text-sm">
+                          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                          <span>
+                            {isCash
+                              ? "Token Payment (Cash Selected)"
+                              : isCheque
+                                ? "Token Payment (Cheque Selected)"
+                                : "Token Payment Link Sent"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-amber-800 leading-relaxed">
+                          {isCash ? (
+                            <>
+                              Token payment of <strong>{formatCurrency(tokenAmt)}</strong> selected in <strong>Cash</strong>. Please submit cash or upload deposit receipt below.
+                            </>
+                          ) : isCheque ? (
+                            <>
+                              Token payment of <strong>{formatCurrency(tokenAmt)}</strong> selected via <strong>Cheque</strong>{formData.cheque_no ? ` (${formData.cheque_no})` : ""}. Please submit your cheque or upload cheque photo below.
+                            </>
+                          ) : (
+                            <>
+                              A secure Razorpay payment link for the token amount (<strong>{formatCurrency(tokenAmt)}</strong>) has been generated and sent to <strong>{formData.email}</strong> and WhatsApp.
+                            </>
+                          )}
+                        </p>
+                        <div className="pt-2 border-t border-amber-200 text-xs text-amber-900 font-medium">
+                          ⚠️ <strong>Notice Regarding Remaining Fees:</strong> In 15 days you have to pay remaining fees (<strong>{formatCurrency(remFees)}</strong>) otherwise it will be considered as Finance.
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (formData.payment_type === "full_payment") {
+                    return (
+                      <div className="rounded-2xl border border-emerald-300 bg-emerald-50/80 p-4 text-left my-4 max-w-lg mx-auto space-y-2">
+                        <div className="flex items-center gap-2 font-semibold text-emerald-900 text-sm">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>Full Payment Link Sent</span>
+                        </div>
+                        <p className="text-xs text-emerald-800 leading-relaxed">
+                          A secure payment link for <strong>{formatCurrency(fullTotal)}</strong> has been generated and sent to <strong>{formData.email}</strong> and WhatsApp. You can also upload your payment proof below.
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="rounded-2xl border border-blue-200 bg-blue-50/80 p-4 text-left my-4 max-w-lg mx-auto space-y-1.5">
+                      <div className="flex items-center gap-2 font-semibold text-blue-900 text-sm">
+                        <Info className="w-4 h-4 text-blue-600 shrink-0" />
+                        <span>Finance Application In Review</span>
+                      </div>
+                      <p className="text-xs text-blue-800 leading-relaxed">
+                        No immediate payment is required. Our admissions counsellor will get in touch with you within 24–48 hours to complete your finance/EMI approval. You may optionally upload any advance voucher or down-payment proof below.
+                      </p>
+                    </div>
+                  );
+                })()}
+
+                {/* Active Razorpay Quick Pay Action */}
+                {razorpayPaymentLink && (
+                  <div className="mt-4 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-400/20 to-amber-500/10 border-2 border-amber-400 max-w-lg mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-left shadow-sm">
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+                        <CreditCard className="w-4 h-4 text-amber-600" />
+                        Razorpay Payment Link Ready
+                      </span>
+                      <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                        Pay securely with UPI, Debit/Credit Card, or Netbanking.
+                      </p>
+                    </div>
+                    <a
+                      href={razorpayPaymentLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-black bg-amber-400 hover:bg-amber-500 shadow-md transition-all shrink-0 cursor-pointer"
+                    >
+                      <span>Pay Token Now</span>
+                      <ArrowUpRight className="w-4 h-4" />
+                    </a>
+                  </div>
+                )}
+
+                <p className="text-xs text-muted-foreground my-3 max-w-lg mx-auto leading-relaxed">
+                  Prefer direct UPI or bank transfer? You can upload your payment receipt and enter the transaction reference ID below to complete your admission confirmation.
+                </p>
+              </div>
+
+              {/* ── Section: Payment History & Transactions ── */}
+              <SectionCard icon={History} title="Payment History & Transactions">
+                <div className="space-y-4">
+                  {paymentHistory && paymentHistory.length > 0 ? (
+                    <div className="space-y-4">
+                      {paymentHistory.map((item: any, idx: number) => {
+                        const isPending = item.status === "pending" || !item.status;
+                        const isPaid = item.status === "paid" || item.status === "success" || item.status === "completed";
+                        const isFailed = item.status === "failed";
+                        const eventLabel =
+                          item.event === "payment_link_created"
+                            ? "Online Payment Link Generated"
+                            : item.event === "payment_received" || item.event === "paid"
+                              ? "Payment Received & Confirmed"
+                              : item.event === "proof_uploaded" || item.event === "payment_submitted"
+                                ? "Payment Proof Submitted"
+                                : (item.event || "Payment Transaction").replace(/_/g, " ");
+
+                        return (
+                          <div
+                            key={idx}
+                            className="rounded-2xl border p-4 sm:p-5 transition-all space-y-3.5"
+                            style={{
+                              background: isPaid ? "rgba(16, 185, 129, 0.04)" : isPending ? "rgba(245, 158, 11, 0.04)" : T.card,
+                              borderColor: isPaid ? "rgba(16, 185, 129, 0.3)" : isPending ? "rgba(245, 158, 11, 0.35)" : T.border,
+                            }}
+                          >
+                            {/* Top row: event label, time, status */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/40">
+                              <div className="flex items-center gap-2.5">
+                                <div
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                                  style={{
+                                    background: isPaid ? "rgba(16, 185, 129, 0.15)" : isPending ? "rgba(245, 158, 11, 0.15)" : "rgba(0,0,0,0.06)",
+                                  }}
+                                >
+                                  {isPaid ? (
+                                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                  ) : item.razorpay_payment_link ? (
+                                    <Link2 className="w-4 h-4 text-amber-600" />
+                                  ) : (
+                                    <CreditCard className="w-4 h-4 text-muted-foreground" />
+                                  )}
+                                </div>
+                                <div>
+                                  <h4 className="text-sm font-bold text-foreground capitalize">
+                                    {eventLabel}
+                                  </h4>
+                                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-0.5">
+                                    <Clock className="w-3 h-3" />
+                                    <span>
+                                      {item.timestamp || item.created_at
+                                        ? new Date(item.timestamp || item.created_at).toLocaleString("en-IN", {
+                                            dateStyle: "medium",
+                                            timeStyle: "short",
+                                          })
+                                        : item.date || "—"}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <Badge
+                                variant="outline"
+                                className={`self-start sm:self-auto text-xs font-semibold px-2.5 py-1 ${
+                                  isPaid
+                                    ? "bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300"
+                                    : isPending
+                                      ? "bg-amber-50 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300"
+                                      : isFailed
+                                        ? "bg-rose-50 text-rose-800 border-rose-300"
+                                        : "bg-muted text-foreground"
+                                }`}
+                              >
+                                {isPaid
+                                  ? "✅ Paid / Verified"
+                                  : isPending
+                                    ? "⏳ Payment Pending"
+                                    : isFailed
+                                      ? "❌ Failed"
+                                      : (item.status || "Recorded")}
+                              </Badge>
+                            </div>
+
+                            {/* Amount & Plan Row */}
+                            <div className="flex flex-wrap items-baseline justify-between gap-2">
+                              <div>
+                                <span className="text-[11px] text-muted-foreground block">
+                                  Transaction Amount
+                                </span>
+                                <span className="text-xl sm:text-2xl font-black text-foreground" style={{ color: T.navy }}>
+                                  {formatCurrency(Number(item.amount || item.token_amount || 0))}
+                                </span>
+                              </div>
+
+                              <div className="flex flex-wrap items-center gap-2 text-xs">
+                                <span className="px-2.5 py-1 rounded-md bg-muted/60 font-medium text-foreground">
+                                  {item.payment_type_display || item.payment_type || "Token Payment"}
+                                </span>
+                                <span className="px-2.5 py-1 rounded-md bg-muted/60 font-medium text-foreground capitalize">
+                                  Mode: {item.payment_choice_display || item.payment_choice || "Online"}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Breakdown stat chips if available */}
+                            {(item.total_fees != null || item.remaining_fees != null) && (
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-2.5 rounded-xl bg-muted/30 border border-border/40 text-xs">
+                                {item.total_fees != null && (
+                                  <div>
+                                    <span className="text-muted-foreground block text-[11px]">Total Course Fee</span>
+                                    <span className="font-semibold text-foreground">
+                                      {formatCurrency(Number(item.total_fees))}
+                                    </span>
+                                  </div>
+                                )}
+                                <div>
+                                  <span className="text-muted-foreground block text-[11px]">Payable / Token Amount</span>
+                                  <span className="font-semibold text-foreground">
+                                    {formatCurrency(Number(item.amount || item.token_amount || 0))}
+                                  </span>
+                                </div>
+                                {item.remaining_fees != null && (
+                                  <div>
+                                    <span className="text-muted-foreground block text-[11px]">Remaining Balance</span>
+                                    <span className="font-semibold text-amber-700 dark:text-amber-400">
+                                      {formatCurrency(Number(item.remaining_fees))}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Razorpay Online Link Box */}
+                            {item.razorpay_payment_link && (
+                              <div className="p-3 sm:p-3.5 rounded-xl bg-amber-500/10 border border-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-950 dark:text-amber-200">
+                                    <Link2 className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
+                                    <span>Razorpay Payment Link</span>
+                                  </div>
+                                  {item.razorpay_payment_link_id && (
+                                    <span className="font-mono text-[11px] text-amber-800/80 dark:text-amber-300/80 block">
+                                      ID: {item.razorpay_payment_link_id}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <a
+                                  href={item.razorpay_payment_link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-black bg-amber-400 hover:bg-amber-500 shadow-sm transition-all shrink-0 cursor-pointer"
+                                >
+                                  <span>{isPaid ? "View Payment Link" : "Pay with Razorpay"}</span>
+                                  <ArrowUpRight className="w-3.5 h-3.5" />
+                                </a>
+                              </div>
+                            )}
+
+                            {/* Uploaded Receipt / Screenshot Proof */}
+                            {(item.payment_screenshot || item.payment_proof) && (
+                              <div className="flex items-center gap-2 pt-1 text-xs">
+                                <Receipt className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-muted-foreground">Receipt Proof:</span>
+                                <a
+                                  href={item.payment_screenshot || item.payment_proof}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:underline font-semibold inline-flex items-center gap-1"
+                                >
+                                  <span>View Document</span>
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              </div>
+                            )}
+
+                            {/* Terms Note */}
+                            {(item.terms_note || item.fee_terms_note) && (
+                              <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs text-amber-900 flex items-start gap-2 leading-relaxed">
+                                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                <span>{item.terms_note || item.fee_terms_note}</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center rounded-2xl bg-muted/20 border border-dashed border-border/60 text-muted-foreground space-y-2">
+                      <History className="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
+                      <p className="text-sm font-semibold text-foreground">No Payment History Recorded Yet</p>
+                      <p className="text-xs max-w-md mx-auto">
+                        When a payment link is created or you submit a transaction receipt, your complete payment audit log will appear here.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </SectionCard>
+
+              {/* ── Payment Proof Upload & Details Card ── */}
+              <SectionCard icon={Receipt} title="Upload Payment Proof & Transaction Details">
+                <div className="space-y-6">
+                  {paymentProofSuccess && (
+                    <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-200 animate-in fade-in duration-200">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" />
+                      <div className="text-xs sm:text-sm space-y-1">
+                        <p className="font-semibold">Payment Details Saved Successfully!</p>
+                        <p className="text-emerald-800/90 dark:text-emerald-300/90">
+                          Your payment reference <strong>{transactionId || `#${savedAdmissionId}`}</strong> has been recorded and submitted for verification by our accounts team.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                    {/* Payment Amount */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                        Payment Amount Paid (₹) <span style={{ color: T.error }}>*</span>
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-2.5 sm:top-3 text-sm font-semibold text-muted-foreground pointer-events-none">
+                          ₹
+                        </span>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={paymentAmount}
+                          onChange={(e) => setPaymentAmount(e.target.value)}
+                          className="h-10 sm:h-11 pl-8 text-sm font-semibold"
+                          placeholder="e.g. 20000"
+                        />
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Amount paid by the student ({formData.payment_type === "token" ? "Token amount" : "Full course fees"}).
+                      </p>
+                    </div>
+
+                    {/* Transaction ID */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                        Transaction ID / Reference Number
+                      </Label>
+                      <Input
+                        type="text"
+                        maxLength={100}
+                        value={transactionId}
+                        onChange={(e) => setTransactionId(e.target.value)}
+                        className="h-10 sm:h-11 text-sm font-mono"
+                        placeholder="UPI Ref / UTR / Cheque No / Bank Ref"
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        UPI / Bank transaction reference number.
+                      </p>
+                    </div>
+
+                    {/* Payment Submitted Date & Time */}
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                        Payment Date & Time
+                      </Label>
+                      <Input
+                        type="datetime-local"
+                        value={paymentSubmittedAt ? paymentSubmittedAt.slice(0, 16) : ""}
+                        onChange={(e) => setPaymentSubmittedAt(e.target.value)}
+                        className="h-10 sm:h-11 text-sm"
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        Date and time when payment was executed. Defaults to current timestamp.
+                      </p>
+                    </div>
+
+                    {/* Payment Screenshot Upload */}
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <FileUploadField
+                        label="Payment Screenshot / Receipt Upload"
+                        icon={Receipt}
+                        file={paymentScreenshot}
+                        onFileChange={setPaymentScreenshot}
+                        existingUrl={existingPaymentScreenshot}
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        Upload screenshot or photo of UPI payment receipt, bank transfer slip, or deposit receipt (JPG, PNG, PDF).
+                      </p>
+                    </div>
+
+                    {/* Payment Note */}
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                        Payment Note <span className="text-muted-foreground font-normal">(Optional)</span>
+                      </Label>
+                      <Textarea
+                        rows={3}
+                        value={paymentNote}
+                        onChange={(e) => setPaymentNote(e.target.value)}
+                        placeholder="Optional note from student regarding payment (e.g., Paid via PhonePe from Father's account, Cheque deposited at branch, etc.)."
+                        className="text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="pt-4 flex flex-col sm:flex-row items-center gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={prevStep}
+                      className="w-full sm:w-auto h-12 px-6 font-semibold"
+                    >
+                      Back to Documents
+                    </Button>
+
+                    <Button
+                      type="submit"
+                      disabled={paymentProofSubmitting}
+                      className="w-full sm:flex-1 h-12 text-sm sm:text-base font-semibold text-black transition-all"
+                      style={{
+                        background: T.primary,
+                        boxShadow: "0 4px 14px rgba(247,169,0,0.25)",
+                      }}
+                    >
+                      {paymentProofSubmitting ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Submitting Payment Proof...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-5 h-5 mr-2" />
+                          {paymentProofSuccess ? "Update Payment Proof Details" : "Submit Payment Proof"}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </SectionCard>
+            </div>
           )}
         </form>
 

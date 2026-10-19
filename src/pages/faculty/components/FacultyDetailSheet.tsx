@@ -23,6 +23,12 @@ import {
 } from "@/components/ui/select";
 import { Pencil, Save, Loader2, X } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
+import WeeklyScheduleEditor from "@/components/schedule/WeeklyScheduleEditor";
+import type { WeeklySchedule } from "@/types/schedule";
+import {
+  normalizeWeeklySchedule,
+  createDefaultWeeklySchedule,
+} from "@/utils/schedule";
 
 const FACULTY_LEVELS = [
   { value: "executive", label: "Executive" },
@@ -75,6 +81,7 @@ export default function FacultyDetailSheet({
     branch_id: "",
     work_start_time: "",
     work_end_time: "",
+    weekly_schedule: createDefaultWeeklySchedule() as WeeklySchedule,
     salary_retention_percentage: "0",
   });
 
@@ -131,6 +138,11 @@ export default function FacultyDetailSheet({
         branch_id: selectedFaculty.branch || "",
         work_start_time: selectedFaculty.work_start_time || "",
         work_end_time: selectedFaculty.work_end_time || "",
+        weekly_schedule: normalizeWeeklySchedule(
+          selectedFaculty.weekly_schedule,
+          selectedFaculty.work_start_time,
+          selectedFaculty.work_end_time
+        ),
         salary_retention_percentage: selectedFaculty.salary_retention_percentage !== undefined ? String(Number(selectedFaculty.salary_retention_percentage)) : "0",
       });
     }
@@ -322,30 +334,20 @@ export default function FacultyDetailSheet({
                     </>
                   )}
                   {["full_time", "part_time"].includes(editForm.employment_type) && (
-                    <>
-                      <div className="space-y-1">
-                        <Label>Work Start Time</Label>
-                        <Input
-                          type="time"
-                          step="1"
-                          value={editForm.work_start_time}
-                          onChange={(e) =>
-                            setEditForm((f) => ({ ...f, work_start_time: e.target.value }))
-                          }
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label>Work End Time</Label>
-                        <Input
-                          type="time"
-                          step="1"
-                          value={editForm.work_end_time}
-                          onChange={(e) =>
-                            setEditForm((f) => ({ ...f, work_end_time: e.target.value }))
-                          }
-                        />
-                      </div>
-                    </>
+                    <div className="col-span-2 pt-2">
+                      <WeeklyScheduleEditor
+                        value={editForm.weekly_schedule}
+                        isEditing={true}
+                        onChange={(newSchedule) => {
+                          setEditForm((f) => ({
+                            ...f,
+                            weekly_schedule: newSchedule,
+                            work_start_time: newSchedule.monday?.start_time || f.work_start_time,
+                            work_end_time: newSchedule.monday?.end_time || f.work_end_time,
+                          }));
+                        }}
+                      />
+                    </div>
                   )}
                   <div className="space-y-1">
                     <Label>Salary Retention Percentage</Label>
@@ -518,10 +520,13 @@ export default function FacultyDetailSheet({
                       value={selectedFaculty.employment_type_display}
                     />
                     {["full_time", "part_time"].includes(selectedFaculty.employment_type) && (
-                      <>
-                        <DetailRow label="Work Start Time" value={selectedFaculty.work_start_time || "—"} />
-                        <DetailRow label="Work End Time" value={selectedFaculty.work_end_time || "—"} />
-                      </>
+                      <div className="py-2.5 border-b border-border/50 last:border-0">
+                        <span className="text-muted-foreground text-sm block mb-2">Weekly Schedule & Shifts</span>
+                        <WeeklyScheduleEditor
+                          value={selectedFaculty.weekly_schedule}
+                          isEditing={false}
+                        />
+                      </div>
                     )}
                     <DetailRow label="Qualification" value={selectedFaculty.qualification} />
                     {/* <DetailRow label="Specialization" value={selectedFaculty.specialization} /> */}

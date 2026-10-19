@@ -207,6 +207,14 @@ export const syllabusActions = {
   DELETE_SYLLABUS: "DELETE_SYLLABUS",
 } as const;
 
+export const moduleActions = {
+  GET_MODULES: "GET_MODULES",
+  GET_MODULE_DETAILS: "GET_MODULE_DETAILS",
+  CREATE_MODULE: "CREATE_MODULE",
+  UPDATE_MODULE: "UPDATE_MODULE",
+  DELETE_MODULE: "DELETE_MODULE",
+} as const;
+
 export const salesActions = {
   GET_PLANS: "GET_PLANS",
   GET_ODOMETER_READINGS: "GET_ODOMETER_READINGS",

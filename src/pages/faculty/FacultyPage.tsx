@@ -1858,7 +1858,7 @@ export default function FacultyPage() {
                     ) : (
                       subjects.map((s) => (
                         <SelectItem key={s.id} value={s.id}>
-                          {s.name} ({s.code || "No Code"})
+                          {s.name}
                         </SelectItem>
                       ))
                     )}

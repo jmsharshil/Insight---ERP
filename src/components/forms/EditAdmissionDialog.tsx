@@ -94,6 +94,9 @@ export default function EditAdmissionDialog({
     grad_last_sem: "",
     note: "",
     reference: "google",
+    payment_type: "full_payment",
+    payment_mode: "online",
+    cheque_no: "",
   });
 
   // Reset form when dialog opens or admission data changes
@@ -137,6 +140,9 @@ export default function EditAdmissionDialog({
         grad_last_sem: admission.grad_last_sem || "",
         note: admission.note || "",
         reference: admission.reference || "google",
+        payment_type: admission.payment_type || "full_payment",
+        payment_mode: admission.payment_mode || "online",
+        cheque_no: admission.cheque_no || "",
       });
       setSelectedFiles({});
     }
@@ -145,6 +151,9 @@ export default function EditAdmissionDialog({
   const handleEditFormChange = (field: string, value: string | boolean) => {
     setEditForm((prev) => {
       const updated = { ...prev, [field]: value };
+      if (field === "payment_type" && value === "token" && !prev.payment_mode) {
+        updated.payment_mode = "online";
+      }
       if (field === "course") {
         if (value === "cseet") {
           updated.group_module = "full";
@@ -516,7 +525,51 @@ export default function EditAdmissionDialog({
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-1.5 md:col-span-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-text-primary">Payment Type</Label>
+                    <Select
+                      value={editForm.payment_type}
+                      onValueChange={(val) => handleEditFormChange("payment_type", val)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Payment Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="full_payment">Full Payment</SelectItem>
+                        <SelectItem value="token">Token Payment</SelectItem>
+                        <SelectItem value="finance">Finance</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {editForm.payment_type === "token" && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-text-primary">Token Payment Mode</Label>
+                      <Select
+                        value={editForm.payment_mode || "online"}
+                        onValueChange={(val) => handleEditFormChange("payment_mode", val)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Payment Mode" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cash">Cash</SelectItem>
+                          <SelectItem value="cheque">Cheque</SelectItem>
+                          <SelectItem value="online">Online Payment</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {editForm.payment_type === "token" && editForm.payment_mode === "cheque" && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-text-primary">Cheque Number / Reference</Label>
+                      <Input
+                        placeholder="e.g. CHQ-104928"
+                        value={editForm.cheque_no || ""}
+                        onChange={(e) => handleEditFormChange("cheque_no", e.target.value)}
+                      />
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
                     <Label className="text-xs font-semibold text-text-primary">Reference</Label>
                     <Select
                       value={editForm.reference}

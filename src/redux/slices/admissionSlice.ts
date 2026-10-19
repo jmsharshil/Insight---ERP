@@ -12,9 +12,19 @@ export interface AdmissionRecord {
   status: string;
   status_display: string;
   location: string;
+  city?: string;
+  reference_name?: string;
+  reference_display?: string;
   assigned_counsellor: { id: string; name: string; email: string; phone: string } | null;
   note: string;
   submitted_at: string;
+  payment_type?: "token" | "full_payment" | "finance" | string;
+  payment_mode?: "cash" | "cheque" | "online" | string;
+  cheque_no?: string;
+  attempt_year?: string | number;
+  remaining_fees?: string | number | null;
+  token_payment_terms_note?: string | null;
+  fee_structure?: number | string | any;
 }
 
 export interface AdmissionDetail extends AdmissionRecord {
@@ -63,6 +73,10 @@ export interface AdmissionDetail extends AdmissionRecord {
   payment_note: string;
   payment_submitted_at: string | null;
   lead: number;
+  fee_structure_detail?: any;
+  icsi_fees_payment?: string;
+  razorpay_payment_link?: string | null;
+  razorpay_payment_id?: string | null;
 }
 
 interface AdmissionState {

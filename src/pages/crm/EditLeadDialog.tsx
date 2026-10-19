@@ -139,7 +139,7 @@ export default function EditLeadDialog({ lead, open, onOpenChange, onSuccess }: 
                   <SelectTrigger className="mt-1"><SelectValue placeholder="Select Branch" /></SelectTrigger>
                   <SelectContent>
                     {branchesLoading ? <SelectItem value="loading" disabled>Loading...</SelectItem> :
-                      branches.map((b) => <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>)}
+                      branches.map((b) => <SelectItem key={b.value} value={String(b.value)}>{b.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -207,9 +207,13 @@ export default function EditLeadDialog({ lead, open, onOpenChange, onSuccess }: 
                 <Select value={formData.group_module} onValueChange={(v) => handleChange("group_module", v)}>
                   <SelectTrigger className="mt-1"><SelectValue placeholder="Select Module" /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="all">All Modules</SelectItem>
+                    <SelectItem value="both">Both Modules</SelectItem>
                     <SelectItem value="module_1">Module 1</SelectItem>
                     <SelectItem value="module_2">Module 2</SelectItem>
-                    <SelectItem value="full">Both Modules</SelectItem>
+                    <SelectItem value="module_3">Module 3</SelectItem>
+                    <SelectItem value="module_4">Module 4</SelectItem>
+                    <SelectItem value="module_5">Module 5</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

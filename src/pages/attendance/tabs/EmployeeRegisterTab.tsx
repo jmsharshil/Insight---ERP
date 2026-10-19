@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { CheckCircle2, XCircle, Clock, CalendarDays, HelpCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, CalendarDays, HelpCircle, CalendarX } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -23,6 +23,8 @@ const STATUS_BADGES: Record<string, { label: string; className: string }> = {
   late: { label: "Late", className: "bg-amber-50 text-amber-700 border-amber-200" },
   half_day: { label: "Half Day", className: "bg-blue-50 text-blue-700 border-blue-200" },
   on_leave: { label: "On Leave", className: "bg-zinc-100 text-zinc-700 border-zinc-200" },
+  weekly_off: { label: "Weekly Off", className: "bg-slate-100 text-slate-700 border-slate-200" },
+  off_day: { label: "Off Day", className: "bg-slate-100 text-slate-700 border-slate-200" },
 };
 
 interface Props {
@@ -289,6 +291,15 @@ export default function EmployeeRegisterTab({ dropdowns }: Props) {
                         onClick={() => handleStatusChange(emp.id, "half_day")}
                       >
                         <HelpCircle className="w-3.5 h-3.5 mr-1" /> Half Day
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={records[emp.id] === "weekly_off" ? "default" : "outline"}
+                        className={`h-8 px-3 text-xs ${records[emp.id] === "weekly_off" ? "bg-slate-700 hover:bg-slate-800 text-white" : "border-slate-300 text-slate-700 hover:bg-slate-100"}`}
+                        onClick={() => handleStatusChange(emp.id, "weekly_off")}
+                        title="Scheduled Off Day (Zero Payroll Deduction)"
+                      >
+                        <CalendarX className="w-3.5 h-3.5 mr-1" /> Off Day
                       </Button>
                     </div>
                   </td>

@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { motion } from "framer-motion";
-import { Eye, X } from "lucide-react";
+import { Eye, X, QrCode, Camera } from "lucide-react";
 import { attendanceActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import { setFaculty, setFacultyLoading } from "@/redux/slices/attendanceSlice";
@@ -89,6 +88,46 @@ export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
         ? "bg-yellow-100 text-yellow-700"
         : "bg-red-100 text-red-700";
 
+  const formatTime = (timeStr?: string | null) => {
+    if (!timeStr) return "—";
+    try {
+      const formatted = timeStr.includes(" ") ? timeStr.replace(" ", "T") : timeStr;
+      const d = new Date(formatted);
+      return isNaN(d.getTime()) ? timeStr : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    } catch {
+      return timeStr;
+    }
+  };
+
+  const renderMethodBadge = (display?: string | null, method?: string | null) => {
+    const rawMethod = (method || "").toLowerCase();
+    const rawDisplay = (display || "").toLowerCase();
+    const isQr = rawMethod.includes("qr") || rawDisplay.includes("qr");
+    const isSelfie = rawMethod.includes("selfie") || rawDisplay.includes("selfie");
+
+    const label = display || (method ? (isQr ? "QR Scan" : isSelfie ? "Selfie" : method) : null);
+
+    if (!label) return null;
+
+    return (
+      <Badge
+        variant="outline"
+        title={label}
+        className={`text-[11px] font-normal whitespace-nowrap inline-flex items-center gap-1 px-1.5 py-0 h-5 ${
+          isQr
+            ? "border-blue-200 bg-blue-50/80 text-blue-700"
+            : isSelfie
+              ? "border-purple-200 bg-purple-50/80 text-purple-700"
+              : "border-border bg-muted/40 text-muted-foreground"
+        }`}
+      >
+        {isQr && <QrCode className="w-3 h-3 text-blue-600 shrink-0" />}
+        {isSelfie && <Camera className="w-3 h-3 text-purple-600 shrink-0" />}
+        <span className="truncate max-w-[140px]">{label}</span>
+      </Badge>
+    );
+  };
+
   const columns: DataTableColumn<any>[] = [
     {
       key: "employee",
@@ -126,40 +165,67 @@ export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
     {
       key: "status",
       header: "Status",
-      render: (fac: any) => (
-        <Badge
-          className={`text-xs font-semibold ${
-            fac.status === "present"
-              ? "bg-green-100 text-green-700"
-              : fac.status === "late"
-                ? "bg-yellow-100 text-yellow-700"
-                : fac.status === "half_day"
-                  ? "bg-orange-100 text-orange-700"
-                  : fac.status === "absent"
-                    ? "bg-red-100 text-red-700"
-                    : "bg-muted text-muted-foreground"
-          }`}
-        >
-          {fac.status_display || fac.status}
-        </Badge>
-      ),
+      render: (fac: any) => {
+        const rawStatus = (fac.status || "").toLowerCase();
+        const display = fac.status_display || fac.status;
+        const isOffDay =
+          rawStatus === "off_day" ||
+          rawStatus === "weekly_off" ||
+          rawStatus === "holiday" ||
+          fac.is_off === true ||
+          (display && (display.toLowerCase().includes("off") || display.toLowerCase().includes("holiday")));
+
+        if (isOffDay) {
+          return (
+            <Badge className="text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+              {display || "Weekly Off"}
+            </Badge>
+          );
+        }
+
+        return (
+          <Badge
+            className={`text-xs font-semibold ${
+              rawStatus === "present"
+                ? "bg-green-100 text-green-700"
+                : rawStatus === "checkout_pending"
+                  ? "bg-amber-100 text-amber-800"
+                  : rawStatus === "late"
+                    ? "bg-yellow-100 text-yellow-700"
+                    : rawStatus === "half_day"
+                      ? "bg-orange-100 text-orange-700"
+                      : rawStatus === "absent"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {display}
+          </Badge>
+        );
+      },
     },
     {
       key: "checked_in_at",
       header: "Check In",
       render: (fac: any) => (
-        <span className="text-xs text-muted-foreground">
-          {fac.checked_in_at ? new Date(fac.checked_in_at).toLocaleTimeString() : "—"}
-        </span>
+        <div className="flex flex-col gap-1 items-start">
+          <span className="text-xs text-foreground font-medium font-mono">
+            {formatTime(fac.checked_in_at)}
+          </span>
+          {renderMethodBadge(fac.check_in_method_display, fac.check_in_method)}
+        </div>
       ),
     },
     {
       key: "checked_out_at",
       header: "Check Out",
       render: (fac: any) => (
-        <span className="text-xs text-muted-foreground">
-          {fac.checked_out_at ? new Date(fac.checked_out_at).toLocaleTimeString() : "—"}
-        </span>
+        <div className="flex flex-col gap-1 items-start">
+          <span className="text-xs text-foreground font-medium font-mono">
+            {formatTime(fac.checked_out_at)}
+          </span>
+          {renderMethodBadge(fac.check_out_method_display, fac.check_out_method)}
+        </div>
       ),
     },
     {
@@ -222,6 +288,7 @@ export default function FacultyTab({ dropdowns }: { dropdowns?: any }) {
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="present">Present</SelectItem>
+              <SelectItem value="checkout_pending">Checkout Pending</SelectItem>
               <SelectItem value="absent">Absent</SelectItem>
               <SelectItem value="late">Late</SelectItem>
               <SelectItem value="half_day">Half Day</SelectItem>

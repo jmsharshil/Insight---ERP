@@ -98,10 +98,6 @@ export default function SupportPage() {
   return (
     <>
       <Tabs defaultValue="tickets" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="tickets">Support Tickets</TabsTrigger>
-          <TabsTrigger value="faqs">FAQs & Contact</TabsTrigger>
-        </TabsList>
 
         <TabsContent value="tickets">
           <SectionCard 

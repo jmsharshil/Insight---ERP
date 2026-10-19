@@ -175,22 +175,6 @@ export default function NotificationsPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={filter} onValueChange={(v: any) => setFilter(v)}>
-              <SelectTrigger className="w-36 h-9 text-xs">
-                <div className="flex items-center gap-2">
-                  <Bell className="w-3.5 h-3.5 text-muted-foreground" />
-                  <SelectValue placeholder="Status" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="unread">Unread</SelectItem>
-                <SelectItem value="high">High Priority</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" size="sm" className="h-9 text-xs" onClick={handleMarkAll} disabled={!notifications.some(n => !n.isRead)}>
-              <CheckCheck className="w-3.5 h-3.5 mr-1.5" /> Mark all read
-            </Button>
           </div>
         }
       />
