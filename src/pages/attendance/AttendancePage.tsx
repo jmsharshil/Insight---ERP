@@ -189,11 +189,11 @@ export default function AttendancePage() {
         <TabsList className="">
           {!isParentOrStudent && !hideMainTabs && <TabsTrigger value="dashboard">Dashboard</TabsTrigger>}
           {isEmployeeHistoryRole && <TabsTrigger value="my_history">My Attendance</TabsTrigger>}
-          {!hideMainTabs && <TabsTrigger value="students">Students</TabsTrigger>}
           {/* {!isParentOrStudent && !hideMainTabs && <TabsTrigger value="register">Student Register</TabsTrigger>} */}
           {/* {isAdmin && <TabsTrigger value="staff_register">Staff Register</TabsTrigger>} */}
           {/* {!hideMainTabs && <TabsTrigger value="history">History</TabsTrigger>} */}
           {!isParentOrStudent && !hideMainTabs && <TabsTrigger value="faculty">Staff</TabsTrigger>}
+          {!hideMainTabs && <TabsTrigger value="students">Students</TabsTrigger>}
           {!isParentOrStudent && !hideMainTabs && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
           {/* {!isParentOrStudent && !hideMainTabs && <TabsTrigger value="defaulters">Defaulters</TabsTrigger>} */}
           {/* {showViolations && <TabsTrigger value="violations">Violations</TabsTrigger>} */}

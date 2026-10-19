@@ -29,3 +29,42 @@ export function greeting() {
   if (h < 17) return "Good afternoon";
   return "Good evening";
 }
+
+export function getAvailableYears(course: string, attempt: string, groupModule?: string): string[] {
+  const current = new Date();
+  const currentYear = current.getFullYear();
+  const currentMonth = current.getMonth();
+  
+  let firstValidYear = currentYear;
+
+  const isCseet = course === "cseet" || course.includes("cseet");
+
+  if (isCseet) {
+    if (attempt === "june") {
+      if (currentMonth > 0) firstValidYear = currentYear + 1;
+    } else if (attempt === "oct") {
+      if (currentMonth > 4) firstValidYear = currentYear + 1;
+    } else if (attempt === "feb") {
+      if (currentMonth > 9) firstValidYear = currentYear + 2;
+      else firstValidYear = currentYear + 1;
+    }
+  } else {
+    if (attempt === "june") {
+      if (groupModule === "both" || groupModule === "full" || !groupModule) {
+        if (currentMonth > 10) firstValidYear = currentYear + 2;
+        else firstValidYear = currentYear + 1;
+      } else {
+        if (currentMonth > 0) firstValidYear = currentYear + 1;
+      }
+    } else if (attempt === "dec") {
+      if (groupModule === "both" || groupModule === "full" || !groupModule) {
+        if (currentMonth > 4) firstValidYear = currentYear + 1;
+      } else {
+        if (currentMonth > 6) firstValidYear = currentYear + 1;
+      }
+    }
+  }
+
+  return [firstValidYear, firstValidYear + 1, firstValidYear + 2, firstValidYear + 3].map(String);
+}
+

@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import type { WeeklySchedule } from "@/types/schedule";
 
 export interface UserRecord {
   id: string;
@@ -36,6 +37,7 @@ export interface UserRecord {
   work_start_time?: string;
   work_end_time?: string;
   working_hours?: string;
+  weekly_schedule?: WeeklySchedule;
   per_paper_rate?: number | string;
   accessible_modules?: string[];
   canDelete?: boolean;

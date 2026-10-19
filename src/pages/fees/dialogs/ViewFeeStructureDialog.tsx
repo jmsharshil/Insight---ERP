@@ -75,6 +75,12 @@ export function ViewFeeStructureDialog({
             <span className="text-muted-foreground font-medium">Level</span>
             <span className="font-semibold">{structure.level_name || "—"}</span>
           </div>
+          {(structure.syllabus_name || structure.syllabus) && (
+            <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
+              <span className="text-muted-foreground font-medium">Syllabus</span>
+              <span className="font-semibold">{structure.syllabus_name || structure.syllabus}</span>
+            </div>
+          )}
           {(structure.attempt || structure.year) && (
             <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
               <span className="text-muted-foreground font-medium">Session</span>
@@ -86,6 +92,7 @@ export function ViewFeeStructureDialog({
             const isCseet = ln === "cseet";
             const isCsExecutive = ln === "cs executive" || ln === "cs_executive";
             const isCsProfessional = ln === "cs professional" || ln === "cs_professional";
+            const hasAnyModule = [1, 2, 3, 4, 5].some((m) => Number((structure as any)[`institute_fees_module_${m}`] || 0) > 0);
 
             return (
               <>
@@ -98,7 +105,9 @@ export function ViewFeeStructureDialog({
 
                 {(isCseet || isCsExecutive || isCsProfessional) && (
                   <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
-                    <span className="text-muted-foreground font-medium">ICSI Exam Fees {!isCseet && "(Per Module)"}</span>
+                    <span className="text-muted-foreground font-medium">
+                      ICSI Exam Fees {(isCsExecutive || isCsProfessional) ? "(Per Module)" : ""}
+                    </span>
                     <span className="font-semibold">{formatCurrency(Number(structure.icsi_exam_fees || 0))}</span>
                   </div>
                 )}
@@ -116,12 +125,34 @@ export function ViewFeeStructureDialog({
                   </>
                 )}
 
+                {[1, 2, 3, 4, 5].map((mNum) => {
+                  const val = Number((structure as any)[`institute_fees_module_${mNum}`] || 0);
+                  if (val <= 0) return null;
+                  return (
+                    <div key={mNum} className="flex justify-between items-center pb-1.5 border-b border-border/50">
+                      <span className="text-muted-foreground font-medium">Module {mNum} Fee</span>
+                      <span className="font-semibold">{formatCurrency(val)}</span>
+                    </div>
+                  );
+                })}
                 <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
-                  <span className="text-muted-foreground font-medium">Institute Fee</span>
+                  <span className="text-muted-foreground font-medium">
+                    {isCsExecutive || isCsProfessional || hasAnyModule
+                      ? "All Modules Fee"
+                      : "Institute Fee"}
+                  </span>
                   <span className="font-semibold text-primary">
                     {formatCurrency(Number(structure.total_amount))}
                   </span>
                 </div>
+                {Number(structure.token_amount || 0) > 0 && (
+                  <div className="flex justify-between items-center pb-1.5 border-b border-border/50">
+                    <span className="text-muted-foreground font-medium">Token Amount</span>
+                    <span className="font-semibold">
+                      {formatCurrency(Number(structure.token_amount))}
+                    </span>
+                  </div>
+                )}
               </>
             );
           })()}

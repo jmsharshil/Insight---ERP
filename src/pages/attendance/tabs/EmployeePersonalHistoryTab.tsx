@@ -74,13 +74,19 @@ export default function EmployeePersonalHistoryTab() {
 
   const getStatusBadge = (status: string, display: string) => {
     let className = "bg-muted text-muted-foreground";
-    if (status === "present") className = "bg-green-100 text-green-700";
-    if (status === "absent") className = "bg-red-100 text-red-700";
-    if (status === "late") className = "bg-yellow-100 text-yellow-700";
-    if (status === "half_day") className = "bg-orange-100 text-orange-700";
-    if (status === "on_leave" || status === "leave") className = "bg-zinc-100 text-zinc-700";
+    const s = (status || "").toLowerCase();
+    const d = (display || "").toLowerCase();
+
+    if (s === "present") className = "bg-green-100 text-green-700";
+    else if (s === "absent") className = "bg-red-100 text-red-700";
+    else if (s === "late") className = "bg-yellow-100 text-yellow-700";
+    else if (s === "half_day") className = "bg-orange-100 text-orange-700";
+    else if (s === "on_leave" || s === "leave") className = "bg-zinc-100 text-zinc-700";
+    else if (s === "off_day" || s === "weekly_off" || s === "holiday" || d.includes("off")) {
+      className = "bg-slate-100 text-slate-700 border border-slate-200";
+    }
     
-    return <Badge className={`text-xs font-semibold ${className}`}>{display || status}</Badge>;
+    return <Badge className={`text-xs font-semibold ${className}`}>{display || (s === "weekly_off" || s === "off_day" ? "Weekly Off" : status)}</Badge>;
   };
 
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i);

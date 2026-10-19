@@ -877,7 +877,7 @@ export default function QuestionsTab({ examId }: QuestionsTabProps) {
                     <SelectContent>
                       {subjects.map(sub => (
                         <SelectItem key={sub.id} value={sub.id}>
-                          {sub.name} {sub.code ? `(${sub.code})` : ""}
+                          {sub.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

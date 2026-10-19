@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store";
@@ -35,9 +35,13 @@ import PageHeader from "@/components/layout/PageHeader";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
+import { formatCurrency, getAvailableYears } from "@/lib/utils";
 
 interface BatchForm {
   fee_structure: string;
+  group_module?: string;
+  batch_attempt?: string;
+  attempt_year?: string;
   branch: string;
   start_date: string;
   end_date: string;
@@ -110,6 +114,7 @@ export default function BatchDetailPage() {
 
   const [batchForm, setBatchForm] = useState<BatchForm>({
     fee_structure: "",
+    group_module: "both",
     branch: "",
     start_date: "",
     end_date: "",
@@ -129,6 +134,9 @@ export default function BatchDetailPage() {
           setBatch(data);
           setBatchForm({
             fee_structure: String(data.fee_structure || ""),
+            group_module: data.group_module || "both",
+            batch_attempt: data.batch_attempt || "june",
+            attempt_year: data.attempt_year ? String(data.attempt_year) : getAvailableYears("other", "june")[0],
             branch: String(data.branch || ""),
             start_date: data.start_date || "",
             end_date: data.end_date || "",
@@ -163,6 +171,63 @@ export default function BatchDetailPage() {
     });
 
   }, [dispatch, id]);
+
+  const getGroupModuleLabel = (mod?: string) => {
+    const m = (mod || "").toLowerCase();
+    if (m === "module_1") return "Module 1";
+    if (m === "module_2") return "Module 2";
+    if (m === "module_3") return "Module 3";
+    if (m === "module_4") return "Module 4";
+    if (m === "module_5") return "Module 5";
+    if (m === "both") return "Both Modules";
+    return "All Modules";
+  };
+
+  const getFeeAmountForModule = (fs: any, mod?: string) => {
+    if (!fs) return 0;
+    const m = (mod || "").toLowerCase();
+    if (m === "module_1") {
+      return Number(fs.institute_fees_module_1 || 0) || Number(fs.total_amount || 0);
+    }
+    if (m === "module_2") {
+      return Number(fs.institute_fees_module_2 || 0) || Number(fs.total_amount || 0);
+    }
+    if (m === "module_3") {
+      return Number(fs.institute_fees_module_3 || 0) || Number(fs.total_amount || 0);
+    }
+    if (m === "module_4") {
+      return Number(fs.institute_fees_module_4 || 0) || Number(fs.total_amount || 0);
+    }
+    if (m === "module_5") {
+      return Number(fs.institute_fees_module_5 || 0) || Number(fs.total_amount || 0);
+    }
+    return Number(
+      fs.institute_fees_all_modules ||
+      fs.total_amount ||
+      fs.institute_fees_both_modules ||
+      0
+    );
+  };
+
+  const selectedFeeStructure = feeStructures.find(
+    (fs: any) => String(fs.id) === String(batchForm.fee_structure)
+  );
+  const currentFeeAmount = getFeeAmountForModule(selectedFeeStructure, batchForm.group_module);
+
+  const courseName = (batch?.course_name || selectedFeeStructure?.course_name || "").toLowerCase();
+  const isCseet = courseName.includes("cseet");
+
+  const batchAttempt = batchForm.batch_attempt || "june";
+  const computedYears = useMemo(() => {
+    return getAvailableYears(isCseet ? "cseet" : "other", batchAttempt, batchForm.group_module);
+  }, [isCseet, batchAttempt, batchForm.group_module]);
+
+  const availableYears = useMemo(() => {
+    if (batch?.attempt_year && !computedYears.includes(String(batch.attempt_year))) {
+      return [String(batch.attempt_year), ...computedYears];
+    }
+    return computedYears;
+  }, [computedYears, batch?.attempt_year]);
 
   const handleSave = () => {
     if (!batchForm.fee_structure) return toast.error("Fee structure is required.");
@@ -257,10 +322,103 @@ export default function BatchDetailPage() {
                     <SelectValue placeholder={feeStructuresLoading ? "Loading..." : "Select fee structure"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {feeStructures.map((fs: any) => (
-                      <SelectItem key={fs.id} value={String(fs.id)}>
-                        {fs.name} {fs.total_amount ? `(₹${fs.total_amount})` : ""}
-                      </SelectItem>
+                    {feeStructures.map((fs: any) => {
+                      const amt = getFeeAmountForModule(fs, batchForm.group_module);
+                      return (
+                        <SelectItem key={fs.id} value={String(fs.id)}>
+                          {fs.name} {amt ? `(${formatCurrency(amt)})` : ""}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Group / Module</Label>
+                <Select
+                  value={batchForm.group_module || "both"}
+                  onValueChange={(val) => setBatchForm({ ...batchForm, group_module: val })}
+                >
+                  <SelectTrigger className="bg-muted/10">
+                    <SelectValue placeholder="Select module" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Modules</SelectItem>
+                    <SelectItem value="both">Both Modules</SelectItem>
+                    <SelectItem value="module_1">Module 1</SelectItem>
+                    <SelectItem value="module_2">Module 2</SelectItem>
+                    <SelectItem value="module_3">Module 3</SelectItem>
+                    <SelectItem value="module_4">Module 4</SelectItem>
+                    <SelectItem value="module_5">Module 5</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedFeeStructure && (
+                <div className="md:col-span-2 rounded-lg bg-primary/5 border border-primary/20 p-3 flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <span className="text-xs text-muted-foreground font-medium">
+                      Fee Amount ({getGroupModuleLabel(batchForm.group_module)})
+                    </span>
+                    <div className="text-lg font-bold text-primary font-mono">
+                      {formatCurrency(currentFeeAmount)}
+                    </div>
+                  </div>
+                  <div className="text-right text-[11px] text-muted-foreground space-y-0.5">
+                    {[1, 2, 3, 4, 5].map((mNum) => {
+                      const val = Number((selectedFeeStructure as any)[`institute_fees_module_${mNum}`] || 0);
+                      if (val <= 0) return null;
+                      return (
+                        <div key={mNum}>
+                          Mod {mNum}: <span className="font-semibold text-foreground">{formatCurrency(val)}</span>
+                        </div>
+                      );
+                    })}
+                    <div>All: <span className="font-semibold text-foreground">{formatCurrency(Number(selectedFeeStructure.total_amount))}</span></div>
+                  </div>
+                </div>
+              )}
+
+              {/* Attempt and Year */}
+              <div className="space-y-2">
+                <Label>Batch Attempt</Label>
+                <Select
+                  value={batchForm.batch_attempt || "june"}
+                  onValueChange={(val: any) => setBatchForm({ ...batchForm, batch_attempt: val })}
+                >
+                  <SelectTrigger className="bg-muted/10">
+                    <SelectValue placeholder="Select attempt" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isCseet ? (
+                      <>
+                        <SelectItem value="june">June</SelectItem>
+                        <SelectItem value="oct">October</SelectItem>
+                        <SelectItem value="feb">February</SelectItem>
+                      </>
+                    ) : (
+                      <>
+                        <SelectItem value="june">June</SelectItem>
+                        <SelectItem value="dec">December</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Attempt Year</Label>
+                <Select
+                  value={String(batchForm.attempt_year || availableYears[0])}
+                  onValueChange={(val: any) => setBatchForm({ ...batchForm, attempt_year: val })}
+                >
+                  <SelectTrigger className="bg-muted/10">
+                    <SelectValue placeholder="Select year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableYears.map((y: string) => (
+                      <SelectItem key={y} value={y}>{y}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -366,13 +524,15 @@ export default function BatchDetailPage() {
                       <p className="font-medium break-words">{batch.course_name || "-"}</p>
                     </div>
                   )}
-                  {batch.group_module_display && (
+                  {(batch.group_module_display || batch.group_module) && (
                     <div className="space-y-1 min-w-0">
                       <span className="text-sm text-muted-foreground flex items-center gap-2">
                         <Layers className="w-4 h-4 text-primary shrink-0" />
                         <span className="truncate">Module</span>
                       </span>
-                      <p className="font-medium break-words">{batch.group_module_display}</p>
+                      <p className="font-medium break-words">
+                        {batch.group_module_display || getGroupModuleLabel(batch.group_module)}
+                      </p>
                     </div>
                   )}
                   {(batch.batch_attempt_display || batch.attempt_year) && (
@@ -402,6 +562,26 @@ export default function BatchDetailPage() {
                     </span>
                     <p className="font-medium break-words">{batch.fee_structure_name || batch.fee_structure || "-"}</p>
                   </div>
+                  {batch && (batch.fee_structure || batch.fee_structure_name) && (
+                    <div className="space-y-1 min-w-0">
+                      <span className="text-sm text-muted-foreground flex items-center gap-2">
+                        <CreditCard className="w-4 h-4 text-primary shrink-0" />
+                        <span className="truncate">Fee Amount</span>
+                      </span>
+                      <p className="font-bold text-primary font-mono">
+                        {formatCurrency(
+                          getFeeAmountForModule(
+                            feeStructures.find((fs: any) => String(fs.id) === String(batch.fee_structure)) || {
+                              total_amount: batch.total_amount,
+                              institute_fees_module_1: batch.institute_fees_module_1,
+                              institute_fees_module_2: batch.institute_fees_module_2,
+                            },
+                            batch.group_module
+                          )
+                        )}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-6 bg-muted/20 p-4 rounded-xl border border-border">

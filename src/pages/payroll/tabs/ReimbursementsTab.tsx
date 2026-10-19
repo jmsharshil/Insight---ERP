@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useDispatch } from "react-redux";
-import { reimbursementActions } from "@/redux/actions";
+import { reimbursementActions, userActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useUI } from "@/hooks/useUI";
@@ -36,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Plus, Eye, Trash2, FileText, CheckCircle2, XCircle, Clock, ExternalLink } from "lucide-react";
+import { Loader2, Plus, Eye, Trash2, FileText, CheckCircle2, XCircle, Clock, ExternalLink, Search, X } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import ReimbursementFormModal from "../../reimbursements/components/ReimbursementFormModal";
 import { useNavigate } from "react-router-dom";
@@ -60,9 +60,9 @@ export default function ReimbursementsTab() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [branchFilter, setBranchFilter] = useState<string>("all");
   const [myClaimsOnly, setMyClaimsOnly] = useState(false);
-  const [userIdFilter, setUserIdFilter] = useState("");
+  const [userIdFilter, setUserIdFilter] = useState("all");
+  const [userOptions, setUserOptions] = useState<{ id: string; name: string }[]>([]);
   const [search, setSearch] = useState("");
-  const [dateFilter, setDateFilter] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [isPaidFilter, setIsPaidFilter] = useState("all");
@@ -78,17 +78,41 @@ export default function ReimbursementsTab() {
   const isApprover = user && ALL_APPROVERS.includes(user.role);
   const isGlobalAdmin = user && ADMIN_ROLES.includes(user.role);
 
+  useEffect(() => {
+    if (isApprover) {
+      dispatch({
+        type: userActions.GET_USERS,
+        method: "GET",
+        endPoint: API.USERS.LIST,
+        auth: true,
+        getResponse: (res: any) => {
+          const raw = res?.data?.results || res?.results || res?.data || res || [];
+          const list = Array.isArray(raw) ? raw : [];
+          const staff = list.filter((u: any) => u.role !== "student" && u.role !== "parents" && u.role !== "parent");
+          setUserOptions(
+            staff.map((u: any) => ({
+              id: String(u.id),
+              name: u.full_name || u.name || `${u.first_name || ""} ${u.last_name || ""}`.trim() || u.email || "Unknown",
+            }))
+          );
+        },
+        getError: () => {},
+      });
+    }
+  }, [isApprover, dispatch]);
+
   const fetchData = () => {
     const filters: any = {};
     if (statusFilter !== "all") filters.status = statusFilter;
     if (branchFilter !== "all") filters.branch_id = branchFilter;
     if (myClaimsOnly || !isApprover) filters.my = 1;
 
-    if (userIdFilter) filters.user_id = userIdFilter;
+    if (userIdFilter && userIdFilter !== "all") filters.user_id = userIdFilter;
     if (search) filters.search = search;
-    if (dateFilter) filters.date = dateFilter;
     if (fromDate) filters.from_date = fromDate;
     if (toDate) filters.to_date = toDate;
+    if (fromDate && !toDate) filters.date = fromDate;
+    else if (fromDate && toDate && fromDate === toDate) filters.date = fromDate;
     if (isPaidFilter !== "all") filters.is_paid = isPaidFilter;
 
     const qs = new URLSearchParams(filters).toString();
@@ -127,10 +151,7 @@ export default function ReimbursementsTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     statusFilter, branchFilter, myClaimsOnly, isApprover, isGlobalAdmin,
-    dateFilter, fromDate, toDate, isPaidFilter
-    // search and userIdFilter are omitted to avoid fetching on every keystroke,
-    // they can be triggered by a manual refresh button or blur if preferred, 
-    // but here we will rely on a Refresh/Search button in the UI.
+    fromDate, toDate, isPaidFilter, userIdFilter
   ]);
 
   const handleFormSubmit = (formData: FormData) => {
@@ -306,8 +327,31 @@ export default function ReimbursementsTab() {
     getPaginationRowModel: getPaginationRowModel(),
   });
 
+  const handleClearFilters = () => {
+    setSearch("");
+    setFromDate("");
+    setToDate("");
+    setUserIdFilter("all");
+    setStatusFilter("all");
+    setBranchFilter("all");
+    setIsPaidFilter("all");
+    setMyClaimsOnly(false);
+    setTimeout(fetchData, 0);
+  };
+
+  const hasActiveFilters = Boolean(
+    search ||
+    fromDate ||
+    toDate ||
+    (userIdFilter && userIdFilter !== "all") ||
+    myClaimsOnly ||
+    isPaidFilter !== "all" ||
+    statusFilter !== "all" ||
+    branchFilter !== "all"
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full min-w-0">
       <div className="flex justify-between items-center bg-card border border-border rounded-xl p-4 shadow-sm">
         <div>
           <h2 className="text-lg font-semibold text-text-primary">Reimbursements</h2>
@@ -363,124 +407,131 @@ export default function ReimbursementsTab() {
       ) : null}
 
       {/* Filters & Table */}
-      <div className="bg-card border border-border rounded-xl shadow-sm flex flex-col">
-        <div className="p-4 border-b border-border flex flex-wrap gap-4 items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[140px] h-9">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {isGlobalAdmin && (
-              <Select value={branchFilter} onValueChange={setBranchFilter}>
-                <SelectTrigger className="w-[180px] h-9">
-                  <SelectValue placeholder="All Branches" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Branches</SelectItem>
-                  {branchOptions.map((b) => (
-                    <SelectItem key={String(b.value)} value={String(b.value)}>{b.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            <Select value={isPaidFilter} onValueChange={setIsPaidFilter}>
-              <SelectTrigger className="w-[140px] h-9">
-                <SelectValue placeholder="Paid Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All (Paid/Unpaid)</SelectItem>
-                <SelectItem value="true">Paid</SelectItem>
-                <SelectItem value="false">Unpaid</SelectItem>
-              </SelectContent>
-            </Select>
-
+      <div className="bg-card border border-border rounded-xl shadow-sm flex flex-col w-full max-w-full overflow-hidden">
+        <div className="p-4 border-b border-border flex flex-wrap items-center gap-3 w-full">
+          {/* Search */}
+          <div className="relative min-w-[200px] flex-1 max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="Search..."
-              className="h-9 w-40 text-sm"
+              placeholder="Search claims..."
+              className="pl-9 h-9 text-xs sm:text-sm bg-card w-full"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && fetchData()}
             />
+          </div>
 
+          {/* Status Filter */}
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[130px] h-9 text-xs sm:text-sm bg-card">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Paid Status Filter */}
+          <Select value={isPaidFilter} onValueChange={setIsPaidFilter}>
+            <SelectTrigger className="w-[155px] h-9 text-xs sm:text-sm bg-card">
+              <SelectValue placeholder="Paid Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All (Paid/Unpaid)</SelectItem>
+              <SelectItem value="true">Paid</SelectItem>
+              <SelectItem value="false">Unpaid</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Branch Filter (Global Admin only) */}
+          {isGlobalAdmin && (
+            <Select value={branchFilter} onValueChange={setBranchFilter}>
+              <SelectTrigger className="w-[160px] h-9 text-xs sm:text-sm bg-card">
+                <SelectValue placeholder="All Branches" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Branches</SelectItem>
+                {branchOptions.map((b) => (
+                  <SelectItem key={String(b.value)} value={String(b.value)}>{b.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {/* Date Range: From / To */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">From:</span>
             <Input
               type="date"
-              title="Date"
-              className="h-9 w-[130px] text-sm"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-            />
-
-            <Input
-              type="date"
-              title="From Date"
-              className="h-9 w-[130px] text-sm"
+              aria-label="From Date"
+              className="h-9 w-[130px] text-xs bg-card"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
             />
+          </div>
 
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">To:</span>
             <Input
               type="date"
-              title="To Date"
-              className="h-9 w-[130px] text-sm"
+              aria-label="To Date"
+              className="h-9 w-[130px] text-xs bg-card"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
             />
+          </div>
 
-            <Input
-              placeholder="User UUID..."
-              className="h-9 w-[130px] text-sm"
-              value={userIdFilter}
-              onChange={(e) => setUserIdFilter(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && fetchData()}
-            />
-            <Button variant="outline" size="sm" className="h-9" onClick={fetchData}>
-              Search
+          {/* Employee Dropdown (Approvers only) */}
+          {isApprover && (
+            <Select value={userIdFilter} onValueChange={setUserIdFilter}>
+              <SelectTrigger className="w-[170px] h-9 text-xs sm:text-sm bg-card">
+                <SelectValue placeholder="All Employees" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Employees</SelectItem>
+                {userOptions.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {/* My Claims Toggle (Approvers only) */}
+          {isApprover && (
+            <Button
+              variant={myClaimsOnly ? "default" : "outline"}
+              size="sm"
+              className="h-9 text-xs"
+              onClick={() => setMyClaimsOnly(!myClaimsOnly)}
+            >
+              My Claims
             </Button>
-            
-            {(search || dateFilter || fromDate || toDate || userIdFilter || isPaidFilter !== "all" || statusFilter !== "all" || branchFilter !== "all") && (
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 sm:ml-auto">
+            <Button variant="outline" size="sm" className="h-9 px-3 gap-1.5" onClick={fetchData}>
+              <Search className="w-3.5 h-3.5" />
+              <span>Search</span>
+            </Button>
+
+            {hasActiveFilters && (
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="h-9"
-                onClick={() => {
-                  setSearch("");
-                  setDateFilter("");
-                  setFromDate("");
-                  setToDate("");
-                  setUserIdFilter("");
-                  setStatusFilter("all");
-                  setBranchFilter("all");
-                  setIsPaidFilter("all");
-                  // The useEffect will trigger fetchData for select changes, but for text inputs we may need to call it manually.
-                  setTimeout(fetchData, 0);
-                }}
+                className="h-9 px-2.5 text-xs text-muted-foreground hover:text-foreground"
+                onClick={handleClearFilters}
               >
+                <X className="w-3.5 h-3.5 mr-1" />
                 Clear
               </Button>
             )}
           </div>
-          
-          {/* <div className="flex items-center gap-2">
-            {isApprover && (
-              <Button
-                variant={myClaimsOnly ? "default" : "outline"}
-                size="sm"
-                className="h-9"
-                onClick={() => setMyClaimsOnly(!myClaimsOnly)}
-              >
-                My Claims
-              </Button>
-            )}
-          </div> */}
         </div>
 
         <div className="relative overflow-x-auto min-h-[400px]">

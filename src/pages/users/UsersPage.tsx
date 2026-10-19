@@ -84,6 +84,13 @@ import EmptyState from "@/components/common/EmptyState";
 import { cn, formatDate } from "@/lib/utils";
 import { TableSkeleton, SheetSkeleton } from "@/components/common/Skeletons";
 import { ROLES } from "@/constants/roles";
+import WeeklyScheduleEditor from "@/components/schedule/WeeklyScheduleEditor";
+import type { WeeklySchedule } from "@/types/schedule";
+import {
+  normalizeWeeklySchedule,
+  createDefaultWeeklySchedule,
+  weeklyScheduleToFlatFields,
+} from "@/utils/schedule";
 
 /* ─── Role choices ──────────────────────────────────────────── */
 
@@ -338,6 +345,7 @@ export default function UsersPage() {
     work_start_time: "",
     work_end_time: "",
     working_hours: "",
+    weekly_schedule: createDefaultWeeklySchedule() as WeeklySchedule,
     per_paper_rate: "",
     accessible_modules: [] as string[],
   });
@@ -458,6 +466,11 @@ export default function UsersPage() {
         work_start_time: selectedUser.work_start_time || "",
         work_end_time: selectedUser.work_end_time || "",
         working_hours: selectedUser.working_hours || "",
+        weekly_schedule: normalizeWeeklySchedule(
+          selectedUser.weekly_schedule,
+          selectedUser.work_start_time,
+          selectedUser.work_end_time
+        ),
         per_paper_rate:
           selectedUser.per_paper_rate !== undefined && selectedUser.per_paper_rate !== null
             ? String(selectedUser.per_paper_rate)
@@ -560,6 +573,7 @@ export default function UsersPage() {
       work_start_time: "",
       work_end_time: "",
       working_hours: "",
+      weekly_schedule: createDefaultWeeklySchedule(),
       per_paper_rate: "",
       accessible_modules: [],
     });
@@ -599,8 +613,13 @@ export default function UsersPage() {
       ifsc_code: editForm.ifsc_code,
       pan_number: editForm.pan_number,
       aadhar_number: editForm.aadhar_number,
-      work_start_time: editForm.work_start_time,
-      work_end_time: editForm.work_end_time,
+      ...(isSalesRole
+        ? {}
+        : {
+            work_start_time: editForm.work_start_time || editForm.weekly_schedule?.monday?.start_time,
+            work_end_time: editForm.work_end_time || editForm.weekly_schedule?.monday?.end_time,
+            weekly_schedule: editForm.weekly_schedule,
+          }),
       working_hours: editForm.working_hours,
       per_paper_rate: editForm.per_paper_rate ? Number(editForm.per_paper_rate) : null,
       accessible_modules: editForm.accessible_modules,
@@ -678,6 +697,11 @@ export default function UsersPage() {
       work_start_time: selectedUser.work_start_time || "",
       work_end_time: selectedUser.work_end_time || "",
       working_hours: selectedUser.working_hours || "",
+      weekly_schedule: normalizeWeeklySchedule(
+        selectedUser.weekly_schedule,
+        selectedUser.work_start_time,
+        selectedUser.work_end_time
+      ),
       per_paper_rate:
         selectedUser.per_paper_rate !== undefined && selectedUser.per_paper_rate !== null
           ? String(selectedUser.per_paper_rate)
@@ -759,8 +783,17 @@ export default function UsersPage() {
     if (editForm.ifsc_code !== undefined) formData.append("ifsc_code", editForm.ifsc_code);
     if (editForm.pan_number !== undefined) formData.append("pan_number", editForm.pan_number);
     if (editForm.aadhar_number !== undefined) formData.append("aadhar_number", editForm.aadhar_number);
-    if (editForm.work_start_time !== undefined) formData.append("work_start_time", editForm.work_start_time);
-    if (editForm.work_end_time !== undefined) formData.append("work_end_time", editForm.work_end_time);
+    if (!isSalesRole) {
+      if (editForm.work_start_time !== undefined) formData.append("work_start_time", editForm.work_start_time);
+      if (editForm.work_end_time !== undefined) formData.append("work_end_time", editForm.work_end_time);
+      if (editForm.weekly_schedule) {
+        formData.append("weekly_schedule", JSON.stringify(editForm.weekly_schedule));
+        const flatFields = weeklyScheduleToFlatFields(editForm.weekly_schedule);
+        Object.entries(flatFields).forEach(([fieldKey, fieldVal]) => {
+          formData.append(fieldKey, String(fieldVal));
+        });
+      }
+    }
     if (editForm.working_hours !== undefined) formData.append("working_hours", editForm.working_hours);
     if (editForm.per_paper_rate !== undefined && editForm.per_paper_rate !== "") formData.append("per_paper_rate", editForm.per_paper_rate);
 
@@ -827,7 +860,19 @@ export default function UsersPage() {
   const hasRole = (role: string) => allActiveRoles.includes(role);
 
   const isEmployee = allActiveRoles.length > 0 && !allActiveRoles.every((r) => r === "student" || r === "parents");
-  const showWorkingHours = ["cmo", "associate_bdm", "senior_bdm", "deputy_bdm", "sales_executive", "sales_senior_executive", "counsellor", "tele_caller"].includes(activeRole);
+  const SALES_ROLES = [
+    "cmo",
+    "associate_bdm",
+    "senior_bdm",
+    "deputy_bdm",
+    "sales_executive",
+    "sales_senior_executive",
+    "counsellor",
+    "tele_caller",
+    "senior_tele_caller",
+  ];
+  const isSalesRole = SALES_ROLES.includes(activeRole);
+  const showWorkingHours = isSalesRole;
   const isFaculty = hasRole("faculty");
   const isPartTimeOrVisiting =
     isFaculty &&
@@ -1626,13 +1671,15 @@ export default function UsersPage() {
                         )}
                       </div>
 
-                      {showWorkingHours ? (
+                      {isSalesRole ? (
                         <div className="space-y-1">
                           <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
                             Working Hours
                           </Label>
                           {isEditing ? (
                             <Input
+                              type="number"
+                              step="0.5"
                               value={editForm.working_hours}
                               onChange={(e) =>
                                 setEditForm((f) => ({ ...f, working_hours: e.target.value }))
@@ -1642,52 +1689,27 @@ export default function UsersPage() {
                             />
                           ) : (
                             <div className="text-sm font-medium text-text-primary pt-0.5">
-                              {selectedUser?.working_hours || "N/A"}
+                              {selectedUser?.working_hours ? `${selectedUser.working_hours} hrs` : "N/A"}
                             </div>
                           )}
                         </div>
                       ) : (
-                        <>
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                              Work Start Time
-                            </Label>
-                            {isEditing ? (
-                              <Input
-                                type="time"
-                                value={editForm.work_start_time}
-                                onChange={(e) =>
-                                  setEditForm((f) => ({ ...f, work_start_time: e.target.value }))
-                                }
-                                className="bg-background"
-                              />
-                            ) : (
-                              <div className="text-sm font-medium text-text-primary pt-0.5">
-                                {selectedUser?.work_start_time || "N/A"}
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                              Work End Time
-                            </Label>
-                            {isEditing ? (
-                              <Input
-                                type="time"
-                                value={editForm.work_end_time}
-                                onChange={(e) =>
-                                  setEditForm((f) => ({ ...f, work_end_time: e.target.value }))
-                                }
-                                className="bg-background"
-                              />
-                            ) : (
-                              <div className="text-sm font-medium text-text-primary pt-0.5">
-                                {selectedUser?.work_end_time || "N/A"}
-                              </div>
-                            )}
-                          </div>
-                        </>
+                        /* Weekly Schedule & Working Hours for Non-Sales Roles */
+                        <div className="sm:col-span-2 pt-2">
+                          <WeeklyScheduleEditor
+                            value={editForm.weekly_schedule}
+                            isEditing={isEditing}
+                            onChange={(newSchedule, avgHours) => {
+                              setEditForm((f) => ({
+                                ...f,
+                                weekly_schedule: newSchedule,
+                                working_hours: String(avgHours),
+                                work_start_time: newSchedule.monday?.start_time || f.work_start_time,
+                                work_end_time: newSchedule.monday?.end_time || f.work_end_time,
+                              }));
+                            }}
+                          />
+                        </div>
                       )}
                     </>
                   )}

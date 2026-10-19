@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDropdown } from "@/hooks/useDropdown";
+import { getAvailableYears } from "@/lib/utils";
 
 interface Course {
   id: string;
@@ -29,8 +30,9 @@ interface BatchForm {
   course: string;
   name: string;
   batch_code: string;
-  group_module: "full" | "both" | "module_1" | "module_2";
+  group_module: "all" | "full" | "both" | "module_1" | "module_2" | "module_3" | "module_4" | "module_5" | string;
   batch_attempt: "june" | "oct" | "dec" | "feb";
+  attempt_year?: string;
   branch: string;
   start_date: string;
   end_date: string;
@@ -58,6 +60,18 @@ export default function BatchDialog({
   onSave,
   courses,
 }: BatchDialogProps) {
+  const selectedCourse = courses.find((c) => String(c.id) === String(batchForm.course));
+  const isCseet = (selectedCourse?.name || "").toLowerCase().includes("cseet");
+
+  const availableYears = useMemo(() => {
+    return getAvailableYears(isCseet ? "cseet" : "other", batchForm.batch_attempt || "june", batchForm.group_module);
+  }, [isCseet, batchForm.batch_attempt, batchForm.group_module]);
+
+  useEffect(() => {
+    if (batchForm && (!batchForm.attempt_year || !availableYears.includes(String(batchForm.attempt_year)))) {
+      setBatchForm({ ...batchForm, attempt_year: availableYears[0] });
+    }
+  }, [availableYears]);
   const {
     options: branches,
     loading: branchesLoading,
@@ -136,10 +150,13 @@ export default function BatchDialog({
                   <SelectValue placeholder="Select module" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="full">Full</SelectItem>
-                  <SelectItem value="both">Both</SelectItem>
+                  <SelectItem value="all">All Modules</SelectItem>
+                  <SelectItem value="both">Both Modules</SelectItem>
                   <SelectItem value="module_1">Module 1</SelectItem>
                   <SelectItem value="module_2">Module 2</SelectItem>
+                  <SelectItem value="module_3">Module 3</SelectItem>
+                  <SelectItem value="module_4">Module 4</SelectItem>
+                  <SelectItem value="module_5">Module 5</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -160,10 +177,41 @@ export default function BatchDialog({
                   <SelectValue placeholder="Select attempt" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="june">June</SelectItem>
-                  <SelectItem value="oct">October</SelectItem>
-                  <SelectItem value="dec">December</SelectItem>
-                  <SelectItem value="feb">February</SelectItem>
+                  {isCseet ? (
+                    <>
+                      <SelectItem value="june">June</SelectItem>
+                      <SelectItem value="oct">October</SelectItem>
+                      <SelectItem value="feb">February</SelectItem>
+                    </>
+                  ) : (
+                    <>
+                      <SelectItem value="june">June</SelectItem>
+                      <SelectItem value="dec">December</SelectItem>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Attempt Year */}
+            <div className="space-y-1">
+              <Label
+                htmlFor="batch-attempt-year"
+                className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+              >
+                Attempt Year
+              </Label>
+              <Select
+                value={String(batchForm.attempt_year || availableYears[0])}
+                onValueChange={(val: any) => setBatchForm({ ...batchForm, attempt_year: val })}
+              >
+                <SelectTrigger id="batch-attempt-year" className="bg-muted/10">
+                  <SelectValue placeholder="Select year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableYears.map((y: string) => (
+                    <SelectItem key={y} value={y}>{y}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

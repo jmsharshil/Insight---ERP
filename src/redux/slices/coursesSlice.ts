@@ -5,7 +5,7 @@ export interface SubjectRecord {
   course: string;
   course_name: string;
   name: string;
-  code: string;
+  code?: string;
   total_hours: number;
   is_active: boolean;
   syllabus?: string;

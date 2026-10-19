@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import type { WeeklySchedule } from "@/types/schedule";
 
 export interface FacultyRecord {
   id: string;
@@ -32,6 +33,8 @@ export interface FacultyRecord {
   session_hours?: string | null;
   work_start_time?: string | null;
   work_end_time?: string | null;
+  working_hours?: string | null;
+  weekly_schedule?: WeeklySchedule;
 }
 
 interface FacultyState {

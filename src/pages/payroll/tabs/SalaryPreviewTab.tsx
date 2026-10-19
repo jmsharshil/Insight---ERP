@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
-import { Eye, TrendingUp, TrendingDown, Clock } from "lucide-react";
+import { Eye, TrendingUp, TrendingDown, Clock, ShieldCheck } from "lucide-react";
 import { payrollActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import { setPreview, setPreviewLoading } from "@/redux/slices/payrollSlice";
@@ -110,6 +110,15 @@ export default function SalaryPreviewTab() {
                 </span>
               </div>
             ))}
+
+            {/* Scheduled Off-Days Guarantee */}
+            <div className="mt-3 rounded-lg bg-emerald-50/70 border border-emerald-200/70 px-3.5 py-2 text-xs text-emerald-800 flex items-center justify-between">
+              <span className="flex items-center gap-1.5 font-medium">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                Scheduled Off-Days: Zero Absence Deduction
+              </span>
+              <span className="font-mono text-emerald-700 font-semibold">₹0.00</span>
+            </div>
           </div>
         </motion.div>
       ) : null}

@@ -19,6 +19,10 @@ export interface FeesStructure {
   institute_fees_module_3?: string | number;
   institute_fees_module_4?: string | number;
   institute_fees_module_5?: string | number;
+  token_amount?: string | number;
+  syllabus?: string | number | null;
+  syllabus_name?: string | null;
+  modules_count?: number;
   group_module?: string;
   attempt?: string;
   attempt_display?: string;

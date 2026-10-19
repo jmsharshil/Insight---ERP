@@ -138,7 +138,6 @@ export default function CourseDetailPage() {
   const [editingSubject, setEditingSubject] = useState<SubjectRecord | null>(null);
   const [subjectForm, setSubjectForm] = useState({
     name: "",
-    code: "",
     total_hours: 60 as string | number,
     is_active: true,
   });
@@ -247,7 +246,6 @@ export default function CourseDetailPage() {
   const openAddSubjectModal = () => {
     setSubjectForm({
       name: "",
-      code: "",
       total_hours: 60,
       is_active: true,
     });
@@ -259,7 +257,6 @@ export default function CourseDetailPage() {
   const openEditSubjectModal = (subject: SubjectRecord) => {
     setSubjectForm({
       name: subject.name || "",
-      code: subject.code || "",
       total_hours: subject.total_hours || "",
       is_active: subject.is_active !== false,
     });
@@ -283,7 +280,6 @@ export default function CourseDetailPage() {
     const payload = {
       course: id,
       name: subjectForm.name,
-      code: subjectForm.code,
       total_hours: hours,
       is_active: subjectForm.is_active,
     };
@@ -573,8 +569,6 @@ export default function CourseDetailPage() {
                         <div className="min-w-0">
                           <p className="text-sm font-semibold truncate text-text-primary">{subject.name}</p>
                           <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
-                            <span className="bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono text-[10px]">{subject.code}</span>
-                            <span>·</span>
                             <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {subject.total_hours}h</span>
                           </p>
                         </div>

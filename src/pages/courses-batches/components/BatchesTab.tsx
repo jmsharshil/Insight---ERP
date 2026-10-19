@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Users, Calendar, Clock, MapPin, Pencil, Trash2, Search, BookOpen, AlertTriangle } from "lucide-react";
+import { Users, Calendar, Clock, MapPin, Pencil, Trash2, Search, BookOpen, AlertTriangle, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
@@ -26,7 +26,8 @@ interface Batch {
   course: string; // UUID
   course_name?: string;
   batch_code: string;
-  group_module: "full" | "both" | "module_1" | "module_2";
+  group_module: "all" | "full" | "both" | "module_1" | "module_2" | "module_3" | "module_4" | "module_5" | string;
+  group_module_display?: string;
   batch_attempt: "june" | "oct" | "dec" | "feb";
   branch?: string;
   branch_name?: string;
@@ -282,6 +283,28 @@ export default function BatchesTab({
                         <MapPin className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
                         <span className="break-words leading-tight">{b.branch_name || b.branch || "N/A"}</span>
                       </div>
+                      {(b.group_module_display || b.group_module) && (
+                        <div className="flex items-start gap-1.5 min-w-0">
+                          <Layers className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                          <span className="break-words leading-tight capitalize">
+                            {b.group_module_display || (
+                              b.group_module === "module_1"
+                                ? "Module 1"
+                                : b.group_module === "module_2"
+                                ? "Module 2"
+                                : b.group_module === "module_3"
+                                ? "Module 3"
+                                : b.group_module === "module_4"
+                                ? "Module 4"
+                                : b.group_module === "module_5"
+                                ? "Module 5"
+                                : b.group_module === "both"
+                                ? "Both Modules"
+                                : "All Modules"
+                            )}
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <div className="pt-2 border-t border-border/50 text-[10px] text-muted-foreground flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2">
                       <span className="break-words">Start: {b.start_date}</span>

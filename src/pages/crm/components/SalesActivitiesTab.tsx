@@ -57,16 +57,19 @@ import {
   PHOTO_TYPE_LABELS,
   OdometerReading,
   SalesDailyPlan,
+  getActivityCategory,
+  getPhotoLabel,
+  getPhotoDisplayLabel,
 } from "@/types/salesActivity";
 import { TableSkeleton } from "@/components/common/Skeletons";
 
 const PHOTO_TYPES: { value: SalesPhotoType; label: string; isMeter?: boolean }[] = [
   { value: "start_selfie", label: "Start of Day Selfie" },
-  { value: "start_odometer", label: "Start of Day Odometer", isMeter: true },
+  { value: "start_odometer", label: "Start Odometer", isMeter: true },
   { value: "school_interior", label: "School Interior" },
   { value: "school_exterior", label: "School Exterior" },
-  { value: "exhibition", label: "Exhibition" },
-  { value: "end_odometer", label: "End of Day Odometer", isMeter: true },
+  { value: "exhibition", label: "Event" },
+  { value: "end_odometer", label: "End Odometer", isMeter: true },
   { value: "end_selfie", label: "End of Day Selfie" },
   { value: "event_start_selfie", label: "Event Start Selfie" },
   { value: "event_end_selfie", label: "Event End Selfie" },
@@ -130,6 +133,18 @@ export default function SalesActivitiesTab() {
 
   // Preview Image Modal
   const [previewPhoto, setPreviewPhoto] = useState<SalesActivityPhoto | null>(null);
+
+  const selectedPlan = useMemo(() => {
+    if (!selectedActivity) return null;
+    return plans.find(p => p.id === (selectedActivity as any).plan || p.activities?.some(a => a.id === selectedActivity.id)) || null;
+  }, [selectedActivity, plans]);
+
+  const previewPhotoCategory = useMemo(() => {
+    if (!previewPhoto) return "default";
+    const act = plans.flatMap(p => p.activities || []).find(a => a.id === previewPhoto.activity);
+    const plan = plans.find(p => p.id === (act as any)?.plan || p.activities?.some(a => a.id === act?.id) || p.photos?.some(ph => ph.id === previewPhoto.id));
+    return getActivityCategory(act, plan, plans);
+  }, [previewPhoto, plans]);
 
   // Odometer Approval/Rejection State
   const [approveOdoReading, setApproveOdoReading] = useState<OdometerReading | null>(null);
@@ -215,7 +230,11 @@ export default function SalesActivitiesTab() {
     if (dateFilter && dateFilter !== 'all' && !fromDate && !toDate) params.append("date", dateFilter);
     if (search) params.append("search", search);
     if (fromDate) params.append("from_date", fromDate);
-    if (toDate) params.append("to_date", toDate);
+    if (toDate) {
+      params.append("to_date", toDate);
+    } else if (fromDate) {
+      params.append("to_date", fromDate);
+    }
     if (userIdFilter && userIdFilter !== "all") params.append("user_id", userIdFilter);
     if (statusFilter && statusFilter !== "all") params.append("status", statusFilter);
     if (isPaidFilter && isPaidFilter !== "all") params.append("is_paid", isPaidFilter);
@@ -431,7 +450,9 @@ export default function SalesActivitiesTab() {
     if (photoType === "exhibition" && selectedActivity) {
       const exhibitionCount = selectedActivity.photos.filter((p) => p.photo_type === "exhibition").length;
       if (exhibitionCount >= 6) {
-        toast.error("A maximum of 6 exhibition photos is allowed per activity day.");
+        const cat = getActivityCategory(selectedActivity, selectedPlan, plans);
+        const typeName = cat === "seminar" ? "seminar" : "event";
+        toast.error(`A maximum of 6 ${typeName} photos is allowed per activity day.`);
         return;
       }
     }
@@ -471,17 +492,57 @@ export default function SalesActivitiesTab() {
     });
   };
 
+  const normalizeToYMD = (dateStr?: string | null): string => {
+    if (!dateStr) return "";
+    const clean = dateStr.split("T")[0].trim();
+    if (/^\d{2}[-/]\d{2}[-/]\d{4}$/.test(clean)) {
+      const [d, m, y] = clean.split(/[-/]/);
+      return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+      return clean;
+    }
+    const parsed = Date.parse(clean);
+    if (!isNaN(parsed)) {
+      const dt = new Date(parsed);
+      return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+    }
+    return clean;
+  };
+
   const filteredPlans = useMemo(() => {
-    return plans.filter((act) => {
+    return plans.filter((plan) => {
+      // Date filter check
+      const planFrom = normalizeToYMD(plan.from_date);
+      const planTo = normalizeToYMD(plan.to_date);
+      const planSingleDate = normalizeToYMD(plan.plan_date) || planFrom || planTo;
+      const normFrom = normalizeToYMD(fromDate);
+      const normTo = normalizeToYMD(toDate);
+
+      if (normFrom) {
+        const targetTo = normTo || normFrom;
+        if (planFrom && planTo) {
+          if (planFrom > targetTo || planTo < normFrom) return false;
+        } else {
+          if (planSingleDate && (planSingleDate < normFrom || planSingleDate > targetTo)) return false;
+        }
+      } else if (normTo) {
+        if (planFrom && planTo) {
+          if (planFrom > normTo) return false;
+        } else {
+          if (planSingleDate && planSingleDate > normTo) return false;
+        }
+      }
+
       if (statusFilter !== "all" || isPaidFilter !== "all") {
-        const actOdoReading = odometerReadings.find((r: any) => (r.activity?.id || r.activity) === act.id) || (act as any).odometer_reading || (act as any).odometer_claim;
+        const actOdoReading = odometerReadings.find((r: any) => (r.activity?.id || r.activity) === plan.id) || (plan as any).odometer_reading || (plan as any).odometer_claim;
         if (!actOdoReading) return false;
         if (statusFilter !== "all" && actOdoReading.status !== statusFilter) return false;
         if (isPaidFilter !== "all" && String(actOdoReading.is_paid) !== isPaidFilter) return false;
       }
       return true;
     });
-  }, [plans, statusFilter, isPaidFilter, odometerReadings]);
+  }, [plans, fromDate, toDate, statusFilter, isPaidFilter, odometerReadings]);
 
   const groupedPlans = useMemo(() => {
     return filteredPlans.reduce((acc, plan) => {
@@ -599,79 +660,194 @@ export default function SalesActivitiesTab() {
         </div>
       ) : (
         <div className="space-y-8">
-          {Object.entries(groupedPlans).map(([userName, userPlans]) => (
-            <div key={userName} className="space-y-4">
-              <h3 className="text-lg font-bold border-b pb-2 text-primary flex items-center gap-2">
-                 <User className="w-5 h-5" /> {userName}
-              </h3>
-              {(() => {
-                const uniquePhotosMap = new Map<string, any>();
-                userPlans.forEach(plan => {
-                  if (plan.photos) {
-                    plan.photos.forEach((p: any) => uniquePhotosMap.set(p.id, p));
+          {Object.entries(groupedPlans).map(([userName, userPlans]) => {
+            // Group plans and day verification photos by Day/Date
+            const dayGroupsMap = new Map<
+              string,
+              {
+                dateKey: string;
+                displayDate: string;
+                dayPhotos: any[];
+                plans: typeof userPlans;
+              }
+            >();
+
+            userPlans.forEach((plan) => {
+              const planDateRaw = plan.plan_date || plan.from_date || plan.created_at || "";
+              const dateKey = normalizeToYMD(planDateRaw) || "unknown";
+
+              if (!dayGroupsMap.has(dateKey)) {
+                const displayDate =
+                  dateKey !== "unknown" && !isNaN(Date.parse(dateKey))
+                    ? new Date(dateKey).toLocaleDateString("en-GB", {
+                        weekday: "short",
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })
+                    : planDateRaw || "Unknown Date";
+
+                dayGroupsMap.set(dateKey, {
+                  dateKey,
+                  displayDate,
+                  dayPhotos: [],
+                  plans: [],
+                });
+              }
+
+              const group = dayGroupsMap.get(dateKey)!;
+              group.plans.push(plan);
+
+              if (plan.photos && plan.photos.length > 0) {
+                plan.photos.forEach((photo: any) => {
+                  const photoDateRaw = photo.captured_at || photo.created_at || planDateRaw;
+                  const photoDateKey = normalizeToYMD(photoDateRaw) || dateKey;
+
+                  let targetGroup = dayGroupsMap.get(photoDateKey);
+                  if (!targetGroup) {
+                    const displayDate =
+                      photoDateKey !== "unknown" && !isNaN(Date.parse(photoDateKey))
+                        ? new Date(photoDateKey).toLocaleDateString("en-GB", {
+                            weekday: "short",
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })
+                        : photoDateRaw || "Unknown Date";
+
+                    targetGroup = {
+                      dateKey: photoDateKey,
+                      displayDate,
+                      dayPhotos: [],
+                      plans: [],
+                    };
+                    dayGroupsMap.set(photoDateKey, targetGroup);
+                  }
+
+                  if (!targetGroup.dayPhotos.some((p: any) => p.id === photo.id)) {
+                    targetGroup.dayPhotos.push({ ...photo, dateKey: photoDateKey });
                   }
                 });
-                const photosArray = Array.from(uniquePhotosMap.values());
-                if (photosArray.length === 0) return null;
-                return (
-                  <div className="mb-4">
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-2">
-                      <Camera className="w-3.5 h-3.5" /> Plan Photos ({photosArray.length})
-                    </h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                      {photosArray.map((p: any) => (
-                        <div
-                          key={p.id}
-                          className="group relative rounded-lg border border-border/80 bg-background overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-                          onClick={() => setPreviewPhoto(p)}
-                        >
-                          <div className="aspect-video w-full bg-muted/40 relative flex items-center justify-center overflow-hidden">
-                            <img
-                              src={p.photo}
-                              alt={p.photo_type_display || p.photo_type}
-                              loading="lazy"
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                              onError={(e) => {
-                                (e.target as any).src = "https://placehold.co/400x300?text=Photo+Unavailable";
-                              }}
-                            />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                              <Eye className="w-5 h-5" />
-                            </div>
+              }
+            });
+
+            const sortedDayGroups = Array.from(dayGroupsMap.values()).sort((a, b) =>
+              b.dateKey.localeCompare(a.dateKey)
+            );
+
+            return (
+              <div key={userName} className="space-y-6">
+                <h3 className="text-lg font-bold border-b pb-2 text-primary flex items-center gap-2">
+                  <User className="w-5 h-5" /> {userName}
+                </h3>
+
+                <div className="space-y-6">
+                  {sortedDayGroups.map((dayGroup) => (
+                    <div
+                      key={dayGroup.dateKey}
+                      className="space-y-4 rounded-xl border border-border/60 bg-muted/10 p-5 shadow-sm"
+                    >
+                      {/* Day Header */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-3">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-primary" />
+                          <h4 className="text-sm font-bold text-foreground">
+                            {dayGroup.displayDate}
+                          </h4>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {dayGroup.dayPhotos.length > 0 && (
+                            <Badge variant="outline" className="text-xs bg-primary/5 text-primary gap-1">
+                              <Camera className="w-3 h-3" />
+                              {dayGroup.dayPhotos.length} {dayGroup.dayPhotos.length === 1 ? "Verification Photo" : "Verification Photos"}
+                            </Badge>
+                          )}
+                          {dayGroup.plans.length > 0 && (
+                            <Badge variant="secondary" className="text-xs">
+                              {dayGroup.plans.length} {dayGroup.plans.length === 1 ? "Activity / Plan" : "Activities / Plans"}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 1 Day Verification Photos section for THIS day */}
+                      {dayGroup.dayPhotos.length > 0 && (
+                        <div className="rounded-lg bg-background border border-border/60 p-4 space-y-3 shadow-xs">
+                          <div className="flex items-center justify-between">
+                            <h5 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                              <Camera className="w-3.5 h-3.5 text-primary" /> Day Verification Photos ({dayGroup.dayPhotos.length})
+                            </h5>
                           </div>
-                          <div className="p-2 space-y-1">
-                            <div className="text-[11px] font-semibold truncate text-foreground">
-                              {p.photo_type_display || PHOTO_TYPE_LABELS[p.photo_type as keyof typeof PHOTO_TYPE_LABELS] || p.photo_type}
-                            </div>
-                            {p.odometer_kms && (
-                              <div className="text-[10px] text-primary font-bold flex items-center gap-1">
-                                <Gauge className="w-3 h-3" /> {p.odometer_kms} km
-                              </div>
-                            )}
-                            {p.latitude && p.longitude ? (
-                              <a
-                                href={`https://www.google.com/maps?q=${p.latitude},${p.longitude}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[10px] text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 truncate group/loc w-fit max-w-full"
-                                onClick={(e) => e.stopPropagation()}
-                                title="Open location in Google Maps"
-                              >
-                                <MapPin className="w-2.5 h-2.5 text-red-500 shrink-0 group-hover/loc:scale-110 transition-transform" />
-                                <span className="underline underline-offset-2 truncate">
-                                  {p.latitude.substring(0, 7)}, {p.longitude.substring(0, 7)}
-                                </span>
-                              </a>
-                            ) : null}
+
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                            {dayGroup.dayPhotos.map((p: any) => {
+                              const displayLabel =
+                                PHOTO_TYPE_LABELS[p.photo_type as SalesPhotoType] ||
+                                p.photo_type_display ||
+                                p.photo_type?.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) ||
+                                "Verification Photo";
+
+                              return (
+                                <div
+                                  key={p.id}
+                                  className="group relative rounded-lg border border-border/80 bg-background overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                                  onClick={() => setPreviewPhoto(p)}
+                                >
+                                  <div className="aspect-video w-full bg-muted/40 relative flex items-center justify-center overflow-hidden">
+                                    <img
+                                      src={p.photo}
+                                      alt={displayLabel}
+                                      loading="lazy"
+                                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                      onError={(e) => {
+                                        (e.target as any).src = "https://placehold.co/400x300?text=Photo+Unavailable";
+                                      }}
+                                    />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                      <Eye className="w-5 h-5" />
+                                    </div>
+                                  </div>
+                                  <div className="p-2 space-y-1">
+                                    <div className="text-[11px] font-semibold truncate text-foreground" title={displayLabel}>
+                                      {displayLabel}
+                                    </div>
+                                    {p.captured_at && (
+                                      <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                        <Clock className="w-2.5 h-2.5" />
+                                        {new Date(p.captured_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                      </div>
+                                    )}
+                                    {p.odometer_kms && (
+                                      <div className="text-[10px] text-primary font-bold flex items-center gap-1">
+                                        <Gauge className="w-3 h-3" /> {p.odometer_kms} km
+                                      </div>
+                                    )}
+                                    {p.latitude && p.longitude ? (
+                                      <a
+                                        href={`https://www.google.com/maps?q=${p.latitude},${p.longitude}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[10px] text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 truncate group/loc w-fit max-w-full"
+                                        onClick={(e) => e.stopPropagation()}
+                                        title="Open location in Google Maps"
+                                      >
+                                        <MapPin className="w-2.5 h-2.5 text-red-500 shrink-0 group-hover/loc:scale-110 transition-transform" />
+                                        <span className="underline underline-offset-2 truncate">
+                                          {p.latitude.substring(0, 7)}, {p.longitude.substring(0, 7)}
+                                        </span>
+                                      </a>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-              <div className="grid grid-cols-1 gap-4">
-                {userPlans.map((plan) => (
+                      )}
+
+                      {/* Day's Events / Plans */}
+                      <div className="grid grid-cols-1 gap-4">
+                        {dayGroup.plans.map((plan) => (
               <motion.div
                 key={plan.id}
                 initial={{ opacity: 0, y: 5 }}
@@ -780,6 +956,7 @@ export default function SalesActivitiesTab() {
                     
                     <div className="grid grid-cols-1 gap-5">
                       {plan.activities.map((act, index) => {
+                        const activityCategory = getActivityCategory(act, plan, plans);
                         const startOdo = act.photos.find((p) => p.photo_type === "start_odometer")?.odometer_kms;
                         const endOdo = act.photos.find((p) => p.photo_type === "end_odometer")?.odometer_kms;
                         const distance =
@@ -804,14 +981,20 @@ export default function SalesActivitiesTab() {
                                     id: slot.photo_id as string,
                                     photo: slot.photo_url as string,
                                     photo_type: slot.type,
-                                    photo_type_display: PHOTO_TYPE_LABELS[slot.type as SalesPhotoType] || slot.type,
+                                    photo_type_display: getPhotoLabel(slot.type, activityCategory),
                                     latitude: "",
                                     longitude: "",
                                     created_at: new Date().toISOString()
                                   });
                                 }
                               } else {
-                                const match = act.photos?.find((p) => p.photo_type === slot.type && !usedPhotoIds.has(p.id));
+                                const match = act.photos?.find((p) => {
+                                  if (usedPhotoIds.has(p.id)) return false;
+                                  if (p.photo_type === slot.type) return true;
+                                  if (slot.type === "event_start_selfie" && (p.photo_type === "meeting_interior" || p.photo_type === "seminar_start_selfie")) return true;
+                                  if (slot.type === "event_end_selfie" && (p.photo_type === "meeting_exterior" || p.photo_type === "seminar_end_selfie")) return true;
+                                  return false;
+                                });
                                 if (match) {
                                   mappedSlotPhotos.set(slotKey, match);
                                   usedPhotoIds.add(match.id);
@@ -856,7 +1039,32 @@ export default function SalesActivitiesTab() {
                                     className="h-8 text-xs bg-background shadow-sm hover:bg-primary hover:text-primary-foreground transition-colors"
                                     onClick={() => {
                                       setSelectedActivity(act);
-                                      setPhotoType("start_odometer");
+                                      let initialType: SalesPhotoType = "start_odometer";
+                                      if (act.event_photo_slots) {
+                                        const unfilledSlot = act.event_photo_slots.flatMap(g => g.slots).find(s => !s.is_filled);
+                                        const hasStartOdo = act.photos?.some(p => p.photo_type === "start_odometer");
+                                        if (!hasStartOdo) {
+                                          initialType = "start_odometer";
+                                        } else if (unfilledSlot) {
+                                          initialType = unfilledSlot.type as SalesPhotoType;
+                                        } else {
+                                          const hasEndOdo = act.photos?.some(p => p.photo_type === "end_odometer");
+                                          initialType = hasEndOdo ? "start_odometer" : "end_odometer";
+                                        }
+                                      } else if (activityCategory === "meeting") {
+                                        const hasStartOdo = act.photos?.some(p => p.photo_type === "start_odometer");
+                                        const hasInterior = act.photos?.some(p => p.photo_type === "event_start_selfie" || (p.photo_type as string) === "meeting_interior");
+                                        if (!hasStartOdo) initialType = "start_odometer";
+                                        else if (!hasInterior) initialType = "event_start_selfie";
+                                        else initialType = "event_end_selfie";
+                                      } else if (activityCategory === "seminar") {
+                                        const hasStartOdo = act.photos?.some(p => p.photo_type === "start_odometer");
+                                        const hasStartSelfie = act.photos?.some(p => p.photo_type === "event_start_selfie" || (p.photo_type as string) === "seminar_start_selfie");
+                                        if (!hasStartOdo) initialType = "start_odometer";
+                                        else if (!hasStartSelfie) initialType = "event_start_selfie";
+                                        else initialType = "exhibition";
+                                      }
+                                      setPhotoType(initialType);
                                       setPhotoOpen(true);
                                     }}
                                   >
@@ -998,7 +1206,7 @@ export default function SalesActivitiesTab() {
                                   <div className="aspect-video w-full bg-muted/40 relative flex items-center justify-center overflow-hidden">
                                     <img
                                       src={p.photo}
-                                      alt={p.photo_type_display || p.photo_type}
+                                      alt={getPhotoDisplayLabel(p, activityCategory)}
                                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                                       onError={(e) => {
                                         (e.target as any).src = "https://placehold.co/400x300?text=Photo+Unavailable";
@@ -1010,7 +1218,7 @@ export default function SalesActivitiesTab() {
                                   </div>
                                   <div className="p-2 space-y-1">
                                     <div className="text-[11px] font-semibold truncate text-foreground flex items-center justify-between">
-                                      <span className="truncate">{p.photo_type_display || PHOTO_TYPE_LABELS[p.photo_type as keyof typeof PHOTO_TYPE_LABELS] || p.photo_type}</span>
+                                      <span className="truncate">{getPhotoDisplayLabel(p, activityCategory)}</span>
                                       <Badge variant="outline" className="text-[9px] h-3.5 px-1 py-0 bg-primary/5 ml-1 leading-none shrink-0 border-primary/20 text-primary">S{slot.slot}</Badge>
                                     </div>
                                     {slot.timing && (
@@ -1056,7 +1264,7 @@ export default function SalesActivitiesTab() {
                                   </div>
                                   <div className="text-center w-full">
                                     <div className="text-[10px] font-semibold text-muted-foreground truncate">
-                                      {PHOTO_TYPE_LABELS[slot.type as SalesPhotoType] || slot.type}
+                                      {getPhotoLabel(slot.type, activityCategory)}
                                     </div>
                                     <div className="text-[9px] text-muted-foreground/70 mb-1">Missing (Slot {slot.slot})</div>
                                     {slot.timing && (
@@ -1083,7 +1291,9 @@ export default function SalesActivitiesTab() {
                               <ImageIcon className="w-3.5 h-3.5" /> Additional Photos ({extraPhotos.length})
                             </h5>
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                              {extraPhotos.map((p) => (
+                              {extraPhotos.map((p) => {
+                                const extraDisplayLabel = getPhotoDisplayLabel(p, activityCategory);
+                                return (
                                 <div
                                   key={p.id}
                                   className="group relative rounded-lg border border-border/80 bg-background overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
@@ -1092,7 +1302,7 @@ export default function SalesActivitiesTab() {
                                   <div className="aspect-video w-full bg-muted/40 relative flex items-center justify-center overflow-hidden">
                                     <img
                                       src={p.photo}
-                                      alt={p.photo_type_display || p.photo_type}
+                                      alt={extraDisplayLabel}
                                       loading="lazy"
                                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                                       onError={(e) => {
@@ -1105,7 +1315,7 @@ export default function SalesActivitiesTab() {
                                   </div>
                                   <div className="p-2 space-y-1">
                                     <div className="text-[11px] font-semibold truncate text-foreground">
-                                      {p.photo_type_display || PHOTO_TYPE_LABELS[p.photo_type as keyof typeof PHOTO_TYPE_LABELS] || p.photo_type}
+                                      {extraDisplayLabel}
                                     </div>
                                     {p.odometer_kms && (
                                       <div className="text-[10px] text-primary font-bold flex items-center gap-1">
@@ -1138,7 +1348,8 @@ export default function SalesActivitiesTab() {
                                     </div>
                                   </div>
                                 </div>
-                              ))}
+                              );
+                            })}
                             </div>
                           </div>
                         );
@@ -1150,7 +1361,9 @@ export default function SalesActivitiesTab() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                      {act.photos.map((p) => (
+                      {act.photos.map((p) => {
+                        const fallbackDisplayLabel = getPhotoDisplayLabel(p, activityCategory);
+                        return (
                         <div
                           key={p.id}
                           className="group relative rounded-lg border border-border/80 bg-background overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
@@ -1159,7 +1372,7 @@ export default function SalesActivitiesTab() {
                           <div className="aspect-video w-full bg-muted/40 relative flex items-center justify-center overflow-hidden">
                             <img
                               src={p.photo}
-                              alt={p.photo_type_display || p.photo_type}
+                              alt={fallbackDisplayLabel}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                               onError={(e) => {
                                 (e.target as any).src = "https://placehold.co/400x300?text=Photo+Unavailable";
@@ -1171,7 +1384,7 @@ export default function SalesActivitiesTab() {
                           </div>
                           <div className="p-2 space-y-1">
                             <div className="text-[11px] font-semibold truncate text-foreground">
-                              {p.photo_type_display || PHOTO_TYPE_LABELS[p.photo_type as keyof typeof PHOTO_TYPE_LABELS] || p.photo_type}
+                              {fallbackDisplayLabel}
                             </div>
                             {p.odometer_kms && (
                               <div className="text-[10px] text-primary font-bold flex items-center gap-1">
@@ -1204,7 +1417,8 @@ export default function SalesActivitiesTab() {
                             </div>
                           </div>
                         </div>
-                      ))}
+                      );
+                    })}
                     </div>
                   )}
                 </div>
@@ -1340,9 +1554,13 @@ export default function SalesActivitiesTab() {
                 )}
               </motion.div>
             ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -1402,6 +1620,7 @@ export default function SalesActivitiesTab() {
                 </SelectTrigger>
                 <SelectContent>
                   {(() => {
+                    const selectedCategory = getActivityCategory(selectedActivity, selectedPlan, plans);
                     let typesToShow = PHOTO_TYPES;
                     if (selectedActivity && selectedActivity.event_photo_slots) {
                       const availableTypes = new Set<string>();
@@ -1418,11 +1637,19 @@ export default function SalesActivitiesTab() {
                       if (filteredTypes.length > 0) {
                         typesToShow = filteredTypes;
                       }
+                    } else if (selectedCategory === "meeting") {
+                      typesToShow = PHOTO_TYPES.filter(pt => 
+                        ["start_odometer", "event_start_selfie", "event_end_selfie", "end_odometer"].includes(pt.value)
+                      );
+                    } else if (selectedCategory === "seminar") {
+                      typesToShow = PHOTO_TYPES.filter(pt => 
+                        ["start_odometer", "event_start_selfie", "exhibition", "event_end_selfie", "end_odometer"].includes(pt.value)
+                      );
                     }
                     
                     return typesToShow.map((pt) => (
                       <SelectItem key={pt.value} value={pt.value}>
-                        {pt.label}
+                        {getPhotoLabel(pt.value, selectedCategory)}
                       </SelectItem>
                     ));
                   })()}
@@ -1512,7 +1739,7 @@ export default function SalesActivitiesTab() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {previewPhoto?.photo_type_display || previewPhoto?.photo_type}
+              {previewPhoto ? getPhotoDisplayLabel(previewPhoto, previewPhotoCategory) : ""}
             </DialogTitle>
           </DialogHeader>
           {previewPhoto && (

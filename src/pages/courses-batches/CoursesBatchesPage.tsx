@@ -33,6 +33,7 @@ import {
   deleteClassroom,
 } from "@/redux/slices/classroomSlice";
 import { API } from "@/service/api";
+import { getAvailableYears } from "@/lib/utils";
 
 import CoursesTab from "./components/CoursesTab";
 import CourseSheet from "./components/CourseSheet";
@@ -236,6 +237,9 @@ export default function CoursesBatchesPage() {
 
   const [batchForm, setBatchForm] = useState<any>({
     fee_structure: "",
+    group_module: "both",
+    batch_attempt: "june",
+    attempt_year: getAvailableYears("other", "june")[0],
     branch: "",
     syllabus: "",
     max_students: "",
@@ -272,6 +276,9 @@ export default function CoursesBatchesPage() {
   const openAddBatchModal = () => {
     setBatchForm({
       fee_structure: "",
+      group_module: "both",
+      batch_attempt: "june",
+      attempt_year: getAvailableYears("other", "june")[0],
       branch: "",
       syllabus: "",
       max_students: "",

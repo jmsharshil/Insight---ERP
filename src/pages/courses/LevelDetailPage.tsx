@@ -178,8 +178,6 @@ export default function LevelDetailPage() {
 
   const [subjectForm, setSubjectForm] = useState({
     name: "",
-    code: "",
-    total_hours: 0,
     syllabus: "",
     module: "",
     is_active: true,
@@ -477,8 +475,6 @@ export default function LevelDetailPage() {
       setEditingSubject(subject);
       setSubjectForm({
         name: subject.name || "",
-        code: subject.code || "",
-        total_hours: subject.total_hours || 0,
         syllabus: subject.syllabus?.id || subject.syllabus || defaultSyllabus || "",
         module: subject.module?.id || subject.module || defaultModule || "",
         is_active: subject.is_active !== false,
@@ -487,8 +483,6 @@ export default function LevelDetailPage() {
       setEditingSubject(null);
       setSubjectForm({
         name: "",
-        code: "",
-        total_hours: 0,
         syllabus: defaultSyllabus || (level?.syllabuses?.[0]?.id || ""),
         module: defaultModule || "",
         is_active: true,
@@ -504,8 +498,6 @@ export default function LevelDetailPage() {
       syllabus: subjectForm.syllabus || null,
       module: subjectForm.module || null,
       name: subjectForm.name.trim(),
-      code: subjectForm.code.trim(),
-      total_hours: Number(subjectForm.total_hours),
       is_active: subjectForm.is_active,
     };
     const isEdit = !!editingSubject;
@@ -812,11 +804,6 @@ export default function LevelDetailPage() {
                 </Badge>
               </div>
               <div className="text-xs text-muted-foreground flex items-center gap-3 flex-wrap">
-                {subject.code && (
-                  <span className="font-medium text-primary/90 bg-primary/5 px-2 py-0.5 rounded border border-primary/10">
-                    Code: {subject.code}
-                  </span>
-                )}
                 {subject.total_hours !== undefined && (
                   <span className="flex items-center gap-1">
                     <Clock className="w-3 h-3 text-primary" /> {subject.total_hours} Hours
@@ -1427,12 +1414,13 @@ export default function LevelDetailPage() {
               <div className="space-y-1">
                 <Label>Syllabus</Label>
                 <Select
+                  disabled={!editingSubject}
                   value={subjectForm.syllabus}
                   onValueChange={(val) => {
                     setSubjectForm({ ...subjectForm, syllabus: val, module: "" });
                   }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={!editingSubject ? "bg-muted/50 cursor-not-allowed opacity-75" : ""}>
                     <SelectValue placeholder="Select Syllabus" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1457,12 +1445,13 @@ export default function LevelDetailPage() {
                 <div className="space-y-1">
                   <Label>Module <span className="text-xs text-muted-foreground">(Optional)</span></Label>
                   <Select
+                    disabled={!editingSubject}
                     value={subjectForm.module || "none"}
                     onValueChange={(val) => {
                       setSubjectForm({ ...subjectForm, module: val === "none" ? "" : val });
                     }}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className={!editingSubject ? "bg-muted/50 cursor-not-allowed opacity-75" : ""}>
                       <SelectValue placeholder="Direct Subject (No Module)" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1486,28 +1475,6 @@ export default function LevelDetailPage() {
                 onChange={(e) => setSubjectForm({ ...subjectForm, name: e.target.value })}
                 placeholder="e.g. Jurisprudence, Interpretation & General Laws"
               />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label htmlFor="sub-code">Code</Label>
-                <Input
-                  id="sub-code"
-                  value={subjectForm.code}
-                  onChange={(e) => setSubjectForm({ ...subjectForm, code: e.target.value })}
-                  placeholder="e.g. JIGL"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="sub-hours">Total Hours</Label>
-                <Input
-                  id="sub-hours"
-                  type="number"
-                  min="0"
-                  value={subjectForm.total_hours}
-                  onChange={(e) => setSubjectForm({ ...subjectForm, total_hours: Number(e.target.value) })}
-                />
-              </div>
             </div>
 
             <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 bg-muted/30">

@@ -12,6 +12,7 @@ import { useDropdown } from "@/hooks/useDropdown";
 import DataTable, { type DataTableColumn } from "@/components/common/DataTable";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -19,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MoreHorizontal } from "lucide-react";
 import type { AdmissionRecord } from "@/redux/slices/admissionSlice";
 import { TableSkeleton } from "@/components/common/Skeletons";
+import { formatCurrency } from "@/lib/utils";
 
 export default function AdmissionsTab() {
   const navigate = useNavigate();
@@ -111,6 +113,45 @@ export default function AdmissionsTab() {
     { key: "contact", header: "Contact", exportValue: (r) => `${r.phone_student || ""} ${r.email || ""}`, render: (r) => <div className="text-xs"><div>{r.phone_student}</div><div className="text-muted-foreground">{r.email}</div></div> },
     { key: "course", header: "Course", exportValue: (r) => r.course, render: (r) => <span className="capitalize">{r.course.replace(/_/g, " ")}</span> },
     { key: "batch", header: "Batch Attempt", exportValue: (r) => r.batch_attempt, render: (r) => <span className="capitalize">{r.batch_attempt}</span> },
+    {
+      key: "payment_plan",
+      header: "Payment Plan",
+      exportValue: (r) => r.payment_type || "N/A",
+      render: (r) => {
+        if (!r.payment_type) return <span className="text-xs text-muted-foreground">—</span>;
+        if (r.payment_type === "token") {
+          return (
+            <div className="text-xs space-y-0.5">
+              <div className="flex items-center gap-1">
+                <Badge variant="outline" className="border-amber-400 bg-amber-50 text-amber-800 text-[10px] px-1.5 py-0 font-medium capitalize">
+                  Token {r.payment_mode ? `• ${r.payment_mode}` : "Plan"}
+                </Badge>
+              </div>
+              {r.remaining_fees ? (
+                <div className="text-[11px] font-semibold text-amber-700">
+                  Due: {formatCurrency(Number(r.remaining_fees))}
+                </div>
+              ) : null}
+            </div>
+          );
+        }
+        if (r.payment_type === "full_payment") {
+          return (
+            <Badge variant="outline" className="border-emerald-400 bg-emerald-50 text-emerald-800 text-[10px] px-1.5 py-0 font-medium">
+              Full Payment
+            </Badge>
+          );
+        }
+        if (r.payment_type === "finance") {
+          return (
+            <Badge variant="outline" className="border-blue-400 bg-blue-50 text-blue-800 text-[10px] px-1.5 py-0 font-medium">
+              Finance
+            </Badge>
+          );
+        }
+        return <span className="text-xs capitalize">{r.payment_type}</span>;
+      },
+    },
     { key: "status", header: "Status", exportValue: (r) => r.status_display || r.status, render: (r) => <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground capitalize">{r.status_display}</span> },
     { key: "counsellor", header: "Counsellor", exportValue: (r) => r.assigned_counsellor ? r.assigned_counsellor.name : "-", render: (r) => r.assigned_counsellor ? r.assigned_counsellor.name : "-" },
     { key: "submitted_at", header: "Submitted At", render: (r) => <span className="text-xs text-muted-foreground">{r.submitted_at}</span> },
@@ -191,7 +232,7 @@ export default function AdmissionsTab() {
               <SelectContent>
                 <SelectItem value="all">All Branches</SelectItem>
                 {branches.map((b) => (
-                  <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>
+                  <SelectItem key={String(b.value)} value={String(b.value)}>{b.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
