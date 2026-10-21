@@ -1,12 +1,20 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Navigate } from "react-router-dom";
+import { useNavigate, Navigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   Eye, EyeOff, Mail, Lock, Loader2,
   ArrowRight, Users, GraduationCap, BookOpen,
+  Smartphone, Sparkles,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/useToast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,9 +49,15 @@ type FormData = z.infer<typeof schema>;
 type ViewMode = "login" | "verify-login-otp" | "forgot-password-email" | "forgot-password-reset";
 
 
+const PLAY_STORE_URL =
+  "https://play.google.com/store/apps/details?id=com.jmsinsight.app&hl=en_IN";
+const APP_STORE_URL =
+  "https://apps.apple.com/us/app/insight-institute/id6780808050";
+
 export default function LoginPage() {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const toast = useToast();
   const isLoading = useSelector((state: RootState) => state.apiAuth.loading);
   const [showPass, setShowPass] = useState(false);
@@ -57,6 +71,10 @@ export default function LoginPage() {
   const [fpConfirmPass, setFpConfirmPass] = useState("");
   const [showFpPass, setShowFpPass] = useState(false);
 
+  // Popup box for student & parents mobile app download
+  const [showMobileAppPopup, setShowMobileAppPopup] = useState(false);
+  const [popupUser, setPopupUser] = useState<any>(null);
+
   const {
     register, handleSubmit, formState: { errors }, reset, setValue, getValues,
   } = useForm<FormData>({ resolver: zodResolver(schema) });
@@ -67,16 +85,23 @@ export default function LoginPage() {
       setValue("email", autoLogoutEmail);
       sessionStorage.removeItem("auto_logout_email");
     }
-  }, [setValue]);
 
-  const { isAuthenticated } = useAuth();
+    if (searchParams.get("app_required") === "true") {
+      setShowMobileAppPopup(true);
+    }
+  }, [setValue, searchParams]);
+
+  const { isAuthenticated, user, logout } = useAuth();
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    if (user?.role === "student" || user?.role === "parents" || user?.role === "parent") {
+      logout();
+    } else {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   const onSubmit = (data: FormData) => {
-
     dispatch({
       type: authActions.LOGIN,
       method: "POST",
@@ -85,12 +110,23 @@ export default function LoginPage() {
       auth: false,
       setLoading: (val: boolean) => dispatch(setAuthLoading(val)),
       getResponse: (res: LoginResponse) => {
-        console.log(res)
+        console.log(res);
         if (res.otp_required) {
           setViewMode("verify-login-otp");
           setOtpEmail(res.email || data.email);
           toast.success(res.message || "OTP sent successfully.");
         } else {
+          const isStudentOrParent =
+            res.user?.role === "student" ||
+            res.user?.role === "parents" ||
+            res.user?.role === "parent";
+
+          if (isStudentOrParent) {
+            setPopupUser(res.user);
+            setShowMobileAppPopup(true);
+            return;
+          }
+
           // Store complete auth session data professionally
           localStorage.setItem("Insight_Login_Data", JSON.stringify(res));
 
@@ -131,6 +167,17 @@ export default function LoginPage() {
       auth: false,
       setLoading: (val: boolean) => dispatch(setAuthLoading(val)),
       getResponse: (res: LoginResponse) => {
+        const isStudentOrParent =
+          res.user?.role === "student" ||
+          res.user?.role === "parents" ||
+          res.user?.role === "parent";
+
+        if (isStudentOrParent) {
+          setPopupUser(res.user);
+          setShowMobileAppPopup(true);
+          return;
+        }
+
         localStorage.setItem("Insight_Login_Data", JSON.stringify(res));
 
         dispatch(setCredentials({
@@ -573,6 +620,104 @@ export default function LoginPage() {
           </Accordion> */}
         </div>
       </div>
+
+      {/* ── Simple Popup Box for Student & Parents (Matching Brand Theme) ── */}
+      <Dialog open={showMobileAppPopup} onOpenChange={setShowMobileAppPopup}>
+        <DialogContent className="max-w-md p-0 overflow-hidden border border-primary/25 bg-card shadow-2xl rounded-2xl">
+          {/* Header with matching brand theme */}
+          <div className="bg-gradient-to-r from-primary via-orange-500 to-amber-600 p-6 text-white text-center relative overflow-hidden">
+            <div className="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-white/10 blur-xl pointer-events-none" />
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 text-white shadow-inner">
+              <Smartphone className="h-7 w-7" />
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 border border-white/25 text-[11px] font-semibold uppercase tracking-wider mb-2">
+              <Sparkles className="w-3 h-3" />
+              <span>
+                {popupUser?.role === "parents" || popupUser?.role === "parent"
+                  ? "Parent Notice"
+                  : "Student Notice"}
+              </span>
+            </div>
+            <DialogTitle className="text-xl font-heading font-bold text-white tracking-tight">
+              Please Download Our Mobile App
+            </DialogTitle>
+            <DialogDescription className="text-white/90 text-xs mt-1 max-w-xs mx-auto leading-relaxed">
+              {popupUser?.name ? `Hello ${popupUser.name}! ` : ""}
+              Student and parent access is exclusively available on our official mobile app.
+            </DialogDescription>
+          </div>
+
+          {/* Body */}
+          <div className="p-6 space-y-4">
+            <p className="text-xs text-muted-foreground text-center leading-relaxed">
+              Please download the Insight Institute mobile app to easily track your daily timetables, live attendance, fee receipts, and exam results.
+            </p>
+
+            {/* Store Download Buttons */}
+            <div className="space-y-2.5 pt-1">
+              {/* Google Play Store */}
+              <button
+                type="button"
+                onClick={() => window.open(PLAY_STORE_URL, "_blank", "noopener,noreferrer")}
+                className="flex items-center justify-center bg-zinc-950 hover:bg-zinc-900 active:scale-[0.98] text-white rounded-xl px-4 py-3 border border-zinc-800 transition-all cursor-pointer shadow-md w-full group"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 512 512"
+                  className="w-7 h-7 mr-3 shrink-0"
+                >
+                  <path fill="#34A853" d="M325.3 234.3L104.6 13l280.8 161.2-60.1 60.1z" />
+                  <path fill="#4285F4" d="M47 0C34 6.8 25.3 19.2 25.3 35.3v441.3c0 16.1 8.7 28.5 21.7 35.3l256-256L47 0z" />
+                  <path fill="#FBBC04" d="M425.2 225.6l-58.9-34.1-65.7 64.5 65.7 64.5 60.1-34.1c18-14.3 18-46.5-1.2-60.8z" />
+                  <path fill="#EA4335" d="M104.6 499l280.8-161.2-60.1-60.1L104.6 499z" />
+                </svg>
+                <div className="flex flex-col items-start text-left">
+                  <span className="text-[9px] leading-none font-medium uppercase text-zinc-300">
+                    GET IT ON
+                  </span>
+                  <span className="text-[16px] font-semibold leading-tight mt-0.5 tracking-tight text-white">
+                    Google Play
+                  </span>
+                </div>
+              </button>
+
+              {/* Apple App Store */}
+              <button
+                type="button"
+                onClick={() => window.open(APP_STORE_URL, "_blank", "noopener,noreferrer")}
+                className="flex items-center justify-center bg-zinc-950 hover:bg-zinc-900 active:scale-[0.98] text-white rounded-xl px-4 py-3 border border-zinc-800 transition-all cursor-pointer shadow-md w-full group"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 384 512"
+                  className="w-7 h-7 mr-3 shrink-0 fill-white"
+                >
+                  <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
+                </svg>
+                <div className="flex flex-col items-start text-left">
+                  <span className="text-[9px] leading-none font-medium text-zinc-300">
+                    Download on the
+                  </span>
+                  <span className="text-[16px] font-semibold leading-tight mt-0.5 tracking-tight text-white">
+                    App Store
+                  </span>
+                </div>
+              </button>
+            </div>
+
+            {/* Close Button with matching primary theme */}
+            <div className="pt-2">
+              <Button
+                type="button"
+                onClick={() => setShowMobileAppPopup(false)}
+                className="w-full h-10 bg-primary hover:bg-primary-dark text-white font-semibold text-xs transition-colors shadow-sm"
+              >
+                Okay, Got It
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </InsightFormLayout>
   );
 }

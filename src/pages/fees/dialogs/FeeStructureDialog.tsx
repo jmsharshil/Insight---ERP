@@ -385,17 +385,7 @@ export function FeeStructureDialog({
   };
 
   const handleModuleBlur = () => {
-    const modSum =
-      parseFloat(instituteFeesModule1 || "0") +
-      parseFloat(instituteFeesModule2 || "0") +
-      parseFloat(instituteFeesModule3 || "0") +
-      parseFloat(instituteFeesModule4 || "0") +
-      parseFloat(instituteFeesModule5 || "0");
-    if (!totalAmount || parseFloat(totalAmount) === 0) {
-      if (modSum > 0) {
-        setTotalAmount(modSum.toString());
-      }
-    }
+    // Module fees and All Modules Fee are independent — no auto-calculation
   };
 
   const isEdit = !!structure;
@@ -406,11 +396,8 @@ export function FeeStructureDialog({
     const mod3 = parseFloat(instituteFeesModule3 || "0");
     const mod4 = parseFloat(instituteFeesModule4 || "0");
     const mod5 = parseFloat(instituteFeesModule5 || "0");
-    const modSum = mod1 + mod2 + mod3 + mod4 + mod5;
     const enteredTotal = parseFloat(totalAmount || "0");
-    // Scenario A: If bulk/all modules is blank, use sum of modules
-    // Scenario B: If bulk/all modules is provided, use entered bulk amount
-    const finalTotalAmount = enteredTotal > 0 ? enteredTotal : modSum;
+    const finalTotalAmount = enteredTotal;
 
     if (!course || finalTotalAmount <= 0) {
       return;
@@ -745,7 +732,7 @@ export function FeeStructureDialog({
             />
             {hasModules && (
               <p className="text-[11px] text-muted-foreground mt-1">
-                Auto-calculated from individual modules or enter a discounted bulk package fee.
+                Enter the total fee for all modules combined.
               </p>
             )}
           </div>

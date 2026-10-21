@@ -198,10 +198,16 @@ function PaymentsTable({
       render: (r) => {
         const statusColors: Record<string, string> = {
           pending_verification: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+          approval_pending: "bg-amber-500/10 text-amber-500 border-amber-500/20",
           verified: "bg-green-500/10 text-green-500 border-green-500/20",
           rejected: "bg-red-500/10 text-red-500 border-red-500/20",
         };
-        const label = r.status === "pending_verification" ? "Pending Verification" : r.status;
+        const label =
+          r.status === "pending_verification"
+            ? "Pending Verification"
+            : r.status === "approval_pending"
+            ? "Approval Pending"
+            : r.status;
         return (
           <span className={cn("px-2 py-0.5 rounded-full text-xs font-semibold border capitalize whitespace-nowrap", statusColors[r.status] || "bg-muted text-muted-foreground border-muted-foreground/20")}>
             {label?.replace("_", " ")}
@@ -211,7 +217,9 @@ function PaymentsTable({
     },
   ];
 
-  const hasPending = data.some((r) => r.status === "approval_pending");
+  const hasPending = data.some(
+    (r) => r.status === "approval_pending" || r.status === "pending_verification"
+  );
   if (hasPending) {
     cols.push({
       key: "actions",
@@ -242,5 +250,5 @@ function PaymentsTable({
     });
   }
 
-  return <DataTable columns={cols} data={data} />;
+  return <DataTable columns={cols} data={data} loading={loading} onRowClick={(row) => onVerify(row)} />;
 }

@@ -9,12 +9,18 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ module }: ProtectedRouteProps) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const { hasModule } = useRole();
   const location = useLocation();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // If a student or parent attempts to access protected web ERP routes, redirect to login with popup notice
+  if (user?.role === "student" || user?.role === "parents" || user?.role === "parent") {
+    logout();
+    return <Navigate to="/login?app_required=true" replace />;
   }
 
   if (module && !hasModule(module)) {

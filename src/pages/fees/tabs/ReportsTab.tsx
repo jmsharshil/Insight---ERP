@@ -58,7 +58,7 @@ interface ReportsTabProps {
 
 import ModulePlaceholder from "@/pages/ModulePlaceholder";
 
-export default function ReportsTab() {
+export default function ReportsTab(_props?: Partial<ReportsTabProps>) {
   return <ModulePlaceholder title="Fees Reports" />;
 }
 

@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import {
   DayOfWeek,
   DaySchedule,
+  SaturdayRule,
   WeeklySchedule,
   DAYS_ORDER,
 } from "@/types/schedule";
@@ -17,6 +18,13 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Clock,
   Calendar,
   ShieldCheck,
@@ -24,6 +32,7 @@ import {
   Info,
   CalendarX,
   CheckCircle2,
+  CalendarCheck2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -50,6 +59,12 @@ export const WeeklyScheduleEditor: React.FC<WeeklyScheduleEditorProps> = ({
           end_time: isWeekend ? "14:00:00" : "19:00:00",
           working_hours: isWeekend ? 4.0 : 9.0,
           is_off: !!isWeekend,
+          ...(key === "saturday" ? { saturday_rule: "all" } : {}),
+        };
+      } else if (key === "saturday" && !s[key]?.saturday_rule) {
+        s[key] = {
+          ...s[key]!,
+          saturday_rule: s[key]?.is_off ? "off" : "all",
         };
       }
     });
@@ -84,6 +99,14 @@ export const WeeklyScheduleEditor: React.FC<WeeklyScheduleEditorProps> = ({
     onChange(updatedSchedule, newStats.averageDailyHours);
   };
 
+  const handleSaturdayRuleChange = (rule: SaturdayRule) => {
+    const isOff = rule === "off";
+    handleDayChange("saturday", {
+      saturday_rule: rule,
+      is_off: isOff,
+    });
+  };
+
   const handleApplyToAllActive = (sourceDayKey: DayOfWeek = "monday") => {
     if (!onChange) return;
     const source = schedule[sourceDayKey];
@@ -116,7 +139,7 @@ export const WeeklyScheduleEditor: React.FC<WeeklyScheduleEditorProps> = ({
       wednesday: { start_time: "10:00:00", end_time: "19:00:00", working_hours: 9.0, is_off: false },
       thursday: { start_time: "10:00:00", end_time: "19:00:00", working_hours: 9.0, is_off: false },
       friday: { start_time: "10:00:00", end_time: "19:00:00", working_hours: 9.0, is_off: false },
-      saturday: { start_time: "10:00:00", end_time: "19:00:00", working_hours: 9.0, is_off: false },
+      saturday: { start_time: "10:00:00", end_time: "19:00:00", working_hours: 9.0, is_off: false, saturday_rule: "all" },
       sunday: { start_time: "10:00:00", end_time: "14:00:00", working_hours: 4.0, is_off: true },
     };
     const newStats = calculateWeeklyStats(updated);
@@ -131,56 +154,6 @@ export const WeeklyScheduleEditor: React.FC<WeeklyScheduleEditorProps> = ({
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* ─── Metric Badges Bar ─────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-        <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 flex flex-col justify-between">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
-            <Clock className="w-3.5 h-3.5" />
-            <span>Avg Daily Hours</span>
-          </div>
-          <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-xl font-bold font-mono text-primary">
-              {stats.averageDailyHours}
-            </span>
-            <span className="text-xs text-muted-foreground">hrs/day</span>
-          </div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">
-            Synced with user profile
-          </div>
-        </div>
-
-        <div className="bg-muted/40 border border-border rounded-xl p-3 flex flex-col justify-between">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-            <Calendar className="w-3.5 h-3.5 text-blue-600" />
-            <span>Active Days</span>
-          </div>
-          <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-xl font-bold font-mono text-foreground">
-              {stats.totalActiveDays}
-            </span>
-            <span className="text-xs text-muted-foreground">/ 7 days</span>
-          </div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">
-            {stats.totalWeeklyHours} hrs weekly total
-          </div>
-        </div>
-
-        <div className="bg-emerald-50/60 border border-emerald-200/60 rounded-xl p-3 flex flex-col justify-between col-span-2 sm:col-span-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800">
-              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Off-Days ({stats.offDaysCount} scheduled)</span>
-            </div>
-            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[10px] h-5 font-medium">
-              Zero Deduction
-            </Badge>
-          </div>
-          <div className="text-[11px] text-emerald-900/80 mt-1 leading-snug">
-            Days with <code className="bg-emerald-100/80 px-1 py-0.5 rounded text-[10px] font-mono">is_off: true</code> are exempt from absence salary deductions and delay penalties.
-          </div>
-        </div>
-      </div>
-
       {/* ─── Quick Actions (in Edit Mode) ──────────────────── */}
       {isEditing && (
         <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-b border-border/50 pb-2">
@@ -242,6 +215,25 @@ export const WeeklyScheduleEditor: React.FC<WeeklyScheduleEditorProps> = ({
                   {isWeekend && (
                     <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-amber-300 text-amber-700 bg-amber-50/50">
                       Weekend
+                    </Badge>
+                  )}
+                  {key === "saturday" && day.saturday_rule && (
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] px-1.5 py-0 h-4 font-medium ${
+                        day.saturday_rule === "odd"
+                          ? "border-blue-300 text-blue-700 bg-blue-50/60"
+                          : day.saturday_rule === "even"
+                          ? "border-purple-300 text-purple-700 bg-purple-50/60"
+                          : day.saturday_rule === "off"
+                          ? "border-slate-300 text-slate-600 bg-slate-50"
+                          : "border-emerald-300 text-emerald-700 bg-emerald-50/60"
+                      }`}
+                    >
+                      {day.saturday_rule === "odd" && "Odd Sats (1st, 3rd, 5th)"}
+                      {day.saturday_rule === "even" && "Even Sats (2nd, 4th)"}
+                      {day.saturday_rule === "all" && "All Saturdays Working"}
+                      {day.saturday_rule === "off" && "All Saturdays Off"}
                     </Badge>
                   )}
                 </div>
@@ -307,9 +299,20 @@ export const WeeklyScheduleEditor: React.FC<WeeklyScheduleEditorProps> = ({
                     <Switch
                       id={`switch-${key}`}
                       checked={day.is_off}
-                      onCheckedChange={(checked) =>
-                        handleDayChange(key, { is_off: checked })
-                      }
+                      onCheckedChange={(checked) => {
+                        if (key === "saturday") {
+                          handleDayChange(key, {
+                            is_off: checked,
+                            saturday_rule: checked
+                              ? "off"
+                              : day.saturday_rule === "off"
+                              ? "all"
+                              : day.saturday_rule || "all",
+                          });
+                        } else {
+                          handleDayChange(key, { is_off: checked });
+                        }
+                      }}
                       className="data-[state=checked]:bg-emerald-600"
                     />
                     <Label
@@ -394,8 +397,86 @@ export const WeeklyScheduleEditor: React.FC<WeeklyScheduleEditorProps> = ({
                 </div>
               </div>
 
-              {/* Subtle note for off-days with shift timings preserved */}
-              {day.is_off && day.start_time && day.end_time && (
+              {/* Saturday Rule Selector (Odd/Even/All/Off) */}
+              {key === "saturday" && (
+                <div className="mt-3 pt-2.5 border-t border-border/70 space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                        <CalendarCheck2 className="w-4 h-4 text-primary" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-foreground">
+                          Saturday Working Rule
+                        </div>
+                        <div className="text-[11px] text-muted-foreground">
+                          Monthly working/off rotation
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="w-full sm:w-64">
+                      <Select
+                        value={day.saturday_rule || (day.is_off ? "off" : "all")}
+                        onValueChange={(val) => handleSaturdayRuleChange(val as SaturdayRule)}
+                      >
+                      <SelectTrigger className="h-8 text-xs bg-background">
+                          <SelectValue placeholder="Select Saturday rule" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all" className="text-xs">
+                            All Saturdays Working
+                          </SelectItem>
+                          <SelectItem value="odd" className="text-xs">
+                            Odd Saturdays (1st, 3rd, 5th)
+                          </SelectItem>
+                          <SelectItem value="even" className="text-xs">
+                            Even Saturdays (2nd, 4th)
+                          </SelectItem>
+                          <SelectItem value="off" className="text-xs">
+                            All Saturdays Off
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Contextual description based on current rule */}
+                  {(day.saturday_rule === "odd" || day.saturday_rule === "even") && (
+                    <div className="flex items-start gap-2 text-[11px] text-blue-900 bg-blue-50/80 border border-blue-200/70 rounded-lg px-2.5 py-1.5 leading-relaxed">
+                      <Info className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
+                      <span>
+                        {day.saturday_rule === "odd" ? (
+                          <>
+                            <strong className="font-semibold text-blue-950">Odd Saturday Rotation:</strong> 1st, 3rd & 5th Saturdays are active working shifts ({calculatedHours} hrs). 2nd & 4th Saturdays are zero-deduction off days.
+                          </>
+                        ) : (
+                          <>
+                            <strong className="font-semibold text-purple-950">Even Saturday Rotation:</strong> 2nd & 4th Saturdays are active working shifts ({calculatedHours} hrs). 1st, 3rd & 5th Saturdays are zero-deduction off days.
+                          </>
+                        )}
+                      </span>
+                    </div>
+                  )}
+
+                  {day.saturday_rule === "all" && !day.is_off && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground bg-muted/40 rounded-lg px-2.5 py-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>Standard working shift applies every Saturday ({calculatedHours} hrs).</span>
+                    </div>
+                  )}
+
+                  {(day.saturday_rule === "off" || day.is_off) && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-emerald-800 bg-emerald-50/70 border border-emerald-200/60 rounded-lg px-2.5 py-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>All Saturdays are designated off days with zero salary deduction.</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Subtle note for other off-days with shift timings preserved */}
+              {day.is_off && key !== "saturday" && day.start_time && day.end_time && (
                 <div className="mt-2 pt-1.5 border-t border-slate-200/50 flex items-center justify-between text-[11px] text-muted-foreground">
                   <span className="text-[10px] text-emerald-700 font-medium flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3 text-emerald-600" /> No penalty if absent
@@ -405,23 +486,6 @@ export const WeeklyScheduleEditor: React.FC<WeeklyScheduleEditorProps> = ({
             </motion.div>
           );
         })}
-      </div>
-
-      {/* ─── Informational Callout ───────────────────────────── */}
-      <div className="rounded-xl bg-blue-50/70 border border-blue-200/70 p-3 text-xs text-blue-900 flex items-start gap-2.5">
-        <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-        <div className="space-y-0.5 leading-relaxed text-[11px]">
-          <p className="font-semibold text-blue-950">
-            Automated Payroll & Attendance Integration
-          </p>
-          <p className="text-blue-900/80">
-            1. Daily working hours are calculated automatically from shift timings.
-            <br />
-            2. Days with <strong className="font-medium">Off Day</strong> active are fully paid with <strong>zero deduction</strong> and excluded from shortfall delay penalties.
-            <br />
-            3. The user's overall <code className="bg-blue-100/70 px-1 py-0.5 rounded font-mono text-[10px]">working_hours</code> field is automatically set to the average of all active working days ({stats.averageDailyHours} hrs).
-          </p>
-        </div>
       </div>
     </div>
   );
