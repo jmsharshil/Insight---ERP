@@ -69,6 +69,7 @@ export const API = {
     LIST: "/api/v1/admissions/",
     GET: (id: string | number) => `/api/v1/admissions/${id}/`,
     SUBMIT: (id: string | number) => `/api/v1/admissions/${id}/`,
+    SETUP: (id: string | number) => `/api/v1/admissions/${id}/setup/`,
     APPROVE: (id: string | number) => `/api/v1/admissions/${id}/approve/`,
     REJECT: (id: string | number) => `/api/v1/admissions/${id}/reject/`,
     PAYMENT_UPLOAD: (id: string | number) => `/api/v1/admissions/${id}/payment/`,

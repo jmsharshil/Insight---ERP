@@ -149,6 +149,7 @@ function FileUploadField({
   existingUrl,
   required = false,
   accept = "image/*,.pdf,application/pdf",
+  disabled = false,
 }: {
   label: string;
   icon: React.ElementType;
@@ -157,6 +158,7 @@ function FileUploadField({
   existingUrl?: string | null;
   required?: boolean;
   accept?: string;
+  disabled?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -166,9 +168,17 @@ function FileUploadField({
         {label} {required && <span style={{ color: T.error }}>*</span>}
       </Label>
       <div
-        className="relative rounded-xl border-2 border-dashed p-4 text-center transition-all duration-200 cursor-pointer hover:border-amber-400 hover:bg-amber-50/30"
+        className={`relative rounded-xl border-2 border-dashed p-4 text-center transition-all duration-200 ${
+          disabled
+            ? "cursor-default bg-muted/20 border-border/70"
+            : "cursor-pointer hover:border-amber-400 hover:bg-amber-50/30"
+        }`}
         style={{ borderColor: file ? T.success : existingUrl ? T.primary : T.border }}
-        onClick={() => inputRef.current?.click()}
+        onClick={() => {
+          if (!disabled) {
+            inputRef.current?.click();
+          }
+        }}
       >
         <input
           ref={inputRef}
@@ -176,6 +186,7 @@ function FileUploadField({
           accept={accept}
           className="hidden"
           required={required}
+          disabled={disabled}
           onChange={(e) => {
             const f = e.target.files?.[0] || null;
             onFileChange(f);
@@ -197,17 +208,19 @@ function FileUploadField({
                 {(file.size / 1024).toFixed(1)} KB (New file)
               </p>
             </div>
-            <button
-              type="button"
-              className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-red-50 transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                onFileChange(null);
-                if (inputRef.current) inputRef.current.value = "";
-              }}
-            >
-              <X className="w-4 h-4" style={{ color: T.error }} />
-            </button>
+            {!disabled && (
+              <button
+                type="button"
+                className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-red-50 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onFileChange(null);
+                  if (inputRef.current) inputRef.current.value = "";
+                }}
+              >
+                <X className="w-4 h-4" style={{ color: T.error }} />
+              </button>
+            )}
           </div>
         ) : existingUrl ? (
           <div className="flex items-center gap-3">
@@ -231,9 +244,15 @@ function FileUploadField({
                 <ExternalLink className="w-3 h-3" /> View Document
               </a>
             </div>
-            <span className="text-[11px] font-medium text-amber-800 bg-amber-100/70 px-2 py-1 rounded-md">
-              Click to replace
-            </span>
+            {disabled ? (
+              <span className="text-[11px] font-medium text-emerald-800 bg-emerald-100/70 px-2 py-1 rounded-md">
+                Verified on file
+              </span>
+            ) : (
+              <span className="text-[11px] font-medium text-amber-800 bg-amber-100/70 px-2 py-1 rounded-md">
+                Click to replace
+              </span>
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 py-2">
@@ -244,12 +263,299 @@ function FileUploadField({
               <Icon className="w-5 h-5" style={{ color: T.primaryDark }} />
             </div>
             <p className="text-xs font-medium" style={{ color: T.textMuted }}>
-              Click to upload
+              {disabled ? "Not Provided (Optional)" : "Click to upload"}
             </p>
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+/* ─── Field definitions per step ────────────────────────────── */
+const STEP_1_FIELDS = [
+  "form_type",
+  "first_name",
+  "surname",
+  "father_name",
+  "mother_name",
+  "street",
+  "city",
+  "state",
+  "pincode",
+  "country",
+  "dob",
+  "category",
+  "phone_student",
+  "phone_father",
+  "email",
+  "email_parent",
+  "tenth_medium",
+  "tenth_school",
+  "tenth_percentage",
+  "tenth_percentile",
+  "twelfth_medium",
+  "twelfth_school",
+  "tenth_coaching",
+  "twelfth_coaching",
+  "twelfth_percentage",
+  "twelfth_percentile",
+  "reference",
+  "reference_name",
+  "inquiry_date",
+  "location",
+];
+
+const STEP_2_FIELDS = [
+  "qualification",
+  "course",
+  "group_module",
+  "batch_attempt",
+  "attempt_year",
+  "payment_type",
+  "payment_mode",
+  "cheque_no",
+  "icsi_fees_payment",
+  "fee_structure",
+];
+
+/* ─── Reusable Payment History Card ────────────────────────── */
+function PaymentHistoryCard({
+  paymentHistory,
+  fallbackRazorpayLink,
+  alwaysRender = false,
+}: {
+  paymentHistory: any[];
+  fallbackRazorpayLink?: string | null;
+  alwaysRender?: boolean;
+}) {
+  const hasHistory = Array.isArray(paymentHistory) && paymentHistory.length > 0;
+  if (!hasHistory && !fallbackRazorpayLink && !alwaysRender) {
+    return null;
+  }
+
+  return (
+    <SectionCard icon={History} title="Payment History & Transactions">
+      <div className="space-y-4">
+        {hasHistory ? (
+          <div className="space-y-4">
+            {paymentHistory.map((item: any, idx: number) => {
+              const isPending = item.status === "pending" || !item.status;
+              const isPaid = item.status === "paid" || item.status === "success" || item.status === "completed";
+              const isFailed = item.status === "failed";
+              const eventLabel =
+                item.event === "payment_link_created"
+                  ? "Online Payment Link Generated"
+                  : item.event === "payment_received" || item.event === "paid"
+                    ? "Payment Received & Confirmed"
+                    : item.event === "proof_uploaded" || item.event === "payment_submitted"
+                      ? "Payment Proof Submitted"
+                      : (item.event || "Payment Transaction").replace(/_/g, " ");
+
+              const rzpLink = item.razorpay_payment_link || fallbackRazorpayLink;
+
+              return (
+                <div
+                  key={idx}
+                  className="rounded-2xl border p-4 sm:p-5 transition-all space-y-3.5"
+                  style={{
+                    background: isPaid ? "rgba(16, 185, 129, 0.04)" : isPending ? "rgba(245, 158, 11, 0.04)" : T.card,
+                    borderColor: isPaid ? "rgba(16, 185, 129, 0.3)" : isPending ? "rgba(245, 158, 11, 0.35)" : T.border,
+                  }}
+                >
+                  {/* Top row: event label, time, status */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/40">
+                    <div className="flex items-center gap-2.5">
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                        style={{
+                          background: isPaid ? "rgba(16, 185, 129, 0.15)" : isPending ? "rgba(245, 158, 11, 0.15)" : "rgba(0,0,0,0.06)",
+                        }}
+                      >
+                        {isPaid ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        ) : rzpLink ? (
+                          <Link2 className="w-4 h-4 text-amber-600" />
+                        ) : (
+                          <CreditCard className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-foreground capitalize">
+                          {eventLabel}
+                        </h4>
+                        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-0.5">
+                          <Clock className="w-3 h-3" />
+                          <span>
+                            {item.timestamp || item.created_at
+                              ? new Date(item.timestamp || item.created_at).toLocaleString("en-IN", {
+                                  dateStyle: "medium",
+                                  timeStyle: "short",
+                                })
+                              : item.date || "—"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Badge
+                      variant="outline"
+                      className={`self-start sm:self-auto text-xs font-semibold px-2.5 py-1 ${
+                        isPaid
+                          ? "bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300"
+                          : isPending
+                            ? "bg-amber-50 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300"
+                            : isFailed
+                              ? "bg-rose-50 text-rose-800 border-rose-300"
+                              : "bg-muted text-foreground"
+                      }`}
+                    >
+                      {isPaid
+                        ? "✅ Paid / Verified"
+                        : isPending
+                          ? "⏳ Payment Pending"
+                          : isFailed
+                            ? "❌ Failed"
+                            : (item.status || "Recorded")}
+                    </Badge>
+                  </div>
+
+                  {/* Amount & Plan Row */}
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <div>
+                      <span className="text-[11px] text-muted-foreground block">
+                        Transaction Amount
+                      </span>
+                      <span className="text-xl sm:text-2xl font-black text-foreground" style={{ color: T.navy }}>
+                        {formatCurrency(Number(item.amount || item.token_amount || 0))}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="px-2.5 py-1 rounded-md bg-muted/60 font-medium text-foreground">
+                        {item.payment_type_display || item.payment_type || "Token Payment"}
+                      </span>
+                      <span className="px-2.5 py-1 rounded-md bg-muted/60 font-medium text-foreground capitalize">
+                        Mode: {item.payment_choice_display || item.payment_choice || "Online"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Breakdown stat chips if available */}
+                  {(item.total_fees != null || item.remaining_fees != null) && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-2.5 rounded-xl bg-muted/30 border border-border/40 text-xs">
+                      {item.total_fees != null && (
+                        <div>
+                          <span className="text-muted-foreground block text-[11px]">Total Course Fee</span>
+                          <span className="font-semibold text-foreground">
+                            {formatCurrency(Number(item.total_fees))}
+                          </span>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-muted-foreground block text-[11px]">Payable / Token Amount</span>
+                        <span className="font-semibold text-foreground">
+                          {formatCurrency(Number(item.amount || item.token_amount || 0))}
+                        </span>
+                      </div>
+                      {item.remaining_fees != null && (
+                        <div>
+                          <span className="text-muted-foreground block text-[11px]">Remaining Balance</span>
+                          <span className="font-semibold text-amber-700 dark:text-amber-400">
+                            {formatCurrency(Number(item.remaining_fees))}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Razorpay Online Link Box */}
+                  {rzpLink && (
+                    <div className="p-3 sm:p-3.5 rounded-xl bg-amber-500/10 border border-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-amber-950 dark:text-amber-200">
+                          <Link2 className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
+                          <span>Razorpay Payment Link</span>
+                        </div>
+                        {item.razorpay_payment_link_id && (
+                          <span className="font-mono text-[11px] text-amber-800/80 dark:text-amber-300/80 block">
+                            ID: {item.razorpay_payment_link_id}
+                          </span>
+                        )}
+                      </div>
+
+                      <a
+                        href={rzpLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-black bg-amber-400 hover:bg-amber-500 shadow-sm transition-all shrink-0 cursor-pointer"
+                      >
+                        <span>{isPaid ? "View Payment Link" : "Pay with Razorpay"}</span>
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Uploaded Receipt / Screenshot Proof */}
+                  {(item.payment_screenshot || item.payment_proof) && (
+                    <div className="flex items-center gap-2 pt-1 text-xs">
+                      <Receipt className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">Receipt Proof:</span>
+                      <a
+                        href={item.payment_screenshot || item.payment_proof}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline font-semibold inline-flex items-center gap-1"
+                      >
+                        <span>View Document</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Terms Note */}
+                  {(item.terms_note || item.fee_terms_note) && (
+                    <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs text-amber-900 flex items-start gap-2 leading-relaxed">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <span>{item.terms_note || item.fee_terms_note}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : fallbackRazorpayLink ? (
+          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-950 dark:text-amber-200">
+                <Link2 className="w-4 h-4 text-amber-700" />
+                <span>Razorpay Payment Link</span>
+              </div>
+              <p className="text-xs text-amber-800">
+                Online payment link generated for your admission fee.
+              </p>
+            </div>
+            <a
+              href={fallbackRazorpayLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-black bg-amber-400 hover:bg-amber-500 shadow-sm transition-all shrink-0 cursor-pointer"
+            >
+              <span>Pay with Razorpay</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        ) : (
+          <div className="p-8 text-center rounded-2xl bg-muted/20 border border-dashed border-border/60 text-muted-foreground space-y-2">
+            <History className="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
+            <p className="text-sm font-semibold text-foreground">No Payment History Recorded Yet</p>
+            <p className="text-xs max-w-md mx-auto">
+              When a payment link is created or you submit a transaction receipt, your complete payment audit log will appear here.
+            </p>
+          </div>
+        )}
+      </div>
+    </SectionCard>
   );
 }
 
@@ -289,8 +595,30 @@ export default function StudentAdmissionForm() {
   const [isChoiceModalOpen, setIsChoiceModalOpen] = useState(!admissionId);
   const [entryMode, setEntryMode] = useState<"select" | "resume">("select");
   const [inputAdmissionId, setInputAdmissionId] = useState(admissionId || "");
+  const [isIncompleteAdmission, setIsIncompleteAdmission] = useState<boolean>(Boolean(admissionId));
   const [loadingExisting, setLoadingExisting] = useState(false);
   const [existingDocs, setExistingDocs] = useState<Record<string, string | null>>({});
+  const [autofilledFields, setAutofilledFields] = useState<Record<string, boolean>>({});
+
+  const isStep2Completed = Boolean(
+    Array.isArray(paymentHistory) && paymentHistory.length > 0
+  );
+
+  const isFieldLocked = (fieldKey: string) => {
+    if (STEP_2_FIELDS.includes(fieldKey)) {
+      return isStep2Completed;
+    }
+    return Boolean(autofilledFields[fieldKey]);
+  };
+
+  const nextStep = () => {
+    setCurrentStep((p) => Math.min(p + 1, 4));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const prevStep = () => {
+    setCurrentStep((p) => Math.max(p - 1, 1));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   // Fetch locations dropdown
   const {
@@ -320,14 +648,15 @@ export default function StudentAdmissionForm() {
       setLoading: (val: boolean) => setLoadingExisting(val),
       getResponse: (res: any) => {
         const data = res?.data?.data || res?.data || res;
-        if (!data || (!data.id && !data.first_name && !data.email)) {
+        if (!data || (!data.id && !data.admission_id && !data.first_name && !data.email)) {
           toast.error(`No admission record found for Admission ID #${trimmedId}`);
           return;
         }
 
-        const validId = String(data.id || trimmedId);
+        const validId = String(data.admission_id || data.id || trimmedId);
         setSavedAdmissionId(validId);
         setInputAdmissionId(validId);
+        setIsIncompleteAdmission(true);
         setSearchParams({ id: validId });
 
         // Populate form data
@@ -379,6 +708,59 @@ export default function StudentAdmissionForm() {
           location: data.location || (data.branch?.name || ""),
           consent: data.consent !== undefined ? Boolean(data.consent) : true,
         }));
+
+        // Populate autofilled fields tracker so existing data cannot be edited
+        const autofilled: Record<string, boolean> = {};
+        const markIfPresent = (key: string, val: any) => {
+          if (val !== undefined && val !== null && String(val).trim() !== "" && val !== false) {
+            autofilled[key] = true;
+          }
+        };
+
+        markIfPresent("first_name", data.first_name);
+        markIfPresent("surname", data.surname);
+        markIfPresent("father_name", data.father_name);
+        markIfPresent("mother_name", data.mother_name);
+        markIfPresent("dob", data.dob);
+        markIfPresent("category", data.category);
+        markIfPresent("phone_student", data.phone_student);
+        markIfPresent("phone_father", data.phone_father);
+        markIfPresent("email", data.email);
+        markIfPresent("email_parent", data.email_parent);
+        markIfPresent("street", data.street);
+        markIfPresent("city", data.city);
+        markIfPresent("state", data.state);
+        markIfPresent("pincode", data.pincode);
+        markIfPresent("country", data.country);
+        markIfPresent("tenth_medium", data.tenth_medium);
+        markIfPresent("tenth_school", data.tenth_school);
+        markIfPresent("tenth_coaching", data.tenth_coaching);
+        markIfPresent("tenth_percentage", data.tenth_percentage);
+        markIfPresent("tenth_percentile", data.tenth_percentile);
+        markIfPresent("twelfth_medium", data.twelfth_medium);
+        markIfPresent("twelfth_school", data.twelfth_school);
+        markIfPresent("twelfth_coaching", data.twelfth_coaching);
+        markIfPresent("twelfth_percentage", data.twelfth_percentage);
+        markIfPresent("twelfth_percentile", data.twelfth_percentile);
+        markIfPresent("reference", data.reference);
+        markIfPresent("reference_name", data.reference_name);
+        markIfPresent("inquiry_date", data.inquiry_date);
+        markIfPresent("location", data.location || data.branch?.name);
+        markIfPresent("qualification", data.qualification);
+        markIfPresent("course", data.course);
+        markIfPresent("group_module", data.group_module);
+        markIfPresent("batch_attempt", data.batch_attempt);
+        markIfPresent("attempt_year", data.attempt_year);
+        markIfPresent("payment_type", data.payment_type);
+        markIfPresent("payment_mode", data.payment_choice || data.payment_mode);
+        markIfPresent("cheque_no", data.cheque_no);
+        markIfPresent("icsi_fees_payment", data.icsi_fees_payment);
+        markIfPresent("fee_structure", data.fee_structure);
+        markIfPresent("transaction_id", data.transaction_id);
+        markIfPresent("payment_amount", data.payment_amount);
+        markIfPresent("payment_submitted_at", data.payment_submitted_at);
+
+        setAutofilledFields(autofilled);
 
         // Populate existing documents if available
         setExistingDocs({
@@ -491,6 +873,7 @@ export default function StudentAdmissionForm() {
     });
     setSavedAdmissionId(null);
     setInputAdmissionId("");
+    setIsIncompleteAdmission(false);
     setSearchParams({});
     setCurrentStep(1);
     setIsSubmitted(false);
@@ -517,6 +900,7 @@ export default function StudentAdmissionForm() {
     setTotalFeesAmount(null);
     setRemainingFeesAmount(null);
     setTokenTermsNote(null);
+    setAutofilledFields({});
     setIsChoiceModalOpen(false);
     setEntryMode("select");
     toast.info("Starting fresh New Admission Form");
@@ -578,6 +962,7 @@ export default function StudentAdmissionForm() {
   });
 
   const handleChange = (field: string, value: string | boolean) => {
+    if (isFieldLocked(field)) return;
     setFormData((prev) => {
       const updated = { ...prev, [field]: value };
       if (field === "payment_type" && value === "token" && !prev.payment_mode) {
@@ -601,6 +986,7 @@ export default function StudentAdmissionForm() {
   };
 
   useEffect(() => {
+    if (isStep2Completed || autofilledFields.group_module) return;
     setFormData((prev) => {
       if (prev.course === "cseet") {
         return prev.group_module === "full" ? prev : { ...prev, group_module: "full" };
@@ -610,10 +996,11 @@ export default function StudentAdmissionForm() {
       }
       return prev;
     });
-  }, [formData.course]);
+  }, [formData.course, isStep2Completed, autofilledFields.group_module]);
 
   /* ─── Auto-set Course based on Qualification ───────────────── */
   useEffect(() => {
+    if (isStep2Completed || autofilledFields.course) return;
     setFormData((prev) => {
       const q = prev.qualification;
       let newCourse = prev.course;
@@ -626,7 +1013,7 @@ export default function StudentAdmissionForm() {
       }
       return newCourse !== prev.course ? { ...prev, course: newCourse } : prev;
     });
-  }, [formData.qualification]);
+  }, [formData.qualification, isStep2Completed, autofilledFields.course]);
 
   const getAvailableYears = (course: string, attempt: string, groupModule: string) => {
     const current = new Date();
@@ -1081,23 +1468,22 @@ interface ModuleOption {
     }
   }, [availableModuleOptions, formData.group_module]);
 
-
-  const nextStep = () => { setCurrentStep(p => min(p + 1, 4)); window.scrollTo({ top: 0, behavior: 'smooth' }); };
-  const prevStep = () => { setCurrentStep(p => max(p - 1, 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); };
-  const min = Math.min;
-  const max = Math.max;
-
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
-    if (currentStep < 3) {
-      submitData(false);
-    } else if (currentStep === 3) {
-      submitData(true);
+    if (currentStep === 2 && isStep2Completed) {
+      nextStep();
+      return;
     }
+    submitData(currentStep);
   };
 
   /* ── Submit Steps 1-3 ── */
-  const submitData = (isFinalStep: boolean) => {
+  const submitData = (stepToSubmit: number) => {
+    if (stepToSubmit === 2 && isStep2Completed) {
+      nextStep();
+      return;
+    }
+    const isFinalStep = stepToSubmit === 3;
     if (isFinalStep && !formData.consent) {
       toast.error("Please accept the consent to proceed.");
       return;
@@ -1105,42 +1491,47 @@ interface ModuleOption {
 
     const payload = new FormData();
 
-    // Append text fields (always)
-    Object.entries(formData).forEach(([key, value]) => {
-      if (key === "fee_structure") {
-        const id = value || (matchedFee?.id ? String(matchedFee.id) : "");
-        if (id) payload.append(key, String(id));
-        return;
+    if (stepToSubmit === 1) {
+      // ONLY append Step 1 fields (Personal, Address, Academics, Reference)
+      STEP_1_FIELDS.forEach((key) => {
+        const value = (formData as any)[key];
+        if (value === undefined || value === null) return;
+        if (
+          key === "tenth_percentage" ||
+          key === "tenth_percentile" ||
+          key === "twelfth_percentage" ||
+          key === "twelfth_percentile"
+        ) {
+          if (value) payload.append(key, String(parseFloat(value as string)));
+        } else if (key === "reference_name") {
+          if (value) payload.append(key, String(value));
+        } else {
+          payload.append(key, String(value));
+        }
+      });
+    } else if (stepToSubmit === 2) {
+      // ONLY append Step 2 fields (Course, Module, Fees, Payment Plan)
+      STEP_2_FIELDS.forEach((key) => {
+        const value = (formData as any)[key];
+        if (key === "fee_structure") {
+          const id = value || (matchedFee?.id ? String(matchedFee.id) : "");
+          if (id) payload.append(key, String(id));
+          return;
+        }
+        if (key === "payment_mode") {
+          if (value) payload.append("payment_choice", String(value));
+          return;
+        }
+        if (value !== undefined && value !== null && value !== "") {
+          payload.append(key, String(value));
+        }
+      });
+      if (!payload.has("fee_structure") && matchedFee?.id) {
+        payload.append("fee_structure", String(matchedFee.id));
       }
-      if (key === "payment_mode") {
-        if (value) payload.append("payment_choice", String(value));
-        return;
-      }
-      if (key === "reference_name") {
-        if (value) payload.append(key, String(value));
-        return;
-      }
-      if (
-        key === "tenth_percentage" ||
-        key === "tenth_percentile" ||
-        key === "twelfth_percentage" ||
-        key === "twelfth_percentile"
-      ) {
-        if (value) payload.append(key, String(parseFloat(value as string)));
-      } else if (key === "reference") {
-        payload.append(key, String(value));
-      } else {
-        payload.append(key, String(value));
-      }
-    });
-
-    // Ensure selected fee structure is attached to payload
-    if (!payload.has("fee_structure") && matchedFee?.id) {
-      payload.append("fee_structure", String(matchedFee.id));
-    }
-
-    // Append documents ONLY on step 3 (final application step before payment proof)
-    if (isFinalStep) {
+    } else if (stepToSubmit === 3) {
+      // ONLY append Step 3 fields & documents
+      payload.append("consent", String(formData.consent));
       if (docSignature) payload.append("doc_signature", docSignature);
       if (docPhoto) payload.append("doc_photo", docPhoto);
       if (docIdCard) payload.append("doc_id_card", docIdCard);
@@ -1153,9 +1544,88 @@ interface ModuleOption {
 
     setLoading(true);
 
-    const method = isFinalStep ? "POST" : (savedAdmissionId ? "PATCH" : "POST");
-    const endpoint = savedAdmissionId
-      ? API.ADMISSIONS.SUBMIT(savedAdmissionId)
+    const isFreshStep1 = stepToSubmit === 1 && !isIncompleteAdmission && !savedAdmissionId;
+    const currentAdmissionId = savedAdmissionId || admissionId;
+
+    if (stepToSubmit === 2 && !currentAdmissionId) {
+      toast.error("Admission ID is missing. Please complete Step 1 first.");
+      setLoading(false);
+      return;
+    }
+
+    if (stepToSubmit === 2) {
+      // Step 2 calls 2 APIs:
+      // 1. PATCH /api/v1/admissions/<id>/ (saves Step 2 course info & fee structure)
+      // 2. POST /api/v1/admissions/<id>/setup/ (triggers backend setup endpoint)
+      //
+      // NOTE: We use axiosRequest directly for the 2nd call (POST /setup/) because
+      // the saga uses takeLatest(SUBMIT_ADMISSION), so dispatching a second action
+      // with the same type inside the first's callback would cause takeLatest to
+      // cancel the running saga. Using axiosRequest bypasses Redux entirely for
+      // the setup call, ensuring both APIs actually fire.
+      dispatch({
+        type: admissionActions.SUBMIT_ADMISSION,
+        method: "PATCH",
+        endPoint: API.ADMISSIONS.SUBMIT(currentAdmissionId),
+        body: payload,
+        auth: false,
+        isFormData: true,
+        setLoading: (val: boolean) => setLoading(val),
+        getResponse: async (patchRes: any) => {
+          const resData = patchRes?.data?.data || patchRes?.data || patchRes;
+          if (resData?.status) setAdmissionStatus(resData.status);
+          if (resData?.status_display) setAdmissionStatusDisplay(resData.status_display);
+
+          // 2nd API call: POST to /setup/ using axiosRequest directly
+          try {
+            const setupResponse = await axiosRequest({
+              baseURL: import.meta.env.VITE_APP_BASE_URL,
+              method: "POST",
+              url: API.ADMISSIONS.SETUP(currentAdmissionId),
+              data: payload,
+            });
+            const setupData = setupResponse?.data?.data || setupResponse?.data || setupResponse;
+            if (setupData?.status) setAdmissionStatus(setupData.status);
+            if (setupData?.status_display) setAdmissionStatusDisplay(setupData.status_display);
+            if (setupData?.razorpay_payment_link) setRazorpayPaymentLink(setupData.razorpay_payment_link);
+            if (Array.isArray(setupData?.payment_history)) setPaymentHistory(setupData.payment_history);
+            setLoading(false);
+            nextStep();
+          } catch (setupErr: any) {
+            setLoading(false);
+            let msg =
+              setupErr?.response?.data?.message ||
+              setupErr?.response?.data?.error ||
+              setupErr?.response?.data?.detail;
+            if (!msg && setupErr?.response?.data && typeof setupErr.response.data === "object") {
+              const firstKey = Object.keys(setupErr.response.data)[0];
+              const val = setupErr.response.data[firstKey];
+              msg = Array.isArray(val) ? `${firstKey}: ${val[0]}` : String(val);
+            }
+            if (!msg) msg = setupErr?.message || "Failed to setup course. Please try again.";
+            toast.error(msg);
+          }
+        },
+        getError: (err: any) => {
+          let msg =
+            err?.response?.data?.message ||
+            err?.response?.data?.error ||
+            err?.response?.data?.detail;
+          if (!msg && err?.response?.data && typeof err.response.data === "object") {
+            const firstKey = Object.keys(err.response.data)[0];
+            const val = err.response.data[firstKey];
+            msg = Array.isArray(val) ? `${firstKey}: ${val[0]}` : String(val);
+          }
+          if (!msg) msg = err?.message || "Failed to save course data. Please try again.";
+          toast.error(msg);
+        },
+      });
+      return;
+    }
+
+    const method = isFreshStep1 ? "POST" : "PATCH";
+    const endpoint = currentAdmissionId
+      ? API.ADMISSIONS.SUBMIT(currentAdmissionId)
       : API.ADMISSIONS.CREATE;
 
     dispatch({
@@ -1167,17 +1637,50 @@ interface ModuleOption {
       isFormData: true,
       setLoading: (val: boolean) => setLoading(val),
       getResponse: (res: any) => {
-        // If an ID is returned, save it
-        const newId = res?.data?.id || res?.id || res?.data?.data?.id;
+        // Support both data.admission_id and data.id from response
+        const resData = res?.data?.data || res?.data || res;
+        const newId =
+          resData?.admission_id ||
+          resData?.id ||
+          res?.admission_id ||
+          res?.id ||
+          res?.data?.admission_id ||
+          res?.data?.id;
         const validId = String(newId || savedAdmissionId || "");
         if (validId) {
           setSavedAdmissionId(validId);
           setSearchParams({ id: validId });
         }
+        if (resData?.status) setAdmissionStatus(resData.status);
+        if (resData?.status_display) setAdmissionStatusDisplay(resData.status_display);
 
-        if (isFinalStep) {
+        if (stepToSubmit === 1) {
+          setAutofilledFields((prev) => {
+            const next = { ...prev };
+            STEP_1_FIELDS.forEach((key) => {
+              const val = (formData as any)[key];
+              if (val !== undefined && val !== null && String(val).trim() !== "") {
+                next[key] = true;
+              }
+            });
+            return next;
+          });
+        }
+
+          if (isFinalStep) {
           setIsSubmitted(true);
           toast.success("Admission details submitted successfully! Please proceed with payment proof.");
+
+          if (resData?.doc_signature) setExistingDocs((prev) => ({ ...prev, doc_signature: resData.doc_signature }));
+          if (resData?.doc_photo) setExistingDocs((prev) => ({ ...prev, doc_photo: resData.doc_photo }));
+          if (resData?.doc_id_card) setExistingDocs((prev) => ({ ...prev, doc_id_card: resData.doc_id_card }));
+          if (resData?.doc_pan_card) setExistingDocs((prev) => ({ ...prev, doc_pan_card: resData.doc_pan_card }));
+          if (resData?.doc_dob_certificate) setExistingDocs((prev) => ({ ...prev, doc_dob_certificate: resData.doc_dob_certificate }));
+          if (resData?.doc_twelfth_receipt) setExistingDocs((prev) => ({ ...prev, doc_twelfth_receipt: resData.doc_twelfth_receipt }));
+          if (resData?.doc_twelfth_marksheet) setExistingDocs((prev) => ({ ...prev, doc_twelfth_marksheet: resData.doc_twelfth_marksheet }));
+          if (resData?.doc_category_cert) setExistingDocs((prev) => ({ ...prev, doc_category_cert: resData.doc_category_cert }));
+          if (Array.isArray(resData?.payment_history)) setPaymentHistory(resData.payment_history);
+          if (resData?.razorpay_payment_link) setRazorpayPaymentLink(resData.razorpay_payment_link);
 
           // Pre-populate expected payment amount if empty
           const instFee = getInstituteFee(matchedFee, formData.course, formData.group_module);
@@ -1603,6 +2106,19 @@ interface ModuleOption {
           {/* ════════════════════════════════════════════════════════ */}
           {currentStep === 1 && (
             <>
+              {/* ── Autofilled Profile Notice Banner ── */}
+              {Object.keys(autofilledFields).length > 0 && (
+                <div className="flex items-start gap-3 p-4 rounded-2xl bg-blue-50/80 border border-blue-200 text-blue-900 dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-200">
+                  <Info className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+                  <div className="text-xs sm:text-sm space-y-0.5">
+                    <p className="font-bold">Autofilled Profile Information (Locked)</p>
+                    <p className="text-blue-800/90 dark:text-blue-300/90 leading-relaxed">
+                      Previously saved personal, contact, address, and academic details cannot be edited.
+                    </p>
+                  </div>
+                </div>
+              )}
+
           {/* ════════════════════════════════════════════════════════ */}
           {/*  PERSONAL INFORMATION                                  */}
           {/* ════════════════════════════════════════════════════════ */}
@@ -1616,6 +2132,7 @@ interface ModuleOption {
                   required
                   value={formData.first_name}
                   onChange={(e) => handleChange("first_name", e.target.value)}
+                  disabled={isFieldLocked("first_name")}
                   className="h-10 sm:h-11 text-sm"
                   placeholder="e.g. Tulsi"
                 />
@@ -1628,6 +2145,7 @@ interface ModuleOption {
                   required
                   value={formData.surname}
                   onChange={(e) => handleChange("surname", e.target.value)}
+                  disabled={isFieldLocked("surname")}
                   className="h-10 sm:h-11 text-sm"
                   placeholder="e.g. Kerai"
                 />
@@ -1639,6 +2157,7 @@ interface ModuleOption {
                 <Input
                   value={formData.father_name}
                   onChange={(e) => handleChange("father_name", e.target.value)}
+                  disabled={isFieldLocked("father_name")}
                   className="h-10 sm:h-11 text-sm"
                   placeholder="e.g. Harji"
                 />
@@ -1650,6 +2169,7 @@ interface ModuleOption {
                 <Input
                   value={formData.mother_name}
                   onChange={(e) => handleChange("mother_name", e.target.value)}
+                  disabled={isFieldLocked("mother_name")}
                   className="h-10 sm:h-11 text-sm"
                   placeholder="e.g. Jashuben"
                 />
@@ -1663,6 +2183,7 @@ interface ModuleOption {
                   type="date"
                   value={formData.dob}
                   onChange={(e) => handleChange("dob", e.target.value)}
+                  disabled={isFieldLocked("dob")}
                   className="h-10 sm:h-11 text-sm"
                 />
               </div>
@@ -1673,6 +2194,7 @@ interface ModuleOption {
                 <Select
                   value={formData.category}
                   onValueChange={(val) => handleChange("category", val)}
+                  disabled={isFieldLocked("category")}
                 >
                   <SelectTrigger className="h-10 sm:h-11 text-sm">
                     <SelectValue />
@@ -1701,6 +2223,7 @@ interface ModuleOption {
                     type="tel"
                     value={formData.phone_student}
                     onChange={(e) => handleChange("phone_student", e.target.value)}
+                    disabled={isFieldLocked("phone_student")}
                     className="h-10 sm:h-11 text-sm"
                     placeholder="e.g. 9954563258"
                   />
@@ -1713,6 +2236,7 @@ interface ModuleOption {
                     type="tel"
                     value={formData.phone_father}
                     onChange={(e) => handleChange("phone_father", e.target.value)}
+                    disabled={isFieldLocked("phone_father")}
                     className="h-10 sm:h-11 text-sm"
                     placeholder="e.g. 9978221566"
                   />
@@ -1726,6 +2250,7 @@ interface ModuleOption {
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleChange("email", e.target.value)}
+                    disabled={isFieldLocked("email")}
                     className="h-10 sm:h-11 text-sm"
                     placeholder="e.g. tulikerai06@gmail.com"
                   />
@@ -1738,6 +2263,7 @@ interface ModuleOption {
                     type="email"
                     value={formData.email_parent}
                     onChange={(e) => handleChange("email_parent", e.target.value)}
+                    disabled={isFieldLocked("email_parent")}
                     className="h-10 sm:h-11 text-sm"
                     placeholder="e.g. parent@gmail.com"
                   />
@@ -1757,6 +2283,7 @@ interface ModuleOption {
                 <Input
                   value={formData.street}
                   onChange={(e) => handleChange("street", e.target.value)}
+                  disabled={isFieldLocked("street")}
                   className="h-10 sm:h-11 text-sm"
                   placeholder="e.g. 45, main road"
                 />
@@ -1768,6 +2295,7 @@ interface ModuleOption {
                 <Input
                   value={formData.city}
                   onChange={(e) => handleChange("city", e.target.value)}
+                  disabled={isFieldLocked("city")}
                   className="h-10 sm:h-11 text-sm"
                   placeholder="e.g. Bhuj"
                 />
@@ -1779,6 +2307,7 @@ interface ModuleOption {
                 <Input
                   value={formData.state}
                   onChange={(e) => handleChange("state", e.target.value)}
+                  disabled={isFieldLocked("state")}
                   className="h-10 sm:h-11 text-sm"
                   placeholder="e.g. Kutch"
                 />
@@ -1790,6 +2319,7 @@ interface ModuleOption {
                 <Input
                   value={formData.pincode}
                   onChange={(e) => handleChange("pincode", e.target.value)}
+                  disabled={isFieldLocked("pincode")}
                   className="h-10 sm:h-11 text-sm"
                   placeholder="e.g. 370001"
                 />
@@ -1801,6 +2331,7 @@ interface ModuleOption {
                 <Input
                   value={formData.country}
                   onChange={(e) => handleChange("country", e.target.value)}
+                  disabled={isFieldLocked("country")}
                   className="h-10 sm:h-11 text-sm"
                   placeholder="e.g. India"
                 />
@@ -1826,6 +2357,7 @@ interface ModuleOption {
                     <Select
                       value={formData.tenth_medium}
                       onValueChange={(val) => handleChange("tenth_medium", val)}
+                      disabled={isFieldLocked("tenth_medium")}
                     >
                       <SelectTrigger className="h-10 sm:h-11 text-sm bg-white">
                         <SelectValue />
@@ -1844,6 +2376,7 @@ interface ModuleOption {
                     <Input
                       value={formData.tenth_school}
                       onChange={(e) => handleChange("tenth_school", e.target.value)}
+                      disabled={isFieldLocked("tenth_school")}
                       className="h-10 sm:h-11 text-sm bg-white"
                       placeholder="School name"
                     />
@@ -1855,6 +2388,7 @@ interface ModuleOption {
                     <Input
                       value={formData.tenth_coaching}
                       onChange={(e) => handleChange("tenth_coaching", e.target.value)}
+                      disabled={isFieldLocked("tenth_coaching")}
                       className="h-10 sm:h-11 text-sm bg-white"
                       placeholder="Coaching name"
                     />
@@ -1868,6 +2402,7 @@ interface ModuleOption {
                       step="0.01"
                       value={formData.tenth_percentage}
                       onChange={(e) => handleChange("tenth_percentage", e.target.value)}
+                      disabled={isFieldLocked("tenth_percentage")}
                       className="h-10 sm:h-11 text-sm bg-white"
                       placeholder="e.g. 86.16"
                     />
@@ -1881,6 +2416,7 @@ interface ModuleOption {
                       step="0.01"
                       value={formData.tenth_percentile}
                       onChange={(e) => handleChange("tenth_percentile", e.target.value)}
+                      disabled={isFieldLocked("tenth_percentile")}
                       className="h-10 sm:h-11 text-sm bg-white"
                       placeholder="e.g. 95.42"
                     />
@@ -1902,6 +2438,7 @@ interface ModuleOption {
                     <Select
                       value={formData.twelfth_medium}
                       onValueChange={(val) => handleChange("twelfth_medium", val)}
+                      disabled={isFieldLocked("twelfth_medium")}
                     >
                       <SelectTrigger className="h-10 sm:h-11 text-sm bg-white">
                         <SelectValue />
@@ -1920,6 +2457,7 @@ interface ModuleOption {
                     <Input
                       value={formData.twelfth_school}
                       onChange={(e) => handleChange("twelfth_school", e.target.value)}
+                      disabled={isFieldLocked("twelfth_school")}
                       className="h-10 sm:h-11 text-sm bg-white"
                       placeholder="School name"
                     />
@@ -1931,6 +2469,7 @@ interface ModuleOption {
                     <Input
                       value={formData.twelfth_coaching}
                       onChange={(e) => handleChange("twelfth_coaching", e.target.value)}
+                      disabled={isFieldLocked("twelfth_coaching")}
                       className="h-10 sm:h-11 text-sm bg-white"
                       placeholder="Coaching name"
                     />
@@ -1944,6 +2483,7 @@ interface ModuleOption {
                       step="0.01"
                       value={formData.twelfth_percentage}
                       onChange={(e) => handleChange("twelfth_percentage", e.target.value)}
+                      disabled={isFieldLocked("twelfth_percentage")}
                       className="h-10 sm:h-11 text-sm bg-white"
                       placeholder="e.g. 80.16"
                     />
@@ -1957,6 +2497,7 @@ interface ModuleOption {
                       step="0.01"
                       value={formData.twelfth_percentile}
                       onChange={(e) => handleChange("twelfth_percentile", e.target.value)}
+                      disabled={isFieldLocked("twelfth_percentile")}
                       className="h-10 sm:h-11 text-sm bg-white"
                       placeholder="e.g. 95.42"
                     />
@@ -1977,6 +2518,7 @@ interface ModuleOption {
                 <Select
                   value={formData.reference}
                   onValueChange={(val) => handleChange("reference", val)}
+                  disabled={isFieldLocked("reference")}
                 >
                   <SelectTrigger className="h-10 sm:h-11 text-sm">
                     <SelectValue />
@@ -2002,6 +2544,7 @@ interface ModuleOption {
                     required
                     value={formData.reference_name}
                     onChange={(e) => handleChange("reference_name", e.target.value)}
+                    disabled={isFieldLocked("reference_name")}
                     className="h-10 sm:h-11 text-sm bg-white"
                     placeholder="e.g. From a friend"
                   />
@@ -2016,6 +2559,7 @@ interface ModuleOption {
                   type="date"
                   value={formData.inquiry_date}
                   onChange={(e) => handleChange("inquiry_date", e.target.value)}
+                  disabled={isFieldLocked("inquiry_date")}
                   className="h-10 sm:h-11 text-sm"
                 />
               </div>
@@ -2027,6 +2571,7 @@ interface ModuleOption {
                 <Input
                   value={formData.location}
                   onChange={(e) => handleChange("location", e.target.value)}
+                  disabled={isFieldLocked("location")}
                   className="h-10 sm:h-11 text-sm"
                   placeholder="e.g. Naranpura (Ahmedabad)"
                 />
@@ -2050,6 +2595,19 @@ interface ModuleOption {
           {/* ════════════════════════════════════════════════════════ */}
           {currentStep === 2 && (
             <>
+              {/* ── View-Only Course & Payment Notice Banner ── */}
+              {isStep2Completed && (
+                <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-300 dark:border-amber-700/60 text-amber-950 dark:text-amber-200">
+                  <ShieldCheck className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                  <div className="text-xs sm:text-sm space-y-0.5">
+                    <p className="font-bold">Course & Payment Plan Finalized (View Only)</p>
+                    <p className="text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
+                      Your course selection and fee structure have been submitted. Changes cannot be made in this step. Review your plan details and payment history below.
+                    </p>
+                  </div>
+                </div>
+              )}
+
           {/* ════════════════════════════════════════════════════════ */}
           {/*  ACADEMIC PREFERENCES                                  */}
           {/* ════════════════════════════════════════════════════════ */}
@@ -2063,6 +2621,7 @@ interface ModuleOption {
                 <Select
                   value={formData.qualification}
                   onValueChange={(val) => handleChange("qualification", val)}
+                  disabled={isFieldLocked("qualification") || isStep2Completed}
                 >
                   <SelectTrigger className="h-10 sm:h-11 text-sm">
                     <SelectValue />
@@ -2084,6 +2643,7 @@ interface ModuleOption {
                 <Select
                   value={formData.course}
                   onValueChange={(val) => handleChange("course", val)}
+                  disabled={isFieldLocked("course") || isStep2Completed}
                 >
                   <SelectTrigger className="h-10 sm:h-11 text-sm">
                     <SelectValue />
@@ -2108,6 +2668,7 @@ interface ModuleOption {
                 <Select
                   value={formData.batch_attempt}
                   onValueChange={(val) => handleChange("batch_attempt", val)}
+                  disabled={isFieldLocked("batch_attempt") || isStep2Completed}
                 >
                   <SelectTrigger className="h-10 sm:h-11 text-sm">
                     <SelectValue />
@@ -2135,6 +2696,7 @@ interface ModuleOption {
                 <Select
                   value={formData.attempt_year}
                   onValueChange={(val) => handleChange("attempt_year", val)}
+                  disabled={isFieldLocked("attempt_year") || isStep2Completed}
                 >
                   <SelectTrigger className="h-10 sm:h-11 text-sm">
                     <SelectValue />
@@ -2153,6 +2715,7 @@ interface ModuleOption {
                 <Select
                   value={formData.group_module}
                   onValueChange={(val) => handleChange("group_module", val)}
+                  disabled={isFieldLocked("group_module") || isStep2Completed}
                 >
                   <SelectTrigger className="h-10 sm:h-11 text-sm">
                     <SelectValue />
@@ -2173,6 +2736,7 @@ interface ModuleOption {
                 <Select
                   value={formData.payment_type}
                   onValueChange={(val) => handleChange("payment_type", val)}
+                  disabled={isFieldLocked("payment_type") || isStep2Completed}
                 >
                   <SelectTrigger className="h-10 sm:h-11 text-sm">
                     <SelectValue />
@@ -2184,14 +2748,16 @@ interface ModuleOption {
                   </SelectContent>
                 </Select>
               </div>
-              {formData.payment_type === "token" && (
+              {(formData.payment_type === "token" || formData.payment_type === "full_payment") && (
                 <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
                   <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                    Token Payment Mode <span style={{ color: T.error }}>*</span>
+                    {formData.payment_type === "token" ? "Token Payment Mode" : "Payment Mode"}{" "}
+                    <span style={{ color: T.error }}>*</span>
                   </Label>
                   <Select
                     value={formData.payment_mode || "online"}
                     onValueChange={(val) => handleChange("payment_mode", val)}
+                    disabled={isFieldLocked("payment_mode") || isStep2Completed}
                   >
                     <SelectTrigger className="h-10 sm:h-11 text-sm">
                       <SelectValue placeholder="Select Payment Mode" />
@@ -2204,6 +2770,22 @@ interface ModuleOption {
                   </Select>
                 </div>
               )}
+              {(formData.payment_type === "token" || formData.payment_type === "full_payment") && formData.payment_mode === "cheque" && (
+                <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                    Cheque Number / Bank
+                  </Label>
+                  <Input
+                    type="text"
+                    maxLength={50}
+                    value={formData.cheque_no || ""}
+                    onChange={(e) => handleChange("cheque_no", e.target.value)}
+                    disabled={isFieldLocked("cheque_no") || isStep2Completed}
+                    placeholder="e.g. CHQ-981245 / Bank Name"
+                    className="h-10 sm:h-11 text-sm font-mono"
+                  />
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
                   ICSI Fees Payment <span style={{ color: T.error }}>*</span>
@@ -2211,6 +2793,7 @@ interface ModuleOption {
                 <Select
                   value={formData.icsi_fees_payment}
                   onValueChange={(val) => handleChange("icsi_fees_payment", val)}
+                  disabled={isFieldLocked("icsi_fees_payment") || isStep2Completed}
                 >
                   <SelectTrigger className="h-10 sm:h-11 text-sm">
                     <SelectValue />
@@ -2245,6 +2828,7 @@ interface ModuleOption {
                     {feeCandidates.length > 1 ? (
                       <Select
                         value={String(matchedFee.id)}
+                        disabled={isFieldLocked("fee_structure") || isStep2Completed}
                         onValueChange={(val) => {
                           const chosen = feeCandidates.find((c) => String(c.id) === String(val));
                           if (chosen) {
@@ -2457,7 +3041,13 @@ interface ModuleOption {
                             <div className="flex justify-between items-center">
                               <div>
                                 <span className="text-sm font-semibold text-foreground block">Total Payable to Institute</span>
-                                <span className="text-[11px] text-muted-foreground">Full payment Razorpay link will be emailed</span>
+                                <span className="text-[11px] text-muted-foreground">
+                                  {formData.payment_mode === "cash"
+                                    ? "Cash payment at branch office"
+                                    : formData.payment_mode === "cheque"
+                                      ? "Cheque payment at branch office"
+                                      : "Full payment Razorpay link will be emailed & WhatsApp"}
+                                </span>
                               </div>
                               <span className="text-base font-bold" style={{ color: T.primaryDark }}>
                                 {formatCurrency(totalPayable)}
@@ -2552,17 +3142,37 @@ interface ModuleOption {
               )}
             </div>
           </SectionCard>
+
+              {/* ── Payment History in Step 2 ── */}
+              {isStep2Completed && (
+                <PaymentHistoryCard
+                  paymentHistory={paymentHistory}
+                  fallbackRazorpayLink={razorpayPaymentLink}
+                />
+              )}
+
               <div className="flex justify-between pt-4">
                 <Button type="button" variant="outline" onClick={prevStep} className="h-12 px-8 font-semibold">
                   Back
                 </Button>
-                <Button type="submit" disabled={loading} className="h-12 px-8 font-semibold" style={{ background: T.primary, color: T.black }}>
-                  {loading ? (
-                    <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Saving...</>
-                  ) : (
-                    "Next: Documents"
-                  )}
-                </Button>
+                {isStep2Completed ? (
+                  <Button
+                    type="button"
+                    onClick={nextStep}
+                    className="h-12 px-8 font-semibold"
+                    style={{ background: T.primary, color: T.black }}
+                  >
+                    Next: Documents
+                  </Button>
+                ) : (
+                  <Button type="submit" disabled={loading} className="h-12 px-8 font-semibold" style={{ background: T.primary, color: T.black }}>
+                    {loading ? (
+                      <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Saving...</>
+                    ) : (
+                      "Next: Documents"
+                    )}
+                  </Button>
+                )}
               </div>
             </>
           )}
@@ -2572,77 +3182,89 @@ interface ModuleOption {
           {/* ════════════════════════════════════════════════════════ */}
           {currentStep === 3 && (
             <>
-          {/* ════════════════════════════════════════════════════════ */}
-          {/*  DOCUMENT UPLOADS                                      */}
-          {/* ════════════════════════════════════════════════════════ */}
-          <SectionCard icon={FileImage} title="Document Uploads">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              <FileUploadField
-                label="Signature Upload"
-                icon={PenTool}
-                file={docSignature}
-                onFileChange={setDocSignature}
-                existingUrl={existingDocs.doc_signature}
-                // required
-              />
-              <FileUploadField
-                label="Your Passport Size Photo Upload"
-                icon={Camera}
-                file={docPhoto}
-                onFileChange={setDocPhoto}
-                existingUrl={existingDocs.doc_photo}
-                // required
-              />
-              <FileUploadField
-                label="Aadhar Card"
-                icon={CreditCard}
-                file={docIdCard}
-                onFileChange={setDocIdCard}
-                existingUrl={existingDocs.doc_id_card}
-                // required
-              />
-              <FileUploadField
-                label="PAN Card"
-                icon={CreditCard}
-                file={docPanCard}
-                onFileChange={setDocPanCard}
-                existingUrl={existingDocs.doc_pan_card}
-                // required
-              />
-              <FileUploadField
-                label="10th Marksheet"
-                icon={Baby}
-                file={docDobCertificate}
-                onFileChange={setDocDobCertificate}
-                existingUrl={existingDocs.doc_dob_certificate}
-                // required
-              />
-              <FileUploadField
-                label="12th Receipt / Hall Ticket (if Appearing in 10+2)"
-                icon={FileCheck}
-                file={doc12thReceipt}
-                onFileChange={setDoc12thReceipt}
-                existingUrl={existingDocs.doc_twelfth_receipt}
-                // required
-              />
-              <FileUploadField
-                label="12th Passing Certificate / Marksheet"
-                icon={GraduationCap}
-                file={doc12thMarkSheet}
-                onFileChange={setDoc12thMarkSheet}
-                existingUrl={existingDocs.doc_twelfth_marksheet}
-                // required
-              />
-              <FileUploadField
-                label="Category Certificate (if belonging to SC/ST or Physically Handicapped Category)"
-                icon={BadgeCheck}
-                file={docCategoryCertificate}
-                onFileChange={setDocCategoryCertificate}
-                existingUrl={existingDocs.doc_category_cert}
-                // required
-              />
-            </div>
-          </SectionCard>
+              {Object.values(existingDocs).some(Boolean) && (
+                <div className="flex items-start gap-3 p-3.5 sm:p-4 rounded-xl bg-blue-50/80 border border-blue-200 text-blue-900 text-xs sm:text-sm animate-in fade-in duration-200">
+                  <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-semibold">Documents on Record</p>
+                    <p className="text-blue-800/90 leading-relaxed">
+                      Previously uploaded documents are verified and locked to protect record integrity. If you need to update any document, please contact the admissions desk.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* ════════════════════════════════════════════════════════ */}
+              {/*  DOCUMENT UPLOADS                                      */}
+              {/* ════════════════════════════════════════════════════════ */}
+              <SectionCard icon={FileImage} title="Document Uploads">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                  <FileUploadField
+                    label="Signature Upload"
+                    icon={PenTool}
+                    file={docSignature}
+                    onFileChange={setDocSignature}
+                    existingUrl={existingDocs.doc_signature}
+                    disabled={Boolean(existingDocs.doc_signature)}
+                  />
+                  <FileUploadField
+                    label="Your Passport Size Photo Upload"
+                    icon={Camera}
+                    file={docPhoto}
+                    onFileChange={setDocPhoto}
+                    existingUrl={existingDocs.doc_photo}
+                    disabled={Boolean(existingDocs.doc_photo)}
+                  />
+                  <FileUploadField
+                    label="Aadhar Card"
+                    icon={CreditCard}
+                    file={docIdCard}
+                    onFileChange={setDocIdCard}
+                    existingUrl={existingDocs.doc_id_card}
+                    disabled={Boolean(existingDocs.doc_id_card)}
+                  />
+                  <FileUploadField
+                    label="PAN Card"
+                    icon={CreditCard}
+                    file={docPanCard}
+                    onFileChange={setDocPanCard}
+                    existingUrl={existingDocs.doc_pan_card}
+                    disabled={Boolean(existingDocs.doc_pan_card)}
+                  />
+                  <FileUploadField
+                    label="10th Marksheet"
+                    icon={Baby}
+                    file={docDobCertificate}
+                    onFileChange={setDocDobCertificate}
+                    existingUrl={existingDocs.doc_dob_certificate}
+                    disabled={Boolean(existingDocs.doc_dob_certificate)}
+                  />
+                  <FileUploadField
+                    label="12th Receipt / Hall Ticket (if Appearing in 10+2)"
+                    icon={FileCheck}
+                    file={doc12thReceipt}
+                    onFileChange={setDoc12thReceipt}
+                    existingUrl={existingDocs.doc_twelfth_receipt}
+                    disabled={Boolean(existingDocs.doc_twelfth_receipt)}
+                  />
+                  <FileUploadField
+                    label="12th Passing Certificate / Marksheet"
+                    icon={GraduationCap}
+                    file={doc12thMarkSheet}
+                    onFileChange={setDoc12thMarkSheet}
+                    existingUrl={existingDocs.doc_twelfth_marksheet}
+                    disabled={Boolean(existingDocs.doc_twelfth_marksheet)}
+                  />
+                  <FileUploadField
+                    label="Category Certificate (if belonging to SC/ST or Physically Handicapped Category)"
+                    icon={BadgeCheck}
+                    file={docCategoryCertificate}
+                    onFileChange={setDocCategoryCertificate}
+                    existingUrl={existingDocs.doc_category_cert}
+                    disabled={Boolean(existingDocs.doc_category_cert)}
+                  />
+                </div>
+              </SectionCard>
           {/* ── Consent & Submit ── */}
           <div
             className="rounded-2xl p-4 sm:p-6"
@@ -2750,7 +3372,7 @@ interface ModuleOption {
                       {formData.payment_type === "token"
                         ? `Token Payment (${formData.payment_mode === "cash" ? "Cash" : formData.payment_mode === "cheque" ? "Cheque" : "Online"})`
                         : formData.payment_type === "full_payment"
-                          ? "Full Payment"
+                          ? `Full Payment (${formData.payment_mode === "cash" ? "Cash" : formData.payment_mode === "cheque" ? "Cheque" : "Online"})`
                           : "Finance Assistance"}
                     </span>
                   </div>
@@ -2807,14 +3429,35 @@ interface ModuleOption {
                   }
 
                   if (formData.payment_type === "full_payment") {
+                    const isCash = formData.payment_mode === "cash";
+                    const isCheque = formData.payment_mode === "cheque";
+
                     return (
                       <div className="rounded-2xl border border-emerald-300 bg-emerald-50/80 p-4 text-left my-4 max-w-lg mx-auto space-y-2">
                         <div className="flex items-center gap-2 font-semibold text-emerald-900 text-sm">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                          <span>Full Payment Link Sent</span>
+                          <span>
+                            {isCash
+                              ? "Full Payment (Cash Selected)"
+                              : isCheque
+                                ? "Full Payment (Cheque Selected)"
+                                : "Full Payment Link Sent"}
+                          </span>
                         </div>
                         <p className="text-xs text-emerald-800 leading-relaxed">
-                          A secure payment link for <strong>{formatCurrency(fullTotal)}</strong> has been generated and sent to <strong>{formData.email}</strong> and WhatsApp. You can also upload your payment proof below.
+                          {isCash ? (
+                            <>
+                              Full payment of <strong>{formatCurrency(fullTotal)}</strong> selected in <strong>Cash</strong>. Please submit cash at branch office or upload deposit receipt below.
+                            </>
+                          ) : isCheque ? (
+                            <>
+                              Full payment of <strong>{formatCurrency(fullTotal)}</strong> selected via <strong>Cheque</strong>{formData.cheque_no ? ` (${formData.cheque_no})` : ""}. Please submit your cheque or upload cheque photo below.
+                            </>
+                          ) : (
+                            <>
+                              A secure payment link for <strong>{formatCurrency(fullTotal)}</strong> has been generated and sent to <strong>{formData.email}</strong> and WhatsApp. You can also upload your payment proof below.
+                            </>
+                          )}
                         </p>
                       </div>
                     );
@@ -2863,204 +3506,11 @@ interface ModuleOption {
               </div>
 
               {/* ── Section: Payment History & Transactions ── */}
-              <SectionCard icon={History} title="Payment History & Transactions">
-                <div className="space-y-4">
-                  {paymentHistory && paymentHistory.length > 0 ? (
-                    <div className="space-y-4">
-                      {paymentHistory.map((item: any, idx: number) => {
-                        const isPending = item.status === "pending" || !item.status;
-                        const isPaid = item.status === "paid" || item.status === "success" || item.status === "completed";
-                        const isFailed = item.status === "failed";
-                        const eventLabel =
-                          item.event === "payment_link_created"
-                            ? "Online Payment Link Generated"
-                            : item.event === "payment_received" || item.event === "paid"
-                              ? "Payment Received & Confirmed"
-                              : item.event === "proof_uploaded" || item.event === "payment_submitted"
-                                ? "Payment Proof Submitted"
-                                : (item.event || "Payment Transaction").replace(/_/g, " ");
-
-                        return (
-                          <div
-                            key={idx}
-                            className="rounded-2xl border p-4 sm:p-5 transition-all space-y-3.5"
-                            style={{
-                              background: isPaid ? "rgba(16, 185, 129, 0.04)" : isPending ? "rgba(245, 158, 11, 0.04)" : T.card,
-                              borderColor: isPaid ? "rgba(16, 185, 129, 0.3)" : isPending ? "rgba(245, 158, 11, 0.35)" : T.border,
-                            }}
-                          >
-                            {/* Top row: event label, time, status */}
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/40">
-                              <div className="flex items-center gap-2.5">
-                                <div
-                                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                                  style={{
-                                    background: isPaid ? "rgba(16, 185, 129, 0.15)" : isPending ? "rgba(245, 158, 11, 0.15)" : "rgba(0,0,0,0.06)",
-                                  }}
-                                >
-                                  {isPaid ? (
-                                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                                  ) : item.razorpay_payment_link ? (
-                                    <Link2 className="w-4 h-4 text-amber-600" />
-                                  ) : (
-                                    <CreditCard className="w-4 h-4 text-muted-foreground" />
-                                  )}
-                                </div>
-                                <div>
-                                  <h4 className="text-sm font-bold text-foreground capitalize">
-                                    {eventLabel}
-                                  </h4>
-                                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-0.5">
-                                    <Clock className="w-3 h-3" />
-                                    <span>
-                                      {item.timestamp || item.created_at
-                                        ? new Date(item.timestamp || item.created_at).toLocaleString("en-IN", {
-                                            dateStyle: "medium",
-                                            timeStyle: "short",
-                                          })
-                                        : item.date || "—"}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <Badge
-                                variant="outline"
-                                className={`self-start sm:self-auto text-xs font-semibold px-2.5 py-1 ${
-                                  isPaid
-                                    ? "bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300"
-                                    : isPending
-                                      ? "bg-amber-50 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300"
-                                      : isFailed
-                                        ? "bg-rose-50 text-rose-800 border-rose-300"
-                                        : "bg-muted text-foreground"
-                                }`}
-                              >
-                                {isPaid
-                                  ? "✅ Paid / Verified"
-                                  : isPending
-                                    ? "⏳ Payment Pending"
-                                    : isFailed
-                                      ? "❌ Failed"
-                                      : (item.status || "Recorded")}
-                              </Badge>
-                            </div>
-
-                            {/* Amount & Plan Row */}
-                            <div className="flex flex-wrap items-baseline justify-between gap-2">
-                              <div>
-                                <span className="text-[11px] text-muted-foreground block">
-                                  Transaction Amount
-                                </span>
-                                <span className="text-xl sm:text-2xl font-black text-foreground" style={{ color: T.navy }}>
-                                  {formatCurrency(Number(item.amount || item.token_amount || 0))}
-                                </span>
-                              </div>
-
-                              <div className="flex flex-wrap items-center gap-2 text-xs">
-                                <span className="px-2.5 py-1 rounded-md bg-muted/60 font-medium text-foreground">
-                                  {item.payment_type_display || item.payment_type || "Token Payment"}
-                                </span>
-                                <span className="px-2.5 py-1 rounded-md bg-muted/60 font-medium text-foreground capitalize">
-                                  Mode: {item.payment_choice_display || item.payment_choice || "Online"}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Breakdown stat chips if available */}
-                            {(item.total_fees != null || item.remaining_fees != null) && (
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-2.5 rounded-xl bg-muted/30 border border-border/40 text-xs">
-                                {item.total_fees != null && (
-                                  <div>
-                                    <span className="text-muted-foreground block text-[11px]">Total Course Fee</span>
-                                    <span className="font-semibold text-foreground">
-                                      {formatCurrency(Number(item.total_fees))}
-                                    </span>
-                                  </div>
-                                )}
-                                <div>
-                                  <span className="text-muted-foreground block text-[11px]">Payable / Token Amount</span>
-                                  <span className="font-semibold text-foreground">
-                                    {formatCurrency(Number(item.amount || item.token_amount || 0))}
-                                  </span>
-                                </div>
-                                {item.remaining_fees != null && (
-                                  <div>
-                                    <span className="text-muted-foreground block text-[11px]">Remaining Balance</span>
-                                    <span className="font-semibold text-amber-700 dark:text-amber-400">
-                                      {formatCurrency(Number(item.remaining_fees))}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-
-                            {/* Razorpay Online Link Box */}
-                            {item.razorpay_payment_link && (
-                              <div className="p-3 sm:p-3.5 rounded-xl bg-amber-500/10 border border-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                <div className="space-y-0.5">
-                                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-950 dark:text-amber-200">
-                                    <Link2 className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
-                                    <span>Razorpay Payment Link</span>
-                                  </div>
-                                  {item.razorpay_payment_link_id && (
-                                    <span className="font-mono text-[11px] text-amber-800/80 dark:text-amber-300/80 block">
-                                      ID: {item.razorpay_payment_link_id}
-                                    </span>
-                                  )}
-                                </div>
-
-                                <a
-                                  href={item.razorpay_payment_link}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-black bg-amber-400 hover:bg-amber-500 shadow-sm transition-all shrink-0 cursor-pointer"
-                                >
-                                  <span>{isPaid ? "View Payment Link" : "Pay with Razorpay"}</span>
-                                  <ArrowUpRight className="w-3.5 h-3.5" />
-                                </a>
-                              </div>
-                            )}
-
-                            {/* Uploaded Receipt / Screenshot Proof */}
-                            {(item.payment_screenshot || item.payment_proof) && (
-                              <div className="flex items-center gap-2 pt-1 text-xs">
-                                <Receipt className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Receipt Proof:</span>
-                                <a
-                                  href={item.payment_screenshot || item.payment_proof}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:underline font-semibold inline-flex items-center gap-1"
-                                >
-                                  <span>View Document</span>
-                                  <ExternalLink className="w-3 h-3" />
-                                </a>
-                              </div>
-                            )}
-
-                            {/* Terms Note */}
-                            {(item.terms_note || item.fee_terms_note) && (
-                              <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs text-amber-900 flex items-start gap-2 leading-relaxed">
-                                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                                <span>{item.terms_note || item.fee_terms_note}</span>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="p-8 text-center rounded-2xl bg-muted/20 border border-dashed border-border/60 text-muted-foreground space-y-2">
-                      <History className="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
-                      <p className="text-sm font-semibold text-foreground">No Payment History Recorded Yet</p>
-                      <p className="text-xs max-w-md mx-auto">
-                        When a payment link is created or you submit a transaction receipt, your complete payment audit log will appear here.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </SectionCard>
+              <PaymentHistoryCard
+                paymentHistory={paymentHistory}
+                fallbackRazorpayLink={razorpayPaymentLink}
+                alwaysRender={true}
+              />
 
               {/* ── Payment Proof Upload & Details Card ── */}
               <SectionCard icon={Receipt} title="Upload Payment Proof & Transaction Details">
@@ -3093,6 +3543,7 @@ interface ModuleOption {
                           step="0.01"
                           value={paymentAmount}
                           onChange={(e) => setPaymentAmount(e.target.value)}
+                          disabled={isFieldLocked("payment_amount")}
                           className="h-10 sm:h-11 pl-8 text-sm font-semibold"
                           placeholder="e.g. 20000"
                         />
@@ -3112,6 +3563,7 @@ interface ModuleOption {
                         maxLength={100}
                         value={transactionId}
                         onChange={(e) => setTransactionId(e.target.value)}
+                        disabled={isFieldLocked("transaction_id")}
                         className="h-10 sm:h-11 text-sm font-mono"
                         placeholder="UPI Ref / UTR / Cheque No / Bank Ref"
                       />
@@ -3129,6 +3581,7 @@ interface ModuleOption {
                         type="datetime-local"
                         value={paymentSubmittedAt ? paymentSubmittedAt.slice(0, 16) : ""}
                         onChange={(e) => setPaymentSubmittedAt(e.target.value)}
+                        disabled={isFieldLocked("payment_submitted_at")}
                         className="h-10 sm:h-11 text-sm"
                       />
                       <p className="text-[11px] text-muted-foreground">
@@ -3144,6 +3597,7 @@ interface ModuleOption {
                         file={paymentScreenshot}
                         onFileChange={setPaymentScreenshot}
                         existingUrl={existingPaymentScreenshot}
+                        disabled={Boolean(existingPaymentScreenshot)}
                       />
                       <p className="text-[11px] text-muted-foreground">
                         Upload screenshot or photo of UPI payment receipt, bank transfer slip, or deposit receipt (JPG, PNG, PDF).
