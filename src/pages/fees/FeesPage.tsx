@@ -31,6 +31,11 @@ import {
   MoreVertical,
   Eye,
   FileText,
+  ShieldAlert,
+  ShieldCheck,
+  CreditCard,
+  Building2,
+  Banknote,
 } from "lucide-react";
 
 import ReportsTab from "./tabs/ReportsTab";
@@ -55,6 +60,7 @@ import {
   BankAccountDialog,
   CreateRefundDialog,
   CreateInstallmentDialog,
+  StudentPayRemainingFeeDialog,
 } from "./dialogs";
 
 import PageHeader from "@/components/layout/PageHeader";
@@ -63,6 +69,7 @@ import DataTable, { type DataTableColumn } from "@/components/common/DataTable";
 import { StudentDetailSkeleton, FeeTableSkeleton } from "@/components/common/Skeletons";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -972,25 +979,49 @@ export default function FeesPage() {
     : "";
 
   // Derive student fee data exclusively from my-fees API response
-  const myStudentFees = useMemo(() => {
-    return myFeesData?.fees ?? [];
+  const myFeeRoot = useMemo(() => {
+    return myFeesData?.data ?? myFeesData ?? {};
   }, [myFeesData]);
+
+  const myStudentFees = useMemo(() => {
+    return myFeeRoot?.fees ?? [];
+  }, [myFeeRoot]);
 
   const myPayments = useMemo(() => {
-    return myFeesData?.payments ?? [];
-  }, [myFeesData]);
+    return myFeeRoot?.payments ?? [];
+  }, [myFeeRoot]);
 
   const myInstallments = useMemo(() => {
-    return myFeesData?.installments ?? [];
-  }, [myFeesData]);
+    return myFeeRoot?.installments ?? [];
+  }, [myFeeRoot]);
 
   const myRefunds = useMemo(() => {
-    return myFeesData?.refunds ?? [];
-  }, [myFeesData]);
+    return myFeeRoot?.refunds ?? [];
+  }, [myFeeRoot]);
 
   const myFeesSummary = useMemo(() => {
-    return myFeesData?.summary ?? null;
-  }, [myFeesData]);
+    return myFeeRoot?.summary ?? null;
+  }, [myFeeRoot]);
+
+  const myFinanceNotice = useMemo(() => {
+    return myFeeRoot?.finance_notice ?? null;
+  }, [myFeeRoot]);
+
+  const myRemainingFeeOptions = useMemo(() => {
+    return myFeeRoot?.remaining_fee_options ?? null;
+  }, [myFeeRoot]);
+
+  const myIsFullyPaid = useMemo(() => {
+    return myFeeRoot?.is_fully_paid ?? false;
+  }, [myFeeRoot]);
+
+  const myAdmissionNumber = useMemo(() => {
+    return myFeeRoot?.admission_number ?? myFeesData?.admission_number ?? null;
+  }, [myFeeRoot, myFeesData]);
+
+  const myInstallmentsEnabled = useMemo(() => {
+    return myFeeRoot?.installments_enabled ?? false;
+  }, [myFeeRoot]);
 
   function handleRecordPayment(payload: any) {
     dispatch({
@@ -1067,6 +1098,7 @@ export default function FeesPage() {
       <StudentFeesView
         studentFees={myStudentFees}
         installments={myInstallments}
+        installmentsEnabled={myInstallmentsEnabled}
         uploadOpen={uploadOpen}
         setUploadOpen={setUploadOpen}
         studentDetail={studentDetail}
@@ -1082,6 +1114,10 @@ export default function FeesPage() {
         students={students}
         refunds={myRefunds}
         summary={myFeesSummary}
+        financeNotice={myFinanceNotice}
+        remainingFeeOptions={myRemainingFeeOptions}
+        isFullyPaid={myIsFullyPaid}
+        admissionNumber={myAdmissionNumber}
         onRefreshFees={fetchMyFees}
       />
     );
@@ -1568,6 +1604,7 @@ export default function FeesPage() {
 function StudentFeesView({
   studentFees,
   installments,
+  installmentsEnabled = false,
   uploadOpen,
   setUploadOpen,
   studentDetail,
@@ -1583,10 +1620,15 @@ function StudentFeesView({
   students,
   refunds = [],
   summary = null,
+  financeNotice = null,
+  remainingFeeOptions = null,
+  isFullyPaid = false,
+  admissionNumber = null,
   onRefreshFees,
 }: {
   studentFees: any[];
   installments: any[];
+  installmentsEnabled?: boolean;
   uploadOpen: boolean;
   setUploadOpen: (b: boolean) => void;
   studentDetail: any;
@@ -1602,10 +1644,15 @@ function StudentFeesView({
   students: any[];
   refunds?: any[];
   summary?: any;
+  financeNotice?: any;
+  remainingFeeOptions?: any;
+  isFullyPaid?: boolean;
+  admissionNumber?: string | null;
   onRefreshFees?: () => void;
 }) {
   const toast = useToast();
   const { user } = useAuth();
+  const [payRemainingOpen, setPayRemainingOpen] = useState(false);
 
   // Derive student info from real API data, fallback to dummy if not loaded yet
   const studentName = studentDetail?.full_name || user?.name || "Loading...";
@@ -1618,6 +1665,7 @@ function StudentFeesView({
   const totalDiscount = summary ? Number(summary.total_discount || 0) : studentFees.reduce((sum, sf) => sum + Number(sf.discount || 0), 0);
   const paidAmount = summary ? Number(summary.total_paid || 0) : studentFees.reduce((sum, sf) => sum + Number(sf.amount_paid || 0), 0);
   const outstanding = summary ? Number(summary.total_due || 0) : studentFees.reduce((sum, sf) => sum + Number(sf.amount_due || 0), 0);
+  const isSettled = isFullyPaid || (outstanding <= 0 && paidAmount > 0);
 
   if (studentDetailLoading) {
     return <StudentDetailSkeleton />;
@@ -1627,7 +1675,7 @@ function StudentFeesView({
     <div>
       <PageHeader
         title="My Fees"
-        subtitle={`Account: ${studentName}`}
+        subtitle={`Account: ${studentName}${admissionNumber ? ` • Adm #${admissionNumber}` : ""}`}
         actions={
           <div className="flex gap-2 items-center">
             {linkedStudents.length > 1 && (
@@ -1647,38 +1695,197 @@ function StudentFeesView({
                 </SelectContent>
               </Select>
             )}
-            <Button
-              onClick={() => setUploadOpen(true)}
-              className="bg-primary hover:bg-primary-dark text-primary-foreground gap-1.5"
-            >
-              <Wallet className="w-4 h-4" /> Record Payment
-            </Button>
+            {/* Button 1: Pay Remaining Balance */}
+            {/* {!isSettled && (
+              <Button
+                onClick={() => setPayRemainingOpen(true)}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 font-semibold shadow-xs"
+              >
+                <Wallet className="w-4 h-4" /> Pay Remaining Balance
+              </Button>
+            )} */}
+            {isSettled && (
+              <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 gap-1.5 py-1 px-3 text-xs font-semibold">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Fully Paid
+              </Badge>
+            )}
           </div>
         }
       />
 
+      {/* ─── 15-Day Finance Policy Notice Banner ───────────────────── */}
+      {!isSettled && financeNotice && (
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`rounded-xl border p-4 mb-4 shadow-xs ${
+            financeNotice.is_moved_to_finance || financeNotice.days_left < 0
+              ? "border-purple-200/90 bg-gradient-to-r from-purple-50 via-indigo-50/40 to-purple-50/70"
+              : "border-amber-200/90 bg-gradient-to-r from-amber-50 via-orange-50/50 to-amber-50/70"
+          }`}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div
+                className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 mt-0.5 ${
+                  financeNotice.is_moved_to_finance || financeNotice.days_left < 0
+                    ? "bg-purple-100 border-purple-300 text-purple-700"
+                    : "bg-amber-100 border-amber-300 text-amber-700"
+                }`}
+              >
+                {financeNotice.is_moved_to_finance || financeNotice.days_left < 0 ? (
+                  <ShieldAlert className="w-5 h-5 text-purple-700" />
+                ) : (
+                  <Clock className="w-5 h-5 text-amber-700 animate-pulse" />
+                )}
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4
+                    className={`font-heading font-bold text-sm ${
+                      financeNotice.is_moved_to_finance || financeNotice.days_left < 0
+                        ? "text-purple-950"
+                        : "text-amber-950"
+                    }`}
+                  >
+                    {financeNotice.is_moved_to_finance || financeNotice.days_left < 0
+                      ? "Balance Moved to Finance Process"
+                      : "15-Day Balance Settlement Window"}
+                  </h4>
+                  {financeNotice.is_moved_to_finance || financeNotice.days_left < 0 ? (
+                    <Badge className="bg-purple-600 text-white border-0 text-[11px] font-semibold">
+                      Finance Process Active
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-amber-500 text-white border-0 text-[11px] font-bold px-2 py-0.5 font-mono shadow-xs">
+                      {financeNotice.days_left} {financeNotice.days_left === 1 ? "Day" : "Days"} Left
+                    </Badge>
+                  )}
+                  {financeNotice.deadline_date_display && (
+                    <span
+                      className={`text-xs font-medium ${
+                        financeNotice.is_moved_to_finance || financeNotice.days_left < 0
+                          ? "text-purple-900/80"
+                          : "text-amber-900/80"
+                      }`}
+                    >
+                      • Deadline: {financeNotice.deadline_date_display}
+                    </span>
+                  )}
+                </div>
+                <p
+                  className={`text-xs leading-relaxed max-w-3xl ${
+                    financeNotice.is_moved_to_finance || financeNotice.days_left < 0
+                      ? "text-purple-900/90"
+                      : "text-amber-900/90"
+                  }`}
+                >
+                  {financeNotice.note ||
+                    (financeNotice.is_moved_to_finance || financeNotice.days_left < 0
+                      ? "The 15-day balance payment window has ended. Your fee balance is now in the finance process. Our finance team will assist you with loan/EMI procedures."
+                      : `Please pay your remaining balance of ${formatCurrency(outstanding)} within 15 days of receiving your login credentials (deadline: ${financeNotice.deadline_date_display || formatDate(financeNotice.deadline_date)}).`)}
+                </p>
+              </div>
+            </div>
+
+            {/* Button 2: Clear Balance Directly / Pay Remaining Balance */}
+            {/* <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+              <Button
+                onClick={() => setPayRemainingOpen(true)}
+                className={`font-semibold text-xs h-9 px-4 gap-1.5 shadow-xs ${
+                  financeNotice.is_moved_to_finance || financeNotice.days_left < 0
+                    ? "bg-purple-600 hover:bg-purple-700 text-white"
+                    : "bg-amber-600 hover:bg-amber-700 text-white"
+                }`}
+              >
+                <Wallet className="w-3.5 h-3.5" />
+                {financeNotice.is_moved_to_finance || financeNotice.days_left < 0
+                  ? "Clear Balance Directly"
+                  : "Pay Remaining Balance"}
+              </Button>
+            </div> */}
+          </div>
+        </motion.div>
+      )}
+
+      {/* ─── Celebratory Fully Paid Banner ─────────────────────────── */}
+      {isSettled && (
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 mb-4 flex items-center justify-between gap-3 shadow-xs"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 border border-emerald-300 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <h4 className="font-heading font-bold text-sm text-emerald-950">
+                Course Fees Fully Settled
+              </h4>
+              <p className="text-xs text-emerald-800/80">
+                All course fees have been completely cleared. Your financial standing is in good standing.
+              </p>
+            </div>
+          </div>
+          <Badge className="bg-emerald-600 text-white text-xs font-semibold px-3 py-1">
+            Paid in Full
+          </Badge>
+        </motion.div>
+      )}
+
+      {/* ─── My Fee Summary Card ────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-xl bg-sidebar text-white p-5 mb-4"
+        className="rounded-xl bg-sidebar text-white p-5 mb-4 relative overflow-hidden"
       >
-        <p className="text-xs uppercase tracking-wider opacity-80">My Fee Summary</p>
-        {courseName && (
-          <p className="text-xs opacity-70 mt-1">
-            {courseName}
-            {batchName ? ` — ${batchName}` : ""}
-          </p>
-        )}
-        <div className="grid grid-cols-4 gap-4 mt-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="text-xs uppercase tracking-wider opacity-80 font-semibold">My Fee Summary</p>
+              {admissionNumber && (
+                <span className="text-[11px] font-mono bg-white/10 px-2 py-0.5 rounded text-white/90">
+                  {admissionNumber}
+                </span>
+              )}
+            </div>
+            {courseName && (
+              <p className="text-xs opacity-75 mt-0.5">
+                {courseName}
+                {batchName ? ` — ${batchName}` : ""}
+              </p>
+            )}
+          </div>
+          {/* Button 3: Pay Remaining Fee */}
+          {/* {!isSettled && (
+            <Button
+              size="sm"
+              onClick={() => setPayRemainingOpen(true)}
+              className="bg-primary hover:bg-primary-dark text-white font-semibold text-xs h-8 px-3 gap-1.5 shadow-sm self-start sm:self-auto"
+            >
+              <Wallet className="w-3.5 h-3.5" /> Pay Remaining Fee ({formatCurrency(outstanding)})
+            </Button>
+          )} */}
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
           <div>
             <p className="text-xs opacity-80">Total Billed</p>
             <p className="text-xl font-heading font-bold">{formatCurrency(totalFee)}</p>
           </div>
-          {totalDiscount > 0 && (
+          {totalDiscount > 0 ? (
             <div>
               <p className="text-xs opacity-80">Discount</p>
               <p className="text-xl font-heading font-bold text-green-400">
                 -{formatCurrency(totalDiscount)}
+              </p>
+            </div>
+          ) : (
+            <div>
+              <p className="text-xs opacity-80">Fee Mode</p>
+              <p className="text-sm font-semibold capitalize mt-1">
+                {studentDetail?.payment_type?.replace("_", " ") || "Full Package"}
               </p>
             </div>
           )}
@@ -1689,8 +1896,12 @@ function StudentFeesView({
             </p>
           </div>
           <div>
-            <p className="text-xs opacity-80">Outstanding</p>
-            <p className="text-xl font-heading font-bold text-rose-400">
+            <p className="text-xs opacity-80">Remaining Balance</p>
+            <p
+              className={`text-xl font-heading font-bold ${
+                isSettled ? "text-emerald-400" : "text-rose-400"
+              }`}
+            >
               {formatCurrency(outstanding > 0 ? outstanding : 0)}
             </p>
           </div>
@@ -1725,7 +1936,7 @@ function StudentFeesView({
                       "px-2 py-0.5 rounded-full text-xs font-semibold border capitalize",
                       sf.status === "paid"
                         ? "bg-green-500/10 text-green-500 border-green-500/20"
-                        : sf.status === "partially_paid"
+                        : sf.status === "partially_paid" || sf.status === "partial"
                           ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
                           : sf.status === "approval_pending"
                             ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
@@ -1769,8 +1980,8 @@ function StudentFeesView({
         </div>
       )}
 
-      {/* Installment Plans */}
-      {installments.length > 0 && (
+      {/* Installment Plans (Rendered only if enabled in API response) */}
+      {installmentsEnabled && installments && installments.length > 0 && (
         <div className="mb-4">
           <h3 className="font-heading font-semibold mb-2 mt-6">Installment Plans</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1832,6 +2043,7 @@ function StudentFeesView({
         </div>
       )}
 
+      {/* Payment History */}
       <h3 className="font-heading font-semibold mb-2 mt-6">Payment History</h3>
       {paymentHistoryLoading ? (
         <FeeTableSkeleton columns={6} rows={3} hasFilter={false} />
@@ -1882,6 +2094,18 @@ function StudentFeesView({
         </div>
       )}
 
+      {/* Student Pay Remaining Balance Dialog */}
+      <StudentPayRemainingFeeDialog
+        open={payRemainingOpen}
+        onClose={() => setPayRemainingOpen(false)}
+        amountDue={outstanding}
+        remainingFeeOptions={remainingFeeOptions}
+        financeNotice={financeNotice}
+        bankAccounts={bankAccounts}
+        onSuccess={() => onRefreshFees && onRefreshFees()}
+      />
+
+      {/* Offline Record Payment Dialog (Fallback) */}
       <RecordPaymentDialog
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
@@ -1982,7 +2206,6 @@ function PaymentsTable({
       header: "Actions",
       render: (r) => {
         const canVerify = r.status === "pending_verification";
-        // if (!canVerify) return <span className="text-xs text-muted-foreground">—</span>;
         return (
           <div className="flex" onClick={(e) => e.stopPropagation()}>
             <DropdownMenu>
@@ -2006,38 +2229,73 @@ function PaymentsTable({
     },
   ];
 
-  return <DataTable columns={cols} data={data} />;
+  return <DataTable columns={cols} data={data} loading={loading} onRowClick={(row) => onVerify(row)} />;
 }
 
 function PaymentsHistoryTable({ data, studentFees }: { data: any[]; studentFees: StudentFee[] }) {
   const cols: DataTableColumn<any>[] = [
-    { key: "receipt_number", header: "Receipt #", className: "font-mono text-xs" },
     {
-      key: "student_fee",
-      header: "Fee Allocation",
+      key: "receipt_number",
+      header: "Receipt #",
+      className: "font-mono text-xs font-semibold",
+      render: (r) => r.receipt_number || "—",
+    },
+    {
+      key: "payment_label",
+      header: "Payment Type",
       render: (r) => {
-        const sf = studentFees.find((f) => f.id === r.student_fee);
-        return sf?.fee_name || r.student_fee;
+        const label = r.payment_label || r.payment_type_display || r.payment_type || "Payment";
+        return (
+          <div className="flex flex-col">
+            <span className="font-semibold text-xs text-foreground">{label}</span>
+            {r.transaction_ref && (
+              <span className="font-mono text-[10px] text-muted-foreground truncate max-w-[130px]">
+                Ref: {r.transaction_ref}
+              </span>
+            )}
+          </div>
+        );
       },
     },
-    { key: "amount", header: "Amount", render: (r) => formatCurrency(Number(r.amount)) },
+    {
+      key: "amount",
+      header: "Amount",
+      render: (r) => (
+        <span className="font-semibold font-mono text-xs text-foreground">
+          {formatCurrency(Number(r.amount))}
+        </span>
+      ),
+    },
     {
       key: "payment_mode",
       header: "Mode",
-      render: (r) => (
-        <span className="uppercase text-xs font-semibold">{r.payment_mode?.replace("_", " ")}</span>
-      ),
+      render: (r) => {
+        const mode = r.payment_mode_display || r.payment_mode || "—";
+        return (
+          <span className="text-xs font-medium capitalize">
+            {mode.replace("_", " ")}
+          </span>
+        );
+      },
+    },
+    {
+      key: "payment_date",
+      header: "Date",
+      render: (r) => (r.payment_date ? formatDate(r.payment_date) : "—"),
     },
     {
       key: "status",
       header: "Status",
       render: (r) => {
         const statusColors: Record<string, string> = {
-          pending_verification: "bg-amber-500/10 text-amber-500 border-amber-500/20",
-          verified: "bg-green-500/10 text-green-500 border-green-500/20",
+          verified: "bg-green-500/10 text-green-600 border-green-500/20",
+          paid: "bg-green-500/10 text-green-600 border-green-500/20",
+          approval_pending: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+          pending_verification: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+          level_1_approved: "bg-blue-500/10 text-blue-600 border-blue-500/20",
           rejected: "bg-red-500/10 text-red-500 border-red-500/20",
         };
-        const label = r.status === "pending_verification" ? "Pending Verification" : r.status;
+        const label = r.status_display || r.status?.replace(/_/g, " ") || "Pending";
         return (
           <span
             className={cn(
@@ -2045,7 +2303,7 @@ function PaymentsHistoryTable({ data, studentFees }: { data: any[]; studentFees:
               statusColors[r.status] || "bg-muted text-muted-foreground border-muted-foreground/20",
             )}
           >
-            {label?.replace("_", " ")}
+            {label}
           </span>
         );
       },
@@ -2054,10 +2312,11 @@ function PaymentsHistoryTable({ data, studentFees }: { data: any[]; studentFees:
       key: "payment_proof",
       header: "Proof",
       render: (r) => {
-        if (r.payment_proof) {
+        const proofUrl = r.payment_proof_url || r.payment_proof || r.payment_document;
+        if (proofUrl) {
           return (
             <a
-              href={r.payment_proof}
+              href={proofUrl}
               target="_blank"
               rel="noreferrer"
               onClick={(e) => e.stopPropagation()}
@@ -2071,29 +2330,8 @@ function PaymentsHistoryTable({ data, studentFees }: { data: any[]; studentFees:
         return <span className="text-xs text-muted-foreground">—</span>;
       },
     },
-    {
-      key: "payment_document",
-      header: "Document",
-      render: (r) => {
-        if (r.payment_document) {
-          return (
-            <a
-              href={r.payment_document}
-              target="_blank"
-              rel="noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-            >
-              <FileText className="w-3.5 h-3.5" />
-              View
-            </a>
-          );
-        }
-        return <span className="text-xs text-muted-foreground">—</span>;
-      },
-    },
-    { key: "payment_date", header: "Date", render: (r) => formatDate(r.payment_date) },
   ];
+
   return <DataTable columns={cols} data={data} />;
 }
 

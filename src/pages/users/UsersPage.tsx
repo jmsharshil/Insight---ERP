@@ -868,8 +868,6 @@ export default function UsersPage() {
     "sales_executive",
     "sales_senior_executive",
     "counsellor",
-    "tele_caller",
-    "senior_tele_caller",
   ];
   const isSalesRole = SALES_ROLES.includes(activeRole);
   const showWorkingHours = isSalesRole;

@@ -7,11 +7,14 @@ export type DayOfWeek =
   | "friday"
   | "saturday";
 
+export type SaturdayRule = "odd" | "even" | "all" | "off";
+
 export interface DaySchedule {
   start_time: string;
   end_time: string;
   working_hours?: number;
   is_off: boolean;
+  saturday_rule?: SaturdayRule;
 }
 
 export type WeeklySchedule = Record<DayOfWeek, DaySchedule>;

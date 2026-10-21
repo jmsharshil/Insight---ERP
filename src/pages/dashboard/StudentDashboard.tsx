@@ -1,5 +1,6 @@
 import DashboardLayout, { StatItem } from "@/components/common/DashboardLayout";
 import SectionCard from "@/components/common/SectionCard";
+import MobileAppBanner from "@/components/common/MobileAppBanner";
 import { ReportsSkeleton } from "@/components/common/Skeletons";
 import { axiosRequest } from "@/service/axiosRequest";
 import { BookOpen, Calendar, Percent, Wallet, CheckCircle, XCircle } from "lucide-react";
@@ -193,6 +194,7 @@ export default function StudentDashboard() {
 
   return (
     <DashboardLayout pageTitle="Student Dashboard" stats={stats}>
+      <MobileAppBanner />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Performance Chart */}
         <SectionCard title="My Performance (Recent Exams)">

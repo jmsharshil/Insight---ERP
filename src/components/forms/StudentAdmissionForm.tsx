@@ -2744,7 +2744,7 @@ interface ModuleOption {
                   <SelectContent>
                     <SelectItem value="full_payment">Full Payment</SelectItem>
                     <SelectItem value="token">Token Payment</SelectItem>
-                    <SelectItem value="finance">Finance</SelectItem>
+                    <SelectItem value="finance">Installment</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -12,3 +12,4 @@ export { RejectInstallmentDialog } from "./RejectInstallmentDialog";
 export { BankAccountDialog } from "./BankAccountDialog";
 export { CreateRefundDialog } from "./CreateRefundDialog";
 export { CreateInstallmentDialog } from "./CreateInstallmentDialog";
+export { StudentPayRemainingFeeDialog } from "./StudentPayRemainingFeeDialog";
