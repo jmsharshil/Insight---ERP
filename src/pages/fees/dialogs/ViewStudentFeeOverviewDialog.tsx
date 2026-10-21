@@ -7,6 +7,8 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Clock, ShieldAlert } from "lucide-react";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import { type FeesStructure } from "@/redux/slices/feesSlice";
 
@@ -91,6 +93,62 @@ export function ViewStudentFeeOverviewDialog({
                 <span className="capitalize font-semibold text-foreground">{displayStatus}</span>
               </div>
             </div>
+
+            {overviewData?.finance_notice && (
+              <div
+                className={cn(
+                  "rounded-xl border p-3.5 text-xs space-y-1.5",
+                  overviewData.finance_notice.is_moved_to_finance ||
+                    overviewData.finance_notice.days_left < 0
+                    ? "border-purple-200 bg-purple-50/70 text-purple-900"
+                    : "border-amber-200 bg-amber-50/70 text-amber-900",
+                )}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 font-semibold">
+                    {overviewData.finance_notice.is_moved_to_finance ||
+                    overviewData.finance_notice.days_left < 0 ? (
+                      <ShieldAlert className="w-4 h-4 text-purple-700" />
+                    ) : (
+                      <Clock className="w-4 h-4 text-amber-700" />
+                    )}
+                    <span>
+                      {overviewData.finance_notice.is_moved_to_finance ||
+                      overviewData.finance_notice.days_left < 0
+                        ? "15-Day Rule Expired: Moved to Finance"
+                        : "15-Day Finance Settlement Window"}
+                    </span>
+                  </div>
+                  <Badge
+                    className={cn(
+                      "text-[10px] font-semibold border-0",
+                      overviewData.finance_notice.is_moved_to_finance ||
+                        overviewData.finance_notice.days_left < 0
+                        ? "bg-purple-600 text-white"
+                        : "bg-amber-500 text-white",
+                    )}
+                  >
+                    {overviewData.finance_notice.is_moved_to_finance ||
+                    overviewData.finance_notice.days_left < 0
+                      ? "Finance Mode"
+                      : `${overviewData.finance_notice.days_left} day(s) left`}
+                  </Badge>
+                </div>
+                {overviewData.finance_notice.note && (
+                  <p className="text-[11px] opacity-90 leading-relaxed">
+                    {overviewData.finance_notice.note}
+                  </p>
+                )}
+                <div className="flex items-center gap-4 text-[10px] opacity-80 pt-1 border-t border-current/10">
+                  {overviewData.finance_notice.enrolled_date && (
+                    <span>Enrolled: {formatDate(overviewData.finance_notice.enrolled_date)}</span>
+                  )}
+                  {overviewData.finance_notice.deadline_date && (
+                    <span>Deadline: {formatDate(overviewData.finance_notice.deadline_date)}</span>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="border border-border bg-card rounded-xl p-3 text-center">

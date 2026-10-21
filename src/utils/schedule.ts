@@ -1,10 +1,13 @@
 import {
   DayOfWeek,
   DaySchedule,
+  SaturdayRule,
   WeeklySchedule,
   DAYS_ORDER,
   WeeklyScheduleStats,
 } from "@/types/schedule";
+
+const VALID_SATURDAY_RULES: SaturdayRule[] = ["odd", "even", "all", "off"];
 
 /**
  * Calculates duration in decimal hours between start_time and end_time.
@@ -140,6 +143,7 @@ export function createDefaultWeeklySchedule(
       end_time: defaultEndTime,
       working_hours: defaultHours,
       is_off: false,
+      saturday_rule: "all",
     },
     sunday: {
       start_time: "10:00:00",
@@ -207,12 +211,28 @@ export function normalizeWeeklySchedule(
       working_hours = calculateHoursBetweenTimes(start_time, end_time);
     }
 
-    normalized[key] = {
+    const dayEntry: DaySchedule = {
       start_time: formatTimeToStandard(start_time),
       end_time: formatTimeToStandard(end_time),
       working_hours: isNaN(working_hours) ? 0 : working_hours,
       is_off,
     };
+
+    // Preserve saturday_rule for the saturday key
+    if (key === "saturday") {
+      const rawRule =
+        rawDay.saturday_rule ??
+        rawDay.saturdayRule ??
+        parsed?.saturday_rule ??
+        parsed?.saturdayRule;
+      if (rawRule && VALID_SATURDAY_RULES.includes(rawRule as SaturdayRule)) {
+        dayEntry.saturday_rule = rawRule as SaturdayRule;
+      } else {
+        dayEntry.saturday_rule = is_off ? "off" : "all";
+      }
+    }
+
+    normalized[key] = dayEntry;
   });
 
   return normalized as WeeklySchedule;
@@ -272,6 +292,9 @@ export function weeklyScheduleToFlatFields(
       if (day.start_time) result[`${key}_start_time`] = day.start_time;
       if (day.end_time) result[`${key}_end_time`] = day.end_time;
       result[`${key}_is_off`] = day.is_off ? "true" : "false";
+      if (key === "saturday" && day.saturday_rule) {
+        result["saturday_rule"] = day.saturday_rule;
+      }
     }
   });
 

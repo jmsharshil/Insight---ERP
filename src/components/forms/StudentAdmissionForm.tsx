@@ -65,6 +65,9 @@ import {
   Link2,
   ArrowUpRight,
   Clock,
+  Sparkles,
+  ArrowLeft,
+  PlusCircle,
 } from "lucide-react";
 
 import { THEME } from "@/config/theme";
@@ -282,9 +285,10 @@ export default function StudentAdmissionForm() {
   const [remainingFeesAmount, setRemainingFeesAmount] = useState<string | number | null>(null);
   const [tokenTermsNote, setTokenTermsNote] = useState<string | null>(null);
 
-  // Resume Incomplete Admission Form state
-  const [isResumeModalOpen, setIsResumeModalOpen] = useState(false);
-  const [inputAppId, setInputAppId] = useState(admissionId || "");
+  // Admission Entry & Resume Modal state
+  const [isChoiceModalOpen, setIsChoiceModalOpen] = useState(!admissionId);
+  const [entryMode, setEntryMode] = useState<"select" | "resume">("select");
+  const [inputAdmissionId, setInputAdmissionId] = useState(admissionId || "");
   const [loadingExisting, setLoadingExisting] = useState(false);
   const [existingDocs, setExistingDocs] = useState<Record<string, string | null>>({});
 
@@ -299,11 +303,11 @@ export default function StudentAdmissionForm() {
     fetchLocations();
   }, [fetchLocations]);
 
-  /* ─── Fetch Admission by Application ID ────────────────────── */
+  /* ─── Fetch Admission by Admission ID ────────────────────── */
   const loadAdmissionById = (idToLoad: string, showToast = true) => {
     const trimmedId = idToLoad.trim();
     if (!trimmedId) {
-      toast.error("Please enter a valid Application ID.");
+      toast.error("Please enter a valid Admission ID.");
       return;
     }
 
@@ -317,12 +321,13 @@ export default function StudentAdmissionForm() {
       getResponse: (res: any) => {
         const data = res?.data?.data || res?.data || res;
         if (!data || (!data.id && !data.first_name && !data.email)) {
-          toast.error(`No admission record found for Application ID #${trimmedId}`);
+          toast.error(`No admission record found for Admission ID #${trimmedId}`);
           return;
         }
 
         const validId = String(data.id || trimmedId);
         setSavedAdmissionId(validId);
+        setInputAdmissionId(validId);
         setSearchParams({ id: validId });
 
         // Populate form data
@@ -408,10 +413,16 @@ export default function StudentAdmissionForm() {
         if (data.status_display) setAdmissionStatusDisplay(data.status_display);
         if (data.token_payment_terms_note) setTokenTermsNote(data.token_payment_terms_note);
 
-        setIsResumeModalOpen(false);
+        if (data.status === "submitted" || data.status === "confirmed" || data.payment_screenshot || data.transaction_id) {
+          setIsSubmitted(true);
+          setCurrentStep(4);
+        }
+
+        setIsChoiceModalOpen(false);
+        setEntryMode("select");
 
         if (showToast) {
-          toast.success(`Application #${validId} loaded successfully!`);
+          toast.success(`Admission ID #${validId} loaded successfully!`);
         }
       },
       getError: (err: any) => {
@@ -419,19 +430,97 @@ export default function StudentAdmissionForm() {
           err?.response?.data?.message ||
           err?.response?.data?.detail ||
           err?.message ||
-          `Failed to find Application #${trimmedId}. Please check the ID.`;
+          `Failed to find Admission ID #${trimmedId}. Please check the Admission ID.`;
         toast.error(msg);
       },
     });
   };
 
-  // If application ID is in URL on mount, auto-load it
+  // If admission ID is in URL on mount, auto-load it
   useEffect(() => {
     if (admissionId) {
       loadAdmissionById(admissionId, false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /* ─── Start Fresh New Admission Form ───────────────────────── */
+  const handleStartNewAdmission = () => {
+    setFormData({
+      form_type: "admission",
+      course: "cseet",
+      group_module: "full",
+      batch_attempt: "june",
+      attempt_year: new Date().getFullYear().toString(),
+      payment_type: "full_payment",
+      payment_mode: "online",
+      cheque_no: "",
+      icsi_fees_payment: "pay_yourself",
+      fee_structure: "",
+      first_name: "",
+      surname: "",
+      father_name: "",
+      mother_name: "",
+      street: "",
+      city: "",
+      state: "",
+      pincode: "",
+      country: "India",
+      dob: "",
+      category: "gen",
+      phone_student: "",
+      phone_father: "",
+      email: "",
+      email_parent: "",
+      qualification: "appearing_12",
+      tenth_medium: "gseb",
+      tenth_school: "",
+      tenth_percentage: "",
+      tenth_percentile: "",
+      twelfth_medium: "gseb",
+      twelfth_school: "",
+      tenth_coaching: "",
+      twelfth_coaching: "",
+      twelfth_percentage: "",
+      twelfth_percentile: "",
+      reference: "google",
+      reference_name: "",
+      inquiry_date: new Date().toISOString().split("T")[0],
+      location: "",
+      consent: true,
+    });
+    setSavedAdmissionId(null);
+    setInputAdmissionId("");
+    setSearchParams({});
+    setCurrentStep(1);
+    setIsSubmitted(false);
+    setExistingDocs({});
+    setDocSignature(null);
+    setDocPhoto(null);
+    setDocIdCard(null);
+    setDocPanCard(null);
+    setDocDobCertificate(null);
+    setDoc12thReceipt(null);
+    setDoc12thMarkSheet(null);
+    setDocCategoryCertificate(null);
+    setPaymentScreenshot(null);
+    setExistingPaymentScreenshot(null);
+    setTransactionId("");
+    setPaymentNote("");
+    setPaymentAmount("");
+    setPaymentSubmittedAt("");
+    setPaymentHistory([]);
+    setPaymentProofSuccess(false);
+    setRazorpayPaymentLink(null);
+    setAdmissionStatus(null);
+    setAdmissionStatusDisplay(null);
+    setTotalFeesAmount(null);
+    setRemainingFeesAmount(null);
+    setTokenTermsNote(null);
+    setIsChoiceModalOpen(false);
+    setEntryMode("select");
+    toast.info("Starting fresh New Admission Form");
+  };
 
   /* ─── Document state ──────────────────────────────────────── */
   const [docSignature, setDocSignature] = useState<File | null>(null);
@@ -1088,7 +1177,7 @@ interface ModuleOption {
 
         if (isFinalStep) {
           setIsSubmitted(true);
-          toast.success("Application details submitted successfully! Please proceed with payment proof.");
+          toast.success("Admission details submitted successfully! Please proceed with payment proof.");
 
           // Pre-populate expected payment amount if empty
           const instFee = getInstituteFee(matchedFee, formData.course, formData.group_module);
@@ -1130,7 +1219,7 @@ interface ModuleOption {
     if (e) e.preventDefault();
     const targetId = savedAdmissionId || admissionId;
     if (!targetId) {
-      toast.error("Application ID is missing. Please save Step 1-3 first.");
+      toast.error("Admission ID is missing. Please save Step 1-3 first.");
       return;
     }
 
@@ -1225,101 +1314,231 @@ interface ModuleOption {
             Complete the registration form below to confirm your admission
           </p>
 
-          {/* ── Incomplete Admission Form Banner / Trigger ── */}
+          {/* ── Admission Status / Switch Banner ── */}
           <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5">
-            <button
-              type="button"
-              onClick={() => {
-                setInputAppId(savedAdmissionId || "");
-                setIsResumeModalOpen(true);
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 shadow-sm hover:shadow cursor-pointer"
-            >
-              <FileEdit className="w-4 h-4 text-amber-600" />
-              <span>Incomplete admission form? <strong>Enter Application ID</strong></span>
-            </button>
+            {savedAdmissionId || admissionId ? (
+              <>
+                <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-sm">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>Admission ID: <strong>#{savedAdmissionId || admissionId}</strong></span>
+                </div>
 
-            {(savedAdmissionId || admissionId) && (
-              <div
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200"
-              >
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>Application ID: <strong>#{savedAdmissionId || admissionId}</strong></span>
-              </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInputAdmissionId(savedAdmissionId || admissionId || "");
+                    setEntryMode("resume");
+                    setIsChoiceModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 shadow-sm hover:shadow cursor-pointer"
+                >
+                  <Search className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Change Admission ID</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleStartNewAdmission}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 shadow-sm hover:shadow cursor-pointer"
+                >
+                  <PlusCircle className="w-3.5 h-3.5 text-gray-500" />
+                  <span>Start New Admission Form</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-amber-500/10 text-amber-900 border border-amber-300/80">
+                  <Sparkles className="w-4 h-4 text-amber-600" />
+                  <span>New Admission Form</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInputAdmissionId("");
+                    setEntryMode("resume");
+                    setIsChoiceModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 shadow-sm hover:shadow cursor-pointer"
+                >
+                  <FileEdit className="w-4 h-4 text-amber-600" />
+                  <span>Incomplete admission form? <strong>Enter Admission ID</strong></span>
+                </button>
+              </>
             )}
           </div>
         </div>
 
-        {/* ── Resume Incomplete Admission Form Modal ── */}
-        <Dialog open={isResumeModalOpen} onOpenChange={setIsResumeModalOpen}>
-          <DialogContent className="sm:max-w-md bg-white">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-base sm:text-lg font-bold" style={{ color: T.navy, fontFamily: T.headingFont }}>
-                <ClipboardList className="w-5 h-5 text-amber-600" />
-                Resume Incomplete Admission Form
-              </DialogTitle>
-              <DialogDescription className="text-xs sm:text-sm text-gray-600 pt-1">
-                Enter your <strong>Application ID</strong> below to retrieve your previously saved details and continue your admission form.
-              </DialogDescription>
-            </DialogHeader>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                loadAdmissionById(inputAppId);
+        {/* ── Choice & Resume Admission Modal ── */}
+        <Dialog open={isChoiceModalOpen} onOpenChange={setIsChoiceModalOpen}>
+          <DialogContent className="sm:max-w-lg p-0 overflow-hidden bg-white border border-gray-100 rounded-3xl shadow-2xl">
+            {/* Header */}
+            <div
+              className="px-6 pt-6 pb-5 text-white"
+              style={{
+                background: `linear-gradient(135deg, ${T.navy} 0%, #001733 100%)`,
+                borderBottom: `3px solid ${T.primary}`,
               }}
-              className="space-y-4 py-2"
             >
-              <div className="space-y-1.5">
-                <Label htmlFor="resume_application_id" className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                  Application ID <span style={{ color: T.error }}>*</span>
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="resume_application_id"
-                    type="text"
-                    required
-                    placeholder="e.g. 1042"
-                    value={inputAppId}
-                    onChange={(e) => setInputAppId(e.target.value)}
-                    disabled={loadingExisting}
-                    className="h-11 pl-9 text-sm font-semibold"
-                    autoFocus
-                  />
-                  <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3.5 pointer-events-none" />
+              <div className="flex items-center gap-3 mb-2">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center shadow-inner"
+                  style={{ background: "rgba(247,169,0,0.2)" }}
+                >
+                  <GraduationCap className="w-5 h-5" style={{ color: T.primary }} />
                 </div>
-                <p className="text-[11px] text-gray-500">
-                  Tip: Your Application ID is assigned after completing Step 1.
-                </p>
+                <div>
+                  <span className="text-[11px] font-bold tracking-wider uppercase text-amber-400">
+                    INSIGHT CS Classes
+                  </span>
+                  <DialogTitle className="text-lg sm:text-xl font-bold leading-tight text-white" style={{ fontFamily: T.headingFont }}>
+                    Student Admission Form
+                  </DialogTitle>
+                </div>
               </div>
+              <DialogDescription className="text-xs sm:text-sm text-gray-300">
+                {entryMode === "select"
+                  ? "Please select how you would like to proceed with your admission:"
+                  : "Enter your Admission ID below to retrieve your saved details and continue."}
+              </DialogDescription>
+            </div>
 
-              <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={loadingExisting}
-                  onClick={() => setIsResumeModalOpen(false)}
-                  className="h-10 px-4 text-xs font-semibold"
+            <div className="p-6">
+              {entryMode === "select" ? (
+                <div className="space-y-3.5">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Select Admission Option
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    {/* Option 1: New Admission Form */}
+                    <div
+                      onClick={() => {
+                        handleStartNewAdmission();
+                      }}
+                      className="group relative flex flex-col justify-between p-4 sm:p-5 rounded-2xl border-2 border-gray-200 hover:border-amber-400 bg-white hover:bg-amber-50/40 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md"
+                    >
+                      <div>
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-amber-100 text-amber-800 mb-3 group-hover:scale-105 transition-transform">
+                          <Sparkles className="w-5 h-5 text-amber-600" />
+                        </div>
+                        <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-full mb-1.5">
+                          Fresh Form
+                        </span>
+                        <h3 className="text-sm sm:text-base font-bold text-gray-900 group-hover:text-amber-700 transition-colors">
+                          New Admission Form
+                        </h3>
+                        <p className="text-xs text-gray-600 mt-1.5 leading-relaxed">
+                          Start a fresh admission application from Step 1.
+                        </p>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-gray-100 flex items-center text-xs font-bold text-amber-800 group-hover:underline">
+                        <span>Start New Admission</span>
+                        <span className="ml-1 transition-transform group-hover:translate-x-1">→</span>
+                      </div>
+                    </div>
+
+                    {/* Option 2: Incomplete Admission Form */}
+                    <div
+                      onClick={() => {
+                        setInputAdmissionId(savedAdmissionId || admissionId || "");
+                        setEntryMode("resume");
+                      }}
+                      className="group relative flex flex-col justify-between p-4 sm:p-5 rounded-2xl border-2 border-gray-200 hover:border-blue-400 bg-white hover:bg-blue-50/40 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md"
+                    >
+                      <div>
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-100 text-blue-800 mb-3 group-hover:scale-105 transition-transform">
+                          <ClipboardList className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-blue-800 bg-blue-100/80 px-2 py-0.5 rounded-full mb-1.5">
+                          Details Saved
+                        </span>
+                        <h3 className="text-sm sm:text-base font-bold text-gray-900 group-hover:text-blue-700 transition-colors">
+                          Incomplete Admission Form
+                        </h3>
+                        <p className="text-xs text-gray-600 mt-1.5 leading-relaxed">
+                          Already started? Enter your <strong>Admission ID</strong> to continue.
+                        </p>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-gray-100 flex items-center text-xs font-bold text-blue-700 group-hover:underline">
+                        <span>Enter Admission ID</span>
+                        <span className="ml-1 transition-transform group-hover:translate-x-1">→</span>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              ) : (
+                /* Resume Incomplete Admission Form View */
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    loadAdmissionById(inputAdmissionId);
+                  }}
+                  className="space-y-4"
                 >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={loadingExisting || !inputAppId.trim()}
-                  className="h-10 px-5 text-xs font-semibold text-black"
-                  style={{ background: T.primary }}
-                >
-                  {loadingExisting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Loading Application...
-                    </>
-                  ) : (
-                    "Load Application"
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="resume_admission_id" className="text-xs sm:text-sm font-semibold" style={{ color: T.text }}>
+                      Admission ID <span style={{ color: T.error }}>*</span>
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="resume_admission_id"
+                        type="text"
+                        required
+                        placeholder="e.g. 1042"
+                        value={inputAdmissionId}
+                        onChange={(e) => setInputAdmissionId(e.target.value)}
+                        disabled={loadingExisting}
+                        className="h-11 pl-9 text-sm font-semibold"
+                        autoFocus
+                      />
+                      <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3.5 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-between items-center gap-2 pt-3">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={loadingExisting}
+                      onClick={() => setEntryMode("select")}
+                      className="w-full sm:w-auto h-10 px-3 text-xs font-semibold text-gray-600 hover:text-gray-900"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-1.5" />
+                      Back to Options
+                    </Button>
+
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={loadingExisting}
+                        onClick={() => setIsChoiceModalOpen(false)}
+                        className="h-10 px-4 text-xs font-semibold"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={loadingExisting || !inputAdmissionId.trim()}
+                        className="h-10 px-5 text-xs font-semibold text-black"
+                        style={{ background: T.primary }}
+                      >
+                        {loadingExisting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Loading Admission...
+                          </>
+                        ) : (
+                          "Load Admission"
+                        )}
+                      </Button>
+                    </div>
+                  </DialogFooter>
+                </form>
+              )}
+            </div>
           </DialogContent>
         </Dialog>
 
@@ -1961,7 +2180,7 @@ interface ModuleOption {
                   <SelectContent>
                     <SelectItem value="full_payment">Full Payment</SelectItem>
                     <SelectItem value="token">Token Payment</SelectItem>
-                    <SelectItem value="finance">Finance</SelectItem>
+                    <SelectItem value="finance">Installment</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -2466,12 +2685,12 @@ interface ModuleOption {
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Submitting Application...
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Submitting Admission...
                 </>
               ) : (
                 <>
                   <ShieldCheck className="w-5 h-5 mr-2" />
-                  Submit Application & Proceed to Payment Proof
+                  Submit Admission & Proceed to Payment Proof
                 </>
               )}
             </Button>
@@ -2513,10 +2732,10 @@ interface ModuleOption {
                   Your registration form has been received successfully.
                 </p>
 
-                {/* Application Details Summary */}
+                {/* Admission Details Summary */}
                 <div className="p-4 sm:p-5 rounded-2xl bg-muted/30 border border-border/60 text-xs sm:text-sm text-left max-w-lg mx-auto space-y-2">
                   <div className="flex justify-between items-center pb-2 border-b border-border/40">
-                    <span className="text-muted-foreground font-medium">Application ID</span>
+                    <span className="text-muted-foreground font-medium">Admission ID</span>
                     <span className="font-mono font-bold text-foreground text-sm">#{savedAdmissionId || "Submitted"}</span>
                   </div>
                   <div className="flex justify-between items-center pb-2 border-b border-border/40">

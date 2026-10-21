@@ -11,6 +11,7 @@ import {
   Search,
   MessageSquareMore,
   BellRing,
+  Smartphone,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
@@ -56,6 +57,19 @@ export default function TopBar() {
         </h2>
 
         <div className="ml-auto flex items-center gap-3">
+          {/* Mobile App Download Button for Students & Parents */}
+          {(user?.role === "student" || user?.role === "parents" || user?.role === "parent") && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.dispatchEvent(new CustomEvent("open-mobile-app-modal"))}
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold h-8 px-2.5 rounded-full border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary transition-all shadow-xs"
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Get App</span>
+            </Button>
+          )}
+
           {/* Messages */}
           <Button
             variant="ghost"
