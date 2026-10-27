@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/useToast";
 import StatCard from "@/components/common/StatCard";
 import DataTable, { type DataTableColumn } from "@/components/common/DataTable";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -32,7 +33,9 @@ export default function StudentsTab() {
   const [batchesLoading, setBatchesLoading] = useState(false);
   const [assignLoading, setAssignLoading] = useState(false);
   const [selectedBatchId, setSelectedBatchId] = useState<string>("");
-  const { students, loading: studentsLoading } = useSelector((state: RootState) => state.students);
+  const { students, count: studentsCount, loading: studentsLoading } = useSelector((state: RootState) => state.students);
+  const [page, setPage] = useState<number>(1);
+  const pageSize = 50;
   const isSuperAdmin = user?.role === "super_admin";
 
   const filteredStudents = useMemo(() => {
@@ -43,10 +46,13 @@ export default function StudentsTab() {
     });
   }, [students, user]);
 
-  const fetchStudents = () => {
-    const endPoint = user && user.role === "branch_manager" && user.branch
+  const fetchStudents = (pageNumber = page) => {
+    let endPoint = user && user.role === "branch_manager" && user.branch
       ? `${API.STUDENTS.LIST}${API.STUDENTS.LIST.includes('?') ? '&' : '?'}branch_id=${user.branch}`
       : API.STUDENTS.LIST;
+
+    const separator = endPoint.includes('?') ? '&' : '?';
+    endPoint = `${endPoint}${separator}page=${pageNumber}&page_size=${pageSize}`;
 
     dispatch({
       type: studentActions.GET_STUDENTS,
@@ -56,7 +62,7 @@ export default function StudentsTab() {
       setLoading: (val: boolean) => dispatch(setStudentsLoading(val)),
       getResponse: (res: any) => {
         if (res?.success && res?.data) {
-          dispatch(setStudents({ data: res.data, count: res.count }));
+          dispatch(setStudents({ data: res.data, count: res.count ?? res.data?.length ?? 0 }));
         } else {
           dispatch(setStudentsError("Unexpected response format"));
           toast.error("Failed to load students data.");
@@ -71,8 +77,8 @@ export default function StudentsTab() {
   };
 
   useEffect(() => {
-    fetchStudents();
-  }, [dispatch, toast]);
+    fetchStudents(page);
+  }, [dispatch, toast, page]);
 
   useEffect(() => {
     if (!assignModalOpen) return;
@@ -224,7 +230,14 @@ export default function StudentsTab() {
     {
       key: "course",
       header: "Course",
-      render: (r) => <span className="capitalize">{r.course.replace(/_/g, " ")}</span>,
+      exportValue: (r) => (typeof r.course === "string" ? r.course : (r.course as any)?.name || ""),
+      render: (r) => (
+        <span className="capitalize">
+          {typeof r.course === "string"
+            ? r.course.replace(/_/g, " ")
+            : (r.course as any)?.name?.replace(/_/g, " ") || "—"}
+        </span>
+      ),
     },
     {
       key: "batch",
@@ -321,12 +334,24 @@ export default function StudentsTab() {
   }
 
   return (
-    <div className="mt-0 space-y-6">
+    <div className="mt-0 space-y-4">
+      <div className="flex items-center justify-end">
+        <Badge variant="outline" className="px-3 py-1.5 text-xs font-medium bg-muted/40 border-border">
+          Total Students: <span className="font-bold ml-1.5 text-foreground">{studentsCount || filteredStudents.length}</span>
+        </Badge>
+      </div>
+
       <DataTable 
         columns={cols} 
         data={filteredStudents} 
         exportable={isSuperAdmin} 
         onRowClick={(r) => navigate(`/students/${r.id}`)}
+        serverPagination={true}
+        currentPage={page}
+        totalCount={studentsCount || filteredStudents.length}
+        pageSize={pageSize}
+        onPageChange={(p) => setPage(p)}
+        loading={studentsLoading}
       />
 
       <Dialog open={assignModalOpen} onOpenChange={setAssignModalOpen}>

@@ -104,14 +104,16 @@ export default function FacultyDashboard() {
       value: data.kpis.today_sessions.toString(), 
       icon: Clock, 
       trend: "Sessions today", 
-      trendType: data.kpis.today_sessions > 0 ? "up" : "neutral" 
+      trendType: data.kpis.today_sessions > 0 ? "up" : "neutral",
+      link: "/timetable",
     },
     { 
       title: "Monthly Sessions", 
       value: data.kpis.monthly_sessions.toString(), 
       icon: Calendar, 
       trend: "Total this month", 
-      trendType: "neutral" 
+      trendType: "neutral",
+      link: "/timetable",
     },
     { 
       title: "Avg Completion", 

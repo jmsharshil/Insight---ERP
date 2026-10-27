@@ -15,9 +15,8 @@ import ConfirmDialog from "@/components/common/ConfirmDialog";
 import RejectionModal from "./components/RejectionModal";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const ADMIN_ROLES = ['super_admin', 'admin_senior_executive', 'admin_executive', 'accountant'];
-const BRANCH_MGR = ['branch_manager'];
-const ALL_APPROVERS = [...ADMIN_ROLES, ...BRANCH_MGR];
+const ADMIN_ROLES = ['super_admin', 'accountant'];
+const ALL_APPROVERS = [...ADMIN_ROLES];
 
 export default function ReimbursementDetailPage() {
   const { id } = useParams<{ id: string }>();

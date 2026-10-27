@@ -10,7 +10,9 @@ export interface RealStudent {
   group_module: string;
   batch_attempt: string;
   branch_name: string;
+  batch?: string | number | null;
   batch_name: string;
+  current_batch_name?: string;
   status: string;
   status_display: string;
   enrolled_at: string;

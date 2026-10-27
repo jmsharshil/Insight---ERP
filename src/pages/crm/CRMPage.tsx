@@ -19,6 +19,8 @@ import {
   RefreshCw,
   GripVertical,
   Pencil,
+  Filter,
+  X,
 } from "lucide-react";
 
 import PageHeader from "@/components/layout/PageHeader";
@@ -45,6 +47,13 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AreaChart,
   Area,
@@ -115,6 +124,7 @@ export default function CRMPage() {
   }, [leads, user]);
 
   const [tab, setTab] = useState("table");
+  const [stageFilter, setStageFilter] = useState("all");
   const [selectedLead, setSelectedLead] = useState<APILead | null>(null);
   const [isLeadDetailLoading, setIsLeadDetailLoading] = useState(false);
   const [isEditLeadOpen, setIsEditLeadOpen] = useState(false);
@@ -157,11 +167,14 @@ export default function CRMPage() {
 
   /* ─── Fetch leads list ─────────────────────────────────────── */
   const fetchLeads = useCallback(
-    (page: number = 1) => {
+    (page: number = 1, stage: string = stageFilter) => {
       const params = new URLSearchParams();
       params.set("page", String(page));
       if (user && user.role === "branch_manager" && user.branch) {
         params.set("branch_id", user.branch);
+      }
+      if (stage && stage !== "all") {
+        params.set("current_stage", stage);
       }
 
       const endPoint = `${API.LEADS.LIST}?${params.toString()}`;
@@ -190,11 +203,28 @@ export default function CRMPage() {
         },
       });
     },
-    [dispatch, toast, user],
+    [dispatch, toast, user, stageFilter],
+  );
+
+  const handleStageChange = useCallback(
+    (newStage: string) => {
+      setStageFilter(newStage);
+      fetchLeads(1, newStage);
+    },
+    [fetchLeads],
+  );
+
+  const handleStatCardClick = useCallback(
+    (newStage: string) => {
+      setTab("table");
+      setStageFilter(newStage);
+      fetchLeads(1, newStage);
+    },
+    [fetchLeads],
   );
 
   useEffect(() => {
-    fetchLeads(1);
+    fetchLeads(1, "all");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -306,6 +336,7 @@ export default function CRMPage() {
       body,
       getResponse: () => {
         fetchAnalytics();
+        fetchLeads(currentPage, stageFilter);
       },
       getError: () => {
         toast.error("Failed to update lead status");
@@ -317,7 +348,7 @@ export default function CRMPage() {
     setMoveNote("");
     setFollowUpDate("");
     setVisitDate("");
-  }, [pendingMove, moveNote, followUpDate, visitDate, leads, dispatch, toast, fetchAnalytics]);
+  }, [pendingMove, moveNote, followUpDate, visitDate, leads, dispatch, toast, fetchAnalytics, currentPage, stageFilter, fetchLeads]);
 
   const pendingLead = pendingMove ? leads.find((l) => String(l.id) === pendingMove.leadId) : null;
   const pendingTitle =
@@ -373,7 +404,7 @@ export default function CRMPage() {
             <Button
               onClick={() => {
                 fetchAnalytics();
-                fetchLeads(currentPage);
+                fetchLeads(currentPage, stageFilter);
               }}
               variant="outline"
               disabled={leadsLoading}
@@ -393,15 +424,31 @@ export default function CRMPage() {
       {/* ─── Stat cards ─────────────────────────────────────── */}
       {tab !== "field-activities" && tab !== "transfer-requests" && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
-          <StatCard title="Total Leads" value={stats.total} icon={Users} />
-          <StatCard title="New" value={stats.new} icon={UserPlus} />
-          <StatCard title="Contacted" value={stats.contacted} icon={Phone} />
+          <StatCard
+            title="Total Leads"
+            value={stats.total}
+            icon={Users}
+            onClick={() => handleStatCardClick("all")}
+          />
+          <StatCard
+            title="New"
+            value={stats.new}
+            icon={UserPlus}
+            onClick={() => handleStatCardClick("new")}
+          />
+          <StatCard
+            title="Contacted"
+            value={stats.contacted}
+            icon={Phone}
+            onClick={() => handleStatCardClick("contacted")}
+          />
           <StatCard
             title={<span className="flex flex-wrap items-center gap-1.5">Interested <span className="inline-flex shrink-0 items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 uppercase tracking-wider leading-none">🔥 Hot</span></span>}
             value={stats.interested}
             icon={TrendingUp}
             iconBgClassName="bg-red-100"
             iconClassName="text-red-700"
+            onClick={() => handleStatCardClick("interested")}
           />
           <StatCard
             title={<span className="flex flex-wrap items-center gap-1.5">Visit <span className="inline-flex shrink-0 items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider leading-none">🌡️ Warm</span></span>}
@@ -409,6 +456,7 @@ export default function CRMPage() {
             icon={MapPin}
             iconBgClassName="bg-amber-100"
             iconClassName="text-amber-700"
+            onClick={() => handleStatCardClick("visit")}
           />
           <StatCard
             title={<span className="flex flex-wrap items-center gap-1.5">Visited <span className="inline-flex shrink-0 items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider leading-none">🌡️ Warm</span></span>}
@@ -416,6 +464,7 @@ export default function CRMPage() {
             icon={CheckCircle2}
             iconBgClassName="bg-amber-100"
             iconClassName="text-amber-700"
+            onClick={() => handleStatCardClick("visited")}
           />
           <StatCard
             title={<span className="flex flex-wrap items-center gap-1.5">Follow Up <span className="inline-flex shrink-0 items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider leading-none">🌡️ Warm</span></span>}
@@ -423,20 +472,37 @@ export default function CRMPage() {
             icon={Clock}
             iconBgClassName="bg-amber-100"
             iconClassName="text-amber-700"
+            onClick={() => handleStatCardClick("follow_up")}
           />
-          <StatCard title="Converted" value={stats.converted} icon={CheckCircle2} trendType="up" />
+          <StatCard
+            title="Converted"
+            value={stats.converted}
+            icon={CheckCircle2}
+            trendType="up"
+            onClick={() => handleStatCardClick("converted")}
+          />
           <StatCard
             title={<span className="flex flex-wrap items-center gap-1.5">Lost <span className="inline-flex shrink-0 items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 uppercase tracking-wider leading-none">🧊 Cold</span></span>}
             value={stats.lost}
             icon={XCircle}
             iconBgClassName="bg-blue-100"
             iconClassName="text-blue-700"
+            onClick={() => handleStatCardClick("lost")}
           />
         </div>
       )}
 
       {/* ─── Tabs ────────────────────────────────────────────── */}
-      <Tabs value={tab} onValueChange={setTab}>
+      <Tabs
+        value={tab}
+        onValueChange={(t) => {
+          setTab(t);
+          if (t === "pipeline" && stageFilter !== "all") {
+            setStageFilter("all");
+            fetchLeads(1, "all");
+          }
+        }}
+      >
         <TabsList>
           <TabsTrigger value="table">Table</TabsTrigger>
           <TabsTrigger value="pipeline">Kanban Board</TabsTrigger>
@@ -449,6 +515,108 @@ export default function CRMPage() {
 
         {/* Table View */}
         <TabsContent value="table">
+          {/* Stage Filters Bar */}
+          <div className="bg-card border border-border rounded-xl p-3 sm:p-4 mb-4 shadow-sm flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-semibold text-text-primary">Stage Filter:</span>
+                {stageFilter !== "all" && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleStageChange("all")}
+                    className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Reset filter
+                  </Button>
+                )}
+              </div>
+
+              {/* Mobile / Compact Select */}
+              <div className="sm:hidden w-full">
+                <Select value={stageFilter} onValueChange={handleStageChange}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select Stage" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      All Stages ({stats.total})
+                    </SelectItem>
+                    {STAGES.map((s) => {
+                      const meta = LEAD_STATUS_META[s];
+                      const countForStage = (stats as any)[s] ?? 0;
+                      return (
+                        <SelectItem key={s} value={s}>
+                          {meta?.label || s} ({countForStage})
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Quick filter pill buttons */}
+            <div className="hidden sm:flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleStageChange("all")}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 flex items-center gap-1.5 border",
+                  stageFilter === "all"
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                    : "bg-muted/40 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <span>All Stages</span>
+                <span
+                  className={cn(
+                    "px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-none",
+                    stageFilter === "all"
+                      ? "bg-primary-foreground/20 text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {stats.total}
+                </span>
+              </button>
+
+              {STAGES.map((s) => {
+                const meta = LEAD_STATUS_META[s];
+                const stageCount = (stats as any)[s] ?? 0;
+                const isSelected = stageFilter === s;
+
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => handleStageChange(s)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 flex items-center gap-1.5 border",
+                      isSelected
+                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                        : "bg-muted/40 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <span>{meta?.label || s}</span>
+                    <span
+                      className={cn(
+                        "px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-none",
+                        isSelected
+                          ? "bg-primary-foreground/20 text-primary-foreground"
+                          : cn(meta?.bg, meta?.color)
+                      )}
+                    >
+                      {stageCount}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {leadsLoading && leads.length === 0 ? (
             <TableSkeleton rows={10} columns={8} className="mt-3" />
           ) : (
@@ -462,13 +630,13 @@ export default function CRMPage() {
                 setPendingMove({ leadId: String(lead.id), stage });
               }}
               onAssignSuccess={() => {
-                fetchLeads(currentPage);
+                fetchLeads(currentPage, stageFilter);
                 fetchAnalytics();
               }}
               currentPage={currentPage}
               totalCount={count}
               pageSize={pageSize}
-              onPageChange={(p) => fetchLeads(p)}
+              onPageChange={(p) => fetchLeads(p, stageFilter)}
               loading={leadsLoading}
             />
           )}
@@ -486,13 +654,13 @@ export default function CRMPage() {
               fetchLeadDetails(lead);
             }}
             onAssignSuccess={() => {
-              fetchLeads(currentPage);
+              fetchLeads(currentPage, "all");
               fetchAnalytics();
             }}
             currentPage={currentPage}
             totalCount={count}
             pageSize={pageSize}
-            onPageChange={(p) => fetchLeads(p)}
+            onPageChange={(p) => fetchLeads(p, "all")}
             stageTotals={stats}
           />
         </TabsContent>
