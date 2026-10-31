@@ -90,12 +90,22 @@ export interface FacultySummary {
 export interface FacultyDetail {
   employee_profile: { id: string; name: string; employee_id: string; email: string; role: string; branch_name: string };
   attendance_percentage: number;
-  summary: { present_count: number; absent_count: number; leave_count: number; late_count: number; attendance_percentage?: number };
+  summary: {
+    total_days?: number;
+    working_days?: number;
+    present_count: number;
+    absent_count: number;
+    leave_count: number;
+    late_count: number;
+    holiday_count?: number;
+    week_off_count?: number;
+    attendance_percentage?: number;
+  };
   day_wise_attendance: any[];
   recent_absences: any[];
   check_in_history: any[];
   check_out_history: any[];
-  monthly_trend: { month_name: string; percentage: number }[];
+  monthly_trend: { month?: string; month_name: string; percentage: number }[];
 }
 
 export interface AnalyticsData {
