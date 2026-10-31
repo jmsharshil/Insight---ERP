@@ -85,6 +85,7 @@ interface AdmissionState {
   selectedAdmissionLoading: boolean;
   loading: boolean;
   error: string | null;
+  count: number;
 }
 
 const initialState: AdmissionState = {
@@ -93,14 +94,25 @@ const initialState: AdmissionState = {
   selectedAdmissionLoading: false,
   loading: false,
   error: null,
+  count: 0,
 };
 
 const admissionSlice = createSlice({
   name: "admissions",
   initialState,
   reducers: {
-    setAdmissions(state, action: PayloadAction<AdmissionRecord[]>) {
-      state.admissions = action.payload;
+    setAdmissions(
+      state,
+      action: PayloadAction<AdmissionRecord[] | { data: AdmissionRecord[]; count?: number }>
+    ) {
+      if (Array.isArray(action.payload)) {
+        state.admissions = action.payload;
+        state.count = action.payload.length;
+      } else {
+        state.admissions = action.payload.data;
+        state.count = action.payload.count ?? action.payload.data.length;
+      }
+      state.loading = false;
       state.error = null;
     },
     setAdmissionsLoading(state, action: PayloadAction<boolean>) {

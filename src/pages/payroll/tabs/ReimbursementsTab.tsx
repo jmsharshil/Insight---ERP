@@ -42,9 +42,8 @@ import ReimbursementFormModal from "../../reimbursements/components/Reimbursemen
 import { useNavigate } from "react-router-dom";
 
 // We'll create these constants locally since they don't exist yet
-const ADMIN_ROLES = ['super_admin', 'admin_senior_executive', 'admin_executive', 'accountant'];
-const BRANCH_MGR = ['branch_manager'];
-const ALL_APPROVERS = [...ADMIN_ROLES, ...BRANCH_MGR];
+const ADMIN_ROLES = ['super_admin', 'accountant'];
+const ALL_APPROVERS = [...ADMIN_ROLES];
 
 export default function ReimbursementsTab() {
   const { user } = useAuth();
@@ -434,18 +433,6 @@ export default function ReimbursementsTab() {
             </SelectContent>
           </Select>
 
-          {/* Paid Status Filter */}
-          <Select value={isPaidFilter} onValueChange={setIsPaidFilter}>
-            <SelectTrigger className="w-[155px] h-9 text-xs sm:text-sm bg-card">
-              <SelectValue placeholder="Paid Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All (Paid/Unpaid)</SelectItem>
-              <SelectItem value="true">Paid</SelectItem>
-              <SelectItem value="false">Unpaid</SelectItem>
-            </SelectContent>
-          </Select>
-
           {/* Branch Filter (Global Admin only) */}
           {isGlobalAdmin && (
             <Select value={branchFilter} onValueChange={setBranchFilter}>
@@ -461,27 +448,43 @@ export default function ReimbursementsTab() {
             </Select>
           )}
 
-          {/* Date Range: From / To */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">From:</span>
-            <Input
+          {/* Date Range Filter */}
+          <div className="flex items-center h-9 rounded-md border border-input bg-card px-2.5 gap-2 text-xs shadow-xs focus-within:ring-1 focus-within:ring-ring focus-within:border-ring transition-colors">
+            <span className="text-xs text-muted-foreground font-medium select-none">From:</span>
+            <input
               type="date"
               aria-label="From Date"
-              className="h-9 w-[130px] text-xs bg-card"
               value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setFromDate(val);
+                if (toDate && val > toDate) setToDate(val);
+              }}
+              className="h-full text-xs sm:text-sm bg-transparent text-foreground focus:outline-none cursor-pointer w-[125px]"
             />
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">To:</span>
-            <Input
+            <span className="text-muted-foreground/30 font-light select-none">|</span>
+            <span className="text-xs text-muted-foreground font-medium select-none">To:</span>
+            <input
               type="date"
               aria-label="To Date"
-              className="h-9 w-[130px] text-xs bg-card"
+              min={fromDate || undefined}
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
+              className="h-full text-xs sm:text-sm bg-transparent text-foreground focus:outline-none cursor-pointer w-[125px]"
             />
+            {(fromDate || toDate) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFromDate("");
+                  setToDate("");
+                }}
+                className="p-0.5 rounded-sm hover:bg-muted text-muted-foreground hover:text-foreground transition-colors ml-0.5"
+                title="Clear date filter"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
           {/* Employee Dropdown (Approvers only) */}

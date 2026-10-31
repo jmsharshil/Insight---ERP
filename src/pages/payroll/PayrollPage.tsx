@@ -23,7 +23,7 @@ export default function PayrollPage() {
   const role = user?.role ?? "";
   const [branches, setBranches] = useState<any[]>([]);
 
-  const isAdmin    = ["super_admin"].includes(role);
+  const isAdmin    = ["super_admin", "branch_manager"].includes(role);
   const isAccount  = ["accountant"].includes(role);
   const isFaculty  = ["faculty"].includes(role);
   const canPreviewSalary = ["faculty", "exam_supervisor"].includes(role);
@@ -93,9 +93,9 @@ export default function PayrollPage() {
                 <TabsTrigger value="payslips" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md text-xs font-medium px-4 py-2 flex items-center gap-1.5 transition-all">
                   <FileText className="w-4 h-4" /> Payslips
                 </TabsTrigger>
-                <TabsTrigger value="extra-hours" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md text-xs font-medium px-4 py-2 flex items-center gap-1.5 transition-all">
+                {/* <TabsTrigger value="extra-hours" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md text-xs font-medium px-4 py-2 flex items-center gap-1.5 transition-all">
                   <Clock className="w-4 h-4" /> Extra Hours
-                </TabsTrigger>
+                </TabsTrigger> */}
               </>
             )}
 

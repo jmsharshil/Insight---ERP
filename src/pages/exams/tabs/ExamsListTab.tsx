@@ -112,6 +112,7 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
   const [papersLoading, setPapersLoading] = useState(false);
 
   const isAdmin   = user && ["super_admin", "branch_manager", "admin"].includes(user.role ?? "");
+  const isBranchManager = user?.role === "branch_manager";
   const canAddGraceMarks = user && ["super_admin", "admin_senior_executive", "branch_manager"].includes(user.role ?? "");
   const isStudent = user?.role === "student";
   const isParent  = user?.role === "parent" || user?.role === "parents";
@@ -172,7 +173,6 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
     if (statusFilter) params.append("status", statusFilter);
     if (batchFilter) params.append("batch_id", batchFilter);
     if (dateFilter) params.append("scheduled_date", dateFilter);
-    if (branchFilter) params.append("branch_id", branchFilter);
     if (subjectFilter) params.append("subject_id", subjectFilter);
 
     if (user?.role === "faculty") {
@@ -182,8 +182,10 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
         params.append("faculty_id", resolvedFacultyId);
       }
       // else: no facultyId yet (still loading), fetch will retry via useEffect below
-    } else if (user?.role === "branch_manager" && user?.branch && !branchFilter) {
+    } else if (isBranchManager && user?.branch) {
       params.append("branch_id", user.branch);
+    } else if (branchFilter) {
+      params.append("branch_id", branchFilter);
     }
 
     const queryString = params.toString();
@@ -490,17 +492,19 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
 
         {!isStudent && !isParent && (
           <>
-            <Select value={branchFilter || "all"} onValueChange={v => setBranchFilter(v === "all" ? "" : v)}>
-              <SelectTrigger className="w-[140px] h-9 text-sm bg-white">
-                <SelectValue placeholder="All Branches" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Branches</SelectItem>
-                {(Array.isArray(dropdowns?.branches) ? dropdowns.branches : []).map((b: any) => (
-                  <SelectItem key={b.id} value={String(b.id)}>{b.name || b.branch_name || `Branch ${b.id}`}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {!isBranchManager && (
+              <Select value={branchFilter || "all"} onValueChange={v => setBranchFilter(v === "all" ? "" : v)}>
+                <SelectTrigger className="w-[140px] h-9 text-sm bg-white">
+                  <SelectValue placeholder="All Branches" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Branches</SelectItem>
+                  {(Array.isArray(dropdowns?.branches) ? dropdowns.branches : []).map((b: any) => (
+                    <SelectItem key={b.id} value={String(b.id)}>{b.name || b.branch_name || `Branch ${b.id}`}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
 
             <Select value={batchFilter || "all"} onValueChange={v => setBatchFilter(v === "all" ? "" : v)}>
               <SelectTrigger className="w-[140px] h-9 text-sm bg-white">
@@ -509,7 +513,10 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
               <SelectContent>
                 <SelectItem value="all">All Batches</SelectItem>
                 {(Array.isArray(dropdowns?.batches) ? dropdowns.batches : [])
-                  .filter((b: any) => !branchFilter || branchFilter === "all" || String(b.branch) === branchFilter || String(b.branch_id) === branchFilter)
+                  .filter((b: any) => {
+                    const effectiveBranch = isBranchManager ? user?.branch : branchFilter;
+                    return !effectiveBranch || effectiveBranch === "all" || String(b.branch) === effectiveBranch || String(b.branch_id) === effectiveBranch;
+                  })
                   .map((b: any) => (
                   <SelectItem key={b.id} value={String(b.id)}>{b.name || b.batch_name || `Batch ${b.id}`}</SelectItem>
                 ))}

@@ -69,6 +69,7 @@ export const API = {
     LIST: "/api/v1/admissions/",
     GET: (id: string | number) => `/api/v1/admissions/${id}/`,
     SUBMIT: (id: string | number) => `/api/v1/admissions/${id}/`,
+    SETUP: (id: string | number) => `/api/v1/admissions/${id}/setup/`,
     APPROVE: (id: string | number) => `/api/v1/admissions/${id}/approve/`,
     REJECT: (id: string | number) => `/api/v1/admissions/${id}/reject/`,
     PAYMENT_UPLOAD: (id: string | number) => `/api/v1/admissions/${id}/payment/`,
@@ -203,7 +204,15 @@ BATCHES: {
     STUDENT_DETAIL: (id: string) => `/api/v1/attendance/students/${id}/`,
     HISTORY: "/api/v1/attendance/",
     FACULTY: "/api/v1/attendance/employee/",
-    FACULTY_DETAIL: (id: string) => `/api/v1/attendance/employee/${id}/`,
+    FACULTY_DETAIL: (id: string, params?: { from_date?: string; to_date?: string }) => {
+      const url = `/api/v1/attendance/employee/${id}/`;
+      if (!params) return url;
+      const q: Record<string, string> = {};
+      if (params.from_date) q.from_date = params.from_date;
+      if (params.to_date) q.to_date = params.to_date;
+      const qs = new URLSearchParams(q).toString();
+      return qs ? `${url}?${qs}` : url;
+    },
     ANALYTICS: "/api/v1/attendance/analytics/",
     DEFAULTERS: "/api/v1/attendance/defaulters/",
     VIOLATIONS: "/api/v1/attendance/violations/",

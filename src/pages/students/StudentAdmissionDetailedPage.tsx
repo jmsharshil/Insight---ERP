@@ -376,7 +376,7 @@ export default function StudentAdmissionDetailedPage() {
                       : "bg-gray-100 text-black"
               }
             >
-              {admission.status_display || admission.status.replace(/_/g, " ")}
+              {admission.status_display || admission.status?.replace(/_/g, " ") || "—"}
             </Badge>
             {admission.payment_type && (
               <Badge
@@ -750,7 +750,7 @@ export default function StudentAdmissionDetailedPage() {
                   )}
                   <div>
                     <p className="font-medium text-lg capitalize">
-                      {admission.status_display || admission.status.replace(/_/g, " ")}
+                      {admission.status_display || admission.status?.replace(/_/g, " ") || "—"}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {admission.status === "payment_pending"

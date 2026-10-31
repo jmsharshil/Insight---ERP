@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
+import { format } from "date-fns";
 import { Plus, CheckCircle2, XCircle, Clock, FileText, Trash2, Pencil, Search, AlertCircle } from "lucide-react";
 import { leaveActions } from "@/redux/actions";
 import { dropdownActions } from "@/redux/actions";
@@ -226,6 +227,8 @@ export default function ApplicationsTab({
   const canApprove = APPROVE_ROLES.includes(role);
   const canManageStudentLeaves = STUDENT_LEAVE_ADMIN_ROLES.includes(role);
 
+  const today = format(new Date(), "yyyy-MM-dd");
+
   // ── Filters & Subtabs ───────────────────────────────────────────────────
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -357,6 +360,15 @@ export default function ApplicationsTab({
 
   // ── Submit leave — FIXED branch_id ───────────────────────────────────────
   const handleApply = () => {
+    if (applyForm.from_date && applyForm.from_date < today) {
+      toast.error("From Date cannot be in the past.");
+      return;
+    }
+    if (applyForm.to_date && applyForm.from_date && applyForm.to_date < applyForm.from_date) {
+      toast.error("To Date cannot be earlier than From Date.");
+      return;
+    }
+
     const isStudentSubmit =
       isStudentContext ||
       isStudentUser ||
@@ -431,6 +443,14 @@ export default function ApplicationsTab({
   // ── Edit ──────────────────────────────────────────────────────────────────
   const handleEdit = () => {
     if (!editTarget) return;
+    if (editTarget.from_date && editTarget.from_date < today) {
+      toast.error("From Date cannot be in the past.");
+      return;
+    }
+    if (editTarget.to_date && editTarget.from_date && editTarget.to_date < editTarget.from_date) {
+      toast.error("To Date cannot be earlier than From Date.");
+      return;
+    }
     const isStudentLeave = isStudentContext || isStudentApplication(editTarget);
     dispatch({
       type: leaveActions.UPDATE_LEAVE,
@@ -675,7 +695,7 @@ export default function ApplicationsTab({
           ? `${filtered.length} personal application${filtered.length === 1 ? "" : "s"}`
           : mode === "student_leaves"
           ? `${applicationsCount} student application(s) total · ${filtered.length} shown`
-          : `${applicationsCount} application(s) total · ${filtered.length} shown`}
+          : `${filtered.length} staff application(s)`}
       </p>
 
       {/* Table */}
@@ -969,12 +989,14 @@ export default function ApplicationsTab({
                 <Label className="text-xs mb-1 block">From Date *</Label>
                 <Input
                   type="date"
+                  min={today}
                   value={applyForm.from_date}
                   onChange={(e) => {
                     const newFromDate = e.target.value;
                     setApplyForm((f) => ({
                       ...f,
                       from_date: newFromDate,
+                      ...(f.to_date && newFromDate > f.to_date ? { to_date: newFromDate } : {}),
                       ...(newFromDate !== f.to_date && { is_half_day: false }),
                     }));
                   }}
@@ -985,6 +1007,7 @@ export default function ApplicationsTab({
                 <Label className="text-xs mb-1 block">To Date *</Label>
                 <Input
                   type="date"
+                  min={applyForm.from_date || today}
                   value={applyForm.to_date}
                   onChange={(e) => {
                     const newToDate = e.target.value;
@@ -1107,6 +1130,8 @@ export default function ApplicationsTab({
                 applyLoading ||
                 !applyForm.from_date ||
                 !applyForm.to_date ||
+                applyForm.from_date < today ||
+                applyForm.to_date < applyForm.from_date ||
                 !applyForm.reason.trim() ||
                 (isSuperAdmin && !selectedBranch) ||
                 (role === "parents" && !applyForm.student_id && Boolean(user?.linked_students?.length))
@@ -1138,10 +1163,20 @@ export default function ApplicationsTab({
                   <Label className="text-xs mb-1 block">From Date</Label>
                   <Input
                     type="date"
+                    min={today}
                     value={editTarget.from_date}
-                    onChange={(e) =>
-                      setEditTarget((p) => (p ? { ...p, from_date: e.target.value } : null))
-                    }
+                    onChange={(e) => {
+                      const newFromDate = e.target.value;
+                      setEditTarget((p) =>
+                        p
+                          ? {
+                              ...p,
+                              from_date: newFromDate,
+                              ...(p.to_date && newFromDate > p.to_date ? { to_date: newFromDate } : {}),
+                            }
+                          : null
+                      );
+                    }}
                     className="h-9 text-sm"
                   />
                 </div>
@@ -1149,6 +1184,7 @@ export default function ApplicationsTab({
                   <Label className="text-xs mb-1 block">To Date</Label>
                   <Input
                     type="date"
+                    min={editTarget.from_date || today}
                     value={editTarget.to_date}
                     onChange={(e) =>
                       setEditTarget((p) => (p ? { ...p, to_date: e.target.value } : null))
@@ -1176,7 +1212,14 @@ export default function ApplicationsTab({
             </Button>
             <Button
               onClick={handleEdit}
-              disabled={editLoading}
+              disabled={
+                editLoading ||
+                !editTarget?.from_date ||
+                !editTarget?.to_date ||
+                editTarget.from_date < today ||
+                editTarget.to_date < editTarget.from_date ||
+                !editTarget?.reason?.trim()
+              }
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               {editLoading ? "Saving…" : "Update"}
