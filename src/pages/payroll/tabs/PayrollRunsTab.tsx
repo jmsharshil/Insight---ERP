@@ -59,8 +59,9 @@ export default function PayrollRunsTab({ branches, onViewPayslips }: PayrollRuns
   const isAdmin    = ["super_admin","branch_manager"].includes(role);
   const canApprove = ["super_admin","branch_manager"].includes(role);
   const canDisburse= ["super_admin","accountant"].includes(role);
-  const canGenerate= ["super_admin","branch_manager"].includes(role);
-  const canDelete  = ["super_admin","branch_manager"].includes(role);
+  const canGenerate= ["super_admin","accountant"].includes(role);
+  const canSubmit  = ["super_admin","accountant"].includes(role);
+  const canDelete  = ["super_admin"].includes(role);
 
   // Filter state
   const d = new Date();
@@ -350,7 +351,7 @@ export default function PayrollRunsTab({ branches, onViewPayslips }: PayrollRuns
                         {MONTH_NAMES[String(run.month)] ?? run.month} {run.year}
                       </td>
                       <td className="px-4 py-3 text-xs">{run.branch_name ?? "—"}</td>
-                      <td className="px-4 py-3 text-xs">{run.faculty_count} employees</td>
+                      <td className="px-4 py-3 text-xs">{run.employee_count ?? (run as any).faculty_count ?? 0} employees</td>
                       <td className="px-4 py-3 font-mono text-sm font-bold text-primary">
                         ₹{Number(run.total_amount ?? 0).toLocaleString("en-IN")}
                       </td>
@@ -378,7 +379,7 @@ export default function PayrollRunsTab({ branches, onViewPayslips }: PayrollRuns
                           </Button>
 
                           {/* Submit for Review (draft → pending_approval) */}
-                          {run.status === "draft" && canApprove && (
+                          {run.status === "draft" && canSubmit && (
                             <Button
                               variant="outline"
                               size="sm"

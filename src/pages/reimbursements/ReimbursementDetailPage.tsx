@@ -49,7 +49,7 @@ export default function ReimbursementDetailPage() {
       },
       getError: (err: any) => {
         toast.error(err?.response?.data?.message || "Failed to load claim details");
-        navigate("/reimbursements");
+        navigate("/payroll?tab=reimbursements");
       },
     });
   };
@@ -114,7 +114,7 @@ export default function ReimbursementDetailPage() {
         if (res?.success) {
           toast.success(res.message || "Claim deleted");
           setIsDeleteOpen(false);
-          navigate("/reimbursements");
+          navigate("/payroll?tab=reimbursements");
         }
       },
       getError: (err: any) => {

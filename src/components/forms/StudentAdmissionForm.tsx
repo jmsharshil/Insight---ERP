@@ -288,8 +288,10 @@ const STEP_1_FIELDS = [
   "category",
   "phone_student",
   "phone_father",
+  "phone_student_2",
   "email",
   "email_parent",
+  "qualification",
   "tenth_medium",
   "tenth_school",
   "tenth_percentage",
@@ -304,6 +306,7 @@ const STEP_1_FIELDS = [
   "reference_name",
   "inquiry_date",
   "location",
+  "branch",
 ];
 
 const STEP_2_FIELDS = [
@@ -593,8 +596,10 @@ export default function StudentAdmissionForm() {
 
   // Admission Entry & Resume Modal state
   const [isChoiceModalOpen, setIsChoiceModalOpen] = useState(!admissionId);
-  const [entryMode, setEntryMode] = useState<"select" | "resume">("select");
+  const [entryMode, setEntryMode] = useState<"select" | "resume" | "autofetch">("select");
   const [inputAdmissionId, setInputAdmissionId] = useState(admissionId || "");
+  const [autoFetchQuery, setAutoFetchQuery] = useState("");
+  const [autoFetchLoading, setAutoFetchLoading] = useState(false);
   const [isIncompleteAdmission, setIsIncompleteAdmission] = useState<boolean>(Boolean(admissionId));
   const [loadingExisting, setLoadingExisting] = useState(false);
   const [existingDocs, setExistingDocs] = useState<Record<string, string | null>>({});
@@ -631,6 +636,324 @@ export default function StudentAdmissionForm() {
     fetchLocations();
   }, [fetchLocations]);
 
+  // Fetch branches dropdown
+  const {
+    options: branches,
+    loading: branchesLoading,
+    fetchOptions: fetchBranches,
+  } = useDropdown("branches", false);
+
+  useEffect(() => {
+    fetchBranches();
+  }, [fetchBranches]);
+
+  /* ─── Populate Fetched Data Helper (all strings in UPPERCASE) ─── */
+  /* ─── Robust Date Formatter for HTML5 Date Inputs (YYYY-MM-DD) ─── */
+  const formatToISODate = (dateVal: any): string => {
+    if (!dateVal) return "";
+    const str = String(dateVal).trim().split("T")[0].split(" ")[0];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+    const dmyMatch = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+    if (dmyMatch) {
+      const [, day, month, year] = dmyMatch;
+      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    }
+    const ymdMatch = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+    if (ymdMatch) {
+      const [, year, month, day] = ymdMatch;
+      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    }
+    const parsed = new Date(str);
+    if (!isNaN(parsed.getTime())) {
+      return parsed.toISOString().split("T")[0];
+    }
+    return "";
+  };
+
+  const applyFetchedData = (
+    data: any,
+    validAdmissionId?: string,
+    targetStep?: number,
+    showToast = true
+  ) => {
+    const validId = String(data.admission_id || data.id || validAdmissionId || "");
+    if (validId) {
+      setSavedAdmissionId(validId);
+      setInputAdmissionId(validId);
+      setIsIncompleteAdmission(true);
+      setSearchParams({ id: validId });
+    }
+
+    // Retrieve cached inquiry from localStorage if any fields are missing from backend response
+    const cleanStudentPhone = String(data.phone_student || "").replace(/\D/g, "");
+    const cleanFatherPhone = String(data.phone_father || "").replace(/\D/g, "");
+    const cacheKeys = [
+      validId ? `inquiry_cache_id_${validId}` : null,
+      data.lead ? `inquiry_cache_id_${data.lead}` : null,
+      cleanStudentPhone ? `inquiry_cache_phone_${cleanStudentPhone}` : null,
+      cleanStudentPhone.length >= 10 ? `inquiry_cache_phone_${cleanStudentPhone.slice(-10)}` : null,
+      cleanFatherPhone ? `inquiry_cache_phone_${cleanFatherPhone}` : null,
+      cleanFatherPhone.length >= 10 ? `inquiry_cache_phone_${cleanFatherPhone.slice(-10)}` : null,
+      "latest_inquiry_data",
+      "latest_admission_cache",
+    ].filter(Boolean) as string[];
+
+    let cached: any = null;
+    for (const k of cacheKeys) {
+      try {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          cached = JSON.parse(raw);
+          break;
+        }
+      } catch (e) {}
+    }
+
+    // Populate form data with uppercase transformation for text fields, merging backend data and cached inquiry
+    setFormData((prev) => ({
+      ...prev,
+      form_type: data.form_type || cached?.form_type || prev.form_type,
+      course: data.course || cached?.course || prev.course,
+      group_module: data.group_module || cached?.group_module || prev.group_module,
+      batch_attempt: data.batch_attempt || cached?.batch_attempt || prev.batch_attempt,
+      attempt_year: data.attempt_year ? String(data.attempt_year) : (cached?.attempt_year ? String(cached.attempt_year) : prev.attempt_year),
+      payment_type: data.payment_type || cached?.payment_type || prev.payment_type,
+      payment_mode: data.payment_choice || data.payment_mode || cached?.payment_mode || prev.payment_mode || "online",
+      cheque_no: data.cheque_no ? String(data.cheque_no).toUpperCase() : (cached?.cheque_no ? String(cached.cheque_no).toUpperCase() : ""),
+      icsi_fees_payment: data.icsi_fees_payment || cached?.icsi_fees_payment || prev.icsi_fees_payment,
+      fee_structure: data.fee_structure
+        ? typeof data.fee_structure === "object"
+          ? String(data.fee_structure.id || "")
+          : String(data.fee_structure)
+        : cached?.fee_structure ? String(cached.fee_structure) : prev.fee_structure,
+      first_name: (data.first_name || cached?.first_name || "") ? String(data.first_name || cached?.first_name).toUpperCase() : "",
+      surname: (data.surname || cached?.surname || "") ? String(data.surname || cached?.surname).toUpperCase() : "",
+      father_name: (data.father_name || cached?.father_name || "") ? String(data.father_name || cached?.father_name).toUpperCase() : "",
+      mother_name: (
+        data.mother_name ||
+        data.mother ||
+        data.mother_full_name ||
+        data.motherName ||
+        cached?.mother_name ||
+        cached?.mother ||
+        ""
+      )
+        ? String(
+            data.mother_name ||
+            data.mother ||
+            data.mother_full_name ||
+            data.motherName ||
+            cached?.mother_name ||
+            cached?.mother
+          ).toUpperCase()
+        : "",
+      street: (data.street || cached?.street || "") ? String(data.street || cached?.street).toUpperCase() : "",
+      city: (data.city || cached?.city || "") ? String(data.city || cached?.city).toUpperCase() : "",
+      state: (data.state || cached?.state || "") ? String(data.state || cached?.state).toUpperCase() : "",
+      pincode: (
+        data.pincode ||
+        data.postal_code ||
+        data.zip_code ||
+        data.pin ||
+        data.pin_code ||
+        data.pinCode ||
+        cached?.pincode ||
+        cached?.postal_code ||
+        ""
+      )
+        ? String(
+            data.pincode ||
+            data.postal_code ||
+            data.zip_code ||
+            data.pin ||
+            data.pin_code ||
+            data.pinCode ||
+            cached?.pincode ||
+            cached?.postal_code
+          ).toUpperCase()
+        : "",
+      country: (data.country || cached?.country || "INDIA") ? String(data.country || cached?.country || "INDIA").toUpperCase() : "INDIA",
+      dob: formatToISODate(
+        data.dob ||
+        data.date_of_birth ||
+        data.birth_date ||
+        data.dateOfBirth ||
+        cached?.dob ||
+        cached?.date_of_birth
+      ),
+      category: data.category
+        ? String(data.category).toLowerCase()
+        : data.caste
+        ? String(data.caste).toLowerCase()
+        : cached?.category
+        ? String(cached.category).toLowerCase()
+        : "gen",
+      phone_student: data.phone_student || cached?.phone_student || "",
+      phone_father: data.phone_father || cached?.phone_father || "",
+      phone_student_2:
+        data.phone_student_2 ||
+        data.phone_mother ||
+        data.mother_phone ||
+        data.phone_parent ||
+        data.phone_student2 ||
+        data.phoneStudent2 ||
+        data.secondary_phone ||
+        cached?.phone_student_2 ||
+        cached?.phone_mother ||
+        cached?.mother_phone ||
+        "",
+      email: (data.email || cached?.email || "") ? String(data.email || cached?.email).toLowerCase() : "",
+      email_parent: (
+        data.email_parent ||
+        data.parent_email ||
+        data.father_email ||
+        data.mother_email ||
+        data.emailParent ||
+        data.parentEmail ||
+        cached?.email_parent ||
+        cached?.parent_email ||
+        ""
+      )
+        ? String(
+            data.email_parent ||
+            data.parent_email ||
+            data.father_email ||
+            data.mother_email ||
+            data.emailParent ||
+            data.parentEmail ||
+            cached?.email_parent ||
+            cached?.parent_email
+          ).toLowerCase()
+        : "",
+      qualification: data.qualification || cached?.qualification || prev.qualification,
+      tenth_medium: data.tenth_medium || cached?.tenth_medium || prev.tenth_medium,
+      tenth_school: (data.tenth_school || cached?.tenth_school || "") ? String(data.tenth_school || cached?.tenth_school).toUpperCase() : "",
+      tenth_percentage: data.tenth_percentage != null ? String(data.tenth_percentage) : (cached?.tenth_percentage != null ? String(cached.tenth_percentage) : ""),
+      tenth_percentile: data.tenth_percentile != null ? String(data.tenth_percentile) : (cached?.tenth_percentile != null ? String(cached.tenth_percentile) : ""),
+      twelfth_medium: data.twelfth_medium || cached?.twelfth_medium || prev.twelfth_medium,
+      twelfth_school: (data.twelfth_school || cached?.twelfth_school || "") ? String(data.twelfth_school || cached?.twelfth_school).toUpperCase() : "",
+      tenth_coaching: (data.tenth_coaching || cached?.tenth_coaching || "") ? String(data.tenth_coaching || cached?.tenth_coaching).toUpperCase() : "",
+      twelfth_coaching: (data.twelfth_coaching || cached?.twelfth_coaching || "") ? String(data.twelfth_coaching || cached?.twelfth_coaching).toUpperCase() : "",
+      twelfth_percentage: data.twelfth_percentage != null ? String(data.twelfth_percentage) : (cached?.twelfth_percentage != null ? String(cached.twelfth_percentage) : ""),
+      twelfth_percentile: data.twelfth_percentile != null ? String(data.twelfth_percentile) : (cached?.twelfth_percentile != null ? String(cached.twelfth_percentile) : ""),
+      reference: data.reference || cached?.reference || prev.reference,
+      reference_name: (data.reference_name || cached?.reference_name || "") ? String(data.reference_name || cached?.reference_name).toUpperCase() : "",
+      inquiry_date: formatToISODate(data.inquiry_date || cached?.inquiry_date) || prev.inquiry_date,
+      location: (data.location || cached?.location || "")
+        ? String(data.location || cached?.location).toUpperCase()
+        : data.branch?.name
+        ? String(data.branch.name).toUpperCase()
+        : "",
+      branch: data.branch
+        ? typeof data.branch === "object"
+          ? String(data.branch.id || "")
+          : String(data.branch)
+        : cached?.branch ? String(cached.branch) : prev.branch || "",
+      consent: data.consent !== undefined ? Boolean(data.consent) : true,
+    }));
+
+    // If backend was missing fields and we filled them from cached inquiry, sync to backend admission in background
+    if (validId && cached) {
+      const patchForm = new FormData();
+      let hasUpdates = false;
+      if (!data.mother_name && cached.mother_name) {
+        patchForm.append("mother_name", cached.mother_name.toUpperCase());
+        hasUpdates = true;
+      }
+      if (!data.dob && cached.dob) {
+        const parsedDob = formatToISODate(cached.dob);
+        if (parsedDob) {
+          patchForm.append("dob", parsedDob);
+          hasUpdates = true;
+        }
+      }
+      if (!data.category && cached.category) {
+        patchForm.append("category", cached.category.toLowerCase());
+        hasUpdates = true;
+      }
+      if (!data.email_parent && cached.email_parent) {
+        patchForm.append("email_parent", cached.email_parent.toLowerCase());
+        hasUpdates = true;
+      }
+      if (!data.phone_student_2 && cached.phone_student_2) {
+        patchForm.append("phone_student_2", cached.phone_student_2);
+        hasUpdates = true;
+      }
+      if (!data.pincode && cached.pincode) {
+        patchForm.append("pincode", cached.pincode.toUpperCase());
+        hasUpdates = true;
+      }
+
+      if (hasUpdates) {
+        axiosRequest({
+          baseURL: import.meta.env.VITE_APP_BASE_URL,
+          url: `/api/v1/admissions/${validId}/`,
+          method: "PATCH",
+          data: patchForm,
+        }).catch((e) => console.warn("Background admission FormData patch failed:", e));
+      }
+    }
+
+    // Populate existing documents if available
+    setExistingDocs({
+      doc_signature: data.doc_signature || null,
+      doc_photo: data.doc_photo || null,
+      doc_id_card: data.doc_id_card || null,
+      doc_pan_card: data.doc_pan_card || null,
+      doc_dob_certificate: data.doc_dob_certificate || null,
+      doc_twelfth_receipt: data.doc_twelfth_receipt || null,
+      doc_twelfth_marksheet: data.doc_twelfth_marksheet || null,
+      doc_category_cert: data.doc_category_cert || null,
+    });
+
+    // Populate existing payment proof details if available
+    if (data.transaction_id) setTransactionId(String(data.transaction_id).toUpperCase());
+    if (data.payment_note) setPaymentNote(String(data.payment_note).toUpperCase());
+    if (data.payment_amount != null) setPaymentAmount(String(data.payment_amount));
+    if (data.payment_submitted_at) setPaymentSubmittedAt(data.payment_submitted_at.slice(0, 16));
+    if (data.payment_screenshot) {
+      setExistingPaymentScreenshot(data.payment_screenshot);
+      setPaymentProofSuccess(true);
+    }
+    if (Array.isArray(data.payment_history)) {
+      setPaymentHistory(data.payment_history);
+    }
+    if (data.razorpay_payment_link) {
+      setRazorpayPaymentLink(data.razorpay_payment_link);
+    }
+    if (data.total_fees != null) setTotalFeesAmount(data.total_fees);
+    if (data.remaining_fees != null) setRemainingFeesAmount(data.remaining_fees);
+    if (data.status) setAdmissionStatus(data.status);
+    if (data.status_display) setAdmissionStatusDisplay(data.status_display);
+    if (data.token_payment_terms_note) setTokenTermsNote(data.token_payment_terms_note);
+
+    if (targetStep !== undefined) {
+      setCurrentStep(targetStep);
+    } else {
+      if (data.status === "submitted" || data.status === "confirmed" || data.doc_signature || data.doc_photo) {
+        setIsSubmitted(true);
+        setCurrentStep(4);
+      } else if (data.payment_screenshot || data.transaction_id) {
+        setCurrentStep(4);
+      } else if (Array.isArray(data.payment_history) && data.payment_history.length > 0) {
+        setCurrentStep(3);
+      } else if (data.first_name) {
+        setCurrentStep(1);
+      }
+    }
+
+    setIsChoiceModalOpen(false);
+    setEntryMode("select");
+
+    if (showToast) {
+      toast.success(
+        validId
+          ? `Admission #${validId} loaded successfully with details in capital!`
+          : "Details loaded successfully in capital format!"
+      );
+    }
+  };
+
   /* ─── Fetch Admission by Admission ID ────────────────────── */
   const loadAdmissionById = (idToLoad: string, showToast = true) => {
     const trimmedId = idToLoad.trim();
@@ -646,166 +969,40 @@ export default function StudentAdmissionForm() {
       endPoint: API.ADMISSIONS.GET(trimmedId),
       auth: false,
       setLoading: (val: boolean) => setLoadingExisting(val),
-      getResponse: (res: any) => {
-        const data = res?.data?.data || res?.data || res;
+      getResponse: async (res: any) => {
+        let data = res?.data?.data || res?.data || res;
         if (!data || (!data.id && !data.admission_id && !data.first_name && !data.email)) {
           toast.error(`No admission record found for Admission ID #${trimmedId}`);
           return;
         }
 
         const validId = String(data.admission_id || data.id || trimmedId);
-        setSavedAdmissionId(validId);
-        setInputAdmissionId(validId);
-        setIsIncompleteAdmission(true);
-        setSearchParams({ id: validId });
 
-        // Populate form data
-        setFormData((prev) => ({
-          ...prev,
-          form_type: data.form_type || prev.form_type,
-          course: data.course || prev.course,
-          group_module: data.group_module || prev.group_module,
-          batch_attempt: data.batch_attempt || prev.batch_attempt,
-          attempt_year: data.attempt_year ? String(data.attempt_year) : prev.attempt_year,
-          payment_type: data.payment_type || prev.payment_type,
-          payment_mode: data.payment_choice || data.payment_mode || prev.payment_mode || "online",
-          cheque_no: data.cheque_no || "",
-          icsi_fees_payment: data.icsi_fees_payment || prev.icsi_fees_payment,
-          fee_structure: data.fee_structure
-            ? typeof data.fee_structure === "object"
-              ? String(data.fee_structure.id || "")
-              : String(data.fee_structure)
-            : prev.fee_structure,
-          first_name: data.first_name || "",
-          surname: data.surname || "",
-          father_name: data.father_name || "",
-          mother_name: data.mother_name || "",
-          street: data.street || "",
-          city: data.city || "",
-          state: data.state || "",
-          pincode: data.pincode || "",
-          country: data.country || "India",
-          dob: data.dob ? data.dob.split("T")[0] : "",
-          category: data.category ? data.category.toLowerCase() : "gen",
-          phone_student: data.phone_student || "",
-          phone_father: data.phone_father || "",
-          email: data.email || "",
-          email_parent: data.email_parent || "",
-          qualification: data.qualification || prev.qualification,
-          tenth_medium: data.tenth_medium || prev.tenth_medium,
-          tenth_school: data.tenth_school || "",
-          tenth_percentage: data.tenth_percentage != null ? String(data.tenth_percentage) : "",
-          tenth_percentile: data.tenth_percentile != null ? String(data.tenth_percentile) : "",
-          twelfth_medium: data.twelfth_medium || prev.twelfth_medium,
-          twelfth_school: data.twelfth_school || "",
-          tenth_coaching: data.tenth_coaching || "",
-          twelfth_coaching: data.twelfth_coaching || "",
-          twelfth_percentage: data.twelfth_percentage != null ? String(data.twelfth_percentage) : "",
-          twelfth_percentile: data.twelfth_percentile != null ? String(data.twelfth_percentile) : "",
-          reference: data.reference || prev.reference,
-          reference_name: data.reference_name || "",
-          inquiry_date: data.inquiry_date ? data.inquiry_date.split("T")[0] : prev.inquiry_date,
-          location: data.location || (data.branch?.name || ""),
-          consent: data.consent !== undefined ? Boolean(data.consent) : true,
-        }));
+        // If any key step 1 fields are empty on the admission record, check if associated lead has them
+        const isMissingFields =
+          !data.mother_name ||
+          !data.dob ||
+          !data.phone_student_2 ||
+          !data.email_parent ||
+          !data.pincode;
 
-        // Populate autofilled fields tracker so existing data cannot be edited
-        const autofilled: Record<string, boolean> = {};
-        const markIfPresent = (key: string, val: any) => {
-          if (val !== undefined && val !== null && String(val).trim() !== "" && val !== false) {
-            autofilled[key] = true;
+        if (isMissingFields && data.lead) {
+          try {
+            const leadRes = await axiosRequest({
+              baseURL: import.meta.env.VITE_APP_BASE_URL,
+              url: API.LEADS.GET(data.lead),
+              method: "GET",
+            });
+            const leadData = leadRes?.data?.data || leadRes?.data || leadRes;
+            if (leadData) {
+              data = { ...leadData, ...data };
+            }
+          } catch (e) {
+            // ignore lead fetch error
           }
-        };
-
-        markIfPresent("first_name", data.first_name);
-        markIfPresent("surname", data.surname);
-        markIfPresent("father_name", data.father_name);
-        markIfPresent("mother_name", data.mother_name);
-        markIfPresent("dob", data.dob);
-        markIfPresent("category", data.category);
-        markIfPresent("phone_student", data.phone_student);
-        markIfPresent("phone_father", data.phone_father);
-        markIfPresent("email", data.email);
-        markIfPresent("email_parent", data.email_parent);
-        markIfPresent("street", data.street);
-        markIfPresent("city", data.city);
-        markIfPresent("state", data.state);
-        markIfPresent("pincode", data.pincode);
-        markIfPresent("country", data.country);
-        markIfPresent("tenth_medium", data.tenth_medium);
-        markIfPresent("tenth_school", data.tenth_school);
-        markIfPresent("tenth_coaching", data.tenth_coaching);
-        markIfPresent("tenth_percentage", data.tenth_percentage);
-        markIfPresent("tenth_percentile", data.tenth_percentile);
-        markIfPresent("twelfth_medium", data.twelfth_medium);
-        markIfPresent("twelfth_school", data.twelfth_school);
-        markIfPresent("twelfth_coaching", data.twelfth_coaching);
-        markIfPresent("twelfth_percentage", data.twelfth_percentage);
-        markIfPresent("twelfth_percentile", data.twelfth_percentile);
-        markIfPresent("reference", data.reference);
-        markIfPresent("reference_name", data.reference_name);
-        markIfPresent("inquiry_date", data.inquiry_date);
-        markIfPresent("location", data.location || data.branch?.name);
-        markIfPresent("qualification", data.qualification);
-        markIfPresent("course", data.course);
-        markIfPresent("group_module", data.group_module);
-        markIfPresent("batch_attempt", data.batch_attempt);
-        markIfPresent("attempt_year", data.attempt_year);
-        markIfPresent("payment_type", data.payment_type);
-        markIfPresent("payment_mode", data.payment_choice || data.payment_mode);
-        markIfPresent("cheque_no", data.cheque_no);
-        markIfPresent("icsi_fees_payment", data.icsi_fees_payment);
-        markIfPresent("fee_structure", data.fee_structure);
-        markIfPresent("transaction_id", data.transaction_id);
-        markIfPresent("payment_amount", data.payment_amount);
-        markIfPresent("payment_submitted_at", data.payment_submitted_at);
-
-        setAutofilledFields(autofilled);
-
-        // Populate existing documents if available
-        setExistingDocs({
-          doc_signature: data.doc_signature || null,
-          doc_photo: data.doc_photo || null,
-          doc_id_card: data.doc_id_card || null,
-          doc_pan_card: data.doc_pan_card || null,
-          doc_dob_certificate: data.doc_dob_certificate || null,
-          doc_twelfth_receipt: data.doc_twelfth_receipt || null,
-          doc_twelfth_marksheet: data.doc_twelfth_marksheet || null,
-          doc_category_cert: data.doc_category_cert || null,
-        });
-
-        // Populate existing payment proof details if available
-        if (data.transaction_id) setTransactionId(data.transaction_id);
-        if (data.payment_note) setPaymentNote(data.payment_note);
-        if (data.payment_amount != null) setPaymentAmount(String(data.payment_amount));
-        if (data.payment_submitted_at) setPaymentSubmittedAt(data.payment_submitted_at);
-        if (data.payment_screenshot) {
-          setExistingPaymentScreenshot(data.payment_screenshot);
-          setPaymentProofSuccess(true);
-        }
-        if (Array.isArray(data.payment_history)) {
-          setPaymentHistory(data.payment_history);
-        }
-        if (data.razorpay_payment_link) {
-          setRazorpayPaymentLink(data.razorpay_payment_link);
-        }
-        if (data.total_fees != null) setTotalFeesAmount(data.total_fees);
-        if (data.remaining_fees != null) setRemainingFeesAmount(data.remaining_fees);
-        if (data.status) setAdmissionStatus(data.status);
-        if (data.status_display) setAdmissionStatusDisplay(data.status_display);
-        if (data.token_payment_terms_note) setTokenTermsNote(data.token_payment_terms_note);
-
-        if (data.status === "submitted" || data.status === "confirmed" || data.payment_screenshot || data.transaction_id) {
-          setIsSubmitted(true);
-          setCurrentStep(4);
         }
 
-        setIsChoiceModalOpen(false);
-        setEntryMode("select");
-
-        if (showToast) {
-          toast.success(`Admission ID #${validId} loaded successfully!`);
-        }
+        applyFetchedData(data, validId, undefined, showToast);
       },
       getError: (err: any) => {
         const msg =
@@ -818,10 +1015,149 @@ export default function StudentAdmissionForm() {
     });
   };
 
-  // If admission ID is in URL on mount, auto-load it
+  /* ─── Auto-Fetch by Phone, Lead/Inquiry ID, or Admission ID ─── */
+  const handleAutoFetch = async (queryToSearch: string) => {
+    const rawQuery = (queryToSearch || "").trim();
+    if (!rawQuery) {
+      toast.error("Please enter a Phone Number, Inquiry ID, or Admission ID.");
+      return;
+    }
+
+    setAutoFetchLoading(true);
+
+    const isPhone = /^[0-9+()-\s]{10,}$/.test(rawQuery) && rawQuery.replace(/\D/g, "").length >= 10;
+    const cleanPhone = rawQuery.replace(/\D/g, "");
+
+    try {
+      if (isPhone) {
+        const clean10 = cleanPhone.slice(-10);
+
+        // 1. Check local cache first
+        const cachedRaw =
+          localStorage.getItem(`inquiry_cache_phone_${cleanPhone}`) ||
+          localStorage.getItem(`inquiry_cache_phone_${clean10}`);
+        let cachedInquiry: any = null;
+        if (cachedRaw) {
+          try {
+            cachedInquiry = JSON.parse(cachedRaw);
+          } catch (e) {}
+        }
+
+        // 2. Look up admissions by student/father/mother phone from backend
+        try {
+          const phoneRes = await axiosRequest({
+            baseURL: import.meta.env.VITE_APP_BASE_URL,
+            url: API.ADMISSIONS.LIST,
+            method: "GET",
+          });
+          const admissions = phoneRes?.data?.data || phoneRes?.data || [];
+          if (Array.isArray(admissions) && admissions.length > 0) {
+            const matchingAdmission = admissions.find((item: any) => {
+              const sPhone = String(item.phone_student || "").replace(/\D/g, "");
+              const fPhone = String(item.phone_father || "").replace(/\D/g, "");
+              const mPhone = String(item.phone_student_2 || item.phone_mother || "").replace(/\D/g, "");
+              return (
+                (sPhone && (sPhone.endsWith(clean10) || clean10.endsWith(sPhone))) ||
+                (fPhone && (fPhone.endsWith(clean10) || clean10.endsWith(fPhone))) ||
+                (mPhone && (mPhone.endsWith(clean10) || clean10.endsWith(mPhone)))
+              );
+            });
+
+            if (matchingAdmission) {
+              const admissionIdToFetch = matchingAdmission.id || matchingAdmission.admission_id;
+              const detailRes = await axiosRequest({
+                baseURL: import.meta.env.VITE_APP_BASE_URL,
+                url: API.ADMISSIONS.GET(admissionIdToFetch),
+                method: "GET",
+              });
+              const detailData = detailRes?.data?.data || detailRes?.data || detailRes;
+              applyFetchedData(detailData, String(admissionIdToFetch), 1, true);
+              setAutoFetchLoading(false);
+              return;
+            }
+          }
+        } catch (apiErr) {
+          console.warn("API lookup by phone failed, checking cache:", apiErr);
+        }
+
+        // 3. Fallback to cached inquiry
+        if (cachedInquiry) {
+          applyFetchedData(cachedInquiry, String(cachedInquiry.id || cachedInquiry.lead_id || ""), 1, true);
+          setAutoFetchLoading(false);
+          return;
+        }
+
+        toast.error(`No existing inquiry or admission found for phone ${cleanPhone}.`);
+        setAutoFetchLoading(false);
+        return;
+      }
+
+      // 2. Query by ID: Check Admission endpoint first, fallback to Lead / Inquiry endpoint, then cache
+      try {
+        const admRes = await axiosRequest({
+          baseURL: import.meta.env.VITE_APP_BASE_URL,
+          url: API.ADMISSIONS.GET(rawQuery),
+          method: "GET",
+        });
+        const admData = admRes?.data?.data || admRes?.data || admRes;
+        if (admData && (admData.id || admData.admission_id || admData.first_name)) {
+          applyFetchedData(admData, String(rawQuery), 1, true);
+          setAutoFetchLoading(false);
+          return;
+        }
+      } catch (admErr: any) {
+        // Try Lead/Inquiry endpoint
+        try {
+          const leadRes = await axiosRequest({
+            baseURL: import.meta.env.VITE_APP_BASE_URL,
+            url: API.LEADS.GET(rawQuery),
+            method: "GET",
+          });
+          const leadData = leadRes?.data?.data || leadRes?.data || leadRes;
+          if (leadData && (leadData.id || leadData.first_name)) {
+            applyFetchedData(
+              leadData,
+              String(leadData.admission || leadData.admission_id || rawQuery),
+              1,
+              true
+            );
+            setAutoFetchLoading(false);
+            return;
+          }
+        } catch (leadErr: any) {
+          // Check local cache
+          const cachedRaw = localStorage.getItem(`inquiry_cache_id_${rawQuery}`);
+          if (cachedRaw) {
+            try {
+              const cachedData = JSON.parse(cachedRaw);
+              applyFetchedData(cachedData, String(rawQuery), 1, true);
+              setAutoFetchLoading(false);
+              return;
+            } catch (e) {}
+          }
+        }
+      }
+
+      toast.error(`No inquiry or admission found for ID #${rawQuery}.`);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to fetch details. Please verify your query.");
+    } finally {
+      setAutoFetchLoading(false);
+    }
+  };
+
+  // If admission ID, phone, or inquiry ID is in URL on mount, auto-load it
   useEffect(() => {
-    if (admissionId) {
-      loadAdmissionById(admissionId, false);
+    const phoneParam = searchParams.get("phone");
+    const inqParam = searchParams.get("inquiry_id") || searchParams.get("lead_id");
+    const admParam = searchParams.get("id") || searchParams.get("admission_id");
+
+    if (admParam) {
+      loadAdmissionById(admParam, false);
+    } else if (phoneParam) {
+      handleAutoFetch(phoneParam);
+    } else if (inqParam) {
+      handleAutoFetch(inqParam);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -847,11 +1183,12 @@ export default function StudentAdmissionForm() {
       city: "",
       state: "",
       pincode: "",
-      country: "India",
+      country: "INDIA",
       dob: "",
       category: "gen",
       phone_student: "",
       phone_father: "",
+      phone_student_2: "",
       email: "",
       email_parent: "",
       qualification: "appearing_12",
@@ -869,6 +1206,7 @@ export default function StudentAdmissionForm() {
       reference_name: "",
       inquiry_date: new Date().toISOString().split("T")[0],
       location: "",
+      branch: "",
       consent: true,
     });
     setSavedAdmissionId(null);
@@ -936,11 +1274,12 @@ export default function StudentAdmissionForm() {
     city: "",
     state: "",
     pincode: "",
-    country: "India",
+    country: "INDIA",
     dob: "",
     category: "gen",
     phone_student: "",
     phone_father: "",
+    phone_student_2: "",
     email: "",
     email_parent: "",
     qualification: "appearing_12",
@@ -958,23 +1297,42 @@ export default function StudentAdmissionForm() {
     reference_name: "",
     inquiry_date: new Date().toISOString().split("T")[0],
     location: "",
+    branch: "",
     consent: true,
   });
 
   const handleChange = (field: string, value: string | boolean) => {
     if (isFieldLocked(field)) return;
+
+    let processedValue = value;
+    if (typeof value === "string") {
+      if (field === "email" || field === "email_parent") {
+        processedValue = value.toLowerCase();
+      } else {
+        const preserveCaseFields = [
+          "course", "group_module", "batch_attempt", "qualification",
+          "tenth_medium", "twelfth_medium", "category", "reference", "branch",
+          "dob", "inquiry_date", "payment_type", "payment_mode", "icsi_fees_payment",
+          "fee_structure", "attempt_year"
+        ];
+        if (!preserveCaseFields.includes(field)) {
+          processedValue = value.toUpperCase();
+        }
+      }
+    }
+
     setFormData((prev) => {
-      const updated = { ...prev, [field]: value };
-      if (field === "payment_type" && value === "token" && !prev.payment_mode) {
+      const updated = { ...prev, [field]: processedValue };
+      if (field === "payment_type" && processedValue === "token" && !prev.payment_mode) {
         updated.payment_mode = "online";
       }
       if (field === "course") {
-        if (value === "cseet") {
+        if (processedValue === "cseet") {
           updated.group_module = "full";
           if (!["june", "oct", "feb"].includes(prev.batch_attempt)) {
             updated.batch_attempt = "june";
           }
-        } else if (value === "cs_executive" || value === "cs_professional") {
+        } else if (processedValue === "cs_executive" || processedValue === "cs_professional") {
           updated.group_module = "module_1";
           if (!["june", "dec"].includes(prev.batch_attempt)) {
             updated.batch_attempt = "june";
@@ -1470,6 +1828,75 @@ interface ModuleOption {
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Enforce compulsory fields for Step 1
+    if (currentStep === 1) {
+      const compulsoryCheck: { key: keyof typeof formData; label: string }[] = [
+        { key: "first_name", label: "First Name" },
+        { key: "surname", label: "Surname" },
+        { key: "father_name", label: "Father's Name" },
+        { key: "mother_name", label: "Mother's Name" },
+        { key: "dob", label: "Date of Birth" },
+        { key: "category", label: "Category" },
+        { key: "phone_student", label: "Student Phone" },
+        { key: "phone_father", label: "Father's Phone" },
+        { key: "phone_student_2", label: "Mother's Phone" },
+        { key: "email", label: "Student Email" },
+        { key: "email_parent", label: "Parent Email" },
+        { key: "street", label: "Street Address" },
+        { key: "city", label: "City" },
+        { key: "state", label: "State" },
+        { key: "pincode", label: "Pincode" },
+        { key: "country", label: "Country" },
+        { key: "qualification", label: "Current Qualification" },
+        { key: "tenth_medium", label: "10th Board/Medium" },
+        { key: "tenth_school", label: "10th School Name" },
+        { key: "tenth_coaching", label: "10th Coaching Institute" },
+        { key: "tenth_percentage", label: "10th Percentage" },
+        { key: "tenth_percentile", label: "10th Percentile" },
+        { key: "twelfth_medium", label: "12th Board/Medium" },
+        { key: "twelfth_school", label: "12th School Name" },
+        { key: "twelfth_coaching", label: "12th Coaching Institute" },
+        { key: "twelfth_percentage", label: "12th Percentage" },
+        { key: "twelfth_percentile", label: "12th Percentile" },
+        { key: "reference", label: "How did you hear about us?" },
+        { key: "inquiry_date", label: "Inquiry Date" },
+        { key: "location", label: "Location" },
+        { key: "branch", label: "Branch" },
+      ];
+
+      for (const field of compulsoryCheck) {
+        const val = formData[field.key];
+        if (val === undefined || val === null || String(val).trim() === "") {
+          toast.error(`Compulsory field missing: ${field.label}`);
+          return;
+        }
+      }
+
+      if (formData.reference === "other" && !formData.reference_name.trim()) {
+        toast.error("Please specify how you heard about us");
+        return;
+      }
+
+      // Ensure Student Phone, Father Phone, and Mother Phone are distinct
+      const cleanStudent = (formData.phone_student || "").trim().replace(/\D/g, "");
+      const cleanFather = (formData.phone_father || "").trim().replace(/\D/g, "");
+      const cleanMother = (formData.phone_student_2 || "").trim().replace(/\D/g, "");
+
+      if (cleanStudent && cleanFather && cleanStudent.slice(-10) === cleanFather.slice(-10)) {
+        toast.error("Father's phone number cannot be the same as Student's phone number.");
+        return;
+      }
+      if (cleanStudent && cleanMother && cleanStudent.slice(-10) === cleanMother.slice(-10)) {
+        toast.error("Mother's phone number cannot be the same as Student's phone number.");
+        return;
+      }
+      if (cleanFather && cleanMother && cleanFather.slice(-10) === cleanMother.slice(-10)) {
+        toast.error("Father's phone number and Mother's phone number cannot be the same.");
+        return;
+      }
+    }
+
     if (currentStep === 2 && isStep2Completed) {
       nextStep();
       return;
@@ -1483,7 +1910,7 @@ interface ModuleOption {
       nextStep();
       return;
     }
-    const isFinalStep = stepToSubmit === 3;
+    const isFinalStep = stepToSubmit === 4;
     if (isFinalStep && !formData.consent) {
       toast.error("Please accept the consent to proceed.");
       return;
@@ -1530,7 +1957,17 @@ interface ModuleOption {
         payload.append("fee_structure", String(matchedFee.id));
       }
     } else if (stepToSubmit === 3) {
-      // ONLY append Step 3 fields & documents
+      // ONLY append Step 3 payment proof fields
+      if (transactionId.trim()) payload.append("transaction_id", transactionId.trim());
+      if (paymentAmount) payload.append("payment_amount", String(paymentAmount));
+      if (paymentNote.trim()) payload.append("payment_note", paymentNote.trim());
+      const submittedTime = paymentSubmittedAt
+        ? new Date(paymentSubmittedAt).toISOString()
+        : new Date().toISOString();
+      payload.append("payment_submitted_at", submittedTime);
+      if (paymentScreenshot) payload.append("payment_screenshot", paymentScreenshot);
+    } else if (stepToSubmit === 4) {
+      // ONLY append Step 4 fields & documents
       payload.append("consent", String(formData.consent));
       if (docSignature) payload.append("doc_signature", docSignature);
       if (docPhoto) payload.append("doc_photo", docPhoto);
@@ -1547,13 +1984,89 @@ interface ModuleOption {
     const isFreshStep1 = stepToSubmit === 1 && !isIncompleteAdmission && !savedAdmissionId;
     const currentAdmissionId = savedAdmissionId || admissionId;
 
-    if (stepToSubmit === 2 && !currentAdmissionId) {
+    if (stepToSubmit > 1 && !currentAdmissionId) {
+      toast.error("Admission ID is missing. Please complete Step 1 first.");
+      setLoading(false);
+      return;
+    }
+
+    if (stepToSubmit === 3) {
+      const isFinance = formData.payment_type === "finance";
+      const hasAnyPaymentDetail = Boolean(
+        paymentAmount || transactionId.trim() || paymentScreenshot || existingPaymentScreenshot || paymentNote.trim()
+      );
+
+      if (!isFinance && !hasAnyPaymentDetail) {
+        toast.error("Please enter a payment amount, transaction ID, or upload a receipt screenshot.");
+        setLoading(false);
+        return;
+      }
+
+      if (isFinance && !hasAnyPaymentDetail) {
+        setLoading(false);
+        nextStep();
+        return;
+      }
+      setPaymentProofSubmitting(true);
+    }
+    if (false && stepToSubmit === 2 && !currentAdmissionId) {
       toast.error("Admission ID is missing. Please complete Step 1 first.");
       setLoading(false);
       return;
     }
 
     if (stepToSubmit === 2) {
+      // Step 2 calls POST /api/v1/admissions/<id>/setup/
+      dispatch({
+        type: admissionActions.SUBMIT_ADMISSION,
+        method: "POST",
+        endPoint: API.ADMISSIONS.SETUP(currentAdmissionId),
+        body: payload,
+        auth: false,
+        isFormData: true,
+        setLoading: (val: boolean) => setLoading(val),
+        getResponse: (res: any) => {
+          const setupData = res?.data?.data || res?.data || res;
+          if (setupData?.status) setAdmissionStatus(setupData.status);
+          if (setupData?.status_display) setAdmissionStatusDisplay(setupData.status_display);
+          if (setupData?.razorpay_payment_link) setRazorpayPaymentLink(setupData.razorpay_payment_link);
+          if (Array.isArray(setupData?.payment_history)) setPaymentHistory(setupData.payment_history);
+          if (setupData?.total_fees != null) setTotalFeesAmount(setupData.total_fees);
+          if (setupData?.remaining_fees != null) setRemainingFeesAmount(setupData.remaining_fees);
+          if (setupData?.token_payment_terms_note) setTokenTermsNote(setupData.token_payment_terms_note);
+
+          // Pre-populate expected payment amount if empty
+          const instFee = getInstituteFee(matchedFee, formData.course, formData.group_module);
+          const tokenAmt = Number(matchedFee?.token_amount || 0);
+          if (formData.payment_type === "token" && tokenAmt > 0) {
+            setPaymentAmount((prev) => prev || String(tokenAmt));
+          } else if (formData.payment_type === "full_payment" && instFee > 0) {
+            setPaymentAmount((prev) => prev || String(instFee));
+          }
+          if (!paymentSubmittedAt) {
+            setPaymentSubmittedAt(new Date().toISOString().slice(0, 16));
+          }
+
+          toast.success("Course details & payment plan saved successfully!");
+          nextStep();
+        },
+        getError: (err: any) => {
+          let msg =
+            err?.response?.data?.message ||
+            err?.response?.data?.error ||
+            err?.response?.data?.detail;
+          if (!msg && err?.response?.data && typeof err.response.data === "object") {
+            const firstKey = Object.keys(err.response.data)[0];
+            const val = err.response.data[firstKey];
+            msg = Array.isArray(val) ? `${firstKey}: ${val[0]}` : String(val);
+          }
+          if (!msg) msg = err?.message || "Failed to setup course. Please try again.";
+          toast.error(msg);
+        },
+      });
+      return;
+    }
+    if (false) {
       // Step 2 calls 2 APIs:
       // 1. PATCH /api/v1/admissions/<id>/ (saves Step 2 course info & fee structure)
       // 2. POST /api/v1/admissions/<id>/setup/ (triggers backend setup endpoint)
@@ -1623,7 +2136,7 @@ interface ModuleOption {
       return;
     }
 
-    const method = isFreshStep1 ? "POST" : "PATCH";
+    const method = "PATCH";
     const endpoint = currentAdmissionId
       ? API.ADMISSIONS.SUBMIT(currentAdmissionId)
       : API.ADMISSIONS.CREATE;
@@ -1667,9 +2180,20 @@ interface ModuleOption {
           });
         }
 
-          if (isFinalStep) {
+        if (stepToSubmit === 3) {
+          setPaymentProofSuccess(true);
+          if (resData?.payment_screenshot) {
+            setExistingPaymentScreenshot(resData.payment_screenshot);
+          }
+          if (Array.isArray(resData?.payment_history)) {
+            setPaymentHistory(resData.payment_history);
+          }
+          toast.success("Payment proof details submitted successfully!");
+          nextStep();
+          return;
+        } else if (isFinalStep) {
           setIsSubmitted(true);
-          toast.success("Admission details submitted successfully! Please proceed with payment proof.");
+          toast.success("Admission application submitted successfully!");
 
           if (resData?.doc_signature) setExistingDocs((prev) => ({ ...prev, doc_signature: resData.doc_signature }));
           if (resData?.doc_photo) setExistingDocs((prev) => ({ ...prev, doc_photo: resData.doc_photo }));
@@ -1718,7 +2242,7 @@ interface ModuleOption {
   };
 
   /* ── Submit Payment Proof (Step 4 PATCH Request) ── */
-  const handlePatchPaymentProof = (e?: React.FormEvent) => {
+  const handlePatchPaymentProof = (e?: React.FormEvent) => { if (e) e.preventDefault(); submitData(3); }; const _unusedPatch = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const targetId = savedAdmissionId || admissionId;
     if (!targetId) {
@@ -1971,7 +2495,7 @@ interface ModuleOption {
                   </div>
 
                 </div>
-              ) : (
+              ) : entryMode === "resume" ? (
                 /* Resume Incomplete Admission Form View */
                 <form
                   onSubmit={(e) => {
@@ -1993,7 +2517,7 @@ interface ModuleOption {
                         value={inputAdmissionId}
                         onChange={(e) => setInputAdmissionId(e.target.value)}
                         disabled={loadingExisting}
-                        className="h-11 pl-9 text-sm font-semibold"
+                        className="h-11 pl-9 text-sm font-semibold uppercase"
                         autoFocus
                       />
                       <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3.5 pointer-events-none" />
@@ -2040,6 +2564,78 @@ interface ModuleOption {
                     </div>
                   </DialogFooter>
                 </form>
+              ) : (
+                /* Auto-Fetch from Inquiry / Phone Form View */
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleAutoFetch(autoFetchQuery);
+                  }}
+                  className="space-y-4"
+                >
+                  <div className="space-y-1.5">
+                    <Label htmlFor="autofetch_query_input" className="text-xs sm:text-sm font-semibold" style={{ color: T.text }}>
+                      10-digit Phone Number or Inquiry ID <span style={{ color: T.error }}>*</span>
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="autofetch_query_input"
+                        type="text"
+                        required
+                        placeholder="e.g. 9954563258 or Inquiry ID"
+                        value={autoFetchQuery}
+                        onChange={(e) => setAutoFetchQuery(e.target.value)}
+                        disabled={autoFetchLoading}
+                        className="h-11 pl-9 text-sm font-semibold uppercase"
+                        autoFocus
+                      />
+                      <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3.5 pointer-events-none" />
+                    </div>
+                    <p className="text-[11px] text-gray-500">
+                      We will search our database and automatically fill your personal, contact, address, and academic background details in capital.
+                    </p>
+                  </div>
+
+                  <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-between items-center gap-2 pt-3">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={autoFetchLoading}
+                      onClick={() => setEntryMode("select")}
+                      className="w-full sm:w-auto h-10 px-3 text-xs font-semibold text-gray-600 hover:text-gray-900"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-1.5" />
+                      Back to Options
+                    </Button>
+
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={autoFetchLoading}
+                        onClick={() => setIsChoiceModalOpen(false)}
+                        className="h-10 px-4 text-xs font-semibold"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={autoFetchLoading || !autoFetchQuery.trim()}
+                        className="h-10 px-5 text-xs font-semibold text-black"
+                        style={{ background: T.primary }}
+                      >
+                        {autoFetchLoading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Fetching Details...
+                          </>
+                        ) : (
+                          "Auto-Fetch Details"
+                        )}
+                      </Button>
+                    </div>
+                  </DialogFooter>
+                </form>
               )}
             </div>
           </DialogContent>
@@ -2051,8 +2647,8 @@ interface ModuleOption {
             {[
               { num: 1, label: "Personal Info" },
               { num: 2, label: "Course Info" },
-              { num: 3, label: "Documents" },
-              { num: 4, label: "Payment Proof" },
+              { num: 3, label: "Payment Proof" },
+              { num: 4, label: "Documents" },
             ].map((step, idx) => {
               const isClickable = Boolean(savedAdmissionId) || step.num <= currentStep;
               return (
@@ -2100,7 +2696,7 @@ interface ModuleOption {
           </div>
         </div>
 
-        <form onSubmit={currentStep === 4 ? handlePatchPaymentProof : handleNext} className="space-y-5 sm:space-y-6">
+        <form onSubmit={handleNext} className="space-y-5 sm:space-y-6">
           {/* ════════════════════════════════════════════════════════ */}
           {/*  STEP 1: PERSONAL INFO                                 */}
           {/* ════════════════════════════════════════════════════════ */}
@@ -2113,14 +2709,14 @@ interface ModuleOption {
                   <div className="text-xs sm:text-sm space-y-0.5">
                     <p className="font-bold">Autofilled Profile Information (Locked)</p>
                     <p className="text-blue-800/90 dark:text-blue-300/90 leading-relaxed">
-                      Previously saved personal, contact, address, and academic details cannot be edited.
+                      Previously saved personal, contact, address, and academic details are shown. All fields are compulsory.
                     </p>
                   </div>
                 </div>
               )}
 
           {/* ════════════════════════════════════════════════════════ */}
-          {/*  PERSONAL INFORMATION                                  */}
+          {/*  PERSONAL INFORMATION                                */}
           {/* ════════════════════════════════════════════════════════ */}
           <SectionCard icon={User} title="Personal Information">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -2133,8 +2729,9 @@ interface ModuleOption {
                   value={formData.first_name}
                   onChange={(e) => handleChange("first_name", e.target.value)}
                   disabled={isFieldLocked("first_name")}
-                  className="h-10 sm:h-11 text-sm"
-                  placeholder="e.g. Tulsi"
+                  className="h-10 sm:h-11 text-sm uppercase"
+                  style={{ textTransform: "uppercase" }}
+                  placeholder="E.G. TULSI"
                 />
               </div>
               <div className="space-y-1.5">
@@ -2146,32 +2743,37 @@ interface ModuleOption {
                   value={formData.surname}
                   onChange={(e) => handleChange("surname", e.target.value)}
                   disabled={isFieldLocked("surname")}
-                  className="h-10 sm:h-11 text-sm"
-                  placeholder="e.g. Kerai"
+                  className="h-10 sm:h-11 text-sm uppercase"
+                  style={{ textTransform: "uppercase" }}
+                  placeholder="E.G. KERAI"
                 />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                  Father's Name
+                  Father's Name <span style={{ color: T.error }}>*</span>
                 </Label>
                 <Input
+                  required
                   value={formData.father_name}
                   onChange={(e) => handleChange("father_name", e.target.value)}
                   disabled={isFieldLocked("father_name")}
-                  className="h-10 sm:h-11 text-sm"
-                  placeholder="e.g. Harji"
+                  className="h-10 sm:h-11 text-sm uppercase"
+                  style={{ textTransform: "uppercase" }}
+                  placeholder="E.G. HARJI"
                 />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                  Mother's Name
+                  Mother's Name <span style={{ color: T.error }}>*</span>
                 </Label>
                 <Input
+                  required
                   value={formData.mother_name}
                   onChange={(e) => handleChange("mother_name", e.target.value)}
                   disabled={isFieldLocked("mother_name")}
-                  className="h-10 sm:h-11 text-sm"
-                  placeholder="e.g. Jashuben"
+                  className="h-10 sm:h-11 text-sm uppercase"
+                  style={{ textTransform: "uppercase" }}
+                  placeholder="E.G. JASHUBEN"
                 />
               </div>
               <div className="space-y-1.5">
@@ -2184,12 +2786,12 @@ interface ModuleOption {
                   value={formData.dob}
                   onChange={(e) => handleChange("dob", e.target.value)}
                   disabled={isFieldLocked("dob")}
-                  className="h-10 sm:h-11 text-sm"
+                  className="h-10 sm:h-11 text-sm uppercase"
                 />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                  Category
+                  Category <span style={{ color: T.error }}>*</span>
                 </Label>
                 <Select
                   value={formData.category}
@@ -2203,8 +2805,6 @@ interface ModuleOption {
                     <SelectItem value="gen">General</SelectItem>
                     <SelectItem value="obc">OBC</SelectItem>
                     <SelectItem value="sc_st">SC / ST</SelectItem>
-                    {/* <SelectItem value="st">ST</SelectItem> */}
-                    {/* <SelectItem value="ews">EWS</SelectItem> */}
                   </SelectContent>
                 </Select>
               </div>
@@ -2215,30 +2815,57 @@ interface ModuleOption {
               <SubSection icon={Phone} title="Contact Details" />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div className="space-y-1.5">
-                  <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                    Student Phone <span style={{ color: T.error }}>*</span>
-                  </Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                      Student Phone <span style={{ color: T.error }}>*</span>
+                    </Label>
+                    {formData.phone_student && (
+                      <button
+                        type="button"
+                        onClick={() => handleAutoFetch(formData.phone_student)}
+                        className="text-[11px] font-semibold flex items-center gap-1 hover:underline cursor-pointer"
+                        style={{ color: T.primaryDark }}
+                      >
+                        <Search className="w-3 h-3" /> Auto-fill from phone
+                      </button>
+                    )}
+                  </div>
                   <Input
                     required
                     type="tel"
                     value={formData.phone_student}
                     onChange={(e) => handleChange("phone_student", e.target.value)}
                     disabled={isFieldLocked("phone_student")}
-                    className="h-10 sm:h-11 text-sm"
-                    placeholder="e.g. 9954563258"
+                    className="h-10 sm:h-11 text-sm uppercase"
+                    placeholder="E.G. 9954563258"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                    Father's Phone
+                    Father's Phone <span style={{ color: T.error }}>*</span>
                   </Label>
                   <Input
+                    required
                     type="tel"
                     value={formData.phone_father}
                     onChange={(e) => handleChange("phone_father", e.target.value)}
                     disabled={isFieldLocked("phone_father")}
-                    className="h-10 sm:h-11 text-sm"
-                    placeholder="e.g. 9978221566"
+                    className="h-10 sm:h-11 text-sm uppercase"
+                    placeholder="E.G. 9978221566"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                    Mother's Phone <span style={{ color: T.error }}>*</span>
+                  </Label>
+                  <Input
+                    required
+                    type="tel"
+                    value={formData.phone_student_2}
+                    onChange={(e) => handleChange("phone_student_2", e.target.value)}
+                    disabled={isFieldLocked("phone_student_2")}
+                    className="h-10 sm:h-11 text-sm uppercase"
+                    placeholder="E.G. 9825012345"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -2251,20 +2878,21 @@ interface ModuleOption {
                     value={formData.email}
                     onChange={(e) => handleChange("email", e.target.value)}
                     disabled={isFieldLocked("email")}
-                    className="h-10 sm:h-11 text-sm"
-                    placeholder="e.g. tulikerai06@gmail.com"
+                    className="h-10 sm:h-11 text-sm lowercase"
+                    placeholder="e.g. tulsi@gmail.com"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                    Parent Email
+                    Parent Email <span style={{ color: T.error }}>*</span>
                   </Label>
                   <Input
+                    required
                     type="email"
                     value={formData.email_parent}
                     onChange={(e) => handleChange("email_parent", e.target.value)}
                     disabled={isFieldLocked("email_parent")}
-                    className="h-10 sm:h-11 text-sm"
+                    className="h-10 sm:h-11 text-sm lowercase"
                     placeholder="e.g. parent@gmail.com"
                   />
                 </div>
@@ -2278,62 +2906,72 @@ interface ModuleOption {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div className="space-y-1.5 sm:col-span-2">
                 <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                  Street Address
+                  Street Address <span style={{ color: T.error }}>*</span>
                 </Label>
                 <Input
+                  required
                   value={formData.street}
                   onChange={(e) => handleChange("street", e.target.value)}
                   disabled={isFieldLocked("street")}
-                  className="h-10 sm:h-11 text-sm"
-                  placeholder="e.g. 45, main road"
+                  className="h-10 sm:h-11 text-sm uppercase"
+                  style={{ textTransform: "uppercase" }}
+                  placeholder="E.G. 45, MAIN ROAD"
                 />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                  City
+                  City <span style={{ color: T.error }}>*</span>
                 </Label>
                 <Input
+                  required
                   value={formData.city}
                   onChange={(e) => handleChange("city", e.target.value)}
                   disabled={isFieldLocked("city")}
-                  className="h-10 sm:h-11 text-sm"
-                  placeholder="e.g. Bhuj"
+                  className="h-10 sm:h-11 text-sm uppercase"
+                  style={{ textTransform: "uppercase" }}
+                  placeholder="E.G. BHUJ"
                 />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                  State
+                  State <span style={{ color: T.error }}>*</span>
                 </Label>
                 <Input
+                  required
                   value={formData.state}
                   onChange={(e) => handleChange("state", e.target.value)}
                   disabled={isFieldLocked("state")}
-                  className="h-10 sm:h-11 text-sm"
-                  placeholder="e.g. Kutch"
+                  className="h-10 sm:h-11 text-sm uppercase"
+                  style={{ textTransform: "uppercase" }}
+                  placeholder="E.G. KUTCH"
                 />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                  Pincode
+                  Pincode <span style={{ color: T.error }}>*</span>
                 </Label>
                 <Input
+                  required
                   value={formData.pincode}
                   onChange={(e) => handleChange("pincode", e.target.value)}
                   disabled={isFieldLocked("pincode")}
-                  className="h-10 sm:h-11 text-sm"
-                  placeholder="e.g. 370001"
+                  className="h-10 sm:h-11 text-sm uppercase"
+                  style={{ textTransform: "uppercase" }}
+                  placeholder="E.G. 370001"
                 />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                  Country
+                  Country <span style={{ color: T.error }}>*</span>
                 </Label>
                 <Input
+                  required
                   value={formData.country}
                   onChange={(e) => handleChange("country", e.target.value)}
                   disabled={isFieldLocked("country")}
-                  className="h-10 sm:h-11 text-sm"
-                  placeholder="e.g. India"
+                  className="h-10 sm:h-11 text-sm uppercase"
+                  style={{ textTransform: "uppercase" }}
+                  placeholder="E.G. INDIA"
                 />
               </div>
             </div>
@@ -2343,6 +2981,30 @@ interface ModuleOption {
           {/* ════════════════════════════════════════════════════════ */}
           <SectionCard icon={GraduationCap} title="Past Academic Background">
             <div className="space-y-6 sm:space-y-8">
+              {/* Current Qualification */}
+              <div className="space-y-1.5">
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  Current Qualification <span style={{ color: T.error }}>*</span>
+                </Label>
+                <Select
+                  value={formData.qualification}
+                  onValueChange={(val) => handleChange("qualification", val)}
+                  disabled={isFieldLocked("qualification")}
+                >
+                  <SelectTrigger className="h-10 sm:h-11 text-sm bg-white">
+                    <SelectValue placeholder="Select qualification" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="appearing_12">Appearing 12th</SelectItem>
+                    <SelectItem value="pass_12">Passed 12th</SelectItem>
+                    <SelectItem value="cseet_pass">CSEET Pass</SelectItem>
+                    <SelectItem value="cs_executive_pass">CS Executive Pass</SelectItem>
+                    <SelectItem value="graduate">Graduate</SelectItem>
+                    <SelectItem value="post_graduate">Post Graduate</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* 10th */}
               <div>
                 <SubSection icon={School} title="10th Standard Details" />
@@ -2352,7 +3014,7 @@ interface ModuleOption {
                 >
                   <div className="space-y-1.5">
                     <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                      Board/Medium
+                      Board/Medium <span style={{ color: T.error }}>*</span>
                     </Label>
                     <Select
                       value={formData.tenth_medium}
@@ -2371,54 +3033,60 @@ interface ModuleOption {
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                      School Name
+                      School Name <span style={{ color: T.error }}>*</span>
                     </Label>
                     <Input
+                      required
                       value={formData.tenth_school}
                       onChange={(e) => handleChange("tenth_school", e.target.value)}
                       disabled={isFieldLocked("tenth_school")}
-                      className="h-10 sm:h-11 text-sm bg-white"
-                      placeholder="School name"
+                      className="h-10 sm:h-11 text-sm bg-white uppercase"
+                      style={{ textTransform: "uppercase" }}
+                      placeholder="SCHOOL NAME"
                     />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                      Coaching Institute
+                      Coaching Institute <span style={{ color: T.error }}>*</span>
                     </Label>
                     <Input
+                      required
                       value={formData.tenth_coaching}
                       onChange={(e) => handleChange("tenth_coaching", e.target.value)}
                       disabled={isFieldLocked("tenth_coaching")}
-                      className="h-10 sm:h-11 text-sm bg-white"
-                      placeholder="Coaching name"
+                      className="h-10 sm:h-11 text-sm bg-white uppercase"
+                      style={{ textTransform: "uppercase" }}
+                      placeholder="COACHING NAME"
                     />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                      Percentage (%)
+                      Percentage (%) <span style={{ color: T.error }}>*</span>
                     </Label>
                     <Input
+                      required
                       type="number" min="0" max="100"
                       step="0.01"
                       value={formData.tenth_percentage}
                       onChange={(e) => handleChange("tenth_percentage", e.target.value)}
                       disabled={isFieldLocked("tenth_percentage")}
-                      className="h-10 sm:h-11 text-sm bg-white"
-                      placeholder="e.g. 86.16"
+                      className="h-10 sm:h-11 text-sm bg-white uppercase"
+                      placeholder="E.G. 86.16"
                     />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                      Percentile
+                      Percentile <span style={{ color: T.error }}>*</span>
                     </Label>
                     <Input
+                      required
                       type="number" min="0" max="100"
                       step="0.01"
                       value={formData.tenth_percentile}
                       onChange={(e) => handleChange("tenth_percentile", e.target.value)}
                       disabled={isFieldLocked("tenth_percentile")}
-                      className="h-10 sm:h-11 text-sm bg-white"
-                      placeholder="e.g. 95.42"
+                      className="h-10 sm:h-11 text-sm bg-white uppercase"
+                      placeholder="E.G. 95.42"
                     />
                   </div>
                 </div>
@@ -2433,7 +3101,7 @@ interface ModuleOption {
                 >
                   <div className="space-y-1.5">
                     <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                      Board/Medium
+                      Board/Medium <span style={{ color: T.error }}>*</span>
                     </Label>
                     <Select
                       value={formData.twelfth_medium}
@@ -2452,54 +3120,60 @@ interface ModuleOption {
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                      School Name
+                      School Name <span style={{ color: T.error }}>*</span>
                     </Label>
                     <Input
+                      required
                       value={formData.twelfth_school}
                       onChange={(e) => handleChange("twelfth_school", e.target.value)}
                       disabled={isFieldLocked("twelfth_school")}
-                      className="h-10 sm:h-11 text-sm bg-white"
-                      placeholder="School name"
+                      className="h-10 sm:h-11 text-sm bg-white uppercase"
+                      style={{ textTransform: "uppercase" }}
+                      placeholder="SCHOOL NAME"
                     />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                      Coaching Institute
+                      Coaching Institute <span style={{ color: T.error }}>*</span>
                     </Label>
                     <Input
+                      required
                       value={formData.twelfth_coaching}
                       onChange={(e) => handleChange("twelfth_coaching", e.target.value)}
                       disabled={isFieldLocked("twelfth_coaching")}
-                      className="h-10 sm:h-11 text-sm bg-white"
-                      placeholder="Coaching name"
+                      className="h-10 sm:h-11 text-sm bg-white uppercase"
+                      style={{ textTransform: "uppercase" }}
+                      placeholder="COACHING NAME"
                     />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                      Percentage (%)
+                      Percentage (%) <span style={{ color: T.error }}>*</span>
                     </Label>
                     <Input
+                      required
                       type="number" min="0" max="100"
                       step="0.01"
                       value={formData.twelfth_percentage}
                       onChange={(e) => handleChange("twelfth_percentage", e.target.value)}
                       disabled={isFieldLocked("twelfth_percentage")}
-                      className="h-10 sm:h-11 text-sm bg-white"
-                      placeholder="e.g. 80.16"
+                      className="h-10 sm:h-11 text-sm bg-white uppercase"
+                      placeholder="E.G. 80.16"
                     />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                      Percentile
+                      Percentile <span style={{ color: T.error }}>*</span>
                     </Label>
                     <Input
+                      required
                       type="number" min="0" max="100"
                       step="0.01"
                       value={formData.twelfth_percentile}
                       onChange={(e) => handleChange("twelfth_percentile", e.target.value)}
                       disabled={isFieldLocked("twelfth_percentile")}
-                      className="h-10 sm:h-11 text-sm bg-white"
-                      placeholder="e.g. 95.42"
+                      className="h-10 sm:h-11 text-sm bg-white uppercase"
+                      placeholder="E.G. 95.42"
                     />
                   </div>
                 </div>
@@ -2513,7 +3187,7 @@ interface ModuleOption {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div className="space-y-1.5">
                 <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                  How did you hear about us?
+                  How did you hear about us? <span style={{ color: T.error }}>*</span>
                 </Label>
                 <Select
                   value={formData.reference}
@@ -2545,36 +3219,64 @@ interface ModuleOption {
                     value={formData.reference_name}
                     onChange={(e) => handleChange("reference_name", e.target.value)}
                     disabled={isFieldLocked("reference_name")}
-                    className="h-10 sm:h-11 text-sm bg-white"
-                    placeholder="e.g. From a friend"
+                    className="h-10 sm:h-11 text-sm bg-white uppercase"
+                    style={{ textTransform: "uppercase" }}
+                    placeholder="E.G. FROM A FRIEND"
                   />
                 </div>
               )}
 
               <div className="space-y-1.5">
                 <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                  Inquiry Date
+                  Inquiry Date <span style={{ color: T.error }}>*</span>
                 </Label>
                 <Input
+                  required
                   type="date"
                   value={formData.inquiry_date}
                   onChange={(e) => handleChange("inquiry_date", e.target.value)}
                   disabled={isFieldLocked("inquiry_date")}
-                  className="h-10 sm:h-11 text-sm"
+                  className="h-10 sm:h-11 text-sm uppercase"
                 />
               </div>
 
-              <div className="space-y-1.5 sm:col-span-2">
+              <div className="space-y-1.5">
                 <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                  Location
+                  Location <span style={{ color: T.error }}>*</span>
                 </Label>
                 <Input
+                  required
                   value={formData.location}
                   onChange={(e) => handleChange("location", e.target.value)}
                   disabled={isFieldLocked("location")}
-                  className="h-10 sm:h-11 text-sm"
-                  placeholder="e.g. Naranpura (Ahmedabad)"
+                  className="h-10 sm:h-11 text-sm uppercase"
+                  style={{ textTransform: "uppercase" }}
+                  placeholder="E.G. NARANPURA (AHMEDABAD)"
                 />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                  Branch <span style={{ color: T.error }}>*</span>
+                </Label>
+                <Select
+                  value={formData.branch}
+                  onValueChange={(val) => handleChange("branch", val)}
+                  disabled={branchesLoading || isFieldLocked("branch")}
+                >
+                  <SelectTrigger className="h-10 sm:h-11 text-sm bg-white">
+                    <SelectValue
+                      placeholder={branchesLoading ? "Loading branches..." : "Select Branch"}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((b) => (
+                      <SelectItem key={b.value} value={String(b.value)}>
+                        {b.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </SectionCard>
@@ -3162,14 +3864,14 @@ interface ModuleOption {
                     className="h-12 px-8 font-semibold"
                     style={{ background: T.primary, color: T.black }}
                   >
-                    Next: Documents
+                    Next: Payment Proof
                   </Button>
                 ) : (
                   <Button type="submit" disabled={loading} className="h-12 px-8 font-semibold" style={{ background: T.primary, color: T.black }}>
                     {loading ? (
                       <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Saving...</>
                     ) : (
-                      "Next: Documents"
+                      "Next: Payment Proof"
                     )}
                   </Button>
                 )}
@@ -3178,10 +3880,60 @@ interface ModuleOption {
           )}
 
           {/* ════════════════════════════════════════════════════════ */}
-          {/*  STEP 3: DOCUMENTS & SUBMIT                            */}
+          {/*  STEP 4: DOCUMENTS & SUBMIT                            */}
           {/* ════════════════════════════════════════════════════════ */}
-          {currentStep === 3 && (
+          {currentStep === 4 && (
             <>
+              {isSubmitted && (
+                <div
+                  className="rounded-3xl p-6 sm:p-10 text-center relative overflow-hidden mb-6"
+                  style={{ background: T.card, border: `1px solid ${T.border}`, boxShadow: "0 10px 40px rgba(0,33,71,0.08)" }}
+                >
+                  <div
+                    className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
+                    style={{
+                      background: `linear-gradient(135deg, ${T.success}15 0%, ${T.success}25 100%)`,
+                    }}
+                  >
+                    <CheckCircle2 className="w-10 h-10" style={{ color: T.success }} />
+                  </div>
+
+                  <h2
+                    className="text-2xl sm:text-3xl font-bold mb-2"
+                    style={{ color: T.black, fontFamily: T.headingFont }}
+                  >
+                    Admission Submitted!
+                  </h2>
+                  <p className="text-sm sm:text-base mb-6" style={{ color: T.text }}>
+                    Your registration form and documents have been received successfully.
+                  </p>
+
+                  <div className="p-4 sm:p-5 rounded-2xl bg-muted/30 border border-border/60 text-xs sm:text-sm text-left max-w-lg mx-auto space-y-2">
+                    <div className="flex justify-between items-center pb-2 border-b border-border/40">
+                      <span className="text-muted-foreground font-medium">Admission ID</span>
+                      <span className="font-mono font-bold text-foreground text-sm">#{savedAdmissionId || "Submitted"}</span>
+                    </div>
+                    <div className="flex justify-between items-center pb-2 border-b border-border/40">
+                      <span className="text-muted-foreground font-medium">Course & Attempt</span>
+                      <span className="font-semibold text-foreground uppercase">
+                        {formData.course?.replace(/_/g, " ")} ({formData.batch_attempt} {formData.attempt_year})
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground font-medium">Payment Plan</span>
+                      <span className="font-semibold capitalize text-foreground">
+                        {formData.payment_type === "token"
+                          ? `Token Payment (${formData.payment_mode === "cash" ? "Cash" : formData.payment_mode === "cheque" ? "Cheque" : "Online"})`
+                          : formData.payment_type === "full_payment"
+                            ? `Full Payment (${formData.payment_mode === "cash" ? "Cash" : formData.payment_mode === "cheque" ? "Cheque" : "Online"})`
+                            : "Finance Assistance"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            <>
+            </>
               {Object.values(existingDocs).some(Boolean) && (
                 <div className="flex items-start gap-3 p-3.5 sm:p-4 rounded-xl bg-blue-50/80 border border-blue-200 text-blue-900 text-xs sm:text-sm animate-in fade-in duration-200">
                   <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
@@ -3312,23 +4064,23 @@ interface ModuleOption {
               ) : (
                 <>
                   <ShieldCheck className="w-5 h-5 mr-2" />
-                  Submit Admission & Proceed to Payment Proof
+                  {isSubmitted ? "Update Submitted Documents" : "Submit Admission Application"}
                 </>
               )}
             </Button>
           </div>
               <div className="flex justify-start -mt-2 mb-6 px-4">
                  <Button type="button" variant="outline" onClick={prevStep} className="h-12 px-8 font-semibold">
-                  Back to Course Info
+                  Back to Payment Proof
                 </Button>
               </div>
             </>
           )}
 
           {/* ════════════════════════════════════════════════════════ */}
-          {/*  STEP 4: PAYMENT PROOF & CONFIRMATION                  */}
+          {/*  STEP 3: PAYMENT PROOF & CONFIRMATION                  */}
           {/* ════════════════════════════════════════════════════════ */}
-          {currentStep === 4 && (
+          {currentStep === 3 && (
             <div className="space-y-6 animate-in fade-in duration-300">
               {/* ── Confirmation Summary Header Card ── */}
               <div
@@ -3341,17 +4093,17 @@ interface ModuleOption {
                     background: `linear-gradient(135deg, ${T.success}15 0%, ${T.success}25 100%)`,
                   }}
                 >
-                  <CheckCircle2 className="w-10 h-10" style={{ color: T.success }} />
+                  <CreditCard className="w-10 h-10" style={{ color: T.primaryDark }} />
                 </div>
 
                 <h2
                   className="text-2xl sm:text-3xl font-bold mb-2"
                   style={{ color: T.black, fontFamily: T.headingFont }}
                 >
-                  Admission Submitted!
+                  Fee Payment & Proof Details
                 </h2>
                 <p className="text-sm sm:text-base mb-6" style={{ color: T.text }}>
-                  Your registration form has been received successfully.
+                  Review your payment plan and record your transaction reference or receipt proof below.
                 </p>
 
                 {/* Admission Details Summary */}
@@ -3627,7 +4379,7 @@ interface ModuleOption {
                       onClick={prevStep}
                       className="w-full sm:w-auto h-12 px-6 font-semibold"
                     >
-                      Back to Documents
+                      Back to Course Info
                     </Button>
 
                     <Button
@@ -3646,7 +4398,7 @@ interface ModuleOption {
                       ) : (
                         <>
                           <Upload className="w-5 h-5 mr-2" />
-                          {paymentProofSuccess ? "Update Payment Proof Details" : "Submit Payment Proof"}
+                          {formData.payment_type === "finance" ? "Next: Documents" : paymentProofSuccess ? "Update & Next: Documents" : "Save & Next: Documents"}
                         </>
                       )}
                     </Button>

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { TrendingUp, Wallet, FileText, CalendarDays } from "lucide-react";
+import { TrendingUp, Wallet, FileText, CalendarDays, ExternalLink } from "lucide-react";
 import { payrollActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import { setMyPayroll, setMyPayrollLoading } from "@/redux/slices/payrollSlice";
@@ -28,8 +29,8 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
     if (current) current += ", " + chunk;
     else current = chunk;
 
-    // Check if the chunk ends with a deduction amount (e.g. ": -16500.00")
-    if (/:\s*-?\d+(\.\d+)?\s*$/.test(chunk)) {
+    // Check if the chunk ends with an adjustment/deduction amount (e.g. ": -16500.00" or ": +1500.00")
+    if (/:\s*[+-]?\d+(\.\d+)?\s*$/.test(chunk)) {
       parts.push(current);
       current = "";
     }
@@ -42,7 +43,10 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
         variant="ghost"
         size="sm"
         className="h-6 px-2 text-primary hover:text-primary/80 mt-1"
-        onClick={() => setIsOpen(true)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(true);
+        }}
       >
         View Deduction note
       </Button>
@@ -50,15 +54,16 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-[600px] ">
           <DialogHeader>
-            <DialogTitle>Deduction Note</DialogTitle>
+            <DialogTitle>Deduction & Adjustment Note</DialogTitle>
           </DialogHeader>
           <div className="py-4 max-h-[70vh] overflow-y-auto">
             <div className="space-y-3">
               {parts.map((part, idx) => {
-                const match = part.match(/^(.*?):\s*(-?\d+(\.\d+)?)\s*$/);
+                const match = part.match(/^(.*?):\s*([+-]?\d+(\.\d+)?)\s*$/);
                 if (match) {
                   const text = match[1];
-                  const amount = match[2];
+                  const amountStr = match[2];
+                  const isPositive = amountStr.startsWith("+");
                   
                   let title = text;
                   let dates: string[] = [];
@@ -68,7 +73,7 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
                     dates = absenceMatch[1].split(/,\s*/);
                   }
                   
-                  const parsedAmount = Math.abs(Number(amount));
+                  const parsedAmount = Math.abs(Number(amountStr));
                   
                   return (
                     <div key={idx} className="bg-white p-4 rounded-lg border border-border shadow-sm">
@@ -81,14 +86,18 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
                             </p>
                           )}
                         </div>
-                        <span className="font-mono text-sm text-red-600 font-medium shrink-0 bg-red-50 px-2 py-1 rounded-md border border-red-100">
-                          - ₹{parsedAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        <span className={`font-mono text-sm font-medium shrink-0 px-2 py-1 rounded-md border ${
+                          isPositive
+                            ? "text-green-600 bg-green-50 border-green-100"
+                            : "text-red-600 bg-red-50 border-red-100"
+                        }`}>
+                          {isPositive ? "+" : "-"} ₹{parsedAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </div>
                       {dates.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 mt-1">
-                          {dates.map(d => (
-                            <Badge key={d} variant="outline" className="text-[11px] font-normal bg-slate-50 text-slate-600 border-slate-200">
+                          {dates.map((d, i) => (
+                            <Badge key={`${d}-${i}`} variant="outline" className="text-[11px] font-normal bg-slate-50 text-slate-600 border-slate-200">
                               {d}
                             </Badge>
                           ))}
@@ -100,6 +109,261 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
                 return (
                   <div key={idx} className="bg-white p-4 rounded-lg border border-border shadow-sm text-sm text-muted-foreground">
                     {part}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
+const ReimbursementNoteCell = ({ row }: { row: any }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
+  const notes = row.reimbursement_notes || [];
+
+  if (!notes || notes.length === 0) {
+    return null;
+  }
+
+  const isUUID = (val: any): boolean => {
+    if (!val || typeof val !== "string") return false;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
+  };
+
+  const handleCardClick = (note: any) => {
+    setIsOpen(false);
+    const q = new URLSearchParams();
+    q.set("tab", "reimbursements");
+    const candidates = [
+      note?.user_id,
+      note?.user,
+      row?.user_id,
+      row?.faculty_id,
+      row?.faculty,
+      row?.employee?.id,
+      row?.user?.id,
+      row?.employee_id,
+      row?.user,
+    ];
+    let userVal: string | null = null;
+    for (const c of candidates) {
+      if (isUUID(c)) {
+        userVal = String(c).trim();
+        break;
+      }
+    }
+    if (!userVal) {
+      userVal = row?.faculty_name || (typeof row?.user === "string" ? row.user : "") || null;
+    }
+    if (userVal) q.set("user_id", userVal);
+    if (note.date) {
+      q.set("from_date", note.date);
+      q.set("to_date", note.date);
+    }
+    navigate(`/payroll?${q.toString()}`);
+  };
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-5 px-1.5 text-[11px] text-primary hover:text-primary/80 mt-1 block"
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(true);
+        }}
+      >
+        View Claims ({notes.length})
+      </Button>
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Expense Reimbursements</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 max-h-[70vh] overflow-y-auto">
+            <div className="space-y-3">
+              {notes.map((note: any, idx: number) => (
+                <div
+                  key={idx}
+                  onClick={() => handleCardClick(note)}
+                  className="bg-white p-4 rounded-xl border border-border shadow-sm hover:border-primary/60 hover:shadow-md hover:bg-slate-50/50 transition-all cursor-pointer group"
+                  title="Click to view in Reimbursements tab"
+                >
+                  <div className="flex justify-between items-start gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors truncate">
+                          {note.event || note.description || "Expense Claim"}
+                        </h4>
+                        <ExternalLink className="w-3.5 h-3.5 text-muted-foreground opacity-60 group-hover:opacity-100 group-hover:text-primary transition-all shrink-0" />
+                      </div>
+                      {note.description && note.event && (
+                        <p className="text-xs text-muted-foreground mt-0.5 mb-1">
+                          {note.description}
+                        </p>
+                      )}
+                    </div>
+                    <span className="font-mono text-sm text-green-600 font-semibold shrink-0 bg-green-50 px-2.5 py-1 rounded-md border border-green-100">
+                      ₹{Number(note.expense || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mt-2 pt-1 border-t border-border/40 text-xs">
+                    {note.date ? (
+                      <Badge variant="outline" className="text-[11px] font-normal bg-slate-50 text-slate-600 border-slate-200">
+                        {note.date}
+                      </Badge>
+                    ) : <span />}
+                    <span className="text-[11px] text-primary font-medium opacity-80 group-hover:opacity-100 flex items-center gap-1">
+                      Open in Reimbursements Tab →
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
+const OdometerNoteCell = ({
+  row,
+  onNavigateToOdometer,
+}: {
+  row: any;
+  onNavigateToOdometer?: (note?: any, row?: any) => void;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
+  const notes = row.odometer_notes || [];
+
+  if (!notes || notes.length === 0) {
+    return null;
+  }
+
+  const isUUID = (val: any): boolean => {
+    if (!val || typeof val !== "string") return false;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
+  };
+
+  const handleCardClick = (note: any) => {
+    setIsOpen(false);
+    if (onNavigateToOdometer) {
+      onNavigateToOdometer(note, row);
+    } else {
+      const q = new URLSearchParams();
+      q.set("tab", "odometer");
+      const candidates = [
+        note?.user_id,
+        note?.user,
+        row?.user_id,
+        row?.faculty_id,
+        row?.faculty,
+        row?.employee?.id,
+        row?.user?.id,
+        row?.employee_id,
+        row?.user,
+      ];
+      let userVal: string | null = null;
+      for (const c of candidates) {
+        if (isUUID(c)) {
+          userVal = String(c).trim();
+          break;
+        }
+      }
+      if (!userVal) {
+        userVal = row?.faculty_name || (typeof row?.user === "string" ? row.user : "") || null;
+      }
+      if (userVal) q.set("user_id", userVal);
+      if (note.date) {
+        q.set("from_date", note.date);
+        q.set("to_date", note.date);
+      }
+      navigate(`/payroll?${q.toString()}`);
+    }
+  };
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-5 px-1.5 text-[11px] text-primary hover:text-primary/80 mt-1 block"
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(true);
+        }}
+      >
+        View Travel ({notes.length})
+      </Button>
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Travel / Odometer Claims</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 max-h-[70vh] overflow-y-auto">
+            <div className="space-y-3">
+              {notes.map((note: any, idx: number) => {
+                const adjReason = note.adjustment_reason || note.deduction_reason || note.notes || note.reason;
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => handleCardClick(note)}
+                    className="bg-white p-4 rounded-xl border border-border shadow-sm hover:border-primary/60 hover:shadow-md hover:bg-slate-50/50 transition-all cursor-pointer group"
+                    title="Click to view in Odometer Readings tab"
+                  >
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">
+                            {note.event || "Travel Claim"}
+                          </h4>
+                          <ExternalLink className="w-3.5 h-3.5 text-muted-foreground opacity-60 group-hover:opacity-100 group-hover:text-primary transition-all shrink-0" />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5 mb-1">
+                          {note.kms ? `${note.kms} kms` : ""}{note.rate_per_km ? ` @ ₹${note.rate_per_km}/km` : ""}{note.vehicle_type ? ` · ${note.vehicle_type}` : ""}
+                        </p>
+                      </div>
+                      <span className="font-mono text-sm text-green-600 font-semibold shrink-0 bg-green-50 px-2.5 py-1 rounded-md border border-green-100">
+                        ₹{Number(note.expense || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    {adjReason && (
+                      <div className="mt-2 bg-amber-50 border border-amber-200/90 rounded-md p-2 text-xs text-amber-900 leading-snug">
+                        <span className="font-bold text-amber-950 block text-[10px] uppercase tracking-wider mb-0.5">
+                          Adjustment Reason:
+                        </span>
+                        <span className="break-words font-medium">{adjReason}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between mt-2 pt-1 border-t border-border/40 text-xs">
+                      {note.date ? (
+                        <Badge variant="outline" className="text-[11px] font-normal bg-slate-50 text-slate-600 border-slate-200">
+                          {note.date}
+                        </Badge>
+                      ) : <span />}
+                      <span className="text-[11px] text-primary font-medium opacity-80 group-hover:opacity-100 flex items-center gap-1">
+                        Open in Odometer Tab →
+                      </span>
+                    </div>
                   </div>
                 );
               })}
@@ -139,7 +403,12 @@ const STATUS_BADGE: Record<string, string> = {
   disbursed:        "bg-blue-100 text-blue-700",
 };
 
-export default function MyPayrollTab() {
+export default function MyPayrollTab({
+  onNavigateToOdometer,
+}: {
+  onNavigateToOdometer?: (note?: any, row?: any) => void;
+} = {}) {
+  const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
   const { myPayroll, myPayrollLoading } = useSelector((s: RootState) => s.payroll);
@@ -147,6 +416,12 @@ export default function MyPayrollTab() {
   const [month,  setMonth]  = useState("all");
   const [year,   setYear]   = useState(String(new Date().getFullYear()));
   const [status, setStatus] = useState("all");
+
+  const handleRowClick = (slip: any) => {
+    navigate(`/payroll/payslips/${slip.id}`, {
+      state: { payslip: slip },
+    });
+  };
 
   const fetch = () => {
     const p = new URLSearchParams();
@@ -237,7 +512,7 @@ export default function MyPayrollTab() {
       </div>
 
       {myPayrollLoading ? (
-        <TableSkeleton columns={8} rows={4} className="mt-0" />
+        <TableSkeleton columns={10} rows={4} className="mt-0" />
       ) : (
         <Tabs defaultValue="deduction_logs" className="w-full space-y-4">
           <TabsList className="bg-card border border-border h-11 p-1">
@@ -320,82 +595,122 @@ export default function MyPayrollTab() {
 
             {/* Payslips Table */}
             <div className="bg-white rounded-xl border border-border overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/40 border-b border-border">
-                  <tr>
-                    {[
-                      "Month / Year",
-                      "Basic",
-                      "Bonus",
-                      "Deductions",
-                      "Deduction Note",
-                      "Net Salary",
-                      "Sessions",
-                      "Status",
-                    ].map((h) => (
-                      <th
-                        key={h}
-                        className="px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {!myPayroll?.payslips?.length ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[950px]">
+                  <thead className="bg-muted/40 border-b border-border">
                     <tr>
-                      <td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">
-                        No payslip records found.
-                      </td>
+                      {[
+                        "Month / Year",
+                        "Basic",
+                        "Bonus / Extra Shift",
+                        "Reimbursements",
+                        "Travel (Odometer)",
+                        "Deductions",
+                        "Deduction Note",
+                        "Net Salary",
+                        "Sessions / Papers",
+                        "Status",
+                      ].map((h) => (
+                        <th
+                          key={h}
+                          className="px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap"
+                        >
+                          {h}
+                        </th>
+                      ))}
                     </tr>
-                  ) : (
-                    myPayroll.payslips.map((slip, i) => (
-                      <motion.tr
-                        key={slip.id}
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.025 }}
-                        className="border-b border-border/50 hover:bg-muted/20 transition-colors"
-                      >
-                        <td className="px-4 py-3 font-mono text-xs">
-                          {slip.payroll_month} / {slip.payroll_year}
+                  </thead>
+                  <tbody>
+                    {!myPayroll?.payslips?.length ? (
+                      <tr>
+                        <td colSpan={10} className="text-center py-12 text-muted-foreground text-sm">
+                          No payslip records found.
                         </td>
-                        <td className="px-4 py-3 font-mono text-xs">
-                          ₹{Number(slip.basic_salary).toLocaleString("en-IN")}
-                        </td>
-                        <td className="px-4 py-3 font-mono text-xs text-green-600">
-                          ₹{Number(slip.bonus || 0).toLocaleString("en-IN")}
-                        </td>
-                        <td className="px-4 py-3 font-mono text-xs text-red-600">
-                          ₹
-                          {(
-                            Number(slip.late_penalty || 0) +
-                            Number(slip.leave_deductions || 0) +
-                            Number(slip.absence_deductions || 0) +
-                            Number(slip.retention_deduction || 0) +
-                            Number(slip.other_deductions || 0)
-                          ).toLocaleString("en-IN")}
-                        </td>
-                        <td className="px-4 py-3 text-xs">
-                          <DeductionNoteCell row={slip} />
-                        </td>
-                        <td className="px-4 py-3 font-mono text-sm font-bold text-primary">
-                          ₹{Number(slip.net_salary).toLocaleString("en-IN")}
-                        </td>
-                        <td className="px-4 py-3 text-xs">{slip.sessions_conducted}</td>
-                        <td className="px-4 py-3">
-                          <Badge
-                            className={`text-xs ${STATUS_BADGE[slip.payroll_status?.toLowerCase().replace(" ", "_")] || "bg-yellow-100 text-yellow-700"}`}
-                          >
-                            {slip.payroll_status || (slip.is_disbursed ? "Disbursed" : "Pending")}
-                          </Badge>
-                        </td>
-                      </motion.tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                      </tr>
+                    ) : (
+                      myPayroll.payslips.map((slip, i) => (
+                        <motion.tr
+                          key={slip.id}
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.025 }}
+                          onClick={() => handleRowClick(slip)}
+                          className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer group"
+                        >
+                          <td className="px-4 py-3 font-mono text-xs">
+                            {slip.payroll_month} / {slip.payroll_year}
+                          </td>
+                          <td className="px-4 py-3 font-mono text-xs">
+                            ₹{Number(slip.basic_salary || slip.salary || 0).toLocaleString("en-IN")}
+                          </td>
+                          <td className="px-4 py-3 font-mono text-xs text-green-600">
+                            {slip.bonus > 0 || Number(slip.extra_shift_allowance || 0) > 0
+                              ? `₹${Number(slip.bonus || slip.extra_shift_allowance).toLocaleString("en-IN")}`
+                              : "—"}
+                          </td>
+                          <td className="px-4 py-3 font-mono text-xs">
+                            {Number(slip.reimbursements_amount || 0) > 0 ? (
+                              <div>
+                                <div className="text-green-600 font-medium">
+                                  ₹{Number(slip.reimbursements_amount).toLocaleString("en-IN")}
+                                </div>
+                                <ReimbursementNoteCell row={slip} />
+                              </div>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className="px-4 py-3 font-mono text-xs">
+                            {Number(slip.odometer_amount || 0) > 0 ? (
+                              <div>
+                                <div className="text-green-600 font-medium">
+                                  ₹{Number(slip.odometer_amount).toLocaleString("en-IN")}
+                                </div>
+                                <OdometerNoteCell row={slip} onNavigateToOdometer={onNavigateToOdometer} />
+                              </div>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className="px-4 py-3 font-mono text-xs text-red-600">
+                            ₹
+                            {(
+                              Number(slip.late_penalty || 0) +
+                              Number(slip.leave_deductions || 0) +
+                              Number(slip.absence_deductions || 0) +
+                              Number(slip.retention_deduction || 0) +
+                              Number(slip.other_deductions || 0)
+                            ).toLocaleString("en-IN")}
+                          </td>
+                          <td className="px-4 py-3 text-xs">
+                            <DeductionNoteCell row={slip} />
+                          </td>
+                          <td className="px-4 py-3 font-mono text-sm font-bold text-primary">
+                            ₹{Number(slip.net_salary || 0).toLocaleString("en-IN")}
+                          </td>
+                          <td className="px-4 py-3 text-xs">
+                            {Number(slip.per_paper_rate || 0) > 0 || myPayroll?.employee?.role === "paper_checker" ? (
+                              <div>
+                                <div className="font-medium text-foreground">{slip.sessions_conducted} papers</div>
+                                <div className="text-muted-foreground text-[10px]">₹{slip.per_paper_rate || 50}/paper</div>
+                              </div>
+                            ) : (
+                              `${slip.sessions_conducted} sessions`
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge
+                              className={`text-xs ${STATUS_BADGE[(slip.payroll_status?.toLowerCase().replace(" ", "_") || "") as keyof typeof STATUS_BADGE] || "bg-yellow-100 text-yellow-700"}`}
+                            >
+                              {slip.payroll_status || (slip.is_disbursed ? "Disbursed" : "Pending")}
+                            </Badge>
+                          </td>
+                        </motion.tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </TabsContent>
 

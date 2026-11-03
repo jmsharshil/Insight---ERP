@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Sliders, CheckCircle2, Send, Users, MessageSquarePlus, Edit3, Download } from "lucide-react";
+import { Sliders, CheckCircle2, Send, Users, Download, ExternalLink } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -9,12 +10,11 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { payrollActions, dropdownActions } from "@/redux/actions";
+import { payrollActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import { ROLES } from "@/constants/roles";
 import { setPayslips, setPayslipsLoading } from "@/redux/slices/payrollSlice";
-import type { PaySlip, PayrollRun } from "@/redux/slices/payrollSlice";
+import type { PaySlip } from "@/redux/slices/payrollSlice";
 import type { RootState, AppDispatch } from "@/store";
 import { useToast } from "@/hooks/useToast";
 import { useAuth } from "@/hooks/useAuth";
@@ -62,7 +62,10 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
         variant="ghost"
         size="sm"
         className="h-6 px-2 text-primary hover:text-primary/80 mt-1"
-        onClick={() => setIsOpen(true)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(true);
+        }}
       >
         View Deduction note
       </Button>
@@ -157,53 +160,107 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
 
 const ReimbursementNoteCell = ({ row }: { row: any }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
+  const notes = row.reimbursement_notes || [];
 
-  if (!row.reimbursement_notes || row.reimbursement_notes.length === 0) {
-    return <span className="text-muted-foreground">—</span>;
+  if (!notes || notes.length === 0) {
+    return null;
   }
+
+  const isUUID = (val: any): boolean => {
+    if (!val || typeof val !== "string") return false;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
+  };
+
+  const handleCardClick = (note: any) => {
+    setIsOpen(false);
+    const q = new URLSearchParams();
+    q.set("tab", "reimbursements");
+    const candidates = [
+      note?.user_id,
+      note?.user,
+      row?.user_id,
+      row?.faculty_id,
+      row?.faculty,
+      row?.employee?.id,
+      row?.user?.id,
+      row?.employee_id,
+      row?.user,
+    ];
+    let userVal: string | null = null;
+    for (const c of candidates) {
+      if (isUUID(c)) {
+        userVal = String(c).trim();
+        break;
+      }
+    }
+    if (!userVal) {
+      userVal = row?.faculty_name || (typeof row?.user === "string" ? row.user : "") || null;
+    }
+    if (userVal) q.set("user_id", userVal);
+    if (note.date) {
+      q.set("from_date", note.date);
+      q.set("to_date", note.date);
+    }
+    navigate(`/payroll?${q.toString()}`);
+  };
 
   return (
     <>
       <Button
         variant="ghost"
         size="sm"
-        className="h-6 px-2 text-primary hover:text-primary/80 mt-1"
-        onClick={() => setIsOpen(true)}
+        className="h-5 px-1.5 text-[11px] text-primary hover:text-primary/80 mt-1 block"
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(true);
+        }}
       >
-        View Reimbursement Note
+        View Claims ({notes.length})
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-[600px] ">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Reimbursement Note</DialogTitle>
+            <DialogTitle>Expense Reimbursements</DialogTitle>
           </DialogHeader>
           <div className="py-4 max-h-[70vh] overflow-y-auto">
             <div className="space-y-3">
-              {row.reimbursement_notes.map((note: any, idx: number) => (
-                <div key={idx} className="bg-white p-4 rounded-lg border border-border shadow-sm">
+              {notes.map((note: any, idx: number) => (
+                <div
+                  key={idx}
+                  onClick={() => handleCardClick(note)}
+                  className="bg-white p-4 rounded-xl border border-border shadow-sm hover:border-primary/60 hover:shadow-md hover:bg-slate-50/50 transition-all cursor-pointer group"
+                  title="Click to view in Reimbursements tab"
+                >
                   <div className="flex justify-between items-start gap-4">
-                    <div>
-                      <h4 className="font-medium text-sm text-foreground">
-                        {note.event || "Reimbursement / Claim"}
-                      </h4>
-                      {note.kms ? (
-                        <p className="text-xs text-muted-foreground mt-0.5 mb-3">
-                          {note.kms} kms
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors truncate">
+                          {note.event || note.description || "Expense Claim"}
+                        </h4>
+                        <ExternalLink className="w-3.5 h-3.5 text-muted-foreground opacity-60 group-hover:opacity-100 group-hover:text-primary transition-all shrink-0" />
+                      </div>
+                      {note.description && note.event && (
+                        <p className="text-xs text-muted-foreground mt-0.5 mb-1">
+                          {note.description}
                         </p>
-                      ) : null}
+                      )}
                     </div>
-                    <span className="font-mono text-sm text-green-600 font-medium shrink-0 bg-green-50 px-2 py-1 rounded-md border border-green-100">
+                    <span className="font-mono text-sm text-green-600 font-semibold shrink-0 bg-green-50 px-2.5 py-1 rounded-md border border-green-100">
                       ₹{Number(note.expense || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
-                  {note.date && (
-                    <div className="flex flex-wrap gap-1.5 mt-1">
+                  <div className="flex items-center justify-between mt-2 pt-1 border-t border-border/40 text-xs">
+                    {note.date ? (
                       <Badge variant="outline" className="text-[11px] font-normal bg-slate-50 text-slate-600 border-slate-200">
                         {note.date}
                       </Badge>
-                    </div>
-                  )}
+                    ) : <span />}
+                    <span className="text-[11px] text-primary font-medium opacity-80 group-hover:opacity-100 flex items-center gap-1">
+                      Open in Reimbursements Tab →
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -219,6 +276,142 @@ const ReimbursementNoteCell = ({ row }: { row: any }) => {
   );
 };
 
+const OdometerNoteCell = ({
+  row,
+  onNavigateToOdometer,
+}: {
+  row: any;
+  onNavigateToOdometer?: (note?: any, row?: any) => void;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
+  const notes = row.odometer_notes || [];
+
+  if (!notes || notes.length === 0) {
+    return null;
+  }
+
+  const isUUID = (val: any): boolean => {
+    if (!val || typeof val !== "string") return false;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
+  };
+
+  const handleCardClick = (note: any) => {
+    setIsOpen(false);
+    if (onNavigateToOdometer) {
+      onNavigateToOdometer(note, row);
+    } else {
+      const q = new URLSearchParams();
+      q.set("tab", "odometer");
+      const candidates = [
+        note?.user_id,
+        note?.user,
+        row?.user_id,
+        row?.faculty_id,
+        row?.faculty,
+        row?.employee?.id,
+        row?.user?.id,
+        row?.employee_id,
+        row?.user,
+      ];
+      let userVal: string | null = null;
+      for (const c of candidates) {
+        if (isUUID(c)) {
+          userVal = String(c).trim();
+          break;
+        }
+      }
+      if (!userVal) {
+        userVal = row?.faculty_name || (typeof row?.user === "string" ? row.user : "") || null;
+      }
+      if (userVal) q.set("user_id", userVal);
+      if (note.date) {
+        q.set("from_date", note.date);
+        q.set("to_date", note.date);
+      }
+      navigate(`/payroll?${q.toString()}`);
+    }
+  };
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-5 px-1.5 text-[11px] text-primary hover:text-primary/80 mt-1 block"
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(true);
+        }}
+      >
+        View Travel ({notes.length})
+      </Button>
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Travel / Odometer Claims</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 max-h-[70vh] overflow-y-auto">
+            <div className="space-y-3">
+              {notes.map((note: any, idx: number) => {
+                const adjReason = note.adjustment_reason || note.deduction_reason || note.notes || note.reason;
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => handleCardClick(note)}
+                    className="bg-white p-4 rounded-xl border border-border shadow-sm hover:border-primary/60 hover:shadow-md hover:bg-slate-50/50 transition-all cursor-pointer group"
+                    title="Click to view in Odometer Readings tab"
+                  >
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">
+                            {note.event || "Travel Claim"}
+                          </h4>
+                          <ExternalLink className="w-3.5 h-3.5 text-muted-foreground opacity-60 group-hover:opacity-100 group-hover:text-primary transition-all shrink-0" />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5 mb-1">
+                          {note.kms ? `${note.kms} kms` : ""}{note.rate_per_km ? ` @ ₹${note.rate_per_km}/km` : ""}{note.vehicle_type ? ` · ${note.vehicle_type}` : ""}
+                        </p>
+                      </div>
+                      <span className="font-mono text-sm text-green-600 font-semibold shrink-0 bg-green-50 px-2.5 py-1 rounded-md border border-green-100">
+                        ₹{Number(note.expense || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    {adjReason && (
+                      <div className="mt-2 bg-amber-50 border border-amber-200/90 rounded-md p-2 text-xs text-amber-900 leading-snug">
+                        <span className="font-bold text-amber-950 block text-[10px] uppercase tracking-wider mb-0.5">
+                          Adjustment Reason:
+                        </span>
+                        <span className="break-words font-medium">{adjReason}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between mt-2 pt-1 border-t border-border/40 text-xs">
+                      {note.date ? (
+                        <Badge variant="outline" className="text-[11px] font-normal bg-slate-50 text-slate-600 border-slate-200">
+                          {note.date}
+                        </Badge>
+                      ) : <span />}
+                      <span className="text-[11px] text-primary font-medium opacity-80 group-hover:opacity-100 flex items-center gap-1">
+                        Open in Odometer Tab →
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
 
 const STATUS_BADGE: Record<string, string> = {
   draft: "bg-gray-100 text-gray-700",
@@ -242,7 +435,12 @@ const MONTH_NAMES: Record<number, string> = {
   12: "Dec",
 };
 
-export default function PayslipsTab() {
+export default function PayslipsTab({
+  onNavigateToOdometer,
+}: {
+  onNavigateToOdometer?: (note?: any, row?: any) => void;
+} = {}) {
+  const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
   const { user } = useAuth();
@@ -255,7 +453,14 @@ export default function PayslipsTab() {
   const role = user?.role ?? "";
   const canApprove = ["super_admin", "branch_manager"].includes(role);
   const canDisburse = ["super_admin", "accountant"].includes(role);
-  const canAdjust = ["super_admin", "branch_manager", "accountant"].includes(role);
+  const canAdjust = ["super_admin", "accountant"].includes(role);
+
+  const handleRowClick = (slip: PaySlip) => {
+    const query = selectedRun?.id ? `?run_id=${selectedRun.id}` : "";
+    navigate(`/payroll/payslips/${slip.id}${query}`, {
+      state: { payslip: slip, run: selectedRun },
+    });
+  };
 
   useEffect(() => {
     if (!selectedRun) return;
@@ -304,16 +509,17 @@ export default function PayslipsTab() {
 
   const exportCsv = () => {
     const headers = [
-      "Employee", "Type", "Basic/Rate", "Hours/Amount", "Bonus", 
-      "Reimbursements", "Deductions", "Net Salary", "Status"
+      "Employee", "Type", "Basic/Rate", "Hours/Amount", "Extra Allowance", 
+      "Reimbursements", "Travel", "Deductions", "Net Salary", "Status"
     ].join(",");
     
     const rows = payslips.map((slip) => {
       const basic = Number(slip.basic_salary || slip.salary || 0);
       const isFaculty = slip.faculty;
       const type = isFaculty ? "Faculty" : "Staff";
-      const bonus = Number(slip.bonus || 0);
+      const bonus = Number(slip.bonus || slip.extra_shift_allowance || 0);
       const reimb = Number(slip.reimbursements_amount || 0);
+      const odo = Number(slip.odometer_amount || 0);
       const deduct = Number(slip.late_penalty || 0) +
                      Number(slip.leave_deductions || 0) +
                      Number(slip.absence_deductions || 0) +
@@ -329,6 +535,7 @@ export default function PayslipsTab() {
         `"${Number(slip.hour_based_amount || 0)}"`,
         `"${bonus}"`,
         `"${reimb}"`,
+        `"${odo}"`,
         `"${deduct}"`,
         `"${net}"`,
         `"${statusStr}"`
@@ -375,7 +582,7 @@ export default function PayslipsTab() {
           </div>
           <div className="flex gap-4 mt-1.5">
             <span className="text-xs text-muted-foreground">
-              {selectedRun.employee_count} employees
+              {selectedRun.employee_count ?? (selectedRun as any).faculty_count ?? 0} employees
             </span>
             <span className="text-xs font-semibold text-primary">
               Total: ₹{Number(selectedRun.total_amount ?? 0).toLocaleString("en-IN")}
@@ -446,9 +653,9 @@ export default function PayslipsTab() {
                     "Type",
                     "Basic / Rate",
                     "Hours / Amount",
-                    "Bonus",
+                    "Bonus / Extra Shift",
                     "Reimbursements",
-                    "Reimb. Note",
+                    "Travel (Odometer)",
                     "Deductions",
                     "Deduction Note",
                     "Net Salary",
@@ -478,7 +685,8 @@ export default function PayslipsTab() {
                       initial={{ opacity: 0, y: 5 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.02 }}
-                      className="border-b border-border/50 hover:bg-muted/20 transition-colors"
+                      onClick={() => handleRowClick(slip)}
+                      className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer group"
                     >
                       <td className="px-4 py-3">
                         <div className="font-medium text-foreground text-xs">
@@ -496,7 +704,9 @@ export default function PayslipsTab() {
                         </Badge>
                       </td>
                       <td className="px-4 py-3 font-mono text-xs">
-                        {slip.employment_type === "part_time" ||
+                        {Number(slip.per_paper_rate || 0) > 0 || slip.employment_type === "paper_checker" ? (
+                          `₹${Number(slip.per_paper_rate || 50).toLocaleString("en-IN")}/paper`
+                        ) : slip.employment_type === "part_time" ||
                         slip.employment_type === "visiting" ||
                         (Number(slip.basic_salary || slip.salary || 0) === 0 &&
                           Number(slip.hour_based_amount) > 0)
@@ -517,7 +727,16 @@ export default function PayslipsTab() {
                             : "—"}
                       </td>
                       <td className="px-4 py-3 font-mono text-xs">
-                        {Number(slip.total_session_hours || slip.session_hours || 0) > 0 ? (
+                        {Number(slip.per_paper_rate || 0) > 0 || slip.employment_type === "paper_checker" ? (
+                          <div>
+                            <div className="text-muted-foreground">
+                              {slip.sessions_conducted} papers
+                            </div>
+                            <div className="text-green-600 font-medium">
+                              ₹{(Number(slip.sessions_conducted || 0) * Number(slip.per_paper_rate || 50)).toLocaleString("en-IN")}
+                            </div>
+                          </div>
+                        ) : Number(slip.total_session_hours || slip.session_hours || 0) > 0 ? (
                           <div>
                             <div className="text-muted-foreground">
                               {Number(slip.total_session_hours || slip.session_hours)} hrs
@@ -535,15 +754,33 @@ export default function PayslipsTab() {
                         )}
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-green-600">
-                        {slip.bonus > 0 ? `₹${Number(slip.bonus).toLocaleString("en-IN")}` : "—"}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-green-600">
-                        {Number(slip.reimbursements_amount || 0) > 0
-                          ? `₹${Number(slip.reimbursements_amount).toLocaleString("en-IN")}`
+                        {slip.bonus > 0 || Number(slip.extra_shift_allowance || 0) > 0
+                          ? `₹${Number(slip.bonus || slip.extra_shift_allowance).toLocaleString("en-IN")}`
                           : "—"}
                       </td>
-                      <td className="px-4 py-3 text-xs">
-                        <ReimbursementNoteCell row={slip} />
+                      <td className="px-4 py-3 font-mono text-xs">
+                        {Number(slip.reimbursements_amount || 0) > 0 ? (
+                          <div>
+                            <div className="text-green-600 font-medium">
+                              ₹{Number(slip.reimbursements_amount).toLocaleString("en-IN")}
+                            </div>
+                            <ReimbursementNoteCell row={slip} />
+                          </div>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs">
+                        {Number(slip.odometer_amount || 0) > 0 ? (
+                          <div>
+                            <div className="text-green-600 font-medium">
+                              ₹{Number(slip.odometer_amount).toLocaleString("en-IN")}
+                            </div>
+                            <OdometerNoteCell row={slip} onNavigateToOdometer={onNavigateToOdometer} />
+                          </div>
+                        ) : (
+                          "—"
+                        )}
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-red-600">
                         ₹
@@ -574,7 +811,10 @@ export default function PayslipsTab() {
                             variant="ghost"
                             size="sm"
                             className="h-7 text-xs gap-1 px-2"
-                            onClick={() => setAdjustTarget(slip)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setAdjustTarget(slip);
+                            }}
                           >
                             <Sliders className="w-3 h-3" /> Adjust
                           </Button>

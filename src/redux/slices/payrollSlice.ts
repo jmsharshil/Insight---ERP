@@ -30,6 +30,9 @@ export interface PaySlip {
   absence_deductions?: number;
   retention_deduction?: number;
   bonus: number;
+  extra_shift_allowance?: number;
+  attendance_bonus?: number;
+  leave_encashment?: number;
   other_deductions?: number;
   deduction_note?: string;
   net_salary: number;
@@ -38,6 +41,9 @@ export interface PaySlip {
   late_logs?: any[];
   employment_type?: string;
   hourly_rate?: number | string;
+  per_paper_rate?: number | string;
+  working_days?: number;
+  leaves_taken?: number;
   session_hours?: number | string;
   total_session_hours?: number | string;
   payroll_month?: string;
@@ -45,6 +51,9 @@ export interface PaySlip {
   payroll_status?: string;
   reimbursements_amount?: number;
   reimbursement_note?: string;
+  reimbursement_notes?: any[];
+  odometer_amount?: number;
+  odometer_notes?: any[];
   salary?: number | string;
 }
 
