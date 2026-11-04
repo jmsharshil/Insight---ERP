@@ -1276,7 +1276,7 @@ export default function FeesPage() {
           <TabsTrigger value="student-fees">
             Student Fees
           </TabsTrigger>
-          <TabsTrigger value="installments">Installment Plans</TabsTrigger>
+          {/* <TabsTrigger value="installments">Installment Plans</TabsTrigger> */}
           <TabsTrigger value="payments">Payments </TabsTrigger>
           {(isAccountant || isAdmin) && (
             <TabsTrigger value="bank-accounts">Bank Accounts</TabsTrigger>

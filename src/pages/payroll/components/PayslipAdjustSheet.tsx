@@ -80,7 +80,11 @@ export default function PayslipAdjustSheet({ open, onClose, payslip, runId, onSu
                        Number(payslip.leave_deductions || 0) +
                        Number(payslip.absence_deductions || 0) +
                        Number(payslip.retention_deduction || 0) +
-                       Number(payslip.other_deductions || 0);
+                       Number(form.other_deductions !== "" ? form.other_deductions : payslip.other_deductions || 0);
+
+    const bonusTotal = Number(form.bonus !== "" ? form.bonus : payslip.bonus || 0) +
+                       Number(payslip.attendance_bonus || 0) +
+                       Number(payslip.leave_encashment || 0);
 
     calculatedNetSalary = calculatedBase +
                           Number(payslip.hour_based_amount || 0) +
@@ -94,7 +98,7 @@ export default function PayslipAdjustSheet({ open, onClose, payslip, runId, onSu
     <div className="flex items-center justify-between py-1.5 border-b border-border/40 last:border-0">
       <span className="text-xs text-muted-foreground">{label}</span>
       <span className={`text-sm font-semibold font-mono ${color}`}>
-        ₹{Number(value ?? 0).toLocaleString("en-IN")}
+        ₹{Number(value ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </span>
     </div>
   );
@@ -149,7 +153,7 @@ export default function PayslipAdjustSheet({ open, onClose, payslip, runId, onSu
               )}
               <SummaryRow label="Late Penalty"       value={payslip.late_penalty} color="text-red-600" />
               <SummaryRow label="Leave Deductions"   value={payslip.leave_deductions} color="text-red-600" />
-              {payslip.absence_deductions !== undefined && (
+              {Number(payslip.absence_deductions || 0) > 0 && (
                 <SummaryRow label="Absence Deductions" value={payslip.absence_deductions} color="text-red-600" />
               )}
               {payslip.retention_deduction !== undefined && (
@@ -159,9 +163,9 @@ export default function PayslipAdjustSheet({ open, onClose, payslip, runId, onSu
                 <SummaryRow label="Other Deductions"   value={payslip.other_deductions} color="text-red-600" />
               )}
               <div className="mt-2 pt-2 border-t border-border flex items-center justify-between">
-                <span className="text-sm font-semibold text-foreground">Net Salary</span>
+                <span className="text-sm font-semibold text-foreground">Projected Net Salary</span>
                 <span className="text-lg font-bold text-primary font-mono">
-                  ₹{calculatedNetSalary.toLocaleString("en-IN")}
+                  ₹{calculatedNetSalary.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
               {isFaculty && payslip.sessions_conducted > 0 && (

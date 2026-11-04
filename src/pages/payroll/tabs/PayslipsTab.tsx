@@ -34,27 +34,44 @@ import PayslipAdjustSheet from "../components/PayslipAdjustSheet";
 const DeductionNoteCell = ({ row }: { row: any }) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  if (!row.deduction_note) {
+  const totalDeduct =
+    Number(row.late_penalty || 0) +
+    Number(row.leave_deductions || 0) +
+    Number(row.absence_deductions || 0) +
+    Number(row.retention_deduction || 0) +
+    Number(row.other_deductions || 0);
+
+  const hasLogs = Array.isArray(row.per_day_deduction_log) && row.per_day_deduction_log.length > 0;
+  const hasNote = !!row.deduction_note && row.deduction_note.trim().length > 0;
+
+  if (totalDeduct === 0 && !hasNote && !hasLogs) {
     return <span className="text-muted-foreground">—</span>;
   }
 
   const parts: string[] = [];
   let current = "";
-  row.deduction_note.split(/,\s*/).forEach((chunk: string) => {
-    const isStartOfNew = /^Absent/.test(chunk) || /^Late check-in\/out/.test(chunk) || /^Leave/.test(chunk);
+  if (hasNote) {
+    row.deduction_note.split(/,\s*/).forEach((chunk: string) => {
+      const isStartOfNew =
+        /^Absent/i.test(chunk) ||
+        /^Late check-in\/out/i.test(chunk) ||
+        /^Leave/i.test(chunk) ||
+        /^Retention/i.test(chunk) ||
+        /^Other/i.test(chunk);
 
-    if (current && /:\s*-?\d+(\.\d+)?\s*$/.test(current)) {
-      parts.push(current);
-      current = chunk;
-    } else if (isStartOfNew && current) {
-      parts.push(current);
-      current = chunk;
-    } else {
-      if (current) current += ", " + chunk;
-      else current = chunk;
-    }
-  });
-  if (current) parts.push(current);
+      if (current && /:\s*-?\d+(\.\d+)?\s*$/.test(current)) {
+        parts.push(current);
+        current = chunk;
+      } else if (isStartOfNew && current) {
+        parts.push(current);
+        current = chunk;
+      } else {
+        if (current) current += ", " + chunk;
+        else current = chunk;
+      }
+    });
+    if (current) parts.push(current);
+  }
 
   return (
     <>
@@ -67,69 +84,141 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
           setIsOpen(true);
         }}
       >
-        View Deduction note
+        View Deductions
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-[600px] ">
+        <DialogContent className="sm:max-w-[650px] max-h-[85vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Deduction Note</DialogTitle>
+            <div className="flex items-center justify-between gap-4 pr-6">
+              <div>
+                <DialogTitle className="text-base font-semibold">Deduction Details</DialogTitle>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {row.faculty_name} ({row.employee_id})
+                </p>
+              </div>
+              <span className="font-mono text-sm text-red-600 font-semibold bg-red-50 px-2.5 py-1 rounded-md border border-red-100 whitespace-nowrap">
+                Total: - ₹{totalDeduct.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
           </DialogHeader>
-          <div className="py-4 max-h-[70vh] overflow-y-auto">
-            <div className="space-y-3">
-              {parts.map((part, idx) => {
-                const match = part.match(/^(.*?):\s*(-?\d+(\.\d+)?)\s*$/);
-                let text = part;
-                let amount: string | null = null;
 
-                if (match) {
-                  text = match[1].trim();
-                  amount = match[2];
-                } else {
-                  text = text.trim();
-                }
+          <div className="py-2 flex-1 overflow-y-auto space-y-4 pr-1">
+            {/* Category Summary Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {Number(row.absence_deductions || 0) > 0 && (
+                <div className="bg-red-50/60 border border-red-100 rounded-lg p-2.5">
+                  <div className="text-[11px] text-muted-foreground font-medium">Absence Deductions</div>
+                  <div className="font-mono text-xs font-semibold text-red-600 mt-0.5">
+                    - ₹{Number(row.absence_deductions).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+              )}
+              {Number(row.leave_deductions || 0) > 0 && (
+                <div className="bg-amber-50/60 border border-amber-100 rounded-lg p-2.5">
+                  <div className="text-[11px] text-muted-foreground font-medium">Leave Deductions</div>
+                  <div className="font-mono text-xs font-semibold text-amber-700 mt-0.5">
+                    - ₹{Number(row.leave_deductions).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+              )}
+              {Number(row.retention_deduction || 0) > 0 && (
+                <div className="bg-purple-50/60 border border-purple-100 rounded-lg p-2.5">
+                  <div className="text-[11px] text-muted-foreground font-medium">Retention Deductions</div>
+                  <div className="font-mono text-xs font-semibold text-purple-700 mt-0.5">
+                    - ₹{Number(row.retention_deduction).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+              )}
+              {(Number(row.late_penalty || 0) > 0 || Number(row.late_penalty_minutes || 0) > 0) && (
+                <div className="bg-orange-50/60 border border-orange-100 rounded-lg p-2.5">
+                  <div className="text-[11px] text-muted-foreground font-medium">
+                    Late Penalty {row.late_penalty_minutes ? `(${row.late_penalty_minutes} mins)` : ""}
+                  </div>
+                  <div className="font-mono text-xs font-semibold text-orange-700 mt-0.5">
+                    - ₹{Number(row.late_penalty || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+              )}
+              {Number(row.other_deductions || 0) > 0 && (
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5">
+                  <div className="text-[11px] text-muted-foreground font-medium">Other Deductions</div>
+                  <div className="font-mono text-xs font-semibold text-slate-700 mt-0.5">
+                    - ₹{Number(row.other_deductions).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+              )}
+            </div>
 
-                let title = text;
-                let dates: string[] = [];
-                let subtitle = "";
+            {/* Parsed Deduction Note Cards */}
+            {parts.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold text-foreground uppercase tracking-wide">
+                  Deduction Notes & Absences
+                </h4>
+                {parts.map((part, idx) => {
+                  const match = part.match(/^(.*?):\s*(-?\d+(\.\d+)?)\s*$/);
+                  let text = part;
+                  let amount: string | null = null;
 
-                const absenceMatch = text.match(/^Absent(?: \(\d+ days?\))? on (.*)/);
-                const lateMatch = text.match(/^Late check-in\/out on (.*?)(?:\s*\(([^)]+)\))?$/);
+                  if (match) {
+                    text = match[1].trim();
+                    amount = match[2];
+                  } else {
+                    text = text.trim();
+                  }
 
-                if (absenceMatch) {
-                  title = "Absence Deductions";
-                  dates = absenceMatch[1].split(/,\s*/);
-                  subtitle = `${dates.length} day${dates.length > 1 ? "s" : ""} absent`;
-                } else if (lateMatch) {
-                  title = "Late Check-in/Out";
-                  dates = lateMatch[1].split(/,\s*/);
-                  subtitle = lateMatch[2] || `${dates.length} instance${dates.length > 1 ? "s" : ""}`;
-                }
+                  let title = text;
+                  let dates: string[] = [];
+                  let subtitle = "";
 
-                if (amount !== null || absenceMatch || lateMatch) {
-                  const parsedAmount = amount ? Math.abs(Number(amount)) : null;
+                  const absenceMatch = text.match(/^Absent(?: \(\d+ days?\))? on (.*)/i);
+                  const lateMatch = text.match(/^Late check-in\/out on (.*?)(?:\s*\(([^)]+)\))?$/i);
+                  const retentionMatch = text.match(/^Retention(?:\s*\(([^)]+)\))?/i);
+
+                  if (absenceMatch) {
+                    title = "Absence Deductions";
+                    dates = absenceMatch[1].split(/,\s*/);
+                    subtitle = `${dates.length} day${dates.length > 1 ? "s" : ""} absent`;
+                  } else if (lateMatch) {
+                    title = "Late Check-in/Out";
+                    dates = lateMatch[1].split(/,\s*/);
+                    subtitle = lateMatch[2] || `${dates.length} instance${dates.length > 1 ? "s" : ""}`;
+                  } else if (retentionMatch) {
+                    title = "Retention Deduction";
+                    subtitle = retentionMatch[1] ? `Rate: ${retentionMatch[1]}` : "";
+                  }
+
+                  const parsedAmount =
+                    amount !== null
+                      ? Math.abs(Number(amount))
+                      : title === "Absence Deductions" && Number(row.absence_deductions || 0) > 0
+                        ? Number(row.absence_deductions)
+                        : title === "Retention Deduction" && Number(row.retention_deduction || 0) > 0
+                          ? Number(row.retention_deduction)
+                          : null;
 
                   return (
-                    <div key={idx} className="bg-white p-4 rounded-lg border border-border shadow-sm">
-                      <div className="flex justify-between items-start gap-4">
+                    <div key={idx} className="bg-white p-3.5 rounded-lg border border-border shadow-sm">
+                      <div className="flex justify-between items-start gap-3">
                         <div>
-                          <h4 className="font-medium text-sm text-foreground">{title}</h4>
+                          <h5 className="font-medium text-xs text-foreground">{title}</h5>
                           {subtitle && (
-                            <p className="text-xs text-muted-foreground mt-0.5 mb-3">
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
                               {subtitle}
                             </p>
                           )}
                         </div>
                         {parsedAmount !== null && (
-                          <span className="font-mono text-sm text-red-600 font-medium shrink-0 bg-red-50 px-2 py-1 rounded-md border border-red-100">
+                          <span className="font-mono text-xs text-red-600 font-medium shrink-0 bg-red-50 px-2 py-0.5 rounded border border-red-100">
                             - ₹{parsedAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                         )}
                       </div>
                       {dates.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mt-1">
+                        <div className="flex flex-wrap gap-1 mt-2.5">
                           {dates.map((d, i) => (
-                            <Badge key={`${d}-${i}`} variant="outline" className="text-[11px] font-normal bg-slate-50 text-slate-600 border-slate-200">
+                            <Badge key={`${d}-${i}`} variant="outline" className="text-[10px] font-normal bg-slate-50 text-slate-600 border-slate-200 py-0">
                               {d}
                             </Badge>
                           ))}
@@ -137,18 +226,54 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
                       )}
                     </div>
                   );
-                }
+                })}
+              </div>
+            )}
 
-                return (
-                  <div key={idx} className="bg-white p-4 rounded-lg border border-border shadow-sm text-sm text-muted-foreground">
-                    {part}
-                  </div>
-                );
-              })}
-            </div>
+            {/* Per-Day Deduction Log Table */}
+            {hasLogs && (
+              <div className="space-y-2 border-t pt-3">
+                <h4 className="text-xs font-semibold text-foreground uppercase tracking-wide">
+                  Per-Day Attendance & Deduction Log ({row.per_day_deduction_log.length})
+                </h4>
+                <div className="border border-border rounded-lg overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/40 border-b border-border">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Date</th>
+                        <th className="px-3 py-2 text-right font-medium text-muted-foreground">Hours</th>
+                        <th className="px-3 py-2 text-right font-medium text-muted-foreground">Late Mins</th>
+                        <th className="px-3 py-2 text-right font-medium text-muted-foreground">Penalty</th>
+                        <th className="px-3 py-2 text-right font-medium text-muted-foreground">Deduction</th>
+                        <th className="px-3 py-2 text-right font-medium text-muted-foreground">Net</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/40">
+                      {row.per_day_deduction_log.map((log: any, idx: number) => (
+                        <tr key={idx} className="hover:bg-muted/20">
+                          <td className="px-3 py-1.5 font-mono">{log.date}</td>
+                          <td className="px-3 py-1.5 text-right font-mono">{log.total_hours ?? "0.00"}h</td>
+                          <td className="px-3 py-1.5 text-right font-mono">{log.late_minutes ?? log.penalty_minutes ?? 0}m</td>
+                          <td className="px-3 py-1.5 text-right font-mono text-red-600">
+                            ₹{Number(log.penalty_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="px-3 py-1.5 text-right font-mono text-red-600">
+                            ₹{Number(log.deduction || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="px-3 py-1.5 text-right font-mono font-medium">
+                            ₹{Number(log.net_salary || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsOpen(false)}>
+
+          <DialogFooter className="pt-2 border-t">
+            <Button variant="outline" size="sm" onClick={() => setIsOpen(false)}>
               Close
             </Button>
           </DialogFooter>
@@ -161,10 +286,11 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
 const ReimbursementNoteCell = ({ row }: { row: any }) => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
-  const notes = row.reimbursement_notes || [];
+  const notes = Array.isArray(row.reimbursement_notes) ? row.reimbursement_notes : [];
+  const singleNote = row.reimbursement_note;
 
-  if (!notes || notes.length === 0) {
-    return null;
+  if (notes.length === 0 && !singleNote && Number(row.reimbursements_amount || 0) === 0) {
+    return <span className="text-muted-foreground">—</span>;
   }
 
   const isUUID = (val: any): boolean => {
@@ -225,8 +351,9 @@ const ReimbursementNoteCell = ({ row }: { row: any }) => {
             <DialogTitle>Expense Reimbursements</DialogTitle>
           </DialogHeader>
           <div className="py-4 max-h-[70vh] overflow-y-auto">
-            <div className="space-y-3">
-              {notes.map((note: any, idx: number) => (
+            {notes.length > 0 ? (
+              <div className="space-y-3">
+                {notes.map((note: any, idx: number) => (
                 <div
                   key={idx}
                   onClick={() => handleCardClick(note)}
@@ -263,10 +390,20 @@ const ReimbursementNoteCell = ({ row }: { row: any }) => {
                   </div>
                 </div>
               ))}
-            </div>
+              </div>
+            ) : singleNote ? (
+              <div className="bg-white p-4 rounded-lg border border-border shadow-sm text-xs text-foreground">
+                {singleNote}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-xs text-muted-foreground">
+                No reimbursement details recorded.
+              </div>
+            )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsOpen(false)}>
+
+          <DialogFooter className="pt-2 border-t">
+            <Button variant="outline" size="sm" onClick={() => setIsOpen(false)}>
               Close
             </Button>
           </DialogFooter>
@@ -449,6 +586,7 @@ export default function PayslipsTab({
   const [roleFilter, setRoleFilter] = useState("all");
   const [adjustTarget, setAdjustTarget] = useState<PaySlip | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [runStats, setRunStats] = useState<{ total_salary_sum?: string | number; count?: number } | null>(null);
 
   const role = user?.role ?? "";
   const canApprove = ["super_admin", "branch_manager"].includes(role);
@@ -473,6 +611,12 @@ export default function PayslipsTab({
       getResponse: (res: any) => {
         const data = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
         dispatch(setPayslips(data));
+        if (res?.total_salary_sum !== undefined || res?.count !== undefined) {
+          setRunStats({
+            total_salary_sum: res.total_salary_sum,
+            count: res.count,
+          });
+        }
       },
       getError: (err: any) =>
         toast.error(err?.response?.data?.message || "Failed to load payslips"),
@@ -512,11 +656,13 @@ export default function PayslipsTab({
       "Employee", "Type", "Basic/Rate", "Hours/Amount", "Extra Allowance", 
       "Reimbursements", "Travel", "Deductions", "Net Salary", "Status"
     ].join(",");
-    
+
     const rows = payslips.map((slip) => {
+      const isFaculty = !!slip.faculty;
+      const isPaperChecker = Number(slip.per_paper_rate || 0) > 0;
+      const type = isFaculty ? "Faculty" : isPaperChecker ? "Paper Evaluator" : "Staff";
+      const empType = (slip.employment_type || "").replace(/_/g, " ");
       const basic = Number(slip.basic_salary || slip.salary || 0);
-      const isFaculty = slip.faculty;
-      const type = isFaculty ? "Faculty" : "Staff";
       const bonus = Number(slip.bonus || slip.extra_shift_allowance || 0);
       const reimb = Number(slip.reimbursements_amount || 0);
       const odo = Number(slip.odometer_amount || 0);
@@ -525,25 +671,46 @@ export default function PayslipsTab({
                      Number(slip.absence_deductions || 0) +
                      Number(slip.retention_deduction || 0) +
                      Number(slip.other_deductions || 0);
+      const hourlyRate = Number(slip.hourly_rate || 0);
+      const paperRate = Number(slip.per_paper_rate || 0);
+      const sessionHours = Number(slip.total_session_hours || slip.session_hours || 0);
+      const hourAmt = Number(slip.hour_based_amount || 0);
+      const attBonus = Number(slip.attendance_bonus || 0);
+      const encashBonus = Number(slip.leave_encashment || 0);
+      const absenceDeduct = Number(slip.absence_deductions || 0);
+      const leaveDeduct = Number(slip.leave_deductions || 0);
+      const retentionDeduct = Number(slip.retention_deduction || 0);
+      const latePenalty = Number(slip.late_penalty || 0);
+      const otherDeduct = Number(slip.other_deductions || 0);
+      const totalDeduct = absenceDeduct + leaveDeduct + retentionDeduct + latePenalty + otherDeduct;
       const net = Number(slip.net_salary || 0);
       const statusStr = slip.is_disbursed ? "Disbursed" : "Pending";
 
       return [
         `"${slip.faculty_name}"`,
+        `"${slip.employee_id}"`,
         `"${type}"`,
+        `"${empType}"`,
+        `"${slip.working_days ?? 0}"`,
+        `"${slip.leaves_taken ?? 0}"`,
         `"${basic}"`,
-        `"${Number(slip.hour_based_amount || 0)}"`,
+        `"${hourlyRate}"`,
+        `"${paperRate}"`,
+        `"${sessionHours}"`,
+        `"${hourAmt}"`,
         `"${bonus}"`,
+        `"${attBonus}"`,
+        `"${encashBonus}"`,
         `"${reimb}"`,
         `"${odo}"`,
         `"${deduct}"`,
         `"${net}"`,
-        `"${statusStr}"`
+        `"${statusStr}"`,
       ].join(",");
     });
 
     const csv = [headers, ...rows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -551,7 +718,6 @@ export default function PayslipsTab({
     a.click();
     URL.revokeObjectURL(url);
   };
-
 
   if (!selectedRun) {
     return (
@@ -563,6 +729,16 @@ export default function PayslipsTab({
       </div>
     );
   }
+
+  const effectiveEmployeeCount =
+    runStats?.count !== undefined
+      ? runStats.count
+      : (payslips.length || selectedRun.employee_count);
+
+  const effectiveTotalAmount =
+    runStats?.total_salary_sum !== undefined
+      ? Number(runStats.total_salary_sum)
+      : Number(selectedRun.total_amount ?? 0);
 
   return (
     <div className="space-y-4">
@@ -585,7 +761,7 @@ export default function PayslipsTab({
               {selectedRun.employee_count ?? (selectedRun as any).faculty_count ?? 0} employees
             </span>
             <span className="text-xs font-semibold text-primary">
-              Total: ₹{Number(selectedRun.total_amount ?? 0).toLocaleString("en-IN")}
+              Total Net Salary: ₹{effectiveTotalAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
         </div>
@@ -741,16 +917,9 @@ export default function PayslipsTab({
                             <div className="text-muted-foreground">
                               {Number(slip.total_session_hours || slip.session_hours)} hrs
                             </div>
-                            <div className="text-green-600 font-medium">
-                              ₹{Number(slip.hour_based_amount || 0).toLocaleString("en-IN")}
-                            </div>
-                          </div>
-                        ) : Number(slip.hour_based_amount) > 0 ? (
-                          <div className="text-green-600 font-medium">
-                            ₹{Number(slip.hour_based_amount || 0).toLocaleString("en-IN")}
                           </div>
                         ) : (
-                          "—"
+                          <span className="text-muted-foreground">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-green-600">
@@ -805,6 +974,7 @@ export default function PayslipsTab({
                           {slip.is_disbursed ? "Disbursed" : "Pending"}
                         </Badge>
                       </td>
+                      {/* Adjust */}
                       <td className="px-4 py-3">
                         {canAdjust && !slip.is_disbursed && (
                           <Button
