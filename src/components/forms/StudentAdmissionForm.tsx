@@ -2206,6 +2206,17 @@ interface ModuleOption {
           if (Array.isArray(resData?.payment_history)) setPaymentHistory(resData.payment_history);
           if (resData?.razorpay_payment_link) setRazorpayPaymentLink(resData.razorpay_payment_link);
 
+          if (resData?.doc_signature) setExistingDocs((prev) => ({ ...prev, doc_signature: resData.doc_signature }));
+          if (resData?.doc_photo) setExistingDocs((prev) => ({ ...prev, doc_photo: resData.doc_photo }));
+          if (resData?.doc_id_card) setExistingDocs((prev) => ({ ...prev, doc_id_card: resData.doc_id_card }));
+          if (resData?.doc_pan_card) setExistingDocs((prev) => ({ ...prev, doc_pan_card: resData.doc_pan_card }));
+          if (resData?.doc_dob_certificate) setExistingDocs((prev) => ({ ...prev, doc_dob_certificate: resData.doc_dob_certificate }));
+          if (resData?.doc_twelfth_receipt) setExistingDocs((prev) => ({ ...prev, doc_twelfth_receipt: resData.doc_twelfth_receipt }));
+          if (resData?.doc_twelfth_marksheet) setExistingDocs((prev) => ({ ...prev, doc_twelfth_marksheet: resData.doc_twelfth_marksheet }));
+          if (resData?.doc_category_cert) setExistingDocs((prev) => ({ ...prev, doc_category_cert: resData.doc_category_cert }));
+          if (Array.isArray(resData?.payment_history)) setPaymentHistory(resData.payment_history);
+          if (resData?.razorpay_payment_link) setRazorpayPaymentLink(resData.razorpay_payment_link);
+
           // Pre-populate expected payment amount if empty
           const instFee = getInstituteFee(matchedFee, formData.course, formData.group_module);
           const tokenAmt = Number(matchedFee?.token_amount || 0);
