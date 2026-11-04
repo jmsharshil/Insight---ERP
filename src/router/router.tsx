@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ReactNode } from "react";
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter, Navigate, useSearchParams } from "react-router-dom";
 import AppShell from "@/components/layout/AppShell";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import LoginPage from "@/pages/auth/LoginPage";
@@ -46,12 +46,20 @@ const ReportsPage = lazy(() => import("@/pages/reports/ReportsPage"));
 const SettingsPage = lazy(() => import("@/pages/settings/SettingsPage"));
 const UsersPage = lazy(() => import("@/pages/users/UsersPage"));
 const PayrollPage = lazy(() => import("@/pages/payroll/PayrollPage"));
+const PayslipDetailPage = lazy(() => import("@/pages/payroll/PayslipDetailPage"));
 const ResultsPage = lazy(() => import("@/pages/results/ResultsPage"));
 const SupportPage = lazy(() => import("@/pages/support/SupportPage"));
 const SupportTicketDetailPage = lazy(() => import("@/pages/support/SupportTicketDetailPage"));
 const ReimbursementDetailPage = lazy(() => import("@/pages/reimbursements/ReimbursementDetailPage"));
 
 /* ─── Helpers ───────────────────────────────────────────────── */
+
+function RedirectWithQuery({ to }: { to: string }) {
+  const [searchParams] = useSearchParams();
+  const search = searchParams.toString();
+  const target = search ? `${to}${to.includes("?") ? "&" : "?"}${search}` : to;
+  return <Navigate to={target} replace />;
+}
 
 function RootRedirect() {
   const { isAuthenticated } = useAuth();
@@ -154,7 +162,11 @@ const router = createBrowserRouter([
     { module: "audit_logs", path: "/audit-logs", element: withSuspense(<AuditLogsPage />) },
     { module: "reports", path: "/reports", element: withSuspense(<ReportsPage />) },
     { module: "payroll", path: "/payroll", element: withSuspense(<PayrollPage />) },
+    { module: "payroll", path: "/payroll/payslips/:id", element: withSuspense(<PayslipDetailPage />) },
+    { module: "payroll", path: "/reimbursements", element: <RedirectWithQuery to="/payroll?tab=reimbursements" /> },
     { module: "payroll", path: "/reimbursements/:id", element: withSuspense(<ReimbursementDetailPage />) },
+    { module: "payroll", path: "/odometer", element: <RedirectWithQuery to="/payroll?tab=odometer" /> },
+    { module: "payroll", path: "/odometer-readings", element: <RedirectWithQuery to="/payroll?tab=odometer" /> },
     { module: "users", path: "/users", element: withSuspense(<UsersPage />) },
     { module: "results", path: "/results", element: withSuspense(<ResultsPage />) },
     { module: "support", path: "/support", element: withSuspense(<SupportPage />) },

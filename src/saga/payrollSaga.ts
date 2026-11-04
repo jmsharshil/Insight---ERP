@@ -11,6 +11,7 @@ export function* watchPayrollSaga() {
   yield takeLatest(payrollActions.APPROVE_RUN,          genericSaga);
   yield takeLatest(payrollActions.DISBURSE_RUN,         genericSaga);
   yield takeLatest(payrollActions.GET_PAYSLIPS,         genericSaga);
+  yield takeLatest(payrollActions.GET_PAYSLIP_DETAIL,   genericSaga);
   yield takeLatest(payrollActions.ADJUST_PAYSLIP,       genericSaga);
   yield takeLatest(payrollActions.GET_MY_PAYROLL,       genericSaga);
   yield takeLatest(payrollActions.GET_SALARY_PREVIEW,   genericSaga);

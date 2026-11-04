@@ -39,32 +39,38 @@ import {
 import { Loader2, Plus, Eye, Trash2, FileText, CheckCircle2, XCircle, Clock, ExternalLink, Search, X } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import ReimbursementFormModal from "../../reimbursements/components/ReimbursementFormModal";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 // We'll create these constants locally since they don't exist yet
 const ADMIN_ROLES = ['super_admin', 'accountant'];
 const ALL_APPROVERS = [...ADMIN_ROLES];
+
+const isUUID = (val: any): boolean => {
+  if (!val || typeof val !== "string") return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
+};
 
 export default function ReimbursementsTab() {
   const { user } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<Reimbursement[]>([]);
   const [summary, setSummary] = useState<ReimbursementSummary | null>(null);
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [branchFilter, setBranchFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>(searchParams.get("status") || "all");
+  const [branchFilter, setBranchFilter] = useState<string>(searchParams.get("branch_id") || "all");
   const [myClaimsOnly, setMyClaimsOnly] = useState(false);
-  const [userIdFilter, setUserIdFilter] = useState("all");
+  const [userIdFilter, setUserIdFilter] = useState(searchParams.get("user_id") || "all");
   const [userOptions, setUserOptions] = useState<{ id: string; name: string }[]>([]);
-  const [search, setSearch] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [isPaidFilter, setIsPaidFilter] = useState("all");
+  const [search, setSearch] = useState(searchParams.get("search") || "");
+  const [fromDate, setFromDate] = useState(searchParams.get("from_date") || searchParams.get("date") || "");
+  const [toDate, setToDate] = useState(searchParams.get("to_date") || searchParams.get("date") || "");
+  const [isPaidFilter, setIsPaidFilter] = useState(searchParams.get("is_paid") || "all");
   const [sorting, setSorting] = useState<SortingState>([]);
 
   // Modals
@@ -88,17 +94,43 @@ export default function ReimbursementsTab() {
           const raw = res?.data?.results || res?.results || res?.data || res || [];
           const list = Array.isArray(raw) ? raw : [];
           const staff = list.filter((u: any) => u.role !== "student" && u.role !== "parents" && u.role !== "parent");
-          setUserOptions(
-            staff.map((u: any) => ({
-              id: String(u.id),
-              name: u.full_name || u.name || `${u.first_name || ""} ${u.last_name || ""}`.trim() || u.email || "Unknown",
-            }))
-          );
+          const mapped = staff.map((u: any) => ({
+            id: String(u.id),
+            name: u.full_name || u.name || `${u.first_name || ""} ${u.last_name || ""}`.trim() || u.email || "Unknown",
+          }));
+          setUserOptions(mapped);
+
+          // If current userIdFilter is a name instead of UUID, resolve it
+          if (userIdFilter && userIdFilter !== "all" && !isUUID(userIdFilter)) {
+            const matched = mapped.find(
+              (u: any) => u.name.toLowerCase() === userIdFilter.toLowerCase()
+            );
+            if (matched?.id) {
+              setUserIdFilter(matched.id);
+            }
+          }
         },
         getError: () => {},
       });
     }
   }, [isApprover, dispatch]);
+
+  // Sync filters whenever searchParams change
+  useEffect(() => {
+    const urlUser = searchParams.get("user_id");
+    const urlFrom = searchParams.get("from_date") || searchParams.get("date");
+    const urlTo = searchParams.get("to_date") || searchParams.get("date");
+    const urlStatus = searchParams.get("status");
+    const urlSearch = searchParams.get("search");
+    const urlBranch = searchParams.get("branch_id");
+
+    if (urlUser !== null && urlUser !== userIdFilter) setUserIdFilter(urlUser || "all");
+    if (urlFrom !== null && urlFrom !== fromDate) setFromDate(urlFrom);
+    if (urlTo !== null && urlTo !== toDate) setToDate(urlTo);
+    if (urlStatus !== null && urlStatus !== statusFilter) setStatusFilter(urlStatus || "all");
+    if (urlSearch !== null && urlSearch !== search) setSearch(urlSearch);
+    if (urlBranch !== null && urlBranch !== branchFilter) setBranchFilter(urlBranch || "all");
+  }, [searchParams]);
 
   const fetchData = () => {
     const filters: any = {};
@@ -106,7 +138,21 @@ export default function ReimbursementsTab() {
     if (branchFilter !== "all") filters.branch_id = branchFilter;
     if (myClaimsOnly || !isApprover) filters.my = 1;
 
-    if (userIdFilter && userIdFilter !== "all") filters.user_id = userIdFilter;
+    let targetUser = userIdFilter;
+    if (targetUser && targetUser !== "all") {
+      if (isUUID(targetUser)) {
+        filters.user_id = targetUser;
+      } else {
+        const matched = userOptions.find(
+          (u) => u.name.toLowerCase() === targetUser.toLowerCase() || u.id === targetUser
+        );
+        if (matched && isUUID(matched.id)) {
+          filters.user_id = matched.id;
+        } else {
+          if (!search && !filters.search) filters.search = targetUser;
+        }
+      }
+    }
     if (search) filters.search = search;
     if (fromDate) filters.from_date = fromDate;
     if (toDate) filters.to_date = toDate;
@@ -335,6 +381,18 @@ export default function ReimbursementsTab() {
     setBranchFilter("all");
     setIsPaidFilter("all");
     setMyClaimsOnly(false);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("user_id");
+      next.delete("from_date");
+      next.delete("to_date");
+      next.delete("date");
+      next.delete("search");
+      next.delete("status");
+      next.delete("branch_id");
+      next.delete("is_paid");
+      return next;
+    });
     setTimeout(fetchData, 0);
   };
 

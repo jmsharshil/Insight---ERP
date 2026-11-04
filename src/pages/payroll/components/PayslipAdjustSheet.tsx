@@ -12,25 +12,27 @@ import { updatePayslipInList } from "@/redux/slices/payrollSlice";
 import type { PaySlip } from "@/redux/slices/payrollSlice";
 import type { AppDispatch } from "@/store";
 import { useToast } from "@/hooks/useToast";
-import { DollarSign, Clock, TrendingDown, TrendingUp } from "lucide-react";
+import { Clock, TrendingDown, TrendingUp } from "lucide-react";
 
 interface PayslipAdjustSheetProps {
   open:      boolean;
   onClose:   () => void;
   payslip:   PaySlip | null;
   runId:     string;
+  onSuccess?: (updated: PaySlip) => void;
 }
 
-export default function PayslipAdjustSheet({ open, onClose, payslip, runId }: PayslipAdjustSheetProps) {
+export default function PayslipAdjustSheet({ open, onClose, payslip, runId, onSuccess }: PayslipAdjustSheetProps) {
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ bonus: "", other_deductions: "", deduction_note: "" });
+  const [form, setForm] = useState({ bonus: "", leave_deductions: "", other_deductions: "", deduction_note: "" });
 
   useEffect(() => {
     if (payslip) {
       setForm({
-        bonus:            String(payslip.bonus ?? ""),
+        bonus:            String(payslip.bonus ?? payslip.extra_shift_allowance ?? ""),
+        leave_deductions: String(payslip.leave_deductions ?? ""),
         other_deductions: String(payslip.other_deductions ?? ""),
         deduction_note:   payslip.deduction_note ?? "",
       });
@@ -39,14 +41,17 @@ export default function PayslipAdjustSheet({ open, onClose, payslip, runId }: Pa
 
   const handleSave = () => {
     if (!payslip) return;
+    const bonusVal = Number(form.bonus) || 0;
     dispatch({
       type: payrollActions.ADJUST_PAYSLIP,
       method: "PATCH",
       endPoint: API.PAYROLL.PAYSLIP_DETAIL(runId, payslip.id),
       body: {
-        bonus:            Number(form.bonus) || 0,
-        other_deductions: Number(form.other_deductions) || 0,
-        deduction_note:   form.deduction_note,
+        bonus:                 bonusVal,
+        extra_shift_allowance: bonusVal,
+        leave_deductions:      form.leave_deductions !== "" ? Number(form.leave_deductions) : Number(payslip.leave_deductions || 0),
+        other_deductions:      Number(form.other_deductions) || 0,
+        deduction_note:        form.deduction_note,
       },
       auth: true,
       setLoading: (v: boolean) => setLoading(v),
@@ -54,6 +59,7 @@ export default function PayslipAdjustSheet({ open, onClose, payslip, runId }: Pa
         const updated = res?.data ?? res;
         if (updated?.id) {
           dispatch(updatePayslipInList(updated));
+          onSuccess?.(updated);
           toast.success("Payslip adjusted successfully.");
           onClose();
         } else {
@@ -82,8 +88,9 @@ export default function PayslipAdjustSheet({ open, onClose, payslip, runId }: Pa
 
     calculatedNetSalary = calculatedBase +
                           Number(payslip.hour_based_amount || 0) +
-                          bonusTotal +
-                          Number(payslip.reimbursements_amount || 0) -
+                          Number(payslip.bonus ?? payslip.extra_shift_allowance ?? 0) +
+                          Number(payslip.reimbursements_amount || 0) +
+                          Number(payslip.odometer_amount || 0) -
                           deductions;
   }
 
@@ -130,19 +137,29 @@ export default function PayslipAdjustSheet({ open, onClose, payslip, runId }: Pa
                   color="text-green-600" 
                 />
               )}
-              <SummaryRow label="Bonus"              value={Number(payslip.bonus || 0) + Number(payslip.attendance_bonus || 0) + Number(payslip.leave_encashment || 0)} color="text-green-600" />
+              {Number(payslip.per_paper_rate || 0) > 0 && (
+                <SummaryRow 
+                  label={`Papers Checked (${payslip.sessions_conducted} @ ₹${payslip.per_paper_rate})`} 
+                  value={Number(payslip.sessions_conducted || 0) * Number(payslip.per_paper_rate || 50)} 
+                  color="text-green-600" 
+                />
+              )}
+              <SummaryRow label="Bonus / Shift Allowance" value={payslip.bonus ?? payslip.extra_shift_allowance ?? 0} color="text-green-600" />
               {Number(payslip.reimbursements_amount || 0) > 0 && (
-                <SummaryRow label="Reimbursements"   value={payslip.reimbursements_amount} color="text-green-600" />
+                <SummaryRow label="Expense Reimbursements" value={payslip.reimbursements_amount} color="text-green-600" />
+              )}
+              {Number(payslip.odometer_amount || 0) > 0 && (
+                <SummaryRow label="Travel / Odometer" value={payslip.odometer_amount} color="text-green-600" />
               )}
               <SummaryRow label="Late Penalty"       value={payslip.late_penalty} color="text-red-600" />
               <SummaryRow label="Leave Deductions"   value={payslip.leave_deductions} color="text-red-600" />
               {Number(payslip.absence_deductions || 0) > 0 && (
                 <SummaryRow label="Absence Deductions" value={payslip.absence_deductions} color="text-red-600" />
               )}
-              {Number(payslip.retention_deduction || 0) > 0 && (
-                <SummaryRow label="Retention Deductions" value={payslip.retention_deduction} color="text-red-600" />
+              {payslip.retention_deduction !== undefined && (
+                <SummaryRow label="Salary Retention"   value={payslip.retention_deduction} color="text-red-600" />
               )}
-              {Number(payslip.other_deductions || 0) > 0 && (
+              {payslip.other_deductions !== undefined && (
                 <SummaryRow label="Other Deductions"   value={payslip.other_deductions} color="text-red-600" />
               )}
               <div className="mt-2 pt-2 border-t border-border flex items-center justify-between">
@@ -165,12 +182,25 @@ export default function PayslipAdjustSheet({ open, onClose, payslip, runId }: Pa
 
               <div className="flex flex-col gap-1">
                 <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3 text-green-600" /> Bonus (₹)
+                  <TrendingUp className="w-3 h-3 text-green-600" /> Bonus / Extra Shift Allowance (₹)
                 </Label>
                 <Input
                   type="number" min="0"
                   value={form.bonus}
                   onChange={e => setForm(f => ({ ...f, bonus: e.target.value }))}
+                  placeholder="0"
+                  className="h-9 text-sm font-mono"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <TrendingDown className="w-3 h-3 text-red-500" /> Leave Deductions (₹)
+                </Label>
+                <Input
+                  type="number" min="0"
+                  value={form.leave_deductions}
+                  onChange={e => setForm(f => ({ ...f, leave_deductions: e.target.value }))}
                   placeholder="0"
                   className="h-9 text-sm font-mono"
                 />
@@ -201,7 +231,7 @@ export default function PayslipAdjustSheet({ open, onClose, payslip, runId }: Pa
               </div>
 
               {/* Preview recalculated net */}
-              {(form.bonus || form.other_deductions) && (
+              {(form.bonus !== "" || form.other_deductions !== "" || form.leave_deductions !== "") && (
                 <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 flex items-center justify-between">
                   <span className="text-xs text-primary font-medium">Estimated new net salary</span>
                   <span className="text-sm font-bold text-primary font-mono">
@@ -209,8 +239,10 @@ export default function PayslipAdjustSheet({ open, onClose, payslip, runId }: Pa
                       calculatedNetSalary
                       + (Number(form.bonus) || 0)
                       - (Number(form.other_deductions) || 0)
-                      - (Number(payslip.bonus) || 0)
+                      - (form.leave_deductions !== "" ? Number(form.leave_deductions) : Number(payslip.leave_deductions || 0))
+                      - (Number(payslip.bonus ?? payslip.extra_shift_allowance) || 0)
                       + (Number(payslip.other_deductions) || 0)
+                      + (Number(payslip.leave_deductions) || 0)
                     ).toLocaleString("en-IN")}
                   </span>
                 </div>

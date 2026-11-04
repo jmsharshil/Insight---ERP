@@ -243,6 +243,7 @@ export interface OdometerReading {
   rejected_by_name?: string | null;
   rejected_at?: string | null;
   rejection_reason?: string | null;
+  adjustment_reason?: string | null;
   is_paid: boolean;
   start_odometer_photo?: string;
   end_odometer_photo?: string;

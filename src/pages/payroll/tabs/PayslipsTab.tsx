@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Sliders, CheckCircle2, Send, Users, Download } from "lucide-react";
+import { Sliders, CheckCircle2, Send, Users, Download, ExternalLink } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -77,8 +78,11 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
       <Button
         variant="ghost"
         size="sm"
-        className="h-6 px-2 text-primary hover:text-primary/80 mt-1 text-xs"
-        onClick={() => setIsOpen(true)}
+        className="h-6 px-2 text-primary hover:text-primary/80 mt-1"
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(true);
+        }}
       >
         View Deductions
       </Button>
@@ -281,7 +285,7 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
 
 const ReimbursementNoteCell = ({ row }: { row: any }) => {
   const [isOpen, setIsOpen] = useState(false);
-
+  const navigate = useNavigate();
   const notes = Array.isArray(row.reimbursement_notes) ? row.reimbursement_notes : [];
   const singleNote = row.reimbursement_note;
 
@@ -289,66 +293,104 @@ const ReimbursementNoteCell = ({ row }: { row: any }) => {
     return <span className="text-muted-foreground">—</span>;
   }
 
+  const isUUID = (val: any): boolean => {
+    if (!val || typeof val !== "string") return false;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
+  };
+
+  const handleCardClick = (note: any) => {
+    setIsOpen(false);
+    const q = new URLSearchParams();
+    q.set("tab", "reimbursements");
+    const candidates = [
+      note?.user_id,
+      note?.user,
+      row?.user_id,
+      row?.faculty_id,
+      row?.faculty,
+      row?.employee?.id,
+      row?.user?.id,
+      row?.employee_id,
+      row?.user,
+    ];
+    let userVal: string | null = null;
+    for (const c of candidates) {
+      if (isUUID(c)) {
+        userVal = String(c).trim();
+        break;
+      }
+    }
+    if (!userVal) {
+      userVal = row?.faculty_name || (typeof row?.user === "string" ? row.user : "") || null;
+    }
+    if (userVal) q.set("user_id", userVal);
+    if (note.date) {
+      q.set("from_date", note.date);
+      q.set("to_date", note.date);
+    }
+    navigate(`/payroll?${q.toString()}`);
+  };
+
   return (
     <>
       <Button
         variant="ghost"
         size="sm"
-        className="h-6 px-2 text-primary hover:text-primary/80 mt-1 text-xs"
-        onClick={() => setIsOpen(true)}
+        className="h-5 px-1.5 text-[11px] text-primary hover:text-primary/80 mt-1 block"
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(true);
+        }}
       >
-        {notes.length > 0 ? `View Notes (${notes.length})` : "View Note"}
+        View Claims ({notes.length})
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[85vh] flex flex-col">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <div className="flex items-center justify-between gap-4 pr-6">
-              <div>
-                <DialogTitle className="text-base font-semibold">Reimbursement Details</DialogTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {row.faculty_name} ({row.employee_id})
-                </p>
-              </div>
-              <span className="font-mono text-sm text-green-600 font-semibold bg-green-50 px-2.5 py-1 rounded-md border border-green-100 whitespace-nowrap">
-                Total: ₹{Number(row.reimbursements_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-            </div>
+            <DialogTitle>Expense Reimbursements</DialogTitle>
           </DialogHeader>
-
-          <div className="py-2 flex-1 overflow-y-auto space-y-3 pr-1">
+          <div className="py-4 max-h-[70vh] overflow-y-auto">
             {notes.length > 0 ? (
-              notes.map((note: any, idx: number) => (
-                <div key={idx} className="bg-white p-3.5 rounded-lg border border-border shadow-sm">
-                  <div className="flex justify-between items-start gap-3">
-                    <div>
-                      <h5 className="font-medium text-xs text-foreground">
-                        {note.event || "Reimbursement / Claim"}
-                      </h5>
-                      {note.description && (
-                        <p className="text-[11px] text-muted-foreground mt-1">
+              <div className="space-y-3">
+                {notes.map((note: any, idx: number) => (
+                <div
+                  key={idx}
+                  onClick={() => handleCardClick(note)}
+                  className="bg-white p-4 rounded-xl border border-border shadow-sm hover:border-primary/60 hover:shadow-md hover:bg-slate-50/50 transition-all cursor-pointer group"
+                  title="Click to view in Reimbursements tab"
+                >
+                  <div className="flex justify-between items-start gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors truncate">
+                          {note.event || note.description || "Expense Claim"}
+                        </h4>
+                        <ExternalLink className="w-3.5 h-3.5 text-muted-foreground opacity-60 group-hover:opacity-100 group-hover:text-primary transition-all shrink-0" />
+                      </div>
+                      {note.description && note.event && (
+                        <p className="text-xs text-muted-foreground mt-0.5 mb-1">
                           {note.description}
                         </p>
                       )}
                     </div>
-                    <span className="font-mono text-xs text-green-600 font-medium shrink-0 bg-green-50 px-2 py-0.5 rounded border border-green-100">
+                    <span className="font-mono text-sm text-green-600 font-semibold shrink-0 bg-green-50 px-2.5 py-1 rounded-md border border-green-100">
                       ₹{Number(note.expense || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                    {note.date && (
-                      <Badge variant="outline" className="text-[10px] font-normal bg-slate-50 text-slate-600 border-slate-200 py-0">
+                  <div className="flex items-center justify-between mt-2 pt-1 border-t border-border/40 text-xs">
+                    {note.date ? (
+                      <Badge variant="outline" className="text-[11px] font-normal bg-slate-50 text-slate-600 border-slate-200">
                         {note.date}
                       </Badge>
-                    )}
-                    {note.kms ? (
-                      <Badge variant="outline" className="text-[10px] font-normal bg-blue-50 text-blue-600 border-blue-200 py-0">
-                        {note.kms} kms
-                      </Badge>
-                    ) : null}
+                    ) : <span />}
+                    <span className="text-[11px] text-primary font-medium opacity-80 group-hover:opacity-100 flex items-center gap-1">
+                      Open in Reimbursements Tab →
+                    </span>
                   </div>
                 </div>
-              ))
+              ))}
+              </div>
             ) : singleNote ? (
               <div className="bg-white p-4 rounded-lg border border-border shadow-sm text-xs text-foreground">
                 {singleNote}
@@ -358,6 +400,144 @@ const ReimbursementNoteCell = ({ row }: { row: any }) => {
                 No reimbursement details recorded.
               </div>
             )}
+          </div>
+
+          <DialogFooter className="pt-2 border-t">
+            <Button variant="outline" size="sm" onClick={() => setIsOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
+const OdometerNoteCell = ({
+  row,
+  onNavigateToOdometer,
+}: {
+  row: any;
+  onNavigateToOdometer?: (note?: any, row?: any) => void;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
+  const notes = row.odometer_notes || [];
+
+  if (!notes || notes.length === 0) {
+    return null;
+  }
+
+  const isUUID = (val: any): boolean => {
+    if (!val || typeof val !== "string") return false;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
+  };
+
+  const handleCardClick = (note: any) => {
+    setIsOpen(false);
+    if (onNavigateToOdometer) {
+      onNavigateToOdometer(note, row);
+    } else {
+      const q = new URLSearchParams();
+      q.set("tab", "odometer");
+      const candidates = [
+        note?.user_id,
+        note?.user,
+        row?.user_id,
+        row?.faculty_id,
+        row?.faculty,
+        row?.employee?.id,
+        row?.user?.id,
+        row?.employee_id,
+        row?.user,
+      ];
+      let userVal: string | null = null;
+      for (const c of candidates) {
+        if (isUUID(c)) {
+          userVal = String(c).trim();
+          break;
+        }
+      }
+      if (!userVal) {
+        userVal = row?.faculty_name || (typeof row?.user === "string" ? row.user : "") || null;
+      }
+      if (userVal) q.set("user_id", userVal);
+      if (note.date) {
+        q.set("from_date", note.date);
+        q.set("to_date", note.date);
+      }
+      navigate(`/payroll?${q.toString()}`);
+    }
+  };
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-5 px-1.5 text-[11px] text-primary hover:text-primary/80 mt-1 block"
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(true);
+        }}
+      >
+        View Travel ({notes.length})
+      </Button>
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Travel / Odometer Claims</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 max-h-[70vh] overflow-y-auto">
+            <div className="space-y-3">
+              {notes.map((note: any, idx: number) => {
+                const adjReason = note.adjustment_reason || note.deduction_reason || note.notes || note.reason;
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => handleCardClick(note)}
+                    className="bg-white p-4 rounded-xl border border-border shadow-sm hover:border-primary/60 hover:shadow-md hover:bg-slate-50/50 transition-all cursor-pointer group"
+                    title="Click to view in Odometer Readings tab"
+                  >
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">
+                            {note.event || "Travel Claim"}
+                          </h4>
+                          <ExternalLink className="w-3.5 h-3.5 text-muted-foreground opacity-60 group-hover:opacity-100 group-hover:text-primary transition-all shrink-0" />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5 mb-1">
+                          {note.kms ? `${note.kms} kms` : ""}{note.rate_per_km ? ` @ ₹${note.rate_per_km}/km` : ""}{note.vehicle_type ? ` · ${note.vehicle_type}` : ""}
+                        </p>
+                      </div>
+                      <span className="font-mono text-sm text-green-600 font-semibold shrink-0 bg-green-50 px-2.5 py-1 rounded-md border border-green-100">
+                        ₹{Number(note.expense || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    {adjReason && (
+                      <div className="mt-2 bg-amber-50 border border-amber-200/90 rounded-md p-2 text-xs text-amber-900 leading-snug">
+                        <span className="font-bold text-amber-950 block text-[10px] uppercase tracking-wider mb-0.5">
+                          Adjustment Reason:
+                        </span>
+                        <span className="break-words font-medium">{adjReason}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between mt-2 pt-1 border-t border-border/40 text-xs">
+                      {note.date ? (
+                        <Badge variant="outline" className="text-[11px] font-normal bg-slate-50 text-slate-600 border-slate-200">
+                          {note.date}
+                        </Badge>
+                      ) : <span />}
+                      <span className="text-[11px] text-primary font-medium opacity-80 group-hover:opacity-100 flex items-center gap-1">
+                        Open in Odometer Tab →
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           <DialogFooter className="pt-2 border-t">
@@ -393,7 +573,12 @@ const MONTH_NAMES: Record<number, string> = {
   12: "Dec",
 };
 
-export default function PayslipsTab() {
+export default function PayslipsTab({
+  onNavigateToOdometer,
+}: {
+  onNavigateToOdometer?: (note?: any, row?: any) => void;
+} = {}) {
+  const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
   const { user } = useAuth();
@@ -407,7 +592,14 @@ export default function PayslipsTab() {
   const role = user?.role ?? "";
   const canApprove = ["super_admin", "branch_manager"].includes(role);
   const canDisburse = ["super_admin", "accountant"].includes(role);
-  const canAdjust = ["super_admin", "branch_manager", "accountant"].includes(role);
+  const canAdjust = ["super_admin", "accountant"].includes(role);
+
+  const handleRowClick = (slip: PaySlip) => {
+    const query = selectedRun?.id ? `?run_id=${selectedRun.id}` : "";
+    navigate(`/payroll/payslips/${slip.id}${query}`, {
+      state: { payslip: slip, run: selectedRun },
+    });
+  };
 
   useEffect(() => {
     if (!selectedRun) return;
@@ -472,17 +664,13 @@ export default function PayslipsTab() {
       "Hourly Rate",
       "Per Paper Rate",
       "Session Hours",
-      "Hours Amount",
-      "Bonus",
+      "Hour Based Amount",
+      "Bonus / Extra Shift",
       "Attendance Bonus",
       "Leave Encashment",
       "Reimbursements",
-      "Absence Deductions",
-      "Leave Deductions",
-      "Retention Deductions",
-      "Late Penalty",
-      "Other Deductions",
-      "Total Deductions",
+      "Travel",
+      "Deductions",
       "Net Salary",
       "Status",
     ].join(",");
@@ -493,14 +681,20 @@ export default function PayslipsTab() {
       const type = isFaculty ? "Faculty" : isPaperChecker ? "Paper Evaluator" : "Staff";
       const empType = (slip.employment_type || "").replace(/_/g, " ");
       const basic = Number(slip.basic_salary || slip.salary || 0);
-      const hourlyRate = Number(slip.hourly_rate || 0);
-      const paperRate = Number(slip.per_paper_rate || 0);
+      const bonus = Number(slip.bonus || slip.extra_shift_allowance || 0);
+      const reimb = Number(slip.reimbursements_amount || 0);
+      const odo = Number(slip.odometer_amount || 0);
+      const deduct = Number(slip.late_penalty || 0) +
+                     Number(slip.leave_deductions || 0) +
+                     Number(slip.absence_deductions || 0) +
+                     Number(slip.retention_deduction || 0) +
+                     Number(slip.other_deductions || 0);
       const sessionHours = Number(slip.total_session_hours || slip.session_hours || 0);
       const hourAmt = Number(slip.hour_based_amount || 0);
-      const bonus = Number(slip.bonus || 0);
       const attBonus = Number(slip.attendance_bonus || 0);
       const encashBonus = Number(slip.leave_encashment || 0);
-      const reimb = Number(slip.reimbursements_amount || 0);
+      const hourlyRate = Number(slip.hourly_rate || 0);
+      const paperRate = Number(slip.per_paper_rate || 0);
       const absenceDeduct = Number(slip.absence_deductions || 0);
       const leaveDeduct = Number(slip.leave_deductions || 0);
       const retentionDeduct = Number(slip.retention_deduction || 0);
@@ -526,12 +720,8 @@ export default function PayslipsTab() {
         `"${attBonus}"`,
         `"${encashBonus}"`,
         `"${reimb}"`,
-        `"${absenceDeduct}"`,
-        `"${leaveDeduct}"`,
-        `"${retentionDeduct}"`,
-        `"${latePenalty}"`,
-        `"${otherDeduct}"`,
-        `"${totalDeduct}"`,
+        `"${odo}"`,
+        `"${deduct}"`,
         `"${net}"`,
         `"${statusStr}"`,
       ].join(",");
@@ -586,7 +776,7 @@ export default function PayslipsTab() {
           </div>
           <div className="flex gap-4 mt-1.5">
             <span className="text-xs text-muted-foreground">
-              {effectiveEmployeeCount} employees
+              {effectiveEmployeeCount ?? 0} employees
             </span>
             <span className="text-xs font-semibold text-primary">
               Total Net Salary: ₹{effectiveTotalAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -657,9 +847,9 @@ export default function PayslipsTab() {
                     "Type",
                     "Basic / Rate",
                     "Hours / Amount",
-                    "Bonus",
+                    "Bonus / Extra Shift",
                     "Reimbursements",
-                    "Reimb. Note",
+                    "Travel (Odometer)",
                     "Deductions",
                     "Deduction Note",
                     "Net Salary",
@@ -684,29 +874,21 @@ export default function PayslipsTab() {
                   </tr>
                 ) : (
                   payslips.map((slip, i) => {
-                    const basic = Number(slip.basic_salary || slip.salary || 0);
                     const perPaperRate = Number(slip.per_paper_rate || 0);
-                    const explicitHourlyRate = Number(slip.hourly_rate || 0);
-                    const totalSessionHours = Number(slip.total_session_hours || slip.session_hours || 0);
+                    const basic = Number(slip.basic_salary || slip.salary || 0);
+                    const totalSessionHours = Number(
+                      slip.total_session_hours || slip.session_hours || 0,
+                    );
                     const hourAmount = Number(slip.hour_based_amount || 0);
+                    const explicitHourlyRate = Number(slip.hourly_rate || 0);
                     const effectiveHourlyRate =
                       explicitHourlyRate > 0
                         ? explicitHourlyRate
                         : totalSessionHours > 0 && hourAmount > 0
                           ? hourAmount / totalSessionHours
                           : 0;
-
-                    const bonusVal = Number(slip.bonus || 0);
-                    const attBonusVal = Number(slip.attendance_bonus || 0);
-                    const encashBonusVal = Number(slip.leave_encashment || 0);
-                    const totalBonus = bonusVal + attBonusVal + encashBonusVal;
-
-                    const totalDeduct =
-                      Number(slip.late_penalty || 0) +
-                      Number(slip.leave_deductions || 0) +
-                      Number(slip.absence_deductions || 0) +
-                      Number(slip.retention_deduction || 0) +
-                      Number(slip.other_deductions || 0);
+                    const isPaperChecker =
+                      perPaperRate > 0 || slip.employment_type === "paper_checker";
 
                     return (
                       <motion.tr
@@ -714,9 +896,9 @@ export default function PayslipsTab() {
                         initial={{ opacity: 0, y: 5 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.02 }}
-                        className="border-b border-border/50 hover:bg-muted/20 transition-colors"
+                        onClick={() => handleRowClick(slip)}
+                        className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer group"
                       >
-                        {/* Employee */}
                         <td className="px-4 py-3">
                           <div className="font-medium text-foreground text-xs">
                             {slip.faculty_name}
@@ -724,22 +906,17 @@ export default function PayslipsTab() {
                           <div className="font-mono text-[11px] text-muted-foreground">
                             {slip.employee_id}
                           </div>
-                          {((slip.working_days ?? 0) > 0 || (slip.leaves_taken ?? 0) > 0) && (
-                            <div className="text-[10px] text-muted-foreground mt-0.5">
-                              {slip.working_days ?? 0} working days
-                              {slip.leaves_taken ? ` · ${slip.leaves_taken} leaves` : ""}
-                            </div>
-                          )}
                         </td>
 
-                        {/* Type */}
                         <td className="px-4 py-3">
                           <div className="flex flex-col gap-1 items-start">
                             {slip.faculty ? (
                               <Badge className="text-[10px] bg-blue-100 text-blue-700 border-blue-200">
-                                {slip.employment_type === "visiting" ? "Visiting Faculty" : "Faculty"}
+                                {slip.employment_type === "visiting"
+                                  ? "Visiting Faculty"
+                                  : "Faculty"}
                               </Badge>
-                            ) : perPaperRate > 0 ? (
+                            ) : isPaperChecker ? (
                               <Badge className="text-[10px] bg-purple-100 text-purple-700 border-purple-200">
                                 Paper Evaluator
                               </Badge>
@@ -749,27 +926,25 @@ export default function PayslipsTab() {
                               </Badge>
                             )}
                             {slip.employment_type && (
-                              <Badge variant="outline" className="text-[9px] capitalize text-muted-foreground px-1 py-0 font-normal">
+                              <Badge
+                                variant="outline"
+                                className="text-[9px] capitalize text-muted-foreground px-1 py-0 font-normal"
+                              >
                                 {slip.employment_type.replace(/_/g, " ")}
                               </Badge>
                             )}
                           </div>
                         </td>
 
-                        {/* Basic / Rate */}
                         <td className="px-4 py-3 font-mono text-xs">
-                          {perPaperRate > 0 ? (
-                            <span className="font-medium text-foreground">
-                              ₹{perPaperRate.toLocaleString("en-IN")}/paper
-                            </span>
+                          {isPaperChecker ? (
+                            `₹${perPaperRate.toLocaleString("en-IN")}/paper`
                           ) : slip.employment_type === "visiting" ||
                             slip.employment_type === "part_time" ||
                             (basic === 0 && effectiveHourlyRate > 0) ? (
-                            effectiveHourlyRate > 0 ? (
-                              `₹${effectiveHourlyRate.toLocaleString("en-IN")}/hr`
-                            ) : (
-                              "—"
-                            )
+                            effectiveHourlyRate > 0
+                              ? `₹${effectiveHourlyRate.toLocaleString("en-IN")}/hr`
+                              : "—"
                           ) : basic > 0 ? (
                             `₹${basic.toLocaleString("en-IN")}`
                           ) : (
@@ -777,9 +952,19 @@ export default function PayslipsTab() {
                           )}
                         </td>
 
-                        {/* Hours / Amount */}
                         <td className="px-4 py-3 font-mono text-xs">
-                          {totalSessionHours > 0 ? (
+                          {isPaperChecker ? (
+                            <div>
+                              <div className="text-muted-foreground">
+                                {Number(slip.sessions_conducted || 0)} papers
+                              </div>
+                              {hourAmount > 0 && (
+                                <div className="text-green-600 font-medium">
+                                  ₹{hourAmount.toLocaleString("en-IN")}
+                                </div>
+                              )}
+                            </div>
+                          ) : totalSessionHours > 0 ? (
                             <div>
                               <div className="text-muted-foreground">
                                 {totalSessionHours} hrs
@@ -795,74 +980,89 @@ export default function PayslipsTab() {
                               ₹{hourAmount.toLocaleString("en-IN")}
                             </div>
                           ) : (
-                            "—"
+                            <span className="text-muted-foreground">—</span>
                           )}
                         </td>
 
-                        {/* Bonus */}
                         <td className="px-4 py-3 font-mono text-xs text-green-600">
-                          {totalBonus > 0 ? (
+                          {Number(slip.bonus || 0) > 0 ||
+                          Number(slip.extra_shift_allowance || 0) > 0
+                            ? `₹${Number(
+                                slip.bonus || slip.extra_shift_allowance || 0,
+                              ).toLocaleString("en-IN")}`
+                            : "—"}
+                        </td>
+
+                        <td className="px-4 py-3 font-mono text-xs">
+                          {Number(slip.reimbursements_amount || 0) > 0 ? (
                             <div>
-                              <div>₹{totalBonus.toLocaleString("en-IN")}</div>
-                              {(attBonusVal > 0 || encashBonusVal > 0) && (
-                                <div className="text-[10px] text-muted-foreground font-sans">
-                                  {attBonusVal > 0 ? `Att: ₹${attBonusVal.toLocaleString("en-IN")}` : ""}
-                                  {attBonusVal > 0 && encashBonusVal > 0 ? " · " : ""}
-                                  {encashBonusVal > 0 ? `Encash: ₹${encashBonusVal.toLocaleString("en-IN")}` : ""}
-                                </div>
-                              )}
+                              <div className="text-green-600 font-medium">
+                                ₹{Number(slip.reimbursements_amount).toLocaleString("en-IN")}
+                              </div>
+                              <ReimbursementNoteCell row={slip} />
                             </div>
                           ) : (
                             "—"
                           )}
                         </td>
 
-                        {/* Reimbursements */}
-                        <td className="px-4 py-3 font-mono text-xs text-green-600">
-                          {Number(slip.reimbursements_amount || 0) > 0
-                            ? `₹${Number(slip.reimbursements_amount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                            : "—"}
+                        <td className="px-4 py-3 font-mono text-xs">
+                          {Number(slip.odometer_amount || 0) > 0 ? (
+                            <div>
+                              <div className="text-green-600 font-medium">
+                                ₹{Number(slip.odometer_amount).toLocaleString("en-IN")}
+                              </div>
+                              <OdometerNoteCell
+                                row={slip}
+                                onNavigateToOdometer={onNavigateToOdometer}
+                              />
+                            </div>
+                          ) : (
+                            "—"
+                          )}
                         </td>
 
-                        {/* Reimbursement Note */}
-                        <td className="px-4 py-3 text-xs">
-                          <ReimbursementNoteCell row={slip} />
-                        </td>
-
-                        {/* Deductions */}
                         <td className="px-4 py-3 font-mono text-xs text-red-600">
-                          {totalDeduct > 0
-                            ? `₹${totalDeduct.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                            : "—"}
+                          ₹
+                          {(
+                            Number(slip.late_penalty || 0) +
+                            Number(slip.leave_deductions || 0) +
+                            Number(slip.absence_deductions || 0) +
+                            Number(slip.retention_deduction || 0) +
+                            Number(slip.other_deductions || 0)
+                          ).toLocaleString("en-IN")}
                         </td>
 
-                        {/* Deduction Note */}
                         <td className="px-4 py-3 text-xs">
                           <DeductionNoteCell row={slip} />
                         </td>
 
-                        {/* Net Salary */}
                         <td className="px-4 py-3 font-mono text-sm font-bold text-primary">
-                          ₹{Number(slip.net_salary || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ₹{Number(slip.net_salary || 0).toLocaleString("en-IN")}
                         </td>
 
-                        {/* Status */}
                         <td className="px-4 py-3">
                           <Badge
-                            className={`text-[10px] ${slip.is_disbursed ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}
+                            className={`text-[10px] ${
+                              slip.is_disbursed
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-gray-100 text-gray-600"
+                            }`}
                           >
                             {slip.is_disbursed ? "Disbursed" : "Pending"}
                           </Badge>
                         </td>
 
-                        {/* Adjust */}
                         <td className="px-4 py-3">
                           {canAdjust && !slip.is_disbursed && (
                             <Button
                               variant="ghost"
                               size="sm"
                               className="h-7 text-xs gap-1 px-2"
-                              onClick={() => setAdjustTarget(slip)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setAdjustTarget(slip);
+                              }}
                             >
                               <Sliders className="w-3 h-3" /> Adjust
                             </Button>

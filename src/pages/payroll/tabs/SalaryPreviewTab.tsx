@@ -30,7 +30,7 @@ export default function SalaryPreviewTab() {
   const [month, setMonth] = useState(String(d.getMonth() + 1));
   const [year,  setYear]  = useState(String(d.getFullYear()));
 
-  // Faculty ID from auth — verify this matches your user object's faculty UUID field
+  // Faculty ID from auth — verify this matches user object's faculty UUID field
   const facultyId = (user as any)?.faculty_id ?? user?.id ?? "";
 
   const fetchPreview = () => {
@@ -42,7 +42,8 @@ export default function SalaryPreviewTab() {
       auth: true,
       setLoading: (v: boolean) => dispatch(setPreviewLoading(v)),
       getResponse: (res: any) => {
-        if (res?.success && res?.data) dispatch(setPreview(res.data));
+        const data = res?.data?.payslip_preview ? res.data : res?.data ? { payslip_preview: res.data } : res?.payslip_preview ? res : null;
+        if (data) dispatch(setPreview(data));
         else toast.error("Failed to load salary preview.");
       },
       getError: (err: any) => toast.error(err?.response?.data?.message || "Error loading preview"),
@@ -84,8 +85,8 @@ export default function SalaryPreviewTab() {
           {/* Estimated Net — hero card */}
           <div className="bg-white rounded-xl border border-border p-6 text-center">
             <div className="text-xs text-muted-foreground mb-1">Estimated Net Salary</div>
-            <div className="text-4xl font-bold text-primary">
-              ₹{Number(p.estimated_net ?? 0).toLocaleString("en-IN")}
+            <div className="text-4xl font-bold text-primary font-mono">
+              ₹{Number(p.net_salary ?? p.estimated_net ?? 0).toLocaleString("en-IN")}
             </div>
             <div className="text-xs text-muted-foreground mt-1">
               {MONTHS.find(m => m.v === month)?.l} {year}
@@ -96,10 +97,15 @@ export default function SalaryPreviewTab() {
           <div className="bg-white rounded-xl border border-border p-5 space-y-0">
             <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Breakdown</div>
             {[
-              { label: "Basic Salary",            value: p.basic_salary,             icon: TrendingUp, color: "text-foreground" },
-              { label: "Expected Hours Amount",   value: p.expected_hours_amount,    icon: Clock,      color: "text-green-600" },
-              { label: "Late Penalty (estimate)", value: p.late_penalty_estimate,    icon: TrendingDown, color: "text-red-600" },
-            ].map(row => (
+              { label: "Basic Salary",            value: p.basic_salary,                                   icon: TrendingUp,   color: "text-foreground" },
+              { label: "Hour-based Amount",       value: p.hour_based_amount ?? p.expected_hours_amount,   icon: Clock,        color: "text-green-600" },
+              { label: "Attendance Bonus",        value: p.attendance_bonus,                               icon: TrendingUp,   color: "text-green-600" },
+              { label: "Leave Encashment",        value: p.leave_encashment,                               icon: TrendingUp,   color: "text-green-600" },
+              { label: "Late Penalty (estimate)", value: p.late_penalty ?? p.late_penalty_estimate,        icon: TrendingDown, color: "text-red-600" },
+              { label: "Absence Deductions",      value: p.absence_deductions,                             icon: TrendingDown, color: "text-red-600" },
+              { label: "Leave Deductions",        value: p.leave_deductions,                               icon: TrendingDown, color: "text-red-600" },
+              { label: "Salary Retention",        value: p.retention_deduction,                           icon: TrendingDown, color: "text-red-600" },
+            ].filter(row => row.value !== undefined && (Number(row.value) > 0 || row.label === "Basic Salary" || row.label === "Hour-based Amount")).map(row => (
               <div key={row.label} className="flex items-center justify-between py-2.5 border-b border-border/40 last:border-0">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <row.icon className={`w-3.5 h-3.5 ${row.color}`} />

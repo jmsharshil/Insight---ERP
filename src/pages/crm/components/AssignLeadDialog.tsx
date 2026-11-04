@@ -114,6 +114,10 @@ export default function AssignLeadDialog({
 
   const handleAssign = useCallback(() => {
     if (!lead || !selectedUser) return;
+    if (isReassign && user?.role === "front_desk") {
+      toast.error("Front desk users cannot reassign leads");
+      return;
+    }
     setAssigning(true);
 
     dispatch({
@@ -140,7 +144,7 @@ export default function AssignLeadDialog({
         toast.error(msg);
       },
     } as any);
-  }, [lead, selectedUser, note, dispatch, toast, onOpenChange, onSuccess, isReassign]);
+  }, [lead, selectedUser, note, dispatch, toast, onOpenChange, onSuccess, isReassign, user?.role]);
 
   /* ─── Render ──────────────────────────────────────────────── */
   return (
@@ -253,6 +257,12 @@ export default function AssignLeadDialog({
             />
           </div>
 
+          {isReassign && user?.role === "front_desk" && (
+            <p className="text-xs text-destructive">
+              Front desk users cannot reassign already assigned leads.
+            </p>
+          )}
+
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-1">
             <Button
@@ -266,7 +276,7 @@ export default function AssignLeadDialog({
             <Button
               size="sm"
               onClick={handleAssign}
-              disabled={!selectedUser || assigning}
+              disabled={!selectedUser || assigning || (isReassign && user?.role === "front_desk")}
               className="gap-1.5"
             >
               {assigning ? (

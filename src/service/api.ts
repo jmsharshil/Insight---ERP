@@ -378,6 +378,9 @@ BATCHES: {
     EXTRA_HOUR_DETAIL: (id: string) => `/api/v1/payroll/extra-hours/${id}/`,
     FACULTY_PAYSLIPS: (fId: string) => `/api/v1/faculty/${fId}/payslips/`,
     FACULTY_PREVIEW: (fId: string) => `/api/v1/faculty/${fId}/salary-preview/`,
+    ODOMETER_READINGS: "/api/v1/sales/odometer-readings/",
+    ODOMETER_READING_APPROVE: (id: string | number) => `/api/v1/sales/odometer-readings/${id}/approve/`,
+    ODOMETER_READING_REJECT: (id: string | number) => `/api/v1/sales/odometer-readings/${id}/reject/`,
   },
 
   /** Result Analytics endpoints */
