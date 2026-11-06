@@ -539,8 +539,9 @@ const OdometerNoteCell = ({
               })}
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsOpen(false)}>
+
+          <DialogFooter className="pt-2 border-t">
+            <Button variant="outline" size="sm" onClick={() => setIsOpen(false)}>
               Close
             </Button>
           </DialogFooter>
@@ -695,8 +696,25 @@ export default function PayslipsTab({
 
   const exportCsv = () => {
     const headers = [
-      "Employee", "Type", "Basic/Rate", "Hours/Amount", "Extra Allowance", 
-      "Reimbursements", "Travel", "Deductions", "Net Salary", "Status"
+      "Employee",
+      "Employee ID",
+      "Type",
+      "Employment Type",
+      "Working Days",
+      "Leaves Taken",
+      "Basic Salary",
+      "Hourly Rate",
+      "Per Paper Rate",
+      "Session Hours",
+      "Hour Based Amount",
+      "Bonus / Extra Shift",
+      "Attendance Bonus",
+      "Leave Encashment",
+      "Reimbursements",
+      "Travel",
+      "Deductions",
+      "Net Salary",
+      "Status",
     ].join(",");
 
     const rows = payslips.map((slip) => {
@@ -713,12 +731,12 @@ export default function PayslipsTab({
                      Number(slip.absence_deductions || 0) +
                      Number(slip.retention_deduction || 0) +
                      Number(slip.other_deductions || 0);
-      const hourlyRate = Number(slip.hourly_rate || 0);
-      const paperRate = Number(slip.per_paper_rate || 0);
       const sessionHours = Number(slip.total_session_hours || slip.session_hours || 0);
       const hourAmt = Number(slip.hour_based_amount || 0);
       const attBonus = Number(slip.attendance_bonus || 0);
       const encashBonus = Number(slip.leave_encashment || 0);
+      const hourlyRate = Number(slip.hourly_rate || 0);
+      const paperRate = Number(slip.per_paper_rate || 0);
       const absenceDeduct = Number(slip.absence_deductions || 0);
       const leaveDeduct = Number(slip.leave_deductions || 0);
       const retentionDeduct = Number(slip.retention_deduction || 0);
@@ -800,7 +818,7 @@ export default function PayslipsTab({
           </div>
           <div className="flex gap-4 mt-1.5">
             <span className="text-xs text-muted-foreground">
-              {selectedRun.employee_count ?? (selectedRun as any).faculty_count ?? 0} employees
+              {effectiveEmployeeCount ?? 0} employees
             </span>
             <span className="text-xs font-semibold text-primary">
               Total Net Salary: ₹{effectiveTotalAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -917,143 +935,204 @@ export default function PayslipsTab({
                     </td>
                   </tr>
                 ) : (
-                  payslips.map((slip, i) => (
-                    <motion.tr
-                      key={slip.id}
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.02 }}
-                      onClick={() => handleRowClick(slip)}
-                      className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer group"
-                    >
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-foreground text-xs">
-                          {slip.faculty_name}
-                        </div>
-                        <div className="font-mono text-[11px] text-muted-foreground">
-                          {slip.employee_id}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge
-                          className={`text-[10px] ${slip.faculty ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700"}`}
-                        >
-                          {slip.faculty ? "Faculty" : "Staff"}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs">
-                        {Number(slip.per_paper_rate || 0) > 0 || slip.employment_type === "paper_checker" ? (
-                          `₹${Number(slip.per_paper_rate || 50).toLocaleString("en-IN")}/paper`
-                        ) : slip.employment_type === "part_time" ||
-                        slip.employment_type === "visiting" ||
-                        (Number(slip.basic_salary || slip.salary || 0) === 0 &&
-                          Number(slip.hour_based_amount) > 0)
-                          ? (() => {
-                              const explicitRate = Number(slip.hourly_rate || 0);
-                              const hours = Number(
-                                slip.total_session_hours || slip.session_hours || 0,
-                              );
-                              const amount = Number(slip.hour_based_amount || 0);
-                              const effectiveRate =
-                                explicitRate > 0 ? explicitRate : hours > 0 ? amount / hours : 0;
-                              return effectiveRate > 0
-                                ? `₹${effectiveRate.toLocaleString("en-IN")}/hr`
-                                : "—";
-                            })()
-                          : Number(slip.basic_salary || slip.salary || 0) > 0
-                            ? `₹${Number(slip.basic_salary || slip.salary || 0).toLocaleString("en-IN")}`
+                  payslips.map((slip, i) => {
+                    const perPaperRate = Number(slip.per_paper_rate || 0);
+                    const basic = Number(slip.basic_salary || slip.salary || 0);
+                    const totalSessionHours = Number(
+                      slip.total_session_hours || slip.session_hours || 0,
+                    );
+                    const hourAmount = Number(slip.hour_based_amount || 0);
+                    const explicitHourlyRate = Number(slip.hourly_rate || 0);
+                    const effectiveHourlyRate =
+                      explicitHourlyRate > 0
+                        ? explicitHourlyRate
+                        : totalSessionHours > 0 && hourAmount > 0
+                          ? hourAmount / totalSessionHours
+                          : 0;
+                    const isPaperChecker =
+                      perPaperRate > 0 || slip.employment_type === "paper_checker";
+
+                    return (
+                      <motion.tr
+                        key={slip.id}
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.02 }}
+                        onClick={() => handleRowClick(slip)}
+                        className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer group"
+                      >
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-foreground text-xs">
+                            {slip.faculty_name}
+                          </div>
+                          <div className="font-mono text-[11px] text-muted-foreground">
+                            {slip.employee_id}
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1 items-start">
+                            {slip.faculty ? (
+                              <Badge className="text-[10px] bg-blue-100 text-blue-700 border-blue-200">
+                                {slip.employment_type === "visiting"
+                                  ? "Visiting Faculty"
+                                  : "Faculty"}
+                              </Badge>
+                            ) : isPaperChecker ? (
+                              <Badge className="text-[10px] bg-purple-100 text-purple-700 border-purple-200">
+                                Paper Evaluator
+                              </Badge>
+                            ) : (
+                              <Badge className="text-[10px] bg-gray-100 text-gray-700 border-gray-200">
+                                Staff
+                              </Badge>
+                            )}
+                            {slip.employment_type && (
+                              <Badge
+                                variant="outline"
+                                className="text-[9px] capitalize text-muted-foreground px-1 py-0 font-normal"
+                              >
+                                {slip.employment_type.replace(/_/g, " ")}
+                              </Badge>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-3 font-mono text-xs">
+                          {isPaperChecker ? (
+                            `₹${perPaperRate.toLocaleString("en-IN")}/paper`
+                          ) : slip.employment_type === "visiting" ||
+                            slip.employment_type === "part_time" ||
+                            (basic === 0 && effectiveHourlyRate > 0) ? (
+                            effectiveHourlyRate > 0
+                              ? `₹${effectiveHourlyRate.toLocaleString("en-IN")}/hr`
+                              : "—"
+                          ) : basic > 0 ? (
+                            `₹${basic.toLocaleString("en-IN")}`
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3 font-mono text-xs">
+                          {isPaperChecker ? (
+                            <div>
+                              <div className="text-muted-foreground">
+                                {Number(slip.sessions_conducted || 0)} papers
+                              </div>
+                              {hourAmount > 0 && (
+                                <div className="text-green-600 font-medium">
+                                  ₹{hourAmount.toLocaleString("en-IN")}
+                                </div>
+                              )}
+                            </div>
+                          ) : totalSessionHours > 0 ? (
+                            <div>
+                              <div className="text-muted-foreground">
+                                {totalSessionHours} hrs
+                              </div>
+                              {hourAmount > 0 && (
+                                <div className="text-green-600 font-medium">
+                                  ₹{hourAmount.toLocaleString("en-IN")}
+                                </div>
+                              )}
+                            </div>
+                          ) : hourAmount > 0 ? (
+                            <div className="text-green-600 font-medium">
+                              ₹{hourAmount.toLocaleString("en-IN")}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3 font-mono text-xs text-green-600">
+                          {Number(slip.bonus || 0) > 0 ||
+                          Number(slip.extra_shift_allowance || 0) > 0
+                            ? `₹${Number(
+                                slip.bonus || slip.extra_shift_allowance || 0,
+                              ).toLocaleString("en-IN")}`
                             : "—"}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs">
-                        {Number(slip.per_paper_rate || 0) > 0 || slip.employment_type === "paper_checker" ? (
-                          <div>
-                            <div className="text-muted-foreground">
-                              {slip.sessions_conducted} papers
+                        </td>
+
+                        <td className="px-4 py-3 font-mono text-xs">
+                          {Number(slip.reimbursements_amount || 0) > 0 ? (
+                            <div>
+                              <div className="text-green-600 font-medium">
+                                ₹{Number(slip.reimbursements_amount).toLocaleString("en-IN")}
+                              </div>
+                              <ReimbursementNoteCell row={slip} />
                             </div>
-                            <div className="text-green-600 font-medium">
-                              ₹{(Number(slip.sessions_conducted || 0) * Number(slip.per_paper_rate || 50)).toLocaleString("en-IN")}
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3 font-mono text-xs">
+                          {Number(slip.odometer_amount || 0) > 0 ? (
+                            <div>
+                              <div className="text-green-600 font-medium">
+                                ₹{Number(slip.odometer_amount).toLocaleString("en-IN")}
+                              </div>
+                              <OdometerNoteCell
+                                row={slip}
+                                onNavigateToOdometer={onNavigateToOdometer}
+                              />
                             </div>
-                          </div>
-                        ) : Number(slip.total_session_hours || slip.session_hours || 0) > 0 ? (
-                          <div>
-                            <div className="text-muted-foreground">
-                              {Number(slip.total_session_hours || slip.session_hours)} hrs
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-green-600">
-                        {slip.bonus > 0 || Number(slip.extra_shift_allowance || 0) > 0
-                          ? `₹${Number(slip.bonus || slip.extra_shift_allowance).toLocaleString("en-IN")}`
-                          : "—"}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs">
-                        {Number(slip.reimbursements_amount || 0) > 0 ? (
-                          <div>
-                            <div className="text-green-600 font-medium">
-                              ₹{Number(slip.reimbursements_amount).toLocaleString("en-IN")}
-                            </div>
-                            <ReimbursementNoteCell row={slip} />
-                          </div>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs">
-                        {Number(slip.odometer_amount || 0) > 0 ? (
-                          <div>
-                            <div className="text-green-600 font-medium">
-                              ₹{Number(slip.odometer_amount).toLocaleString("en-IN")}
-                            </div>
-                            <OdometerNoteCell row={slip} onNavigateToOdometer={onNavigateToOdometer} />
-                          </div>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-red-600">
-                        ₹
-                        {(
-                          Number(slip.late_penalty || 0) +
-                          Number(slip.leave_deductions || 0) +
-                          Number(slip.absence_deductions || 0) +
-                          Number(slip.retention_deduction || 0) +
-                          Number(slip.other_deductions || 0)
-                        ).toLocaleString("en-IN")}
-                      </td>
-                      <td className="px-4 py-3 text-xs">
-                        <DeductionNoteCell row={slip} />
-                      </td>
-                      <td className="px-4 py-3 font-mono text-sm font-bold text-primary">
-                        ₹{Number(slip.net_salary || 0).toLocaleString("en-IN")}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge
-                          className={`text-[10px] ${slip.is_disbursed ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}
-                        >
-                          {slip.is_disbursed ? "Disbursed" : "Pending"}
-                        </Badge>
-                      </td>
-                      {/* Adjust */}
-                      <td className="px-4 py-3">
-                        {canAdjust && !slip.is_disbursed && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 text-xs gap-1 px-2"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setAdjustTarget(slip);
-                            }}
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3 font-mono text-xs text-red-600">
+                          ₹
+                          {(
+                            Number(slip.late_penalty || 0) +
+                            Number(slip.leave_deductions || 0) +
+                            Number(slip.absence_deductions || 0) +
+                            Number(slip.retention_deduction || 0) +
+                            Number(slip.other_deductions || 0)
+                          ).toLocaleString("en-IN")}
+                        </td>
+
+                        <td className="px-4 py-3 text-xs">
+                          <DeductionNoteCell row={slip} />
+                        </td>
+
+                        <td className="px-4 py-3 font-mono text-sm font-bold text-primary">
+                          ₹{Number(slip.net_salary || 0).toLocaleString("en-IN")}
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <Badge
+                            className={`text-[10px] ${
+                              slip.is_disbursed
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-gray-100 text-gray-600"
+                            }`}
                           >
-                            <Sliders className="w-3 h-3" /> Adjust
-                          </Button>
-                        )}
-                      </td>
-                    </motion.tr>
-                  ))
+                            {slip.is_disbursed ? "Disbursed" : "Pending"}
+                          </Badge>
+                        </td>
+
+                        <td className="px-4 py-3">
+                          {canAdjust && !slip.is_disbursed && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs gap-1 px-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setAdjustTarget(slip);
+                              }}
+                            >
+                              <Sliders className="w-3 h-3" /> Adjust
+                            </Button>
+                          )}
+                        </td>
+                      </motion.tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

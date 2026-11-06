@@ -9,7 +9,7 @@ export interface PayrollRun {
   year: number;
   branch?: string;
   branch_name?: string;
-  total_amount: string;
+  total_amount: string | number;
   employee_count: number;
   generated_at: string;
   approved_by?: string | null;
@@ -19,43 +19,66 @@ export interface PayrollRun {
 
 export interface PaySlip {
   id: string;
+
+  // Employee / Faculty
   faculty: string | null;
   user_id: string;
   faculty_name: string;
   employee_id: string;
-  basic_salary: number;
-  hour_based_amount: number;
-  late_penalty: number;
-  leave_deductions: number;
-  absence_deductions?: number;
-  retention_deduction?: number;
-  bonus: number;
-  extra_shift_allowance?: number;
-  attendance_bonus?: number;
-  leave_encashment?: number;
-  other_deductions?: number;
-  deduction_note?: string;
-  per_day_deduction_log?: any[];
-  net_salary: number | string;
-  sessions_conducted: number;
-  is_disbursed: boolean;
-  late_logs?: any[];
+  employment_type?: string;
+
+  // Salary
+  basic_salary: number | string;
+  salary?: number | string;
   hourly_rate?: number | string;
   per_paper_rate?: number | string;
-  working_days?: number;
-  leaves_taken?: number;
+
+  // Hours / Sessions
+  hour_based_amount: number | string;
   session_hours?: number | string;
   total_session_hours?: number | string;
-  salary?: number | string;
+  sessions_conducted: number;
   visiting_count?: number;
+
+  // Deductions
+  late_penalty: number | string;
+  late_penalty_minutes?: number | string;
+  leave_deductions: number | string;
+  absence_deductions?: number | string;
+  retention_deduction?: number | string;
+  other_deductions?: number | string;
+
+  deduction_note?: string;
+  per_day_deduction_log?: any[];
+  late_logs?: any[];
+
+  // Bonuses / Allowances
+  bonus: number | string;
+  extra_shift_allowance?: number | string;
+  attendance_bonus?: number | string;
+  leave_encashment?: number | string;
+
+  // Reimbursements
+  reimbursements_amount?: number | string;
+  reimbursement_note?: string;
+  reimbursement_notes?: any[];
+
+  // Odometer / Travel
+  odometer_amount?: number | string;
+  odometer_notes?: any[];
+
+  // Final Salary
+  net_salary: number | string;
+  is_disbursed: boolean;
+
+  // Attendance
+  working_days?: number;
+  leaves_taken?: number;
+
+  // Payroll Details
   payroll_month?: string;
   payroll_year?: string;
   payroll_status?: string;
-  reimbursements_amount?: number;
-  reimbursement_note?: string;
-  reimbursement_notes?: any[];
-  odometer_amount?: number;
-  odometer_notes?: any[];
 }
 
 export interface LatePolicy {
@@ -88,11 +111,13 @@ export interface MyPayrollData {
     email: string;
     role: string;
   };
+
   summary: {
     total_payslips: number;
-    total_net_earned: string;
-    total_disbursed: string;
+    total_net_earned: string | number;
+    total_disbursed: string | number;
   };
+
   payslips: PaySlip[];
 }
 
@@ -100,114 +125,327 @@ export interface SalaryPreview {
   faculty_id: string;
   month: number;
   year: number;
+
   payslip_preview: {
-    basic_salary: number;
-    expected_hours_amount: number;
-    estimated_net: number;
-    late_penalty_estimate: number;
+    basic_salary: number | string;
+    expected_hours_amount: number | string;
+    estimated_net: number | string;
+    late_penalty_estimate: number | string;
     [key: string]: any;
   };
 }
 
-interface PayrollState {
-  runs:              PayrollRun[];
-  runsLoading:       boolean;
+// ─── State ────────────────────────────────────────────────────────────────────
 
-  selectedRun:       PayrollRun | null;
+interface PayrollState {
+  runs: PayrollRun[];
+  runsLoading: boolean;
+
+  selectedRun: PayrollRun | null;
   selectedRunLoading: boolean;
 
-  payslips:          PaySlip[];
-  payslipsLoading:   boolean;
+  payslips: PaySlip[];
+  payslipsLoading: boolean;
 
-  myPayroll:         MyPayrollData | null;
-  myPayrollLoading:  boolean;
+  myPayroll: MyPayrollData | null;
+  myPayrollLoading: boolean;
 
-  preview:           SalaryPreview | null;
-  previewLoading:    boolean;
+  preview: SalaryPreview | null;
+  previewLoading: boolean;
 
-  latePolicies:      LatePolicy[];
+  latePolicies: LatePolicy[];
   latePoliciesLoading: boolean;
 
-  extraHours:        ExtraHour[];
+  extraHours: ExtraHour[];
   extraHoursLoading: boolean;
 
   error: string | null;
 }
 
+// ─── Initial State ────────────────────────────────────────────────────────────
+
 const initialState: PayrollState = {
-  runs: [],              runsLoading: false,
-  selectedRun: null,     selectedRunLoading: false,
-  payslips: [],          payslipsLoading: false,
-  myPayroll: null,       myPayrollLoading: false,
-  preview: null,         previewLoading: false,
-  latePolicies: [],      latePoliciesLoading: false,
-  extraHours: [],        extraHoursLoading: false,
+  runs: [],
+  runsLoading: false,
+
+  selectedRun: null,
+  selectedRunLoading: false,
+
+  payslips: [],
+  payslipsLoading: false,
+
+  myPayroll: null,
+  myPayrollLoading: false,
+
+  preview: null,
+  previewLoading: false,
+
+  latePolicies: [],
+  latePoliciesLoading: false,
+
+  extraHours: [],
+  extraHoursLoading: false,
+
   error: null,
 };
+
+// ─── Slice ────────────────────────────────────────────────────────────────────
 
 const payrollSlice = createSlice({
   name: "payroll",
   initialState,
+
   reducers: {
-    setRuns(s, a: PayloadAction<PayrollRun[]>)           { s.runs = a.payload; s.error = null; },
-    setRunsLoading(s, a: PayloadAction<boolean>)         { s.runsLoading = a.payload; },
-    addRun(s, a: PayloadAction<PayrollRun>)              { s.runs.unshift(a.payload); },
-    updateRunInList(s, a: PayloadAction<PayrollRun>)     {
-      const i = s.runs.findIndex(x => x.id === a.payload.id);
-      if (i !== -1) s.runs[i] = a.payload;
-      if (s.selectedRun?.id === a.payload.id) s.selectedRun = a.payload;
-    },
-    removeRun(s, a: PayloadAction<string>)               {
-      s.runs = s.runs.filter(x => x.id !== a.payload);
-      if (s.selectedRun?.id === a.payload) s.selectedRun = null;
+    // ─── Payroll Runs ────────────────────────────────────────────────────────
+
+    setRuns(state, action: PayloadAction<PayrollRun[]>) {
+      state.runs = action.payload;
+      state.error = null;
     },
 
-    setSelectedRun(s, a: PayloadAction<PayrollRun | null>) { s.selectedRun = a.payload; },
-    setSelectedRunLoading(s, a: PayloadAction<boolean>)  { s.selectedRunLoading = a.payload; },
-
-    setPayslips(s, a: PayloadAction<PaySlip[]>)          { s.payslips = a.payload; s.error = null; },
-    setPayslipsLoading(s, a: PayloadAction<boolean>)     { s.payslipsLoading = a.payload; },
-    updatePayslipInList(s, a: PayloadAction<PaySlip>)    {
-      const i = s.payslips.findIndex(x => x.id === a.payload.id);
-      if (i !== -1) s.payslips[i] = a.payload;
+    setRunsLoading(state, action: PayloadAction<boolean>) {
+      state.runsLoading = action.payload;
     },
 
-    setMyPayroll(s, a: PayloadAction<MyPayrollData>)     { s.myPayroll = a.payload; s.error = null; },
-    setMyPayrollLoading(s, a: PayloadAction<boolean>)    { s.myPayrollLoading = a.payload; },
-
-    setPreview(s, a: PayloadAction<SalaryPreview>)       { s.preview = a.payload; },
-    setPreviewLoading(s, a: PayloadAction<boolean>)      { s.previewLoading = a.payload; },
-
-    setLatePolicies(s, a: PayloadAction<LatePolicy[]>)   { s.latePolicies = a.payload; s.error = null; },
-    setLatePoliciesLoading(s, a: PayloadAction<boolean>) { s.latePoliciesLoading = a.payload; },
-    addLatePolicy(s, a: PayloadAction<LatePolicy>)       { s.latePolicies.push(a.payload); },
-    updateLatePolicyInList(s, a: PayloadAction<LatePolicy>) {
-      const i = s.latePolicies.findIndex(x => x.id === a.payload.id);
-      if (i !== -1) s.latePolicies[i] = a.payload;
-    },
-    removeLatePolicy(s, a: PayloadAction<string>)        { s.latePolicies = s.latePolicies.filter(x => x.id !== a.payload); },
-
-    setExtraHours(s, a: PayloadAction<ExtraHour[]>)      { s.extraHours = a.payload; s.error = null; },
-    setExtraHoursLoading(s, a: PayloadAction<boolean>)   { s.extraHoursLoading = a.payload; },
-    updateExtraHourInList(s, a: PayloadAction<ExtraHour>) {
-      const i = s.extraHours.findIndex(x => x.id === a.payload.id);
-      if (i !== -1) s.extraHours[i] = a.payload;
+    addRun(state, action: PayloadAction<PayrollRun>) {
+      state.runs.unshift(action.payload);
     },
 
-    setPayrollError(s, a: PayloadAction<string>)         { s.error = a.payload; },
-    clearPayrollError(s)                                 { s.error = null; },
+    updateRunInList(state, action: PayloadAction<PayrollRun>) {
+      const index = state.runs.findIndex(
+        (run) => run.id === action.payload.id
+      );
+
+      if (index !== -1) {
+        state.runs[index] = action.payload;
+      }
+
+      if (state.selectedRun?.id === action.payload.id) {
+        state.selectedRun = action.payload;
+      }
+    },
+
+    removeRun(state, action: PayloadAction<string>) {
+      state.runs = state.runs.filter(
+        (run) => run.id !== action.payload
+      );
+
+      if (state.selectedRun?.id === action.payload) {
+        state.selectedRun = null;
+      }
+    },
+
+    // ─── Selected Payroll Run ────────────────────────────────────────────────
+
+    setSelectedRun(
+      state,
+      action: PayloadAction<PayrollRun | null>
+    ) {
+      state.selectedRun = action.payload;
+    },
+
+    setSelectedRunLoading(
+      state,
+      action: PayloadAction<boolean>
+    ) {
+      state.selectedRunLoading = action.payload;
+    },
+
+    // ─── Payslips ────────────────────────────────────────────────────────────
+
+    setPayslips(state, action: PayloadAction<PaySlip[]>) {
+      state.payslips = action.payload;
+      state.error = null;
+    },
+
+    setPayslipsLoading(
+      state,
+      action: PayloadAction<boolean>
+    ) {
+      state.payslipsLoading = action.payload;
+    },
+
+    updatePayslipInList(
+      state,
+      action: PayloadAction<PaySlip>
+    ) {
+      const index = state.payslips.findIndex(
+        (payslip) => payslip.id === action.payload.id
+      );
+
+      if (index !== -1) {
+        state.payslips[index] = action.payload;
+      }
+    },
+
+    // ─── My Payroll ──────────────────────────────────────────────────────────
+
+    setMyPayroll(
+      state,
+      action: PayloadAction<MyPayrollData>
+    ) {
+      state.myPayroll = action.payload;
+      state.error = null;
+    },
+
+    setMyPayrollLoading(
+      state,
+      action: PayloadAction<boolean>
+    ) {
+      state.myPayrollLoading = action.payload;
+    },
+
+    // ─── Salary Preview ──────────────────────────────────────────────────────
+
+    setPreview(
+      state,
+      action: PayloadAction<SalaryPreview>
+    ) {
+      state.preview = action.payload;
+    },
+
+    setPreviewLoading(
+      state,
+      action: PayloadAction<boolean>
+    ) {
+      state.previewLoading = action.payload;
+    },
+
+    // ─── Late Policies ───────────────────────────────────────────────────────
+
+    setLatePolicies(
+      state,
+      action: PayloadAction<LatePolicy[]>
+    ) {
+      state.latePolicies = action.payload;
+      state.error = null;
+    },
+
+    setLatePoliciesLoading(
+      state,
+      action: PayloadAction<boolean>
+    ) {
+      state.latePoliciesLoading = action.payload;
+    },
+
+    addLatePolicy(
+      state,
+      action: PayloadAction<LatePolicy>
+    ) {
+      state.latePolicies.push(action.payload);
+    },
+
+    updateLatePolicyInList(
+      state,
+      action: PayloadAction<LatePolicy>
+    ) {
+      const index = state.latePolicies.findIndex(
+        (policy) => policy.id === action.payload.id
+      );
+
+      if (index !== -1) {
+        state.latePolicies[index] = action.payload;
+      }
+    },
+
+    removeLatePolicy(
+      state,
+      action: PayloadAction<string>
+    ) {
+      state.latePolicies = state.latePolicies.filter(
+        (policy) => policy.id !== action.payload
+      );
+    },
+
+    // ─── Extra Hours ─────────────────────────────────────────────────────────
+
+    setExtraHours(
+      state,
+      action: PayloadAction<ExtraHour[]>
+    ) {
+      state.extraHours = action.payload;
+      state.error = null;
+    },
+
+    setExtraHoursLoading(
+      state,
+      action: PayloadAction<boolean>
+    ) {
+      state.extraHoursLoading = action.payload;
+    },
+
+    updateExtraHourInList(
+      state,
+      action: PayloadAction<ExtraHour>
+    ) {
+      const index = state.extraHours.findIndex(
+        (extraHour) => extraHour.id === action.payload.id
+      );
+
+      if (index !== -1) {
+        state.extraHours[index] = action.payload;
+      }
+    },
+
+    // ─── Error ───────────────────────────────────────────────────────────────
+
+    setPayrollError(
+      state,
+      action: PayloadAction<string>
+    ) {
+      state.error = action.payload;
+    },
+
+    clearPayrollError(state) {
+      state.error = null;
+    },
   },
 });
 
+// ─── Actions ──────────────────────────────────────────────────────────────────
+
 export const {
-  setRuns, setRunsLoading, addRun, updateRunInList, removeRun,
-  setSelectedRun, setSelectedRunLoading,
-  setPayslips, setPayslipsLoading, updatePayslipInList,
-  setMyPayroll, setMyPayrollLoading,
-  setPreview, setPreviewLoading,
-  setLatePolicies, setLatePoliciesLoading, addLatePolicy, updateLatePolicyInList, removeLatePolicy,
-  setExtraHours, setExtraHoursLoading, updateExtraHourInList,
-  setPayrollError, clearPayrollError,
+  // Runs
+  setRuns,
+  setRunsLoading,
+  addRun,
+  updateRunInList,
+  removeRun,
+
+  // Selected Run
+  setSelectedRun,
+  setSelectedRunLoading,
+
+  // Payslips
+  setPayslips,
+  setPayslipsLoading,
+  updatePayslipInList,
+
+  // My Payroll
+  setMyPayroll,
+  setMyPayrollLoading,
+
+  // Preview
+  setPreview,
+  setPreviewLoading,
+
+  // Late Policies
+  setLatePolicies,
+  setLatePoliciesLoading,
+  addLatePolicy,
+  updateLatePolicyInList,
+  removeLatePolicy,
+
+  // Extra Hours
+  setExtraHours,
+  setExtraHoursLoading,
+  updateExtraHourInList,
+
+  // Error
+  setPayrollError,
+  clearPayrollError,
 } = payrollSlice.actions;
+
+// ─── Reducer ──────────────────────────────────────────────────────────────────
 
 export default payrollSlice.reducer;
