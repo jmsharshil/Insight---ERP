@@ -172,7 +172,7 @@ export default function OdometerReadingsTab() {
   // Filters: Just users and date filter as in SalesActivitiesTab
   const [fromDate, setFromDate] = useState(searchParams.get("from_date") || "");
   const [toDate, setToDate] = useState(searchParams.get("to_date") || "");
-  const [selectedUserId, setSelectedUserId] = useState(searchParams.get("user_id") || "all");
+  const [selectedUserId, setSelectedUserId] = useState(searchParams.get("user_id") || "");
   const [userOptions, setUserOptions] = useState<{ id: string; name: string }[]>([]);
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -333,11 +333,15 @@ export default function OdometerReadingsTab() {
 
     const params = new URLSearchParams();
 
-    // User ID param
+    // User ID param - when approver/admin, require a selected user before fetching
     let targetUserId: string | null = null;
     if (canApprove) {
       if (activeUserId && activeUserId !== "all") {
         targetUserId = activeUserId;
+      } else {
+        setLoading(false);
+        setReadings([]);
+        return;
       }
     } else if (user?.id) {
       targetUserId = String(user.id);
@@ -429,19 +433,23 @@ export default function OdometerReadingsTab() {
     const pFrom = searchParams.get("from_date");
     const pTo = searchParams.get("to_date");
 
-    if (pUser || pFrom || pTo) {
-      if (pUser) setSelectedUserId(pUser);
-      if (pFrom) setFromDate(pFrom);
-      if (pTo) setToDate(pTo);
-      fetchReadings(pUser || undefined, pFrom || undefined, pTo || undefined);
-    } else {
-      fetchReadings();
-    }
+    if (pFrom) setFromDate(pFrom);
+    if (pTo) setToDate(pTo);
 
     if (canApprove) {
       fetchUsers();
+      if (pUser && pUser !== "all") {
+        setSelectedUserId(pUser);
+        fetchReadings(pUser, pFrom || undefined, pTo || undefined);
+      } else {
+        setSelectedUserId("");
+        setReadings([]);
+        setLoading(false);
+      }
+    } else if (user?.id) {
+      fetchReadings(String(user.id), pFrom || undefined, pTo || undefined);
     }
-  }, [searchParams, canApprove]);
+  }, [searchParams, canApprove, user?.id]);
 
   // Clear km deduction when summary changes
   useEffect(() => {
@@ -561,24 +569,51 @@ export default function OdometerReadingsTab() {
 
   const handleFromDateChange = (val: string) => {
     setFromDate(val);
-    fetchReadings(selectedUserId, val, toDate);
+    if (!canApprove || (selectedUserId && selectedUserId !== "all")) {
+      fetchReadings(selectedUserId, val, toDate);
+    }
   };
 
   const handleToDateChange = (val: string) => {
     setToDate(val);
-    fetchReadings(selectedUserId, fromDate, val);
+    if (!canApprove || (selectedUserId && selectedUserId !== "all")) {
+      fetchReadings(selectedUserId, fromDate, val);
+    }
   };
 
   const handleUserChange = (val: string) => {
     setSelectedUserId(val);
-    fetchReadings(val, fromDate, toDate);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (val && val !== "all") {
+        next.set("user_id", val);
+      } else {
+        next.delete("user_id");
+      }
+      return next;
+    });
+    if (val && val !== "all") {
+      fetchReadings(val, fromDate, toDate);
+    } else {
+      setReadings([]);
+      setLoading(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    if (canApprove && (!selectedUserId || selectedUserId === "all")) {
+      toast.info("Please select an employee first.");
+      return;
+    }
+    fetchReadings();
   };
 
   const handleClearFilters = () => {
     setFromDate("");
     setToDate("");
-    setSelectedUserId("all");
+    setSelectedUserId("");
     setStatusFilter("all");
+    setReadings([]);
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       next.delete("user_id");
@@ -586,7 +621,6 @@ export default function OdometerReadingsTab() {
       next.delete("to_date");
       return next;
     });
-    fetchReadings("all", "", "");
   };
 
   // Check ownership for employee role scoping
@@ -924,6 +958,11 @@ export default function OdometerReadingsTab() {
 
   // CSV Export
   const exportCsv = () => {
+    if (canApprove && (!selectedUserId || selectedUserId === "all")) {
+      toast.info("Please select an employee to export readings.");
+      return;
+    }
+
     const headers = [
       "ID",
       "Date",
@@ -994,7 +1033,11 @@ export default function OdometerReadingsTab() {
                 {stats.totalCount}
               </div>
               <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
-                {canApprove ? "All employee travel logs" : "Your recorded travel trips"}
+                {canApprove
+                  ? selectedUserId && selectedUserId !== "all"
+                    ? "Employee travel logs"
+                    : "Select an employee"
+                  : "Your recorded travel trips"}
               </div>
             </div>
             <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
@@ -1021,9 +1064,11 @@ export default function OdometerReadingsTab() {
               </div>
               <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
                 {canApprove
-                  ? stats.pendingCount === 1
-                    ? "1 claim awaits review"
-                    : `${stats.pendingCount} claims await review`
+                  ? selectedUserId && selectedUserId !== "all"
+                    ? stats.pendingCount === 1
+                      ? "1 claim awaits review"
+                      : `${stats.pendingCount} claims await review`
+                    : "Select an employee"
                   : "Awaiting manager approval"}
               </div>
             </div>
@@ -1060,7 +1105,11 @@ export default function OdometerReadingsTab() {
                 </TooltipContent>
               </Tooltip>
               <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
-                {canApprove ? "Verified travel distance" : "Your approved travel distance"}
+                {canApprove
+                  ? selectedUserId && selectedUserId !== "all"
+                    ? "Verified travel distance"
+                    : "Select an employee"
+                  : "Your approved travel distance"}
               </div>
             </div>
             <div className="w-11 h-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100">
@@ -1093,7 +1142,11 @@ export default function OdometerReadingsTab() {
                 </TooltipContent>
               </Tooltip>
               <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
-                {canApprove ? "Total approved payout" : "Your approved travel payout"}
+                {canApprove
+                  ? selectedUserId && selectedUserId !== "all"
+                    ? "Total approved payout"
+                    : "Select an employee"
+                  : "Your approved travel payout"}
               </div>
             </div>
             <div className="w-11 h-11 rounded-xl bg-green-50 text-green-600 flex items-center justify-center shrink-0 border border-green-100">
@@ -1135,15 +1188,14 @@ export default function OdometerReadingsTab() {
                   (u) =>
                     u.id === selectedUserId ||
                     u.name.toLowerCase().trim() === selectedUserId.toLowerCase().trim()
-                )?.id || selectedUserId
+                )?.id || (selectedUserId !== "all" ? selectedUserId : "")
               }
               onValueChange={handleUserChange}
             >
-              <SelectTrigger className="h-9 w-44 text-sm">
-                <SelectValue placeholder="Team Member" />
+              <SelectTrigger className="h-9 w-48 text-sm">
+                <SelectValue placeholder="Select Employee..." />
               </SelectTrigger>
               <SelectContent className="max-h-60">
-                <SelectItem value="all">All Members</SelectItem>
                 {combinedUserOptions.map((u) => (
                   <SelectItem key={u.id} value={u.id}>
                     {u.name}
@@ -1153,7 +1205,7 @@ export default function OdometerReadingsTab() {
             </Select>
           )}
 
-          {(fromDate || toDate || (canApprove && selectedUserId !== "all") || statusFilter !== "all") && (
+          {(fromDate || toDate || (canApprove && selectedUserId && selectedUserId !== "all") || statusFilter !== "all") && (
             <Button
               variant="ghost"
               size="sm"
@@ -1176,7 +1228,7 @@ export default function OdometerReadingsTab() {
             </Button>
           )}
 
-          <Button variant="outline" size="sm" onClick={() => fetchReadings()} className="h-9 text-xs gap-1.5">
+          <Button variant="outline" size="sm" onClick={handleRefresh} className="h-9 text-xs gap-1.5">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
 
@@ -1187,7 +1239,35 @@ export default function OdometerReadingsTab() {
       </div>
 
       {/* Main Table */}
-      {loading ? (
+      {canApprove && (!selectedUserId || selectedUserId === "all") ? (
+        <div className="bg-white rounded-xl border border-dashed border-border p-12 text-center shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4 border border-primary/20">
+            <Users className="w-7 h-7" />
+          </div>
+          <h3 className="text-base font-semibold text-foreground mb-1">
+            Select an Employee
+          </h3>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto mb-5">
+            Please select an employee to view their odometer readings and review travel claims.
+          </p>
+          {combinedUserOptions.length > 0 && (
+            <div className="max-w-xs mx-auto">
+              <Select value={selectedUserId || ""} onValueChange={handleUserChange}>
+                <SelectTrigger className="h-10 text-sm">
+                  <SelectValue placeholder="Choose an employee..." />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {combinedUserOptions.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+      ) : loading ? (
         <TableSkeleton columns={11} rows={5} className="mt-0" />
       ) : (
         <div className="bg-white rounded-xl border border-border overflow-hidden shadow-sm">

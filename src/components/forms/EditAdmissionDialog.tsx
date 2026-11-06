@@ -76,6 +76,7 @@ export default function EditAdmissionDialog({
     email: "",
     email_parent: "",
     course: "cs_executive",
+    combo_offer: false,
     group_module: "module_1",
     batch_attempt: "june",
     qualification: "appearing_12",
@@ -122,6 +123,7 @@ export default function EditAdmissionDialog({
         email: admission.email || "",
         email_parent: admission.email_parent || "",
         course: admission.course || "cs_executive",
+        combo_offer: Boolean(admission.combo_offer),
         group_module: admission.group_module || "module_1",
         batch_attempt: admission.batch_attempt || "june",
         qualification: admission.qualification || "appearing_12",
@@ -161,12 +163,15 @@ export default function EditAdmissionDialog({
             updated.batch_attempt = "june";
           }
         } else if (value === "cs_executive" || value === "cs_professional") {
+          updated.combo_offer = false;
           if (prev.group_module === "full" || prev.group_module === "both") {
             updated.group_module = "module_1";
           }
           if (!["june", "dec"].includes(prev.batch_attempt)) {
             updated.batch_attempt = "june";
           }
+        } else {
+          updated.combo_offer = false;
         }
       }
       return updated;
@@ -207,7 +212,7 @@ export default function EditAdmissionDialog({
     Object.entries(editForm).forEach(([key, val]) => {
       if (val !== null && val !== undefined) {
         if (key.endsWith("_percentage") || key.endsWith("_percentile")) {
-          payload.append(key, val ? String(parseFloat(val)) : "");
+          payload.append(key, val ? String(parseFloat(String(val))) : "");
         } else {
           payload.append(key, String(val));
         }
@@ -507,6 +512,26 @@ export default function EditAdmissionDialog({
                       </SelectContent>
                     </Select>
                   </div>
+                  {editForm.course === "cseet" && (
+                    <div className="md:col-span-2 flex items-center justify-between p-3 rounded-xl border border-purple-200 bg-purple-50/50 dark:bg-purple-950/20 dark:border-purple-800">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="edit-fs-combo" className="text-sm font-semibold text-purple-900 dark:text-purple-200 flex items-center gap-1.5 cursor-pointer">
+                          <span>CSEET + CS Executive Combo Offer</span>
+                          <span className="text-[10px] bg-purple-200 dark:bg-purple-800 text-purple-800 dark:text-purple-100 font-mono px-1.5 py-0.5 rounded font-semibold">combo_offer</span>
+                        </Label>
+                        <p className="text-xs text-purple-700/80 dark:text-purple-300">
+                          Enables combo offer. Recalculates future CS Executive batch mapping automatically.
+                        </p>
+                      </div>
+                      <input
+                        id="edit-fs-combo"
+                        type="checkbox"
+                        checked={Boolean(editForm.combo_offer)}
+                        onChange={(e) => handleEditFormChange("combo_offer", e.target.checked)}
+                        className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 cursor-pointer"
+                      />
+                    </div>
+                  )}
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold text-text-primary">Current Qualification</Label>
                     <Select

@@ -119,13 +119,20 @@ export default function AdmissionsTab() {
     { 
       key: "course", 
       header: "Course", 
-      exportValue: (r) => (typeof r.course === "string" ? r.course : (r.course as any)?.name || ""), 
+      exportValue: (r) => `${typeof r.course === "string" ? r.course : (r.course as any)?.name || ""}${r.combo_offer ? " (Combo)" : ""}`, 
       render: (r) => (
-        <span className="capitalize">
-          {typeof r.course === "string" 
-            ? r.course.replace(/_/g, " ") 
-            : (r.course as any)?.name?.replace(/_/g, " ") || "—"}
-        </span>
+        <div className="flex flex-col gap-1 items-start">
+          <span className="capitalize">
+            {typeof r.course === "string" 
+              ? r.course.replace(/_/g, " ") 
+              : (r.course as any)?.name?.replace(/_/g, " ") || "—"}
+          </span>
+          {r.combo_offer && (
+            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-medium bg-purple-50 text-purple-700 border-purple-300">
+              Combo Offer
+            </Badge>
+          )}
+        </div>
       ) 
     },
     { key: "batch", header: "Batch Attempt", exportValue: (r) => r.batch_attempt || "", render: (r) => <span className="capitalize">{r.batch_attempt || "—"}</span> },

@@ -499,7 +499,16 @@ export default function StudentAdmissionDetailedPage() {
             <Card title="Admission Details">
               <Row
                 label="Course"
-                value={<span className="capitalize">{admission.course?.replace(/_/g, " ")}</span>}
+                value={
+                  <div className="flex items-center gap-2">
+                    <span className="capitalize">{admission.course?.replace(/_/g, " ")}</span>
+                    {admission.combo_offer && (
+                      <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300 border-purple-300 dark:border-purple-700 text-[10px]">
+                        Combo Offer
+                      </Badge>
+                    )}
+                  </div>
+                }
               />
               <Row
                 label="Module/Group"
@@ -513,6 +522,41 @@ export default function StudentAdmissionDetailedPage() {
               />
               <Row label="Qualification" value={admission.qualification || "—"} />
             </Card>
+
+            {admission.combo_offer && (
+              <Card title="Combo Offer & Future Batch Progression">
+                <div className="p-3 bg-purple-50/60 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-purple-950 dark:text-purple-200 uppercase tracking-wide">
+                      Package: CSEET + CS Executive
+                    </span>
+                    <Badge className="bg-purple-600 text-white text-[10px]">Combo Active</Badge>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
+                    <div>
+                      <span className="text-muted-foreground block">Future CS Executive Attempt:</span>
+                      <span className="font-semibold text-foreground capitalize">
+                        {admission.combo_future_batch_attempt || "—"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground block">CS Executive Enrollment Year:</span>
+                      <span className="font-semibold text-foreground">
+                        {admission.combo_future_attempt_year || "—"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2 p-2.5 rounded-lg bg-purple-100/60 dark:bg-purple-900/40 text-purple-900 dark:text-purple-200 text-xs border border-purple-200/50">
+                    <AlertCircle className="w-4 h-4 text-purple-700 dark:text-purple-400 mt-0.5 shrink-0" />
+                    <p className="leading-relaxed">
+                      Next-batch communications and schedule notifications remain suppressed until the student completes CSEET and the {admission.combo_future_attempt_year || "Executive"} academic session unlocks.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
 
             <Card title="10th Standard Details">
               <Row
@@ -827,8 +871,10 @@ export default function StudentAdmissionDetailedPage() {
                       <span>Important Notice Regarding Remaining Fees</span>
                     </div>
                     <p className="text-xs sm:text-sm leading-relaxed text-amber-800 dark:text-amber-300">
-                      {admission.token_payment_terms_note ||
-                        `In 15 days you have to pay remaining fees (${formatCurrency(Number(admission.remaining_fees || 0))}) otherwise it will be considered as Finance.`}
+                      {admission.terms_note ||
+                        admission.fee_terms_note ||
+                        admission.token_payment_terms_note ||
+                        `In 15 days you have to pay remaining fees (${formatCurrency(Number(admission.remaining_fees || 0))}) otherwise it will be considered as Installment/Finance.`}
                     </p>
                   </div>
                 )}

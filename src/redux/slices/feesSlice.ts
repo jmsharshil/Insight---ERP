@@ -30,6 +30,7 @@ export interface FeesStructure {
   batch_name?: string | null;
   year?: string;
   is_active: boolean;
+  is_combo?: boolean;
   created_at: string;
   description?: string;
 }

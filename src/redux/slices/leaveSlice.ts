@@ -20,8 +20,10 @@ export interface LeavePolicy {
 export interface PublicHoliday {
   id: string;
   branch: string;
+  branch_name?: string;
   date: string;
   name: string;
+  description?: string;
   year: number;
   created_at: string;
 }

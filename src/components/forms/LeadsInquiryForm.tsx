@@ -166,9 +166,9 @@ export default function LeadsInquiryForm() {
     reference: "google",
     reference_name: "",
     inquiry_date: new Date().toISOString().split("T")[0],
-    location: "",
+    // location: "",
     consent: true,
-    branch: "",
+    // branch: "",
   });
 
   // ── Contact state
@@ -178,7 +178,7 @@ export default function LeadsInquiryForm() {
     phone_student: "",
     course: "cseet",
     consent: true,
-    branch: "",
+    // branch: "",
   });
 
   const handleInquiryChange = (field: string, value: string | boolean | number) => {
@@ -242,7 +242,7 @@ export default function LeadsInquiryForm() {
     e.preventDefault();
 
     if (formType === "contact") {
-      if (!contactData.first_name.trim() || !contactData.phone_student.trim() || !contactData.email.trim() || !contactData.branch) {
+      if (!contactData.first_name.trim() || !contactData.phone_student.trim()) {
         toast.error("Please fill in all compulsory fields marked with *");
         return;
       }
@@ -278,8 +278,8 @@ export default function LeadsInquiryForm() {
         { key: "twelfth_percentile", label: "12th Percentile" },
         { key: "reference", label: "How did you hear about us?" },
         { key: "inquiry_date", label: "Inquiry Date" },
-        { key: "location", label: "Location" },
-        { key: "branch", label: "Branch" },
+        // { key: "location", label: "Location" },
+        // { key: "branch", label: "Branch" },
       ];
 
       for (const field of compulsoryCheck) {
@@ -324,7 +324,7 @@ export default function LeadsInquiryForm() {
         phone_student: contactData.phone_student,
         course: contactData.course,
         consent: contactData.consent,
-        branch: contactData.branch,
+        // branch: contactData.branch,
       };
     } else {
       payload = {
@@ -370,9 +370,9 @@ export default function LeadsInquiryForm() {
         reference: inquiryData.reference,
         reference_name: inquiryData.reference === "other" ? inquiryData.reference_name : "",
         inquiry_date: inquiryData.inquiry_date,
-        location: inquiryData.location,
+        // location: inquiryData.location,
         consent: inquiryData.consent,
-        branch: inquiryData.branch,
+        // branch: inquiryData.branch,
       };
     }
 
@@ -487,18 +487,18 @@ export default function LeadsInquiryForm() {
         }}
       >
         <div
-          className="max-w-lg w-full rounded-3xl p-8 sm:p-12 text-center animate-in fade-in zoom-in duration-500"
+          className="max-w-lg w-full rounded-3xl p-6 sm:p-10 text-center animate-in fade-in zoom-in duration-500"
           style={{ background: T.card, boxShadow: "0 20px 60px rgba(0,33,71,0.12)" }}
         >
-          <img src={logo} alt="Insight ERP" className="h-12 sm:h-14 object-contain mx-auto mb-10" />
+          <img src={logo} alt="Insight ERP" className="h-12 sm:h-14 object-contain mx-auto mb-8" />
 
           <div
-            className="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-8"
+            className="w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center mx-auto mb-6 sm:mb-8"
             style={{
               background: `linear-gradient(135deg, ${T.success}15 0%, ${T.success}25 100%)`,
             }}
           >
-            <CheckCircle2 className="w-12 h-12" style={{ color: T.success }} />
+            <CheckCircle2 className="w-10 h-10 sm:w-12 sm:h-12" style={{ color: T.success }} />
           </div>
 
           <h2
@@ -511,7 +511,7 @@ export default function LeadsInquiryForm() {
             Your {formType === "contact" ? "contact request" : "inquiry application"} has been
             received.
           </p>
-          <p className="text-sm mb-10 max-w-sm mx-auto" style={{ color: T.textMuted }}>
+          <p className="text-sm mb-8 max-w-sm mx-auto" style={{ color: T.textMuted }}>
             Our admissions team will review your details and reach out to you within 24 hours. We
             appreciate your interest!
           </p>
@@ -536,30 +536,16 @@ export default function LeadsInquiryForm() {
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row gap-3">
-            {submittedLeadId && (
-              <Button
-                className="flex-1 h-12 text-sm font-semibold text-white transition-all shadow-md"
-                style={{ background: T.navy }}
-                onClick={() => {
-                  window.location.href = `/admission?id=${submittedLeadId}&phone=${encodeURIComponent(
-                    inquiryData.phone_student.trim()
-                  )}`;
-                }}
-              >
-                <ClipboardList className="w-4 h-4 mr-2" />
-                Proceed to Admission Form
-              </Button>
-            )}
+          <div className="flex flex-col gap-3 w-full">
             <Button
-              className="flex-1 h-12 text-sm font-semibold text-black transition-all"
+              className="w-full h-12 text-sm font-semibold text-black transition-all rounded-xl"
               style={{ background: T.primary }}
               onClick={() => {
                 setIsSubmitted(false);
                 setFormType("contact");
               }}
             >
-              <ClipboardList className="w-4 h-4 mr-2" />
+              <ClipboardList className="w-4 h-4 mr-2 shrink-0" />
               Submit Another Form
             </Button>
           </div>
@@ -679,20 +665,6 @@ export default function LeadsInquiryForm() {
 
                 <div className="space-y-1.5">
                   <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                    Student Email <span style={{ color: T.error }}>*</span>
-                  </Label>
-                  <Input
-                    required
-                    type="email"
-                    value={contactData.email}
-                    onChange={(e) => handleContactChange("email", e.target.value)}
-                    className="h-10 sm:h-11 text-sm lowercase"
-                    placeholder="e.g. student@gmail.com"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
                     Course <span style={{ color: T.error }}>*</span>
                   </Label>
                   <Select
@@ -706,28 +678,6 @@ export default function LeadsInquiryForm() {
                       <SelectItem value="cseet">CSEET</SelectItem>
                       <SelectItem value="cs_executive">CS Executive</SelectItem>
                       <SelectItem value="cs_professional">CS Professional</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                    Branch <span style={{ color: T.error }}>*</span>
-                  </Label>
-                  <Select
-                    value={contactData.branch}
-                    onValueChange={(val) => handleContactChange("branch", val)}
-                    disabled={branchesLoading}
-                  >
-                    <SelectTrigger className="h-10 sm:h-11 text-sm">
-                      <SelectValue placeholder={branchesLoading ? "Loading branches..." : "Select Branch"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {branches.map((b) => (
-                        <SelectItem key={b.value} value={String(b.value)}>
-                          {b.label}
-                        </SelectItem>
-                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1261,12 +1211,12 @@ export default function LeadsInquiryForm() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="google">Google</SelectItem>
-                        <SelectItem value="existing">Existing Student</SelectItem>
-                        <SelectItem value="offline_ad">Offline Ad</SelectItem>
-                        <SelectItem value="social_media">Social Media</SelectItem>
                         <SelectItem value="seminar">Seminar</SelectItem>
-                        <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="existing">Existing Student</SelectItem>
+                        <SelectItem value="google">Google</SelectItem>
+                        <SelectItem value="social_media">Social Media</SelectItem>
+                        <SelectItem value="offline_ad">Offline Ad</SelectItem>
+                        {/* <SelectItem value="none">None</SelectItem> */}
                         <SelectItem value="other">Others</SelectItem>
                       </SelectContent>
                     </Select>
@@ -1298,44 +1248,6 @@ export default function LeadsInquiryForm() {
                       onChange={(e) => handleInquiryChange("inquiry_date", e.target.value)}
                       className="h-10 sm:h-11 text-sm uppercase"
                     />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                      Location <span style={{ color: T.error }}>*</span>
-                    </Label>
-                    <Input
-                      required
-                      value={inquiryData.location}
-                      onChange={(e) => handleInquiryChange("location", e.target.value)}
-                      className="h-10 sm:h-11 text-sm uppercase"
-                      style={{ textTransform: "uppercase" }}
-                      placeholder="e.g. NARANPURA (AHMEDABAD)"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                      Branch <span style={{ color: T.error }}>*</span>
-                    </Label>
-                    <Select
-                      value={inquiryData.branch}
-                      onValueChange={(val) => handleInquiryChange("branch", val)}
-                      disabled={branchesLoading}
-                    >
-                      <SelectTrigger className="h-10 sm:h-11 text-sm">
-                        <SelectValue
-                          placeholder={branchesLoading ? "Loading branches..." : "Select Branch"}
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {branches.map((b) => (
-                          <SelectItem key={b.value} value={String(b.value)}>
-                            {b.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                   </div>
                 </div>
               </SectionCard>

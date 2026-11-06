@@ -75,6 +75,7 @@ export function FeeStructureDialog({
   const [year, setYear] = useState(() => getAvailableYears("other", "june")[0]);
   const [description, setDescription] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [isCombo, setIsCombo] = useState(false);
 
   const selectedCourseObj = courses?.find(c => String(c.id) === String(course));
   const selectedLevelName = levels.find(l => String(l.id) === String(level))?.name || structure?.level_name || "";
@@ -319,6 +320,7 @@ export function FeeStructureDialog({
       setYear(structure.year ? String(structure.year) : getAvailableYears("other", "june")[0]);
       setDescription(structure.description || "");
       setIsActive(structure.is_active !== false);
+      setIsCombo(Boolean(structure.is_combo));
     } else {
       setName("");
       setCourse("");
@@ -341,6 +343,7 @@ export function FeeStructureDialog({
       setYear(getAvailableYears("other", "june")[0]);
       setDescription("");
       setIsActive(true);
+      setIsCombo(false);
     }        
   }, [structure, open]);
 
@@ -426,6 +429,7 @@ export function FeeStructureDialog({
       year,
       description,
       is_active: isActive,
+      is_combo: isCombo,
     };
 
     onSubmit(payload);
@@ -560,6 +564,32 @@ export function FeeStructureDialog({
               </Select>
             </div>
           </div>
+          {isCseet && (
+            <div className="flex items-center justify-between p-3 rounded-xl border border-purple-200 bg-purple-50/50 dark:bg-purple-950/20 dark:border-purple-800">
+              <div className="space-y-0.5">
+                <Label htmlFor="fs-combo" className="text-sm font-semibold text-purple-900 dark:text-purple-200 flex items-center gap-1.5 cursor-pointer">
+                  <span>Combo Offer (CSEET + CS Executive)</span>
+                  <span className="text-[10px] bg-purple-200 dark:bg-purple-800 text-purple-800 dark:text-purple-100 font-mono px-1.5 py-0.5 rounded font-semibold">is_combo</span>
+                </Label>
+                <p className="text-xs text-purple-700/80 dark:text-purple-300">
+                  Direct package price for CSEET + CS Executive combo.
+                </p>
+              </div>
+              <input
+                id="fs-combo"
+                type="checkbox"
+                checked={isCombo}
+                onChange={(e) => {
+                  setIsCombo(e.target.checked);
+                  if (e.target.checked && !description) {
+                    setDescription("CSEET and CS Executive combo offer");
+                  }
+                }}
+                className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 cursor-pointer"
+              />
+            </div>
+          )}
+
           <div>
             <Label htmlFor="fs-desc">Description</Label>
             <Textarea
