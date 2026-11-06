@@ -36,14 +36,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Plus, Eye, Trash2, FileText, CheckCircle2, XCircle, Clock, ExternalLink, Search, X } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  Eye,
+  Trash2,
+  FileText,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  ExternalLink,
+  Search,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import ReimbursementFormModal from "../../reimbursements/components/ReimbursementFormModal";
+import RejectionModal from "../../reimbursements/components/RejectionModal";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 // We'll create these constants locally since they don't exist yet
 const ADMIN_ROLES = ['super_admin', 'accountant'];
-const ALL_APPROVERS = [...ADMIN_ROLES];
+const ALL_APPROVERS = [...ADMIN_ROLES, 'branch_manager', 'admin_senior_executive'];
 
 const isUUID = (val: any): boolean => {
   if (!val || typeof val !== "string") return false;
@@ -72,11 +89,18 @@ export default function ReimbursementsTab() {
   const [toDate, setToDate] = useState(searchParams.get("to_date") || searchParams.get("date") || "");
   const [isPaidFilter, setIsPaidFilter] = useState(searchParams.get("is_paid") || "all");
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 50,
+  });
 
-  // Modals
+  // Modals & Actions
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [rejectClaimId, setRejectClaimId] = useState<string | null>(null);
+  const [isRejectOpen, setIsRejectOpen] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const { options: branchOptions, fetchOptions: fetchBranchOptions } = useDropdown("branches", false);
 
@@ -241,6 +265,48 @@ export default function ReimbursementsTab() {
     setDeleteId(null);
   };
 
+  const handleQuickApprove = (claimId: string) => {
+    dispatch({
+      type: reimbursementActions.APPROVE_REIMBURSEMENT,
+      method: "POST",
+      endPoint: API.REIMBURSEMENTS.APPROVE(claimId),
+      auth: true,
+      setLoading: (val: boolean) => setActionLoading(val),
+      getResponse: (res: any) => {
+        if (res?.success) {
+          toast.success(res.message || "Claim approved successfully");
+          fetchData();
+        }
+      },
+      getError: (err: any) => {
+        toast.error(err?.response?.data?.message || "Failed to approve claim");
+      },
+    });
+  };
+
+  const handleQuickReject = (reason: string) => {
+    if (!rejectClaimId) return;
+    dispatch({
+      type: reimbursementActions.REJECT_REIMBURSEMENT,
+      method: "POST",
+      endPoint: API.REIMBURSEMENTS.REJECT(rejectClaimId),
+      body: { rejection_reason: reason },
+      auth: true,
+      setLoading: (val: boolean) => setActionLoading(val),
+      getResponse: (res: any) => {
+        if (res?.success) {
+          toast.success(res.message || "Claim rejected");
+          setIsRejectOpen(false);
+          setRejectClaimId(null);
+          fetchData();
+        }
+      },
+      getError: (err: any) => {
+        toast.error(err?.response?.data?.message || "Failed to reject claim");
+      },
+    });
+  };
+
   const columns = useMemo<ColumnDef<Reimbursement>[]>(() => [
     {
       accessorKey: "title",
@@ -286,7 +352,11 @@ export default function ReimbursementsTab() {
         let icon = <Clock className="w-3.5 h-3.5 mr-1" />;
         let label = "Pending";
 
-        if (s === "approved") {
+        if (s === "approved_by_accountant") {
+          color = "bg-blue-500/10 text-blue-600 border border-blue-500/20";
+          icon = <Clock className="w-3.5 h-3.5 mr-1" />;
+          label = "Accountant Approved";
+        } else if (s === "approved") {
           color = paid ? "bg-primary/10 text-primary-dark" : "bg-success/10 text-success";
           icon = <CheckCircle2 className="w-3.5 h-3.5 mr-1" />;
           label = paid ? "Paid" : "Approved";
@@ -301,6 +371,9 @@ export default function ReimbursementsTab() {
             <span className={cn("inline-flex items-center w-fit px-2.5 py-0.5 rounded-full text-xs font-medium", color)}>
               {icon} {label}
             </span>
+            {s === "approved_by_accountant" && row.original.accountant_approved_by_name && (
+              <span className="text-[11px] text-muted-foreground">by {row.original.accountant_approved_by_name}</span>
+            )}
             {s === "approved" && row.original.approved_by_name && (
               <span className="text-[11px] text-muted-foreground">by {row.original.approved_by_name}</span>
             )}
@@ -323,6 +396,7 @@ export default function ReimbursementsTab() {
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+            onClick={(e) => e.stopPropagation()}
           >
             <ExternalLink className="w-3.5 h-3.5" /> View
           </a>
@@ -341,16 +415,45 @@ export default function ReimbursementsTab() {
       header: "",
       cell: ({ row }) => {
         const r = row.original;
-        const canEditOrDelete = r.status === "pending" && (r.user === user?.id || isGlobalAdmin);
+        const canApprove = (r.status === "pending" || r.status === "approved_by_accountant") && isApprover && (isGlobalAdmin || r.branch === user?.branch);
+        const canDelete = !r.is_paid && !r.payroll_run && (r.user === user?.id || isGlobalAdmin);
 
         return (
-          <div className="flex items-center justify-end gap-1">
-            {canEditOrDelete && (
+          <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+            {canApprove && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/30"
+                onClick={() => handleQuickApprove(r.id)}
+                disabled={actionLoading}
+                title={r.status === "approved_by_accountant" ? "Final Approve Claim" : "Approve Claim"}
+              >
+                <CheckCircle2 className="w-4 h-4" />
+              </Button>
+            )}
+            {canApprove && (
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => {
+                  setRejectClaimId(r.id);
+                  setIsRejectOpen(true);
+                }}
+                disabled={actionLoading}
+                title="Reject Claim"
+              >
+                <XCircle className="w-4 h-4" />
+              </Button>
+            )}
+            {canDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                 onClick={() => setDeleteId(r.id)}
+                disabled={actionLoading}
                 title="Delete Claim"
               >
                 <Trash2 className="w-4 h-4" />
@@ -360,13 +463,14 @@ export default function ReimbursementsTab() {
         );
       },
     },
-  ], [user, isGlobalAdmin, navigate]);
+  ], [user, isGlobalAdmin, isApprover, actionLoading, navigate]);
 
   const table = useReactTable({
     data,
     columns,
-    state: { sorting },
+    state: { sorting, pagination },
     onSortingChange: setSorting,
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -480,12 +584,13 @@ export default function ReimbursementsTab() {
 
           {/* Status Filter */}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[130px] h-9 text-xs sm:text-sm bg-card">
+            <SelectTrigger className="w-[160px] h-9 text-xs sm:text-sm bg-card">
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="approved_by_accountant">Accountant Approved</SelectItem>
               <SelectItem value="approved">Approved</SelectItem>
               <SelectItem value="rejected">Rejected</SelectItem>
             </SelectContent>
@@ -667,7 +772,84 @@ export default function ReimbursementsTab() {
           )}
         </div>
         
-        {/* Pagination placeholder if needed */}
+        {/* Pagination Bar */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-border bg-muted/10 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span>
+              Showing {data.length === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1} to{" "}
+              {Math.min((pagination.pageIndex + 1) * pagination.pageSize, data.length)} of {data.length} claims
+            </span>
+            <div className="flex items-center gap-1.5 ml-0 sm:ml-4">
+              <span>Rows per page:</span>
+              <Select
+                value={String(pagination.pageSize)}
+                onValueChange={(val) => {
+                  table.setPageSize(Number(val));
+                }}
+              >
+                <SelectTrigger className="h-7 w-20 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value="500">All</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span>
+              Page {table.getPageCount() === 0 ? 0 : table.getState().pagination.pageIndex + 1} of{" "}
+              {Math.max(table.getPageCount(), 1)}
+            </span>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => table.setPageIndex(0)}
+                disabled={!table.getCanPreviousPage()}
+                title="First page"
+              >
+                <ChevronsLeft className="w-3.5 h-3.5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+                title="Previous page"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+                title="Next page"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                disabled={!table.getCanNextPage()}
+                title="Last page"
+              >
+                <ChevronsRight className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <ReimbursementFormModal
@@ -675,6 +857,13 @@ export default function ReimbursementsTab() {
         onOpenChange={setIsFormOpen}
         onSubmit={handleFormSubmit}
         isLoading={formLoading}
+      />
+
+      <RejectionModal
+        open={isRejectOpen}
+        onOpenChange={setIsRejectOpen}
+        onSubmit={handleQuickReject}
+        isLoading={actionLoading}
       />
 
       <ConfirmDialog

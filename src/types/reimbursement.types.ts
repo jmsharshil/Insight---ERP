@@ -1,4 +1,4 @@
-export type ReimbursementStatus = "pending" | "approved" | "rejected";
+export type ReimbursementStatus = "pending" | "approved_by_accountant" | "approved" | "rejected";
 
 export interface Reimbursement {
   id: string;
@@ -14,6 +14,9 @@ export interface Reimbursement {
   proof: string; // URL
   expense_date: string;
   status: ReimbursementStatus;
+  accountant_approved_by?: string | null;
+  accountant_approved_by_name?: string | null;
+  accountant_approved_at?: string | null;
   approved_by: string | null;
   approved_by_name: string | null;
   approved_at: string | null;

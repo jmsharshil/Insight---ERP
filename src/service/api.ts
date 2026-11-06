@@ -308,6 +308,8 @@ BATCHES: {
     // Holidays
     HOLIDAYS: "/api/v1/leave/public-holidays/",
     HOLIDAY_DETAIL: (id: string) => `/api/v1/leave/public-holidays/${id}/`,
+    HOLIDAYS_UPLOAD_EXCEL: "/api/v1/leave/public-holidays/upload/",
+    HOLIDAYS_EXCEL_TEMPLATE: "/api/v1/leave/public-holidays/template/",
 
     // Balances
     MY_BALANCE: "/api/v1/leave/balance/",

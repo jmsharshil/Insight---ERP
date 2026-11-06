@@ -24,7 +24,13 @@ export interface AdmissionRecord {
   attempt_year?: string | number;
   remaining_fees?: string | number | null;
   token_payment_terms_note?: string | null;
+  terms_note?: string | null;
+  fee_terms_note?: string | null;
   fee_structure?: number | string | any;
+  combo_offer?: boolean;
+  combo_future_batch?: any;
+  combo_future_batch_attempt?: string | null;
+  combo_future_attempt_year?: number | string | null;
 }
 
 export interface AdmissionDetail extends AdmissionRecord {

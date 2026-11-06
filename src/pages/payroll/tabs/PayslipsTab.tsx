@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { payrollActions } from "@/redux/actions";
+import { payrollActions, userActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import { ROLES } from "@/constants/roles";
 import { setPayslips, setPayslipsLoading } from "@/redux/slices/payrollSlice";
@@ -585,6 +585,8 @@ export default function PayslipsTab({
   const { payslips, payslipsLoading, selectedRun } = useSelector((s: RootState) => s.payroll);
 
   const [roleFilter, setRoleFilter] = useState("all");
+  const [userIdFilter, setUserIdFilter] = useState("all");
+  const [userOptions, setUserOptions] = useState<Array<{ id: string; name: string }>>([]);
   const [adjustTarget, setAdjustTarget] = useState<PaySlip | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [runStats, setRunStats] = useState<{ total_salary_sum?: string | number; count?: number } | null>(null);
@@ -593,6 +595,40 @@ export default function PayslipsTab({
   const canApprove = ["super_admin", "branch_manager"].includes(role);
   const canDisburse = ["super_admin", "accountant"].includes(role);
   const canAdjust = ["super_admin", "accountant"].includes(role);
+
+  useEffect(() => {
+    dispatch({
+      type: userActions.GET_USERS,
+      method: "GET",
+      endPoint: API.USERS.LIST,
+      auth: true,
+      getResponse: (res: any) => {
+        const raw = res?.data?.results || res?.results || res?.data || res || [];
+        const list = Array.isArray(raw) ? raw : [];
+        const staff = list.filter((u: any) => u.role !== "student" && u.role !== "parents" && u.role !== "parent");
+        const mapped = staff.map((u: any) => ({
+          id: String(u.id),
+          name: u.full_name || u.name || `${u.first_name || ""} ${u.last_name || ""}`.trim() || u.email || "Unknown",
+        }));
+        setUserOptions(mapped);
+      },
+      getError: () => {},
+    });
+  }, [dispatch]);
+
+  const combinedUserOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    userOptions.forEach((u) => {
+      if (u.id) map.set(String(u.id), u.name);
+    });
+    payslips.forEach((p) => {
+      const uid = p.user_id ? String(p.user_id) : "";
+      if (uid && !map.has(uid)) {
+        map.set(uid, p.faculty_name || `Employee #${p.employee_id || uid.slice(0, 8)}`);
+      }
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [userOptions, payslips]);
 
   const handleRowClick = (slip: PaySlip) => {
     const query = selectedRun?.id ? `?run_id=${selectedRun.id}` : "";
@@ -603,10 +639,16 @@ export default function PayslipsTab({
 
   useEffect(() => {
     if (!selectedRun) return;
+    const params = new URLSearchParams();
+    if (roleFilter !== "all") params.set("role", roleFilter);
+    if (userIdFilter !== "all") params.set("user_id", userIdFilter);
+    const qs = params.toString();
+    const endPoint = API.PAYROLL.PAYSLIPS(selectedRun.id) + (qs ? `?${qs}` : "");
+
     dispatch({
       type: payrollActions.GET_PAYSLIPS,
       method: "GET",
-      endPoint: API.PAYROLL.PAYSLIPS(selectedRun.id) + (roleFilter !== "all" ? `?role=${roleFilter}` : ""),
+      endPoint,
       auth: true,
       setLoading: (v: boolean) => dispatch(setPayslipsLoading(v)),
       getResponse: (res: any) => {
@@ -622,7 +664,7 @@ export default function PayslipsTab({
       getError: (err: any) =>
         toast.error(err?.response?.data?.message || "Failed to load payslips"),
     });
-  }, [selectedRun, roleFilter]);
+  }, [selectedRun, roleFilter, userIdFilter, dispatch]);
 
   const triggerAction = (type: "approve" | "disburse") => {
     if (!selectedRun) return;
@@ -810,22 +852,42 @@ export default function PayslipsTab({
         </div>
       </div>
 
-      {/* Type Filter */}
-      <div className="flex items-center gap-3">
-        <Label className="text-xs text-muted-foreground shrink-0">Show:</Label>
-        <Select value={roleFilter} onValueChange={setRoleFilter}>
-          <SelectTrigger className="h-8 text-xs w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Roles</SelectItem>
-            {Object.values(ROLES).map((r) => (
-              <SelectItem key={r.id} value={r.id}>
-                {r.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* Filters */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Label className="text-xs text-muted-foreground shrink-0">Role:</Label>
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="h-8 text-xs w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Roles</SelectItem>
+              {Object.values(ROLES).map((r) => (
+                <SelectItem key={r.id} value={r.id}>
+                  {r.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Label className="text-xs text-muted-foreground shrink-0">User:</Label>
+          <Select value={userIdFilter} onValueChange={setUserIdFilter}>
+            <SelectTrigger className="h-8 text-xs w-52">
+              <SelectValue placeholder="All Users" />
+            </SelectTrigger>
+            <SelectContent className="max-h-64">
+              <SelectItem value="all">All Users</SelectItem>
+              {combinedUserOptions.map((u) => (
+                <SelectItem key={u.id} value={u.id}>
+                  {u.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <span className="text-xs text-muted-foreground">{payslips.length} payslip(s)</span>
         {role === "super_admin" && (
           <Button variant="outline" size="sm" onClick={exportCsv} className="h-8 text-xs gap-1.5 ml-auto">

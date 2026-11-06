@@ -16,7 +16,7 @@ import RejectionModal from "./components/RejectionModal";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const ADMIN_ROLES = ['super_admin', 'accountant'];
-const ALL_APPROVERS = [...ADMIN_ROLES];
+const ALL_APPROVERS = [...ADMIN_ROLES, 'branch_manager', 'admin_senior_executive'];
 
 export default function ReimbursementDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -189,8 +189,10 @@ export default function ReimbursementDetailPage() {
 
   if (!claim) return null;
 
-  const canApproveReject = isApprover && claim.status === "pending" && (isGlobalAdmin || claim.branch === user?.branch);
-  const canDelete = claim.status === "pending" && (claim.user === user?.id || isGlobalAdmin);
+  const isPending = claim.status === "pending";
+  const isAccountantApproved = claim.status === "approved_by_accountant";
+  const canApproveReject = (isPending || isAccountantApproved) && isApprover && (isGlobalAdmin || claim.branch === user?.branch);
+  const canDelete = !claim.is_paid && !claim.payroll_run && (claim.user === user?.id || isGlobalAdmin);
 
   return (
     <div className="space-y-6 mx-auto">
@@ -293,6 +295,11 @@ export default function ReimbursementDetailPage() {
                     <Clock className="w-4 h-4 mr-2" /> Pending Approval
                   </span>
                 )}
+                {claim.status === "approved_by_accountant" && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-500/10 text-blue-600 border border-blue-500/20">
+                    <Clock className="w-4 h-4 mr-2" /> Approved by Accountant (Pending Final Approval)
+                  </span>
+                )}
                 {claim.status === "approved" && (
                   <span className={cn("inline-flex items-center px-3 py-1 rounded-full text-sm font-medium", claim.is_paid ? "bg-primary/10 text-primary-dark" : "bg-success/10 text-success")}>
                     <CheckCircle2 className="w-4 h-4 mr-2" /> {claim.is_paid ? "Paid via Payroll" : "Approved"}
@@ -305,9 +312,19 @@ export default function ReimbursementDetailPage() {
                 )}
               </div>
 
+              {/* Accountant Review Info */}
+              {claim.accountant_approved_by_name && (
+                <div className="pt-4 border-t border-border">
+                  <p className="text-sm text-muted-foreground font-medium mb-1">Accountant Verification</p>
+                  <p className="font-medium text-text-primary">{claim.accountant_approved_by_name}</p>
+                  <p className="text-xs text-muted-foreground">on {formatDate(claim.accountant_approved_at || "")}</p>
+                </div>
+              )}
+
+              {/* Final Approved Info */}
               {claim.status === "approved" && claim.approved_by_name && (
                 <div className="pt-4 border-t border-border">
-                  <p className="text-sm text-muted-foreground font-medium mb-1">Approved By</p>
+                  <p className="text-sm text-muted-foreground font-medium mb-1">Final Approved By</p>
                   <p className="font-medium text-text-primary">{claim.approved_by_name}</p>
                   <p className="text-xs text-muted-foreground">on {formatDate(claim.approved_at || "")}</p>
                   
@@ -338,7 +355,7 @@ export default function ReimbursementDetailPage() {
               <div className="pt-6 border-t border-border space-y-3">
                 <Button className="w-full" onClick={handleApprove} disabled={actionLoading}>
                   {actionLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-                  Approve Claim
+                  {claim.status === "approved_by_accountant" ? "Final Approve Claim" : "Approve Claim"}
                 </Button>
                 <Button variant="outline" className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/20" onClick={() => setIsRejectOpen(true)} disabled={actionLoading}>
                   <XCircle className="w-4 h-4 mr-2" />

@@ -315,6 +315,7 @@ const STEP_2_FIELDS = [
   "group_module",
   "batch_attempt",
   "attempt_year",
+  "combo_offer",
   "payment_type",
   "payment_mode",
   "cheque_no",
@@ -726,6 +727,7 @@ export default function StudentAdmissionForm() {
           ? String(data.fee_structure.id || "")
           : String(data.fee_structure)
         : cached?.fee_structure ? String(cached.fee_structure) : prev.fee_structure,
+      combo_offer: data.combo_offer !== undefined ? Boolean(data.combo_offer) : (cached?.combo_offer !== undefined ? Boolean(cached.combo_offer) : prev.combo_offer),
       first_name: (data.first_name || cached?.first_name || "") ? String(data.first_name || cached?.first_name).toUpperCase() : "",
       surname: (data.surname || cached?.surname || "") ? String(data.surname || cached?.surname).toUpperCase() : "",
       father_name: (data.father_name || cached?.father_name || "") ? String(data.father_name || cached?.father_name).toUpperCase() : "",
@@ -839,16 +841,16 @@ export default function StudentAdmissionForm() {
       reference: data.reference || cached?.reference || prev.reference,
       reference_name: (data.reference_name || cached?.reference_name || "") ? String(data.reference_name || cached?.reference_name).toUpperCase() : "",
       inquiry_date: formatToISODate(data.inquiry_date || cached?.inquiry_date) || prev.inquiry_date,
-      location: (data.location || cached?.location || "")
-        ? String(data.location || cached?.location).toUpperCase()
-        : data.branch?.name
-        ? String(data.branch.name).toUpperCase()
-        : "",
-      branch: data.branch
-        ? typeof data.branch === "object"
-          ? String(data.branch.id || "")
-          : String(data.branch)
-        : cached?.branch ? String(cached.branch) : prev.branch || "",
+      // location: (data.location || cached?.location || "")
+      //   ? String(data.location || cached?.location).toUpperCase()
+      //   : data.branch?.name
+      //   ? String(data.branch.name).toUpperCase()
+      //   : "",
+      // branch: data.branch
+      //   ? typeof data.branch === "object"
+      //     ? String(data.branch.id || "")
+      //     : String(data.branch)
+      //   : cached?.branch ? String(cached.branch) : prev.branch || "",
       consent: data.consent !== undefined ? Boolean(data.consent) : true,
     }));
 
@@ -925,7 +927,8 @@ export default function StudentAdmissionForm() {
     if (data.remaining_fees != null) setRemainingFeesAmount(data.remaining_fees);
     if (data.status) setAdmissionStatus(data.status);
     if (data.status_display) setAdmissionStatusDisplay(data.status_display);
-    if (data.token_payment_terms_note) setTokenTermsNote(data.token_payment_terms_note);
+    const terms = data.token_payment_terms_note || data.terms_note || data.fee_terms_note;
+    if (terms) setTokenTermsNote(terms);
 
     if (targetStep !== undefined) {
       setCurrentStep(targetStep);
@@ -1175,6 +1178,7 @@ export default function StudentAdmissionForm() {
       cheque_no: "",
       icsi_fees_payment: "pay_yourself",
       fee_structure: "",
+      combo_offer: false,
       first_name: "",
       surname: "",
       father_name: "",
@@ -1205,8 +1209,8 @@ export default function StudentAdmissionForm() {
       reference: "google",
       reference_name: "",
       inquiry_date: new Date().toISOString().split("T")[0],
-      location: "",
-      branch: "",
+      // location: "",
+      // branch: "",
       consent: true,
     });
     setSavedAdmissionId(null);
@@ -1266,6 +1270,7 @@ export default function StudentAdmissionForm() {
     cheque_no: "",
     icsi_fees_payment: "pay_yourself",
     fee_structure: "",
+    combo_offer: false,
     first_name: "",
     surname: "",
     father_name: "",
@@ -1296,8 +1301,8 @@ export default function StudentAdmissionForm() {
     reference: "google",
     reference_name: "",
     inquiry_date: new Date().toISOString().split("T")[0],
-    location: "",
-    branch: "",
+    // location: "",
+    // branch: "",
     consent: true,
   });
 
@@ -1333,10 +1338,13 @@ export default function StudentAdmissionForm() {
             updated.batch_attempt = "june";
           }
         } else if (processedValue === "cs_executive" || processedValue === "cs_professional") {
+          updated.combo_offer = false;
           updated.group_module = "module_1";
           if (!["june", "dec"].includes(prev.batch_attempt)) {
             updated.batch_attempt = "june";
           }
+        } else {
+          updated.combo_offer = false;
         }
       }
       return updated;
@@ -1594,9 +1602,17 @@ export default function StudentAdmissionForm() {
     const courseKey = formData.course.toLowerCase().replace(/_/g, " ");
     const attemptKey = (formData.batch_attempt || "").toLowerCase();
     const yearKey = String(formData.attempt_year || "");
+    const isComboSelected = formData.course === "cseet" && Boolean(formData.combo_offer);
 
     const candidates = feeStructuresList.filter((fs) => {
       if (!fs.is_active) return false;
+
+      // Filter combo vs regular structures for CSEET
+      if (formData.course === "cseet") {
+        const isFsCombo = Boolean(fs.is_combo) || Boolean(fs.name && /combo/i.test(fs.name));
+        if (isComboSelected && !isFsCombo) return false;
+        if (!isComboSelected && isFsCombo) return false;
+      }
 
       const levelName = (fs.level_name || "").toLowerCase();
       const fsName = (fs.name || "").toLowerCase();
@@ -1639,14 +1655,22 @@ export default function StudentAdmissionForm() {
     let match: FeesStructure | null = null;
 
     if (formData.course === "cseet") {
-      match =
-        candidates.find(
-          (fs) =>
-            !fs.group_module ||
-            fs.group_module === "" ||
-            fs.group_module === "full" ||
-            fs.group_module === "all"
-        ) || candidates[0];
+      if (isComboSelected) {
+        match =
+          candidates.find(
+            (fs) => Boolean(fs.is_combo) || Boolean(fs.name && /combo/i.test(fs.name))
+          ) || candidates[0];
+      } else {
+        match =
+          candidates.find(
+            (fs) =>
+              !fs.is_combo &&
+              (!fs.group_module ||
+                fs.group_module === "" ||
+                fs.group_module === "full" ||
+                fs.group_module === "all")
+          ) || candidates[0];
+      }
     } else {
       const group = formData.group_module; // "both", "module_1", "module_2"
 
@@ -1686,10 +1710,26 @@ export default function StudentAdmissionForm() {
   }, [
     feeStructuresList,
     formData.course,
+    formData.combo_offer,
     formData.batch_attempt,
     formData.attempt_year,
     formData.group_module,
   ]);
+
+  const comboFutureBatchPreview = useMemo(() => {
+    if (formData.course !== "cseet" || !formData.combo_offer) return null;
+    const attempt = (formData.batch_attempt || "june").toLowerCase();
+    const curYear = parseInt(String(formData.attempt_year || new Date().getFullYear()), 10) || new Date().getFullYear();
+
+    if (attempt === "june") {
+      return { attempt: "June", year: curYear + 1 };
+    } else if (attempt === "oct" || attempt === "feb") {
+      return { attempt: "December", year: curYear };
+    } else if (attempt === "dec") {
+      return { attempt: "December", year: curYear + 1 };
+    }
+    return { attempt: "June", year: curYear + 1 };
+  }, [formData.course, formData.combo_offer, formData.batch_attempt, formData.attempt_year]);
 
 interface ModuleOption {
   value: string;
@@ -1861,8 +1901,8 @@ interface ModuleOption {
         { key: "twelfth_percentile", label: "12th Percentile" },
         { key: "reference", label: "How did you hear about us?" },
         { key: "inquiry_date", label: "Inquiry Date" },
-        { key: "location", label: "Location" },
-        { key: "branch", label: "Branch" },
+        // { key: "location", label: "Location" },
+        // { key: "branch", label: "Branch" },
       ];
 
       for (const field of compulsoryCheck) {
@@ -1943,6 +1983,10 @@ interface ModuleOption {
         if (key === "fee_structure") {
           const id = value || (matchedFee?.id ? String(matchedFee.id) : "");
           if (id) payload.append(key, String(id));
+          return;
+        }
+        if (key === "combo_offer") {
+          payload.append("combo_offer", String(Boolean(formData.combo_offer)));
           return;
         }
         if (key === "payment_mode") {
@@ -2033,7 +2077,14 @@ interface ModuleOption {
           if (Array.isArray(setupData?.payment_history)) setPaymentHistory(setupData.payment_history);
           if (setupData?.total_fees != null) setTotalFeesAmount(setupData.total_fees);
           if (setupData?.remaining_fees != null) setRemainingFeesAmount(setupData.remaining_fees);
-          if (setupData?.token_payment_terms_note) setTokenTermsNote(setupData.token_payment_terms_note);
+          const setupTerms =
+            setupData?.token_payment_terms_note ||
+            setupData?.terms_note ||
+            setupData?.fee_terms_note ||
+            res?.data?.token_payment_terms_note ||
+            res?.data?.terms_note ||
+            res?.data?.fee_terms_note;
+          if (setupTerms) setTokenTermsNote(setupTerms);
 
           // Pre-populate expected payment amount if empty
           const instFee = getInstituteFee(matchedFee, formData.course, formData.group_module);
@@ -2102,6 +2153,14 @@ interface ModuleOption {
             if (setupData?.status_display) setAdmissionStatusDisplay(setupData.status_display);
             if (setupData?.razorpay_payment_link) setRazorpayPaymentLink(setupData.razorpay_payment_link);
             if (Array.isArray(setupData?.payment_history)) setPaymentHistory(setupData.payment_history);
+            const setupTerms =
+              setupData?.token_payment_terms_note ||
+              setupData?.terms_note ||
+              setupData?.fee_terms_note ||
+              resData?.token_payment_terms_note ||
+              resData?.terms_note ||
+              resData?.fee_terms_note;
+            if (setupTerms) setTokenTermsNote(setupTerms);
             setLoading(false);
             nextStep();
           } catch (setupErr: any) {
@@ -2205,6 +2264,8 @@ interface ModuleOption {
           if (resData?.doc_category_cert) setExistingDocs((prev) => ({ ...prev, doc_category_cert: resData.doc_category_cert }));
           if (Array.isArray(resData?.payment_history)) setPaymentHistory(resData.payment_history);
           if (resData?.razorpay_payment_link) setRazorpayPaymentLink(resData.razorpay_payment_link);
+          const stepTerms = resData?.token_payment_terms_note || resData?.terms_note || resData?.fee_terms_note;
+          if (stepTerms) setTokenTermsNote(stepTerms);
 
           if (resData?.doc_signature) setExistingDocs((prev) => ({ ...prev, doc_signature: resData.doc_signature }));
           if (resData?.doc_photo) setExistingDocs((prev) => ({ ...prev, doc_photo: resData.doc_photo }));
@@ -3209,12 +3270,12 @@ interface ModuleOption {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="google">Google</SelectItem>
-                    <SelectItem value="existing">Existing Student</SelectItem>
-                    <SelectItem value="offline_ad">Offline Ad</SelectItem>
-                    <SelectItem value="social_media">Social Media - Instagram / Whatsapp</SelectItem>
                     <SelectItem value="seminar">Seminar</SelectItem>
-                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="existing">Existing Student</SelectItem>
+                    <SelectItem value="google">Google</SelectItem>
+                    <SelectItem value="social_media">Social Media - Instagram / Whatsapp</SelectItem>
+                    <SelectItem value="offline_ad">Offline Ad</SelectItem>
+                    {/* <SelectItem value="none">None</SelectItem> */}
                     <SelectItem value="other">Others</SelectItem>
                   </SelectContent>
                 </Select>
@@ -3249,45 +3310,6 @@ interface ModuleOption {
                   disabled={isFieldLocked("inquiry_date")}
                   className="h-10 sm:h-11 text-sm uppercase"
                 />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                  Location <span style={{ color: T.error }}>*</span>
-                </Label>
-                <Input
-                  required
-                  value={formData.location}
-                  onChange={(e) => handleChange("location", e.target.value)}
-                  disabled={isFieldLocked("location")}
-                  className="h-10 sm:h-11 text-sm uppercase"
-                  style={{ textTransform: "uppercase" }}
-                  placeholder="E.G. NARANPURA (AHMEDABAD)"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                  Branch <span style={{ color: T.error }}>*</span>
-                </Label>
-                <Select
-                  value={formData.branch}
-                  onValueChange={(val) => handleChange("branch", val)}
-                  disabled={branchesLoading || isFieldLocked("branch")}
-                >
-                  <SelectTrigger className="h-10 sm:h-11 text-sm bg-white">
-                    <SelectValue
-                      placeholder={branchesLoading ? "Loading branches..." : "Select Branch"}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {branches.map((b) => (
-                      <SelectItem key={b.value} value={String(b.value)}>
-                        {b.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
             </div>
           </SectionCard>
@@ -3457,7 +3479,7 @@ interface ModuleOption {
                   <SelectContent>
                     <SelectItem value="full_payment">Full Payment</SelectItem>
                     <SelectItem value="token">Token Payment</SelectItem>
-                    <SelectItem value="finance">Installment</SelectItem>
+                    <SelectItem value="finance">Installment / Finance</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -3513,10 +3535,46 @@ interface ModuleOption {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="pay_yourself">Pay Yourself</SelectItem>
-                    <SelectItem value="pay_through_institute">Pay through Institute</SelectItem>
+                    <SelectItem value="pay_through_institute">Pay through IIPS</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
+              {formData.course === "cseet" && (
+                <div className="col-span-full mt-2 p-4 rounded-2xl border-2 transition-all duration-200 bg-gradient-to-r from-purple-500/5 to-indigo-500/5 dark:from-purple-950/20 dark:to-indigo-950/20 border-purple-200 dark:border-purple-800">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-heading font-semibold text-sm sm:text-base text-purple-950 dark:text-purple-100">
+                          CSEET + CS Executive Combo Offer
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300 border border-purple-300 dark:border-purple-700 uppercase tracking-wide">
+                          Special Package
+                        </span>
+                      </div>
+                      <p className="text-xs text-purple-800/80 dark:text-purple-300/80 leading-relaxed max-w-xl">
+                        Enroll in both CSEET and the subsequent CS Executive batch together with direct combo package pricing.
+                      </p>
+                      {formData.combo_offer && comboFutureBatchPreview && (
+                        <div className="mt-2.5 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-100/70 dark:bg-purple-900/40 text-purple-900 dark:text-purple-200 text-xs border border-purple-200/60">
+                          <span className="font-semibold">Future CS Executive Batch:</span>
+                          <span>{comboFutureBatchPreview.attempt} {comboFutureBatchPreview.year}</span>
+                        </div>
+                      )}
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(formData.combo_offer)}
+                        disabled={isFieldLocked("combo_offer") || isStep2Completed}
+                        onChange={(e) => handleChange("combo_offer", e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                    </label>
+                  </div>
+                </div>
+              )}
             </div>
           </SectionCard>
 
@@ -3537,6 +3595,11 @@ interface ModuleOption {
                     <div className="flex items-center gap-2">
                       <GraduationCap className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm font-medium text-muted-foreground">Fee Structure</span>
+                      {(matchedFee.is_combo || Boolean(matchedFee.name && /combo/i.test(matchedFee.name))) && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300 border border-purple-300 dark:border-purple-700">
+                          Combo Offer (CSEET + Executive)
+                        </span>
+                      )}
                     </div>
                     {feeCandidates.length > 1 ? (
                       <Select
@@ -3720,7 +3783,11 @@ interface ModuleOption {
                                   <span>15-Day Policy Notice</span>
                                 </div>
                                 <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
-                                  In 15 days you have to pay remaining fees (<strong>{formatCurrency(remainingFees)}</strong>) otherwise it will be considered as Finance.
+                                  {tokenTermsNote || (
+                                    <>
+                                      In 15 days you have to pay remaining fees (<strong>{formatCurrency(remainingFees)}</strong>) otherwise it will be considered as Installment/Finance.
+                                    </>
+                                  )}
                                 </p>
                               </div>
                             </div>
@@ -4185,7 +4252,12 @@ interface ModuleOption {
                           )}
                         </p>
                         <div className="pt-2 border-t border-amber-200 text-xs text-amber-900 font-medium">
-                          ⚠️ <strong>Notice Regarding Remaining Fees:</strong> In 15 days you have to pay remaining fees (<strong>{formatCurrency(remFees)}</strong>) otherwise it will be considered as Finance.
+                          ⚠️ <strong>Notice Regarding Remaining Fees:</strong>{" "}
+                          {tokenTermsNote || (
+                            <>
+                              In 15 days you have to pay remaining fees (<strong>{formatCurrency(remFees)}</strong>) otherwise it will be considered as Installment/Finance.
+                            </>
+                          )}
                         </div>
                       </div>
                     );
@@ -4319,7 +4391,7 @@ interface ModuleOption {
                     {/* Transaction ID */}
                     <div className="space-y-1.5">
                       <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                        Transaction ID / Reference Number
+                        Transaction ID / Reference Number / Cheque Number
                       </Label>
                       <Input
                         type="text"
@@ -4328,7 +4400,7 @@ interface ModuleOption {
                         onChange={(e) => setTransactionId(e.target.value)}
                         disabled={isFieldLocked("transaction_id")}
                         className="h-10 sm:h-11 text-sm font-mono"
-                        placeholder="UPI Ref / UTR / Cheque No / Bank Ref"
+                        placeholder="E.G.ZKHFTRHU3457795"
                       />
                       <p className="text-[11px] text-muted-foreground">
                         UPI / Bank transaction reference number.

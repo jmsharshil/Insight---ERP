@@ -73,9 +73,16 @@ export default function StructuresTab({
           )}
           <div>
             <div className="flex justify-between items-start mb-3">
-              <h3 className="font-heading font-semibold text-lg text-card-foreground leading-snug pr-2">
-                {fs.name}
-              </h3>
+              <div className="space-y-1 pr-2">
+                <h3 className="font-heading font-semibold text-lg text-card-foreground leading-snug">
+                  {fs.name}
+                </h3>
+                {(fs.is_combo || (fs.name && /combo/i.test(fs.name))) && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 border border-purple-300 dark:border-purple-700">
+                    Combo Offer (CSEET + Executive)
+                  </span>
+                )}
+              </div>
               <span
                 className={cn(
                   "px-2.5 py-0.5 rounded-full text-xs font-semibold border whitespace-nowrap",
