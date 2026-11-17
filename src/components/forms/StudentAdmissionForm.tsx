@@ -2053,74 +2053,10 @@ interface ModuleOption {
       }
       setPaymentProofSubmitting(true);
     }
-    if (false && stepToSubmit === 2 && !currentAdmissionId) {
-      toast.error("Admission ID is missing. Please complete Step 1 first.");
-      setLoading(false);
-      return;
-    }
-
     if (stepToSubmit === 2) {
-      // Step 2 calls POST /api/v1/admissions/<id>/setup/
-      dispatch({
-        type: admissionActions.SUBMIT_ADMISSION,
-        method: "POST",
-        endPoint: API.ADMISSIONS.SETUP(currentAdmissionId),
-        body: payload,
-        auth: false,
-        isFormData: true,
-        setLoading: (val: boolean) => setLoading(val),
-        getResponse: (res: any) => {
-          const setupData = res?.data?.data || res?.data || res;
-          if (setupData?.status) setAdmissionStatus(setupData.status);
-          if (setupData?.status_display) setAdmissionStatusDisplay(setupData.status_display);
-          if (setupData?.razorpay_payment_link) setRazorpayPaymentLink(setupData.razorpay_payment_link);
-          if (Array.isArray(setupData?.payment_history)) setPaymentHistory(setupData.payment_history);
-          if (setupData?.total_fees != null) setTotalFeesAmount(setupData.total_fees);
-          if (setupData?.remaining_fees != null) setRemainingFeesAmount(setupData.remaining_fees);
-          const setupTerms =
-            setupData?.token_payment_terms_note ||
-            setupData?.terms_note ||
-            setupData?.fee_terms_note ||
-            res?.data?.token_payment_terms_note ||
-            res?.data?.terms_note ||
-            res?.data?.fee_terms_note;
-          if (setupTerms) setTokenTermsNote(setupTerms);
-
-          // Pre-populate expected payment amount if empty
-          const instFee = getInstituteFee(matchedFee, formData.course, formData.group_module);
-          const tokenAmt = Number(matchedFee?.token_amount || 0);
-          if (formData.payment_type === "token" && tokenAmt > 0) {
-            setPaymentAmount((prev) => prev || String(tokenAmt));
-          } else if (formData.payment_type === "full_payment" && instFee > 0) {
-            setPaymentAmount((prev) => prev || String(instFee));
-          }
-          if (!paymentSubmittedAt) {
-            setPaymentSubmittedAt(new Date().toISOString().slice(0, 16));
-          }
-
-          toast.success("Course details & payment plan saved successfully!");
-          nextStep();
-        },
-        getError: (err: any) => {
-          let msg =
-            err?.response?.data?.message ||
-            err?.response?.data?.error ||
-            err?.response?.data?.detail;
-          if (!msg && err?.response?.data && typeof err.response.data === "object") {
-            const firstKey = Object.keys(err.response.data)[0];
-            const val = err.response.data[firstKey];
-            msg = Array.isArray(val) ? `${firstKey}: ${val[0]}` : String(val);
-          }
-          if (!msg) msg = err?.message || "Failed to setup course. Please try again.";
-          toast.error(msg);
-        },
-      });
-      return;
-    }
-    if (false) {
       // Step 2 calls 2 APIs:
       // 1. PATCH /api/v1/admissions/<id>/ (saves Step 2 course info & fee structure)
-      // 2. POST /api/v1/admissions/<id>/setup/ (triggers backend setup endpoint)
+      // 2. POST /api/v1/admissions/<id>/setup/ (triggers backend setup endpoint & calculations)
       //
       // NOTE: We use axiosRequest directly for the 2nd call (POST /setup/) because
       // the saga uses takeLatest(SUBMIT_ADMISSION), so dispatching a second action
@@ -2142,6 +2078,7 @@ interface ModuleOption {
 
           // 2nd API call: POST to /setup/ using axiosRequest directly
           try {
+            setLoading(true);
             const setupResponse = await axiosRequest({
               baseURL: import.meta.env.VITE_APP_BASE_URL,
               method: "POST",
@@ -2153,6 +2090,8 @@ interface ModuleOption {
             if (setupData?.status_display) setAdmissionStatusDisplay(setupData.status_display);
             if (setupData?.razorpay_payment_link) setRazorpayPaymentLink(setupData.razorpay_payment_link);
             if (Array.isArray(setupData?.payment_history)) setPaymentHistory(setupData.payment_history);
+            if (setupData?.total_fees != null) setTotalFeesAmount(setupData.total_fees);
+            if (setupData?.remaining_fees != null) setRemainingFeesAmount(setupData.remaining_fees);
             const setupTerms =
               setupData?.token_payment_terms_note ||
               setupData?.terms_note ||
@@ -2161,6 +2100,20 @@ interface ModuleOption {
               resData?.terms_note ||
               resData?.fee_terms_note;
             if (setupTerms) setTokenTermsNote(setupTerms);
+
+            // Pre-populate expected payment amount if empty
+            const instFee = getInstituteFee(matchedFee, formData.course, formData.group_module);
+            const tokenAmt = Number(matchedFee?.token_amount || 0);
+            if (formData.payment_type === "token" && tokenAmt > 0) {
+              setPaymentAmount((prev) => prev || String(tokenAmt));
+            } else if (formData.payment_type === "full_payment" && instFee > 0) {
+              setPaymentAmount((prev) => prev || String(instFee));
+            }
+            if (!paymentSubmittedAt) {
+              setPaymentSubmittedAt(new Date().toISOString().slice(0, 16));
+            }
+
+            toast.success("Course details & payment plan saved successfully!");
             setLoading(false);
             nextStep();
           } catch (setupErr: any) {
@@ -2179,6 +2132,7 @@ interface ModuleOption {
           }
         },
         getError: (err: any) => {
+          setLoading(false);
           let msg =
             err?.response?.data?.message ||
             err?.response?.data?.error ||
