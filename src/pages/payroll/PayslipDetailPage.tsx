@@ -34,6 +34,7 @@ import { useToast } from "@/hooks/useToast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import PayslipAdjustSheet from "./components/PayslipAdjustSheet";
+import PageHeader from "@/components/layout/PageHeader";
 
 const MONTH_NAMES: Record<number, string> = {
   1: "January", 2: "February", 3: "March", 4: "April",
@@ -274,8 +275,19 @@ export default function PayslipDetailPage() {
     navigate(`/payroll?${q.toString()}`);
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleNavigateToLeave = (_leaveNote?: any) => {
+    navigate("/leave");
+  };
+
+  const formatLeaveDate = (dStr?: string) => {
+    if (!dStr) return "—";
+    try {
+      const d = new Date(dStr);
+      if (isNaN(d.getTime())) return dStr;
+      return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+    } catch {
+      return dStr;
+    }
   };
 
   if (loading) {
@@ -312,32 +324,9 @@ export default function PayslipDetailPage() {
   const periodLabel = monthLabel && yearLabel ? `${monthLabel} ${yearLabel}` : monthLabel || yearLabel || "Current Period";
 
   return (
+    <>
+    <PageHeader title="Payslip Detail" subtitle="View and Manage Payslips" />
     <div className="w-full space-y-6 pb-12 payslip-detail-container">
-      {/* ── Print Stylesheet ── */}
-      <style>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          .payslip-print-view, .payslip-print-view * {
-            visibility: visible;
-          }
-          .payslip-print-view {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            padding: 24px;
-            background: white !important;
-            color: black !important;
-          }
-          .no-print {
-            display: none !important;
-          }
-        }
-      `}</style>
-
-      {/* ── Top Navigation Bar (Hidden in Print) ── */}
       <div className="no-print flex flex-wrap items-center justify-between gap-4 border-b border-border/70 pb-4">
         <div className="flex items-center gap-3">
           <Button
@@ -374,15 +363,6 @@ export default function PayslipDetailPage() {
               <Sliders className="w-3.5 h-3.5" /> Adjust Payslip
             </Button>
           )}
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePrint}
-            className="h-9 text-xs gap-1.5 bg-white shadow-sm"
-          >
-            <Printer className="w-4 h-4 text-muted-foreground" /> Print / PDF
-          </Button>
         </div>
       </div>
 
@@ -571,6 +551,9 @@ export default function PayslipDetailPage() {
             </div>
             <div className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1.5 flex-wrap">
               <span>{payslip.leaves_taken ?? 0} leaves</span>
+              {Boolean(payslip.leave_notes && payslip.leave_notes.length > 0) && (
+                <span className="text-primary font-medium">({payslip.leave_notes.length} approved)</span>
+              )}
               <span>•</span>
               {Number(payslip.per_paper_rate || 0) > 0 || payslip.employment_type === "paper_checker" ? (
                 <span>{payslip.sessions_conducted ?? 0} papers</span>
@@ -782,9 +765,23 @@ export default function PayslipDetailPage() {
             </div>
 
             {/* Leave Deductions */}
-            <div className="flex items-center justify-between py-2 border-b border-border/40">
+            <div
+              onClick={() => handleNavigateToLeave()}
+              className="flex items-center justify-between py-2 border-b border-border/40 cursor-pointer hover:bg-muted/30 px-1.5 -mx-1.5 rounded transition-colors group"
+              title="Click to view in Leaves module"
+            >
               <div>
-                <p className="text-sm font-medium text-foreground">Excess Leave Deductions</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                    Excess Leave Deductions
+                  </p>
+                  {Boolean(payslip.leave_notes && payslip.leave_notes.length > 0) && (
+                    <Badge variant="outline" className="text-[10px] bg-slate-50 text-slate-700">
+                      {payslip.leave_notes.length} record(s)
+                    </Badge>
+                  )}
+                  <ExternalLink className="w-3.5 h-3.5 text-muted-foreground opacity-60 group-hover:opacity-100 group-hover:text-primary transition-all shrink-0" />
+                </div>
                 <p className="text-xs text-muted-foreground">Unpaid or over-limit leaves taken</p>
               </div>
               <span className="font-mono text-sm font-semibold text-red-600">
@@ -1070,6 +1067,115 @@ export default function PayslipDetailPage() {
         </div>
       )}
 
+      {/* ── Approved Leave Records & Notes (if notes present) ── */}
+      {Boolean(payslip.leave_notes && payslip.leave_notes.length > 0) && (
+        <div className="bg-white rounded-2xl border border-border p-6 shadow-sm space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-3">
+            <div>
+              <h3 className="font-semibold text-base text-foreground flex items-center gap-2">
+                <CalendarDays className="w-4 h-4 text-blue-600" />
+                Approved Leave Records & Policy Breakdown
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Staff leaves tracked during this payroll cycle and their impact on salary deductions
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleNavigateToLeave()}
+              className="text-xs h-8 gap-1.5 text-primary border-primary/30 hover:bg-primary/5"
+            >
+              View in Leaves Module <ExternalLink className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {(payslip.leave_notes || []).map((note: any, idx: number) => {
+              const isUnpaid = Boolean(note.is_unpaid || note.leave_type === "unpaid");
+              const isHalfDay = Boolean(note.is_half_day);
+              const days = note.days ?? (isHalfDay ? 0.5 : 1);
+              const formattedFrom = formatLeaveDate(note.date_from);
+              const formattedTo = formatLeaveDate(note.date_to);
+              const dateDisplay =
+                !note.date_to || note.date_from === note.date_to
+                  ? formattedFrom
+                  : `${formattedFrom} → ${formattedTo}`;
+
+              return (
+                <div
+                  key={idx}
+                  onClick={() => handleNavigateToLeave(note)}
+                  className="bg-white p-4 rounded-xl border border-border shadow-sm hover:border-primary/60 hover:shadow-md hover:bg-slate-50/50 transition-all cursor-pointer group flex flex-col justify-between"
+                  title="Click to view in Leaves module"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors capitalize truncate">
+                          {(note.leave_type || "Leave").replace(/_/g, " ")} Leave
+                        </h4>
+                        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] font-semibold py-0 h-4 ${
+                              isUnpaid
+                                ? "bg-red-50 text-red-700 border-red-200"
+                                : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            }`}
+                          >
+                            {isUnpaid ? "Unpaid (LOP)" : "Paid Leave"}
+                          </Badge>
+                          {isHalfDay && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] font-medium bg-amber-50 text-amber-700 border-amber-200 py-0 h-4"
+                            >
+                              Half Day
+                            </Badge>
+                          )}
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] font-mono bg-slate-50 text-slate-700 border-slate-200 py-0 h-4"
+                          >
+                            {days} {days === 1 ? "Day" : "Days"}
+                          </Badge>
+                        </div>
+                      </div>
+                      <span
+                        className={`font-mono text-xs font-semibold px-2 py-0.5 rounded border shrink-0 ${
+                          isUnpaid
+                            ? "text-red-600 bg-red-50 border-red-100"
+                            : "text-emerald-600 bg-emerald-50 border-emerald-100"
+                        }`}
+                      >
+                        {isUnpaid ? "Deduction" : "Covered"}
+                      </span>
+                    </div>
+
+                    {(note.reason || note.notes || note.remarks || note.description) && (
+                      <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
+                        {note.reason || note.notes || note.remarks || note.description}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-3 mt-3 border-t border-border/50 text-xs">
+                    <span className="text-muted-foreground font-medium flex items-center gap-1 font-mono text-[11px]">
+                      <Calendar className="w-3.5 h-3.5 text-muted-foreground/70 shrink-0" />
+                      {dateDisplay}
+                    </span>
+                    <span className="text-[11px] text-primary font-medium opacity-80 group-hover:opacity-100 flex items-center gap-1">
+                      View Details →
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ── Late Check-in / Daily Deduction Logs (if present) ── */}
       {Boolean(
         (payslip.late_logs && payslip.late_logs.length > 0) ||
@@ -1262,6 +1368,45 @@ export default function PayslipDetailPage() {
             </div>
           </div>
 
+          {/* Leaves Breakdown (if records present) */}
+          {Boolean(payslip.leave_notes && payslip.leave_notes.length > 0) && (
+            <div className="border border-slate-300 rounded overflow-hidden mt-4">
+              <div className="bg-slate-200 px-3 py-1.5 font-bold text-xs text-slate-800 flex justify-between">
+                <span>Approved Leave Records & Policy Breakdown ({payslip.leave_notes.length})</span>
+                <span>Type / Pay Impact</span>
+              </div>
+              <div className="divide-y divide-slate-200 text-xs">
+                {payslip.leave_notes.map((note: any, idx: number) => {
+                  const isUnpaid = Boolean(note.is_unpaid || note.leave_type === "unpaid");
+                  const isHalfDay = Boolean(note.is_half_day);
+                  const days = note.days ?? (isHalfDay ? 0.5 : 1);
+                  const formattedFrom = formatLeaveDate(note.date_from);
+                  const formattedTo = formatLeaveDate(note.date_to);
+                  const dates =
+                    !note.date_to || note.date_from === note.date_to
+                      ? formattedFrom
+                      : `${formattedFrom} to ${formattedTo}`;
+                  return (
+                    <div key={idx} className="px-3 py-1.5 flex justify-between items-center">
+                      <div>
+                        <span className="font-semibold capitalize">{(note.leave_type || "Leave").replace(/_/g, " ")} Leave</span>
+                        <span className="text-slate-600 ml-2">
+                          ({dates} · {days} {days === 1 ? "day" : "days"}{isHalfDay ? " · Half Day" : ""})
+                        </span>
+                        {(note.reason || note.notes || note.remarks) && (
+                          <span className="text-slate-400 italic ml-2">— {note.reason || note.notes || note.remarks}</span>
+                        )}
+                      </div>
+                      <span className={`font-semibold ${isUnpaid ? "text-red-700" : "text-emerald-700"}`}>
+                        {isUnpaid ? "Unpaid (LOP)" : "Paid Leave"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Net Salary Box */}
           <div className="bg-slate-900 text-white p-4 rounded flex justify-between items-center">
             <div>
@@ -1286,5 +1431,6 @@ export default function PayslipDetailPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

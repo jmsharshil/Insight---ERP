@@ -43,6 +43,7 @@ export default function LeadsTable({
   const STAGES = Object.keys(LEAD_STATUS_META) as LeadStatus[];
   const { user } = useAuth();
   const canReassign = ["sales_senior_executive", "branch_manager", "super_admin"].includes(user?.role || "");
+  const canTransfer = ["tele_caller", "counsellor"].includes(user?.role || "");
 
   const [assignLead, setAssignLead] = useState<APILead | null>(null);
   const [transferLead, setTransferLead] = useState<APILead | null>(null);
@@ -166,13 +167,13 @@ export default function LeadsTable({
             <Eye className="w-3.5 h-3.5" />
           </Button>
 
-          {user?.role === "tele_caller" && (
+          {canTransfer && (
             <Button
               variant="outline"
               size="sm"
               className="gap-1 h-8 text-xs px-2.5"
               onClick={() => setTransferLead(r)}
-              title="Request Transfer to Counsellor"
+              title="Transfer Lead"
             >
               <ArrowRightLeft className="w-3 h-3" />
               Transfer

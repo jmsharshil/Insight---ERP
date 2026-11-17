@@ -64,13 +64,17 @@ export default function ReviewTransferDialog({
         setUsersLoading(false);
         const data = Array.isArray(res) ? res : res?.results ?? res?.data ?? [];
         setUsers(data);
+        if (request?.assigned_to) {
+          const match = data.find((u: any) => String(u.id) === String(request.assigned_to));
+          if (match) setSelectedUser(match);
+        }
       },
       getError: () => {
         setUsersLoading(false);
         toast.error("Failed to load users");
       },
     } as any);
-  }, [open, dispatch, toast]);
+  }, [open, dispatch, toast, request]);
 
   const ALLOWED_ROLES = ["cmo", "associate_bdm", "senior_bdm", "deputy_bdm", "sales_executive", "sales_senior_executive", "counsellor", "tele_caller"];
 
@@ -114,8 +118,14 @@ export default function ReviewTransferDialog({
           body: JSON.stringify(body),
         });
 
+        const resData = await res.json().catch(() => null);
         if (!res.ok) {
-          throw new Error(`Failed to ${status} transfer request`);
+          throw new Error(
+            resData?.error ||
+            resData?.message ||
+            resData?.detail ||
+            `Failed to ${status} transfer request`
+          );
         }
 
         toast.success(`Transfer request ${status} successfully.`);
@@ -138,11 +148,21 @@ export default function ReviewTransferDialog({
             Review Transfer Request
           </DialogTitle>
           <DialogDescription>
-            {request?.requested_by_name} requested to transfer{" "}
+            {request?.requested_by_name || "A team member"} requested to transfer{" "}
             <span className="font-semibold text-foreground">
               {request?.lead_name || `Lead #${request?.lead_id}`}
             </span>{" "}
-            to a counsellor.
+            {request?.assigned_to_name ? (
+              <>
+                to{" "}
+                <span className="font-semibold text-foreground">
+                  {request.assigned_to_name}
+                </span>
+                .
+              </>
+            ) : (
+              "to a counsellor."
+            )}
           </DialogDescription>
         </DialogHeader>
 

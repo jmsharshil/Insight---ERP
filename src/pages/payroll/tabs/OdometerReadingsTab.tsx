@@ -233,6 +233,7 @@ export default function OdometerReadingsTab() {
   } | null>(null);
 
   const role = user?.role ?? "";
+  const isSuperAdmin = role === "super_admin";
   const canApprove = ["super_admin", "branch_manager", "accountant"].includes(role);
 
   // Normalize date string to YYYY-MM-DD
@@ -2242,8 +2243,15 @@ export default function OdometerReadingsTab() {
 
                 {/* Rates Configuration */}
                 <div className="p-3.5 bg-muted/30 rounded-xl border border-border">
-                  <div className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
-                    <Car className="w-3.5 h-3.5 text-primary" /> Expense Rates per Kilometer
+                  <div className="text-xs font-semibold text-foreground mb-2 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Car className="w-3.5 h-3.5 text-primary" /> Expense Rates per Kilometer
+                    </span>
+                    {!isSuperAdmin && (
+                      <span className="text-[10px] text-muted-foreground font-normal">
+                        (Super Admin only)
+                      </span>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -2252,9 +2260,10 @@ export default function OdometerReadingsTab() {
                         type="number"
                         step="0.01"
                         min="0"
+                        disabled={!isSuperAdmin}
                         value={bulkExpensePerKm2W}
                         onChange={(e) => setBulkExpensePerKm2W(e.target.value)}
-                        className="h-8 text-xs font-mono bg-background"
+                        className={`h-8 text-xs font-mono bg-background ${!isSuperAdmin ? "opacity-75 cursor-not-allowed bg-muted/50" : ""}`}
                       />
                     </div>
                     <div>
@@ -2263,9 +2272,10 @@ export default function OdometerReadingsTab() {
                         type="number"
                         step="0.01"
                         min="0"
+                        disabled={!isSuperAdmin}
                         value={bulkExpensePerKm4W}
                         onChange={(e) => setBulkExpensePerKm4W(e.target.value)}
-                        className="h-8 text-xs font-mono bg-background"
+                        className={`h-8 text-xs font-mono bg-background ${!isSuperAdmin ? "opacity-75 cursor-not-allowed bg-muted/50" : ""}`}
                       />
                     </div>
                   </div>

@@ -632,16 +632,6 @@ export default function SalesActivitiesTab() {
           <Button variant="outline" size="sm" className="h-9 gap-1" onClick={fetchPlans}>
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
-          {canApproveOdoAccess && (
-            <Button
-              variant="default"
-              size="sm"
-              className="h-9 gap-1 bg-primary text-primary-foreground"
-              onClick={() => setBulkSettlementOpen(true)}
-            >
-              <CheckCircle2 className="w-3.5 h-3.5" /> Monthly Settlement
-            </Button>
-          )}
         </div>
       </div>
 

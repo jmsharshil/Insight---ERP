@@ -5,6 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Calculator, Wallet, Clock, Settings, FileText, View, Gauge } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
+import { useUI } from "@/hooks/useUI";
 import type { RootState, AppDispatch } from "@/store";
 import { dropdownActions } from "@/redux/actions";
 
@@ -22,6 +23,7 @@ export default function PayrollPage() {
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useAuth();
   const toast = useToast();
+  const { setPageTitle } = useUI();
   const role = user?.role ?? "";
   const [branches, setBranches] = useState<any[]>([]);
 
@@ -29,6 +31,11 @@ export default function PayrollPage() {
   const isAccount  = ["accountant"].includes(role);
   const isFaculty  = ["faculty"].includes(role);
   const canPreviewSalary = ["faculty", "exam_supervisor"].includes(role);
+  
+  // Set page title
+  useEffect(() => {
+    setPageTitle("Payroll & Salaries");
+  }, [setPageTitle]);
   
   // Decide default tab based on role
   const defaultTab = (isAdmin || isAccount) ? "runs" : "my-payroll";

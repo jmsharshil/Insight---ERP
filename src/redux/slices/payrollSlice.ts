@@ -74,6 +74,7 @@ export interface PaySlip {
   // Attendance
   working_days?: number;
   leaves_taken?: number;
+  leave_notes?: any[];
 
   // Payroll Details
   payroll_month?: string;

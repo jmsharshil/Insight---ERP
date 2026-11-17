@@ -43,8 +43,9 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
 
   const hasLogs = Array.isArray(row.per_day_deduction_log) && row.per_day_deduction_log.length > 0;
   const hasNote = !!row.deduction_note && row.deduction_note.trim().length > 0;
+  const hasLeaveNotes = Array.isArray(row.leave_notes) && row.leave_notes.length > 0;
 
-  if (totalDeduct === 0 && !hasNote && !hasLogs) {
+  if (totalDeduct === 0 && !hasNote && !hasLogs && !hasLeaveNotes) {
     return <span className="text-muted-foreground">—</span>;
   }
 
@@ -227,6 +228,84 @@ const DeductionNoteCell = ({ row }: { row: any }) => {
                     </div>
                   );
                 })}
+              </div>
+            )}
+
+            {/* Approved Leave Records & Policy Breakdown */}
+            {hasLeaveNotes && (
+              <div className="space-y-2 border-t pt-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold text-foreground uppercase tracking-wide">
+                    Approved Leave Records ({row.leave_notes.length})
+                  </h4>
+                  <span className="text-[11px] text-muted-foreground font-mono">
+                    {row.leaves_taken ?? row.leave_notes.length} total leaves
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {row.leave_notes.map((note: any, idx: number) => {
+                    const isUnpaid = Boolean(note.is_unpaid || note.leave_type === "unpaid");
+                    const isHalfDay = Boolean(note.is_half_day);
+                    const days = note.days ?? (isHalfDay ? 0.5 : 1);
+                    const dateDisplay =
+                      !note.date_to || note.date_from === note.date_to
+                        ? note.date_from
+                        : `${note.date_from} → ${note.date_to}`;
+
+                    return (
+                      <div
+                        key={idx}
+                        className="bg-white p-3 rounded-lg border border-border shadow-sm flex items-center justify-between gap-2"
+                      >
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-xs font-medium capitalize text-foreground">
+                              {(note.leave_type || "Leave").replace(/_/g, " ")} Leave
+                            </span>
+                            <Badge
+                              variant="outline"
+                              className={`text-[9px] py-0 px-1.5 font-semibold ${
+                                isUnpaid
+                                  ? "bg-red-50 text-red-700 border-red-200"
+                                  : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              }`}
+                            >
+                              {isUnpaid ? "Unpaid (LOP)" : "Paid Leave"}
+                            </Badge>
+                            {isHalfDay && (
+                              <Badge
+                                variant="outline"
+                                className="text-[9px] py-0 px-1.5 bg-amber-50 text-amber-700 border-amber-200"
+                              >
+                                Half Day
+                              </Badge>
+                            )}
+                            <span className="text-[10px] text-muted-foreground font-mono">
+                              ({days} {days === 1 ? "day" : "days"})
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mt-0.5 font-mono">
+                            {dateDisplay}
+                          </p>
+                          {(note.reason || note.notes || note.remarks) && (
+                            <p className="text-[11px] text-muted-foreground italic mt-0.5">
+                              {note.reason || note.notes || note.remarks}
+                            </p>
+                          )}
+                        </div>
+                        <span
+                          className={`text-xs font-semibold font-mono px-2 py-0.5 rounded border ${
+                            isUnpaid
+                              ? "text-red-600 bg-red-50 border-red-100"
+                              : "text-emerald-600 bg-emerald-50 border-emerald-100"
+                          }`}
+                        >
+                          {isUnpaid ? "Deduction" : "Covered"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
