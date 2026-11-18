@@ -153,12 +153,14 @@ export default function LeadsInquiryForm() {
     phone_father: "",
     phone_student_2: "",
     qualification: "appearing_12",
-    tenth_medium: "gseb",
+    tenth_board: "gseb",
+    tenth_medium: "english",
     tenth_school: "",
     tenth_coaching: "",
     tenth_percentage: "",
     tenth_percentile: "",
-    twelfth_medium: "gseb",
+    twelfth_board: "gseb",
+    twelfth_medium: "english",
     twelfth_school: "",
     twelfth_coaching: "",
     twelfth_percentage: "",
@@ -190,7 +192,7 @@ export default function LeadsInquiryForm() {
       } else {
         const preserveCaseFields = [
           "course", "group_module", "batch_attempt", "qualification",
-          "tenth_medium", "twelfth_medium", "category", "reference", "branch", "dob", "inquiry_date"
+          "tenth_medium", "tenth_board", "twelfth_medium", "twelfth_board", "category", "reference", "branch", "dob", "inquiry_date"
         ];
         if (!preserveCaseFields.includes(field)) {
           processedValue = value.toUpperCase();
@@ -266,12 +268,14 @@ export default function LeadsInquiryForm() {
         { key: "pincode", label: "Pincode" },
         { key: "country", label: "Country" },
         { key: "qualification", label: "Current Qualification" },
-        { key: "tenth_medium", label: "10th Board/Medium" },
+        { key: "tenth_board", label: "10th Board" },
+        { key: "tenth_medium", label: "10th Medium" },
         { key: "tenth_school", label: "10th School Name" },
         { key: "tenth_coaching", label: "10th Coaching Institute" },
         { key: "tenth_percentage", label: "10th Percentage" },
         { key: "tenth_percentile", label: "10th Percentile" },
-        { key: "twelfth_medium", label: "12th Board/Medium" },
+        { key: "twelfth_board", label: "12th Board" },
+        { key: "twelfth_medium", label: "12th Medium" },
         { key: "twelfth_school", label: "12th School Name" },
         { key: "twelfth_coaching", label: "12th Coaching Institute" },
         { key: "twelfth_percentage", label: "12th Percentage" },
@@ -349,6 +353,7 @@ export default function LeadsInquiryForm() {
         phone_father: inquiryData.phone_father,
         phone_student_2: inquiryData.phone_student_2,
         qualification: inquiryData.qualification,
+        tenth_board: inquiryData.tenth_board,
         tenth_medium: inquiryData.tenth_medium,
         tenth_school: inquiryData.tenth_school,
         tenth_coaching: inquiryData.tenth_coaching,
@@ -358,6 +363,7 @@ export default function LeadsInquiryForm() {
         tenth_percentile: inquiryData.tenth_percentile
           ? parseFloat(inquiryData.tenth_percentile)
           : null,
+        twelfth_board: inquiryData.twelfth_board,
         twelfth_medium: inquiryData.twelfth_medium,
         twelfth_school: inquiryData.twelfth_school,
         twelfth_coaching: inquiryData.twelfth_coaching,
@@ -562,7 +568,7 @@ export default function LeadsInquiryForm() {
 
   const FORM_TABS = [
     { key: "contact" as const, label: "Contact Form", icon: PhoneCall },
-    { key: "inquiry" as const, label: "Enrollment Form", icon: ClipboardList },
+    { key: "inquiry" as const, label: "Inquiry Form", icon: ClipboardList },
   ];
 
   return (
@@ -581,12 +587,12 @@ export default function LeadsInquiryForm() {
             alt="Insight ERP"
             className="h-16 sm:h-20 object-contain mx-auto mb-5 sm:mb-6"
           />
-          <h1
+          {/* <h1
             className="text-2xl sm:text-3xl font-bold tracking-tight"
             style={{ color: T.navy, fontFamily: T.headingFont }}
           >
             {isInquiry ? "Student Admission Inquiry" : "Get in Touch"}
-          </h1>
+          </h1> */}
           <p className="mt-2 text-sm sm:text-base max-w-md mx-auto" style={{ color: T.textMuted }}>
             {isInquiry
               ? "Fill in the details below to register your interest in our programmes"
@@ -1035,7 +1041,25 @@ export default function LeadsInquiryForm() {
                     >
                       <div className="space-y-1.5">
                         <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                          Board/Medium <span style={{ color: T.error }}>*</span>
+                          Board <span style={{ color: T.error }}>*</span>
+                        </Label>
+                        <Select
+                          value={inquiryData.tenth_board}
+                          onValueChange={(val) => handleInquiryChange("tenth_board", val)}
+                        >
+                          <SelectTrigger className="h-10 sm:h-11 text-sm bg-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="gseb">GSEB</SelectItem>
+                            <SelectItem value="cbse">CBSE</SelectItem>
+                            <SelectItem value="icse">ICSE</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                          Medium <span style={{ color: T.error }}>*</span>
                         </Label>
                         <Select
                           value={inquiryData.tenth_medium}
@@ -1045,9 +1069,10 @@ export default function LeadsInquiryForm() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="gseb">GSEB</SelectItem>
-                            <SelectItem value="cbse">CBSE</SelectItem>
-                            <SelectItem value="icse">ICSE</SelectItem>
+                            <SelectItem value="english">English Medium</SelectItem>
+                            <SelectItem value="gujarati">Gujarati Medium</SelectItem>
+                            <SelectItem value="hindi">Hindi Medium</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -1117,7 +1142,25 @@ export default function LeadsInquiryForm() {
                     >
                       <div className="space-y-1.5">
                         <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                          Board/Medium <span style={{ color: T.error }}>*</span>
+                          Board <span style={{ color: T.error }}>*</span>
+                        </Label>
+                        <Select
+                          value={inquiryData.twelfth_board}
+                          onValueChange={(val) => handleInquiryChange("twelfth_board", val)}
+                        >
+                          <SelectTrigger className="h-10 sm:h-11 text-sm bg-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="gseb">GSEB</SelectItem>
+                            <SelectItem value="cbse">CBSE</SelectItem>
+                            <SelectItem value="icse">ICSE</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                          Medium <span style={{ color: T.error }}>*</span>
                         </Label>
                         <Select
                           value={inquiryData.twelfth_medium}
@@ -1127,9 +1170,10 @@ export default function LeadsInquiryForm() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="gseb">GSEB</SelectItem>
-                            <SelectItem value="cbse">CBSE</SelectItem>
-                            <SelectItem value="icse">ICSE</SelectItem>
+                            <SelectItem value="english">English Medium</SelectItem>
+                            <SelectItem value="gujarati">Gujarati Medium</SelectItem>
+                            <SelectItem value="hindi">Hindi Medium</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

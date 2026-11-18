@@ -293,10 +293,12 @@ const STEP_1_FIELDS = [
   "email_parent",
   "qualification",
   "tenth_medium",
+  "tenth_board",
   "tenth_school",
   "tenth_percentage",
   "tenth_percentile",
   "twelfth_medium",
+  "twelfth_board",
   "twelfth_school",
   "tenth_coaching",
   "twelfth_coaching",
@@ -605,16 +607,22 @@ export default function StudentAdmissionForm() {
   const [loadingExisting, setLoadingExisting] = useState(false);
   const [existingDocs, setExistingDocs] = useState<Record<string, string | null>>({});
   const [autofilledFields, setAutofilledFields] = useState<Record<string, boolean>>({});
+  const [isSetupCompleted, setIsSetupCompleted] = useState<boolean>(false);
 
-  const isStep2Completed = Boolean(
-    Array.isArray(paymentHistory) && paymentHistory.length > 0
-  );
+  const isStep2Completed = Boolean(isSetupCompleted);
 
   const isFieldLocked = (fieldKey: string) => {
-    if (STEP_2_FIELDS.includes(fieldKey)) {
-      return isStep2Completed;
+    if (!isSetupCompleted) {
+      return false;
     }
-    return Boolean(autofilledFields[fieldKey]);
+    if (STEP_2_FIELDS.includes(fieldKey)) {
+      return true;
+    }
+    if (autofilledFields[fieldKey]) {
+      return true;
+    }
+    const val = (formData as any)[fieldKey];
+    return val !== undefined && val !== null && String(val).trim() !== "";
   };
 
   const nextStep = () => {
@@ -828,11 +836,13 @@ export default function StudentAdmissionForm() {
           ).toLowerCase()
         : "",
       qualification: data.qualification || cached?.qualification || prev.qualification,
-      tenth_medium: data.tenth_medium || cached?.tenth_medium || prev.tenth_medium,
+      tenth_board: data.tenth_board || cached?.tenth_board || prev.tenth_board || "gseb",
+      tenth_medium: data.tenth_medium || cached?.tenth_medium || prev.tenth_medium || "english",
       tenth_school: (data.tenth_school || cached?.tenth_school || "") ? String(data.tenth_school || cached?.tenth_school).toUpperCase() : "",
       tenth_percentage: data.tenth_percentage != null ? String(data.tenth_percentage) : (cached?.tenth_percentage != null ? String(cached.tenth_percentage) : ""),
       tenth_percentile: data.tenth_percentile != null ? String(data.tenth_percentile) : (cached?.tenth_percentile != null ? String(cached.tenth_percentile) : ""),
-      twelfth_medium: data.twelfth_medium || cached?.twelfth_medium || prev.twelfth_medium,
+      twelfth_board: data.twelfth_board || cached?.twelfth_board || prev.twelfth_board || "gseb",
+      twelfth_medium: data.twelfth_medium || cached?.twelfth_medium || prev.twelfth_medium || "english",
       twelfth_school: (data.twelfth_school || cached?.twelfth_school || "") ? String(data.twelfth_school || cached?.twelfth_school).toUpperCase() : "",
       tenth_coaching: (data.tenth_coaching || cached?.tenth_coaching || "") ? String(data.tenth_coaching || cached?.tenth_coaching).toUpperCase() : "",
       twelfth_coaching: (data.twelfth_coaching || cached?.twelfth_coaching || "") ? String(data.twelfth_coaching || cached?.twelfth_coaching).toUpperCase() : "",
@@ -929,6 +939,29 @@ export default function StudentAdmissionForm() {
     if (data.status_display) setAdmissionStatusDisplay(data.status_display);
     const terms = data.token_payment_terms_note || data.terms_note || data.fee_terms_note;
     if (terms) setTokenTermsNote(terms);
+
+    const isAlreadyPastSetup = Boolean(
+      data.status === "submitted" ||
+      data.status === "confirmed" ||
+      Boolean(data.payment_screenshot) ||
+      Boolean(data.transaction_id) ||
+      (Array.isArray(data.payment_history) && data.payment_history.length > 0)
+    );
+
+    if (isAlreadyPastSetup) {
+      setIsSetupCompleted(true);
+      const prefilled: Record<string, boolean> = {};
+      [...STEP_1_FIELDS, ...STEP_2_FIELDS].forEach((key) => {
+        const val = (data as any)[key] ?? (cached as any)?.[key];
+        if (val !== undefined && val !== null && String(val).trim() !== "") {
+          prefilled[key] = true;
+        }
+      });
+      setAutofilledFields(prefilled);
+    } else {
+      setIsSetupCompleted(false);
+      setAutofilledFields({});
+    }
 
     if (targetStep !== undefined) {
       setCurrentStep(targetStep);
@@ -1196,11 +1229,13 @@ export default function StudentAdmissionForm() {
       email: "",
       email_parent: "",
       qualification: "appearing_12",
-      tenth_medium: "gseb",
+      tenth_board: "gseb",
+      tenth_medium: "english",
       tenth_school: "",
       tenth_percentage: "",
       tenth_percentile: "",
-      twelfth_medium: "gseb",
+      twelfth_board: "gseb",
+      twelfth_medium: "english",
       twelfth_school: "",
       tenth_coaching: "",
       twelfth_coaching: "",
@@ -1242,6 +1277,7 @@ export default function StudentAdmissionForm() {
     setTotalFeesAmount(null);
     setRemainingFeesAmount(null);
     setTokenTermsNote(null);
+    setIsSetupCompleted(false);
     setAutofilledFields({});
     setIsChoiceModalOpen(false);
     setEntryMode("select");
@@ -1288,11 +1324,13 @@ export default function StudentAdmissionForm() {
     email: "",
     email_parent: "",
     qualification: "appearing_12",
-    tenth_medium: "gseb",
+    tenth_board: "gseb",
+    tenth_medium: "english",
     tenth_school: "",
     tenth_percentage: "",
     tenth_percentile: "",
-    twelfth_medium: "gseb",
+    twelfth_board: "gseb",
+    twelfth_medium: "english",
     twelfth_school: "",
     tenth_coaching: "",
     twelfth_coaching: "",
@@ -1316,7 +1354,7 @@ export default function StudentAdmissionForm() {
       } else {
         const preserveCaseFields = [
           "course", "group_module", "batch_attempt", "qualification",
-          "tenth_medium", "twelfth_medium", "category", "reference", "branch",
+          "tenth_medium", "tenth_board", "twelfth_medium", "twelfth_board", "category", "reference", "branch",
           "dob", "inquiry_date", "payment_type", "payment_mode", "icsi_fees_payment",
           "fee_structure", "attempt_year"
         ];
@@ -1889,12 +1927,14 @@ interface ModuleOption {
         { key: "pincode", label: "Pincode" },
         { key: "country", label: "Country" },
         { key: "qualification", label: "Current Qualification" },
-        { key: "tenth_medium", label: "10th Board/Medium" },
+        { key: "tenth_board", label: "10th Board" },
+        { key: "tenth_medium", label: "10th Medium" },
         { key: "tenth_school", label: "10th School Name" },
         { key: "tenth_coaching", label: "10th Coaching Institute" },
         { key: "tenth_percentage", label: "10th Percentage" },
         { key: "tenth_percentile", label: "10th Percentile" },
-        { key: "twelfth_medium", label: "12th Board/Medium" },
+        { key: "twelfth_board", label: "12th Board" },
+        { key: "twelfth_medium", label: "12th Medium" },
         { key: "twelfth_school", label: "12th School Name" },
         { key: "twelfth_coaching", label: "12th Coaching Institute" },
         { key: "twelfth_percentage", label: "12th Percentage" },
@@ -1935,6 +1975,11 @@ interface ModuleOption {
         toast.error("Father's phone number and Mother's phone number cannot be the same.");
         return;
       }
+    }
+
+    if (currentStep === 1 && isSetupCompleted) {
+      nextStep();
+      return;
     }
 
     if (currentStep === 2 && isStep2Completed) {
@@ -2113,6 +2158,19 @@ interface ModuleOption {
               setPaymentSubmittedAt(new Date().toISOString().slice(0, 16));
             }
 
+            // Mark setup as completed and lock pre-filled details so user cannot edit them
+            setIsSetupCompleted(true);
+            setAutofilledFields((prev) => {
+              const next = { ...prev };
+              [...STEP_1_FIELDS, ...STEP_2_FIELDS].forEach((key) => {
+                const val = (formData as any)[key];
+                if (val !== undefined && val !== null && String(val).trim() !== "") {
+                  next[key] = true;
+                }
+              });
+              return next;
+            });
+
             toast.success("Course details & payment plan saved successfully!");
             setLoading(false);
             nextStep();
@@ -2179,19 +2237,6 @@ interface ModuleOption {
         }
         if (resData?.status) setAdmissionStatus(resData.status);
         if (resData?.status_display) setAdmissionStatusDisplay(resData.status_display);
-
-        if (stepToSubmit === 1) {
-          setAutofilledFields((prev) => {
-            const next = { ...prev };
-            STEP_1_FIELDS.forEach((key) => {
-              const val = (formData as any)[key];
-              if (val !== undefined && val !== null && String(val).trim() !== "") {
-                next[key] = true;
-              }
-            });
-            return next;
-          });
-        }
 
         if (stepToSubmit === 3) {
           setPaymentProofSuccess(true);
@@ -2729,13 +2774,13 @@ interface ModuleOption {
           {currentStep === 1 && (
             <>
               {/* ── Autofilled Profile Notice Banner ── */}
-              {Object.keys(autofilledFields).length > 0 && (
+              {isSetupCompleted && (
                 <div className="flex items-start gap-3 p-4 rounded-2xl bg-blue-50/80 border border-blue-200 text-blue-900 dark:bg-blue-950/30 dark:border-blue-800 dark:text-blue-200">
                   <Info className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
                   <div className="text-xs sm:text-sm space-y-0.5">
-                    <p className="font-bold">Autofilled Profile Information (Locked)</p>
+                    <p className="font-bold">Profile Details Locked</p>
                     <p className="text-blue-800/90 dark:text-blue-300/90 leading-relaxed">
-                      Previously saved personal, contact, address, and academic details are shown. All fields are compulsory.
+                      Admission setup has been completed. Pre-filled personal, contact, address, and academic details cannot be edited.
                     </p>
                   </div>
                 </div>
@@ -2845,7 +2890,7 @@ interface ModuleOption {
                     <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
                       Student Phone <span style={{ color: T.error }}>*</span>
                     </Label>
-                    {formData.phone_student && (
+                    {/* {formData.phone_student && (
                       <button
                         type="button"
                         onClick={() => handleAutoFetch(formData.phone_student)}
@@ -2854,7 +2899,7 @@ interface ModuleOption {
                       >
                         <Search className="w-3 h-3" /> Auto-fill from phone
                       </button>
-                    )}
+                    )} */}
                   </div>
                   <Input
                     required
@@ -3040,7 +3085,26 @@ interface ModuleOption {
                 >
                   <div className="space-y-1.5">
                     <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                      Board/Medium <span style={{ color: T.error }}>*</span>
+                      Board <span style={{ color: T.error }}>*</span>
+                    </Label>
+                    <Select
+                      value={formData.tenth_board}
+                      onValueChange={(val) => handleChange("tenth_board", val)}
+                      disabled={isFieldLocked("tenth_board")}
+                    >
+                      <SelectTrigger className="h-10 sm:h-11 text-sm bg-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="gseb">GSEB</SelectItem>
+                        <SelectItem value="cbse">CBSE</SelectItem>
+                        <SelectItem value="icse">ICSE</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                      Medium <span style={{ color: T.error }}>*</span>
                     </Label>
                     <Select
                       value={formData.tenth_medium}
@@ -3051,9 +3115,10 @@ interface ModuleOption {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="gseb">GSEB</SelectItem>
-                        <SelectItem value="cbse">CBSE</SelectItem>
-                        <SelectItem value="icse">ICSE</SelectItem>
+                        <SelectItem value="english">English Medium</SelectItem>
+                        <SelectItem value="gujarati">Gujarati Medium</SelectItem>
+                        <SelectItem value="hindi">Hindi Medium</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -3127,7 +3192,26 @@ interface ModuleOption {
                 >
                   <div className="space-y-1.5">
                     <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-                      Board/Medium <span style={{ color: T.error }}>*</span>
+                      Board <span style={{ color: T.error }}>*</span>
+                    </Label>
+                    <Select
+                      value={formData.twelfth_board}
+                      onValueChange={(val) => handleChange("twelfth_board", val)}
+                      disabled={isFieldLocked("twelfth_board")}
+                    >
+                      <SelectTrigger className="h-10 sm:h-11 text-sm bg-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="gseb">GSEB</SelectItem>
+                        <SelectItem value="cbse">CBSE</SelectItem>
+                        <SelectItem value="icse">ICSE</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+                      Medium <span style={{ color: T.error }}>*</span>
                     </Label>
                     <Select
                       value={formData.twelfth_medium}
@@ -3138,9 +3222,10 @@ interface ModuleOption {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="gseb">GSEB</SelectItem>
-                        <SelectItem value="cbse">CBSE</SelectItem>
-                        <SelectItem value="icse">ICSE</SelectItem>
+                        <SelectItem value="english">English Medium</SelectItem>
+                        <SelectItem value="gujarati">Gujarati Medium</SelectItem>
+                        <SelectItem value="hindi">Hindi Medium</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -3268,13 +3353,29 @@ interface ModuleOption {
             </div>
           </SectionCard>
               <div className="flex justify-end pt-4">
-                <Button type="submit" disabled={loading} className="h-12 px-8 font-semibold" style={{ background: T.primary, color: T.black }}>
-                  {loading ? (
-                    <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Saving...</>
-                  ) : (
-                    "Next: Course Info"
-                  )}
-                </Button>
+                {isSetupCompleted ? (
+                  <Button
+                    type="button"
+                    onClick={nextStep}
+                    className="h-12 px-8 font-semibold"
+                    style={{ background: T.primary, color: T.black }}
+                  >
+                    Next: Course Info
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="h-12 px-8 font-semibold"
+                    style={{ background: T.primary, color: T.black }}
+                  >
+                    {loading ? (
+                      <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Saving...</>
+                    ) : (
+                      "Next: Course Info"
+                    )}
+                  </Button>
+                )}
               </div>
             </>
           )}
