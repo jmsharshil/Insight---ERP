@@ -113,6 +113,7 @@ export default function KanbanBoard({
   const [searchQuery, setSearchQuery] = useState("");
   const { user } = useAuth();
   const canReassign = ["sales_senior_executive", "branch_manager", "super_admin"].includes(user?.role || "");
+  const canTransfer = ["tele_caller", "counsellor"].includes(user?.role || "");
 
   const total = totalCount ?? leads.length;
   const size = pageSize ?? 50;
@@ -427,13 +428,13 @@ export default function KanbanBoard({
                                             <RefreshCw className="w-3 h-3 text-muted-foreground hover:text-foreground" />
                                           </Button>
                                         )}
-                                        {user?.role === "tele_caller" && (
+                                        {canTransfer && (
                                           <Button
                                             variant="ghost"
                                             size="sm"
                                             className="h-5 w-5 p-0"
                                             onClick={(e) => { e.stopPropagation(); setTransferLead(lead); }}
-                                            title="Request Transfer to Counsellor"
+                                            title="Transfer Lead"
                                           >
                                             <ArrowRightLeft className="w-3 h-3 text-muted-foreground hover:text-foreground" />
                                           </Button>
@@ -451,13 +452,13 @@ export default function KanbanBoard({
                                         <UserCheck className="w-2.5 h-2.5" />
                                         Assign
                                       </Button>
-                                      {user?.role === "tele_caller" && (
+                                      {canTransfer && (
                                         <Button
                                           variant="ghost"
                                           size="sm"
                                           className="h-5 w-5 p-0"
                                           onClick={(e) => { e.stopPropagation(); setTransferLead(lead); }}
-                                          title="Request Transfer to Counsellor"
+                                          title="Transfer Lead"
                                         >
                                           <ArrowRightLeft className="w-3 h-3 text-muted-foreground hover:text-foreground" />
                                         </Button>

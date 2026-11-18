@@ -560,8 +560,16 @@ export default function StudentAdmissionDetailedPage() {
 
             <Card title="10th Standard Details">
               <Row
+                label="Board"
+                value={<span className="uppercase">{admission.tenth_board || "—"}</span>}
+              />
+              <Row
                 label="Medium"
-                value={<span className="uppercase">{admission.tenth_medium || "—"}</span>}
+                value={
+                  <span className="capitalize">
+                    {admission.tenth_medium ? (admission.tenth_medium === "other" ? "Other" : `${admission.tenth_medium} Medium`) : "—"}
+                  </span>
+                }
               />
               <Row label="School" value={admission.tenth_school || "—"} />
               <Row label="Coaching" value={admission.tenth_coaching || "—"} />
@@ -577,8 +585,16 @@ export default function StudentAdmissionDetailedPage() {
 
             <Card title="12th Standard Details">
               <Row
+                label="Board"
+                value={<span className="uppercase">{admission.twelfth_board || "—"}</span>}
+              />
+              <Row
                 label="Medium"
-                value={<span className="uppercase">{admission.twelfth_medium || "—"}</span>}
+                value={
+                  <span className="capitalize">
+                    {admission.twelfth_medium ? (admission.twelfth_medium === "other" ? "Other" : `${admission.twelfth_medium} Medium`) : "—"}
+                  </span>
+                }
               />
               <Row label="School" value={admission.twelfth_school || "—"} />
               <Row label="Coaching" value={admission.twelfth_coaching || "—"} />

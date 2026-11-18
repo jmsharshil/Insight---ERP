@@ -60,11 +60,13 @@ export interface APILead {
   reference?: string;
   inquiry_date?: string | null;
   tenth_medium?: string;
+  tenth_board?: string;
   tenth_school?: string;
   tenth_coaching?: string;
   tenth_percentage?: number | null;
   tenth_percentile?: number | null;
   twelfth_medium?: string;
+  twelfth_board?: string;
   twelfth_school?: string;
   twelfth_coaching?: string;
   twelfth_percentage?: number | null;

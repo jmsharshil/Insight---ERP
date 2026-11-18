@@ -70,14 +70,20 @@ export default function TransferRequestsTab() {
     {
       key: "assigned_to_name" as keyof LeadTransferRequest,
       header: "Transfer To",
-      render: (r) =>
-        r.assigned_to_name ? (
+      render: (r) => {
+        const name =
+          r.assigned_to_name ||
+          (typeof (r as any).assigned_to === "object"
+            ? (r as any).assigned_to?.name || (r as any).assigned_to?.full_name
+            : null);
+        return name ? (
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-            {r.assigned_to_name}
+            {name}
           </span>
         ) : (
           <span className="text-xs text-muted-foreground">—</span>
-        ),
+        );
+      },
     },
     {
       key: "reason",
@@ -92,51 +98,6 @@ export default function TransferRequestsTab() {
       key: "created_at",
       header: "Date",
       render: (r) => <span className="text-sm">{formatDate(r.created_at)}</span>,
-    },
-    {
-      key: "status",
-      header: "Status",
-      render: (r) => {
-        if (r.status === "approved") {
-          return (
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-100 px-2 py-0.5 rounded-full">
-              <CheckCircle2 className="w-3 h-3" /> Approved
-            </span>
-          );
-        }
-        if (r.status === "rejected") {
-          return (
-             <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 bg-red-100 px-2 py-0.5 rounded-full">
-               Rejected
-             </span>
-          );
-        }
-        return (
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
-             <Clock className="w-3 h-3" /> Pending
-          </span>
-        );
-      },
-    },
-    {
-      key: "actions",
-      header: "Actions",
-      render: (r) => {
-        if (r.status !== "pending") return null;
-        return (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 text-xs"
-            onClick={(e) => {
-              e.stopPropagation();
-              setReviewRequest(r);
-            }}
-          >
-            Review
-          </Button>
-        );
-      },
     },
   ];
 

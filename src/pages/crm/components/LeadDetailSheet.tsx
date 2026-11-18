@@ -245,8 +245,11 @@ export default function LeadDetailSheet({ lead, isLoading, onClose, onEditClick,
                           10th Grade
                         </p>
                         <p className="font-medium">{lead.tenth_school}</p>
-                        <div className="flex gap-3 text-xs text-muted-foreground mt-1">
-                          {lead.tenth_medium && <span>Board: {lead.tenth_medium.toUpperCase()}</span>}
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1">
+                          {lead.tenth_board && <span>Board: {lead.tenth_board.toUpperCase()}</span>}
+                          {lead.tenth_medium && (
+                            <span>Medium: {lead.tenth_medium === "other" ? "Other" : `${lead.tenth_medium.charAt(0).toUpperCase() + lead.tenth_medium.slice(1)} Medium`}</span>
+                          )}
                           {lead.tenth_percentage && <span>{lead.tenth_percentage}%</span>}
                         </div>
                       </div>
@@ -257,9 +260,12 @@ export default function LeadDetailSheet({ lead, isLoading, onClose, onEditClick,
                           12th Grade
                         </p>
                         <p className="font-medium">{lead.twelfth_school}</p>
-                        <div className="flex gap-3 text-xs text-muted-foreground mt-1">
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1">
+                          {lead.twelfth_board && (
+                            <span>Board: {lead.twelfth_board.toUpperCase()}</span>
+                          )}
                           {lead.twelfth_medium && (
-                            <span>Board: {lead.twelfth_medium.toUpperCase()}</span>
+                            <span>Medium: {lead.twelfth_medium === "other" ? "Other" : `${lead.twelfth_medium.charAt(0).toUpperCase() + lead.twelfth_medium.slice(1)} Medium`}</span>
                           )}
                           {lead.twelfth_percentage && <span>{lead.twelfth_percentage}%</span>}
                         </div>

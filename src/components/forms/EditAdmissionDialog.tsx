@@ -80,12 +80,14 @@ export default function EditAdmissionDialog({
     group_module: "module_1",
     batch_attempt: "june",
     qualification: "appearing_12",
-    tenth_medium: "gseb",
+    tenth_board: "gseb",
+    tenth_medium: "english",
     tenth_school: "",
     tenth_coaching: "",
     tenth_percentage: "",
     tenth_percentile: "",
-    twelfth_medium: "gseb",
+    twelfth_board: "gseb",
+    twelfth_medium: "english",
     twelfth_school: "",
     twelfth_coaching: "",
     twelfth_percentage: "",
@@ -127,12 +129,14 @@ export default function EditAdmissionDialog({
         group_module: admission.group_module || "module_1",
         batch_attempt: admission.batch_attempt || "june",
         qualification: admission.qualification || "appearing_12",
-        tenth_medium: admission.tenth_medium || "gseb",
+        tenth_board: admission.tenth_board || "gseb",
+        tenth_medium: admission.tenth_medium || "english",
         tenth_school: admission.tenth_school || "",
         tenth_coaching: admission.tenth_coaching || "",
         tenth_percentage: admission.tenth_percentage ? String(admission.tenth_percentage) : "",
         tenth_percentile: admission.tenth_percentile ? String(admission.tenth_percentile) : "",
-        twelfth_medium: admission.twelfth_medium || "gseb",
+        twelfth_board: admission.twelfth_board || "gseb",
+        twelfth_medium: admission.twelfth_medium || "english",
         twelfth_school: admission.twelfth_school || "",
         twelfth_coaching: admission.twelfth_coaching || "",
         twelfth_percentage: admission.twelfth_percentage ? String(admission.twelfth_percentage) : "",
@@ -632,7 +636,23 @@ export default function EditAdmissionDialog({
                   <h4 className="text-sm font-bold border-b border-border pb-1 text-primary">10th Standard Details</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-text-primary">Board/Medium</Label>
+                      <Label className="text-xs font-semibold text-text-primary">Board</Label>
+                      <Select
+                        value={editForm.tenth_board}
+                        onValueChange={(val) => handleEditFormChange("tenth_board", val)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Board" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="gseb">GSEB</SelectItem>
+                          <SelectItem value="cbse">CBSE</SelectItem>
+                          <SelectItem value="icse">ICSE</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-text-primary">Medium</Label>
                       <Select
                         value={editForm.tenth_medium}
                         onValueChange={(val) => handleEditFormChange("tenth_medium", val)}
@@ -641,9 +661,10 @@ export default function EditAdmissionDialog({
                           <SelectValue placeholder="Select Medium" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="gseb">GSEB</SelectItem>
-                          <SelectItem value="cbse">CBSE</SelectItem>
-                          <SelectItem value="icse">ICSE</SelectItem>
+                          <SelectItem value="english">English Medium</SelectItem>
+                          <SelectItem value="gujarati">Gujarati Medium</SelectItem>
+                          <SelectItem value="hindi">Hindi Medium</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -691,7 +712,23 @@ export default function EditAdmissionDialog({
                   <h4 className="text-sm font-bold border-b border-border pb-1 text-primary">12th Standard Details</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-text-primary">Board/Medium</Label>
+                      <Label className="text-xs font-semibold text-text-primary">Board</Label>
+                      <Select
+                        value={editForm.twelfth_board}
+                        onValueChange={(val) => handleEditFormChange("twelfth_board", val)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Board" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="gseb">GSEB</SelectItem>
+                          <SelectItem value="cbse">CBSE</SelectItem>
+                          <SelectItem value="icse">ICSE</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-text-primary">Medium</Label>
                       <Select
                         value={editForm.twelfth_medium}
                         onValueChange={(val) => handleEditFormChange("twelfth_medium", val)}
@@ -700,9 +737,10 @@ export default function EditAdmissionDialog({
                           <SelectValue placeholder="Select Medium" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="gseb">GSEB</SelectItem>
-                          <SelectItem value="cbse">CBSE</SelectItem>
-                          <SelectItem value="icse">ICSE</SelectItem>
+                          <SelectItem value="english">English Medium</SelectItem>
+                          <SelectItem value="gujarati">Gujarati Medium</SelectItem>
+                          <SelectItem value="hindi">Hindi Medium</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

@@ -59,12 +59,14 @@ export default function EditLeadDialog({ lead, open, onOpenChange, onSuccess }: 
         qualification: lead.qualification || "appearing_12",
         reference: lead.reference || "google",
         inquiry_date: lead.inquiry_date ? lead.inquiry_date.split("T")[0] : new Date().toISOString().split("T")[0],
-        tenth_medium: lead.tenth_medium || "",
+        tenth_board: lead.tenth_board || "gseb",
+        tenth_medium: lead.tenth_medium || "english",
         tenth_school: lead.tenth_school || "",
         tenth_coaching: lead.tenth_coaching || "",
         tenth_percentage: lead.tenth_percentage || "",
         tenth_percentile: lead.tenth_percentile || "",
-        twelfth_medium: lead.twelfth_medium || "",
+        twelfth_board: lead.twelfth_board || "gseb",
+        twelfth_medium: lead.twelfth_medium || "english",
         twelfth_school: lead.twelfth_school || "",
         twelfth_coaching: lead.twelfth_coaching || "",
         twelfth_percentage: lead.twelfth_percentage || "",
@@ -258,13 +260,25 @@ export default function EditLeadDialog({ lead, open, onOpenChange, onSuccess }: 
                 <Label className="text-xs text-muted-foreground uppercase tracking-wide">10th Details</Label>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs">Medium</Label>
-                    <Select value={formData.tenth_medium} onValueChange={(v) => handleChange("tenth_medium", v)}>
+                    <Label className="text-xs">Board</Label>
+                    <Select value={formData.tenth_board} onValueChange={(v) => handleChange("tenth_board", v)}>
                       <SelectTrigger className="mt-1 h-8"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="gseb">GSEB</SelectItem>
                         <SelectItem value="cbse">CBSE</SelectItem>
                         <SelectItem value="icse">ICSE</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Medium</Label>
+                    <Select value={formData.tenth_medium} onValueChange={(v) => handleChange("tenth_medium", v)}>
+                      <SelectTrigger className="mt-1 h-8"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="english">English Medium</SelectItem>
+                        <SelectItem value="gujarati">Gujarati Medium</SelectItem>
+                        <SelectItem value="hindi">Hindi Medium</SelectItem>
                         <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
@@ -289,13 +303,25 @@ export default function EditLeadDialog({ lead, open, onOpenChange, onSuccess }: 
                 <Label className="text-xs text-muted-foreground uppercase tracking-wide">12th Details</Label>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs">Medium</Label>
-                    <Select value={formData.twelfth_medium} onValueChange={(v) => handleChange("twelfth_medium", v)}>
+                    <Label className="text-xs">Board</Label>
+                    <Select value={formData.twelfth_board} onValueChange={(v) => handleChange("twelfth_board", v)}>
                       <SelectTrigger className="mt-1 h-8"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="gseb">GSEB</SelectItem>
                         <SelectItem value="cbse">CBSE</SelectItem>
                         <SelectItem value="icse">ICSE</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Medium</Label>
+                    <Select value={formData.twelfth_medium} onValueChange={(v) => handleChange("twelfth_medium", v)}>
+                      <SelectTrigger className="mt-1 h-8"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="english">English Medium</SelectItem>
+                        <SelectItem value="gujarati">Gujarati Medium</SelectItem>
+                        <SelectItem value="hindi">Hindi Medium</SelectItem>
                         <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
