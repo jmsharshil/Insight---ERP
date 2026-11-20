@@ -5,6 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 import { useUI } from "@/hooks/useUI";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
 import { downloadExcel } from "@/lib/exportUtils";
 import { API } from "@/service/api";
@@ -17,13 +18,23 @@ import DelayFlowTab from "./tabs/DelayFlowTab";
 
 export default function ResultsPage() {
   const { setPageTitle } = useUI();
-  const [activeTab, setActiveTab] = useState("summary");
+  const { user } = useAuth();
+  console.log(user)
+  const isFaculty = user?.role === "faculty";
+  const defaultTab = isFaculty ? "subject-wise" : "summary";
+  const [activeTab, setActiveTab] = useState(defaultTab);
   const [isExporting, setIsExporting] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
     setPageTitle("Results Analytics");
   }, [setPageTitle]);
+
+  useEffect(() => {
+    if (isFaculty && (activeTab === "summary" || activeTab === "faculty-wise")) {
+      setActiveTab("subject-wise");
+    }
+  }, [isFaculty, activeTab]);
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -63,50 +74,58 @@ export default function ResultsPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-px mb-6">
             <TabsList className="bg-transparent h-auto p-0 border-none justify-start w-auto overflow-x-auto">
-              <TabsTrigger
-                value="summary"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2 text-sm font-medium disabled:opacity-40"
-              >
-                Summary
-              </TabsTrigger>
+              {user?.role === "super_admin" && (
+                <TabsTrigger
+                  value="summary"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2 text-sm font-medium disabled:opacity-40"
+                >
+                  Summary
+                </TabsTrigger>
+              )}
               <TabsTrigger
                 value="subject-wise"
                 className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2 text-sm font-medium disabled:opacity-40"
               >
                 Subject-Wise Results
               </TabsTrigger>
-              <TabsTrigger
-                value="faculty-wise"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2 text-sm font-medium disabled:opacity-40"
-              >
-                Faculty-Wise Results
-              </TabsTrigger>
+              {!isFaculty && (
+                <TabsTrigger
+                  value="faculty-wise"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2 text-sm font-medium disabled:opacity-40"
+                >
+                  Faculty-Wise Results
+                </TabsTrigger>
+              )}
               <TabsTrigger
                 value="batch-wise"
                 className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2 text-sm font-medium disabled:opacity-40"
               >
                 Batch-Wise Results
               </TabsTrigger>
-              <TabsTrigger
+              {user?.role === "super_admin" && <TabsTrigger
                 value="delay-flow"
                 className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2 text-sm font-medium disabled:opacity-40"
               >
                 Delay Flow
-              </TabsTrigger>
+              </TabsTrigger>}
             </TabsList>
           </div>
 
-          <TabsContent value="summary" className="mt-0 outline-none">
-            <SummaryTab />
-          </TabsContent>
+          {!isFaculty && (
+            <TabsContent value="summary" className="mt-0 outline-none">
+              <SummaryTab />
+            </TabsContent>
+          )}
           
           <TabsContent value="subject-wise" className="mt-0 outline-none">
             <SubjectWiseTab />
           </TabsContent>
 
-          <TabsContent value="faculty-wise" className="mt-0 outline-none">
-            <FacultyWiseTab />
-          </TabsContent>
+          {!isFaculty && (
+            <TabsContent value="faculty-wise" className="mt-0 outline-none">
+              <FacultyWiseTab />
+            </TabsContent>
+          )}
 
           <TabsContent value="batch-wise" className="mt-0 outline-none">
             <BatchWiseTab />

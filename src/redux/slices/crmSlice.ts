@@ -82,7 +82,10 @@ export interface APILead {
   assigned_to?: string | null;
   assigned_to_name?: string | null;
   assigned_by?: string | null;
-  
+  assigned_telecaller?: any | null;
+  assigned_counsellor?: any | null;
+  assignment_history?: any[];
+  [key: string]: any;
 }
 
 interface CRMState {

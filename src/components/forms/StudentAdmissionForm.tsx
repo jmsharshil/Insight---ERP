@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
 import { useDropdown } from "@/hooks/useDropdown";
 import { admissionActions } from "@/redux/actions";
@@ -68,6 +69,10 @@ import {
   Sparkles,
   ArrowLeft,
   PlusCircle,
+  Copy,
+  Check,
+  FileText,
+  Download,
 } from "lucide-react";
 
 import { THEME } from "@/config/theme";
@@ -570,6 +575,8 @@ function PaymentHistoryCard({
    ═══════════════════════════════════════════════════════════════ */
 export default function StudentAdmissionForm() {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const admissionId = searchParams.get("id") || searchParams.get("admission_id") || "";
@@ -577,8 +584,20 @@ export default function StudentAdmissionForm() {
   const [savedAdmissionId, setSavedAdmissionId] = useState<string | null>(admissionId || null);
 
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [showSuccessScreen, setShowSuccessScreen] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+
+  const handleCopyId = () => {
+    const idToCopy = savedAdmissionId || admissionId;
+    if (idToCopy) {
+      navigator.clipboard.writeText(idToCopy);
+      setCopiedId(true);
+      setTimeout(() => setCopiedId(false), 2000);
+      toast.success("Admission ID copied to clipboard!");
+    }
+  };
 
   // Step 4: Payment proof & transaction state
   const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
@@ -612,6 +631,9 @@ export default function StudentAdmissionForm() {
   const isStep2Completed = Boolean(isSetupCompleted);
 
   const isFieldLocked = (fieldKey: string) => {
+    if (fieldKey === "consent") {
+      return false;
+    }
     if (!isSetupCompleted) {
       return false;
     }
@@ -621,8 +643,11 @@ export default function StudentAdmissionForm() {
     if (autofilledFields[fieldKey]) {
       return true;
     }
-    const val = (formData as any)[fieldKey];
-    return val !== undefined && val !== null && String(val).trim() !== "";
+    if (STEP_1_FIELDS.includes(fieldKey)) {
+      const val = (formData as any)[fieldKey];
+      return val !== undefined && val !== null && String(val).trim() !== "";
+    }
+    return false;
   };
 
   const nextStep = () => {
@@ -966,7 +991,11 @@ export default function StudentAdmissionForm() {
     if (targetStep !== undefined) {
       setCurrentStep(targetStep);
     } else {
-      if (data.status === "submitted" || data.status === "confirmed" || data.doc_signature || data.doc_photo) {
+      if (data.status === "submitted" || data.status === "confirmed") {
+        setIsSubmitted(true);
+        setShowSuccessScreen(true);
+        setCurrentStep(4);
+      } else if (data.doc_signature || data.doc_photo) {
         setIsSubmitted(true);
         setCurrentStep(4);
       } else if (data.payment_screenshot || data.transaction_id) {
@@ -1254,6 +1283,7 @@ export default function StudentAdmissionForm() {
     setSearchParams({});
     setCurrentStep(1);
     setIsSubmitted(false);
+    setShowSuccessScreen(false);
     setExistingDocs({});
     setDocSignature(null);
     setDocPhoto(null);
@@ -1754,6 +1784,23 @@ export default function StudentAdmissionForm() {
     formData.group_module,
   ]);
 
+  /* ─── Auto-populate fixed Payment Amount based on Fee & Payment Type ─── */
+  useEffect(() => {
+    if (currentStep === 3) {
+      const instFee = getInstituteFee(matchedFee, formData.course, formData.group_module);
+      const tokenAmt = Number(matchedFee?.token_amount || 0);
+      if (formData.payment_type === "token" && tokenAmt > 0) {
+        if (!paymentAmount || paymentAmount !== String(tokenAmt)) {
+          setPaymentAmount(String(tokenAmt));
+        }
+      } else if (formData.payment_type === "full_payment" && instFee > 0) {
+        if (!paymentAmount || paymentAmount !== String(instFee)) {
+          setPaymentAmount(String(instFee));
+        }
+      }
+    }
+  }, [currentStep, matchedFee, formData.course, formData.group_module, formData.payment_type]);
+
   const comboFutureBatchPreview = useMemo(() => {
     if (formData.course !== "cseet" || !formData.combo_offer) return null;
     const attempt = (formData.batch_attempt || "june").toLowerCase();
@@ -2251,6 +2298,7 @@ interface ModuleOption {
           return;
         } else if (isFinalStep) {
           setIsSubmitted(true);
+          setShowSuccessScreen(true);
           toast.success("Admission application submitted successfully!");
 
           if (resData?.doc_signature) setExistingDocs((prev) => ({ ...prev, doc_signature: resData.doc_signature }));
@@ -2266,17 +2314,6 @@ interface ModuleOption {
           const stepTerms = resData?.token_payment_terms_note || resData?.terms_note || resData?.fee_terms_note;
           if (stepTerms) setTokenTermsNote(stepTerms);
 
-          if (resData?.doc_signature) setExistingDocs((prev) => ({ ...prev, doc_signature: resData.doc_signature }));
-          if (resData?.doc_photo) setExistingDocs((prev) => ({ ...prev, doc_photo: resData.doc_photo }));
-          if (resData?.doc_id_card) setExistingDocs((prev) => ({ ...prev, doc_id_card: resData.doc_id_card }));
-          if (resData?.doc_pan_card) setExistingDocs((prev) => ({ ...prev, doc_pan_card: resData.doc_pan_card }));
-          if (resData?.doc_dob_certificate) setExistingDocs((prev) => ({ ...prev, doc_dob_certificate: resData.doc_dob_certificate }));
-          if (resData?.doc_twelfth_receipt) setExistingDocs((prev) => ({ ...prev, doc_twelfth_receipt: resData.doc_twelfth_receipt }));
-          if (resData?.doc_twelfth_marksheet) setExistingDocs((prev) => ({ ...prev, doc_twelfth_marksheet: resData.doc_twelfth_marksheet }));
-          if (resData?.doc_category_cert) setExistingDocs((prev) => ({ ...prev, doc_category_cert: resData.doc_category_cert }));
-          if (Array.isArray(resData?.payment_history)) setPaymentHistory(resData.payment_history);
-          if (resData?.razorpay_payment_link) setRazorpayPaymentLink(resData.razorpay_payment_link);
-
           // Pre-populate expected payment amount if empty
           const instFee = getInstituteFee(matchedFee, formData.course, formData.group_module);
           const tokenAmt = Number(matchedFee?.token_amount || 0);
@@ -2289,7 +2326,6 @@ interface ModuleOption {
             setPaymentSubmittedAt(new Date().toISOString().slice(0, 16));
           }
 
-          // Advance to Step 4
           setCurrentStep(4);
           window.scrollTo({ top: 0, behavior: "smooth" });
         } else {
@@ -2413,58 +2449,60 @@ interface ModuleOption {
           </p>
 
           {/* ── Admission Status / Switch Banner ── */}
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5">
-            {savedAdmissionId || admissionId ? (
-              <>
-                <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-sm">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>Admission ID: <strong>#{savedAdmissionId || admissionId}</strong></span>
-                </div>
+          {!showSuccessScreen && (
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5">
+              {savedAdmissionId || admissionId ? (
+                <>
+                  <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-sm">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>Admission ID: <strong>#{savedAdmissionId || admissionId}</strong></span>
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setInputAdmissionId(savedAdmissionId || admissionId || "");
-                    setEntryMode("resume");
-                    setIsChoiceModalOpen(true);
-                  }}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 shadow-sm hover:shadow cursor-pointer"
-                >
-                  <Search className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Change Admission ID</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInputAdmissionId(savedAdmissionId || admissionId || "");
+                      setEntryMode("resume");
+                      setIsChoiceModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 shadow-sm hover:shadow cursor-pointer"
+                  >
+                    <Search className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Change Admission ID</span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={handleStartNewAdmission}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 shadow-sm hover:shadow cursor-pointer"
-                >
-                  <PlusCircle className="w-3.5 h-3.5 text-gray-500" />
-                  <span>Start New Admission Form</span>
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-amber-500/10 text-amber-900 border border-amber-300/80">
-                  <Sparkles className="w-4 h-4 text-amber-600" />
-                  <span>New Admission Form</span>
-                </div>
+                  <button
+                    type="button"
+                    onClick={handleStartNewAdmission}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 shadow-sm hover:shadow cursor-pointer"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5 text-gray-500" />
+                    <span>Start New Admission Form</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-amber-500/10 text-amber-900 border border-amber-300/80">
+                    <Sparkles className="w-4 h-4 text-amber-600" />
+                    <span>New Admission Form</span>
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setInputAdmissionId("");
-                    setEntryMode("resume");
-                    setIsChoiceModalOpen(true);
-                  }}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 shadow-sm hover:shadow cursor-pointer"
-                >
-                  <FileEdit className="w-4 h-4 text-amber-600" />
-                  <span>Incomplete admission form? <strong>Enter Admission ID</strong></span>
-                </button>
-              </>
-            )}
-          </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInputAdmissionId("");
+                      setEntryMode("resume");
+                      setIsChoiceModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 shadow-sm hover:shadow cursor-pointer"
+                  >
+                    <FileEdit className="w-4 h-4 text-amber-600" />
+                    <span>Incomplete admission form? <strong>Enter Admission ID</strong></span>
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ── Choice & Resume Admission Modal ── */}
@@ -2713,61 +2751,470 @@ interface ModuleOption {
         </Dialog>
 
         {/* ── Stepper ── */}
-        <div className="flex items-center justify-center mb-8">
-          <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4">
-            {[
-              { num: 1, label: "Personal Info" },
-              { num: 2, label: "Course Info" },
-              { num: 3, label: "Payment Proof" },
-              { num: 4, label: "Documents" },
-            ].map((step, idx) => {
-              const isClickable = Boolean(savedAdmissionId) || step.num <= currentStep;
-              return (
-                <React.Fragment key={step.num}>
-                  <div
-                    className={`flex flex-col items-center ${isClickable ? "cursor-pointer" : "cursor-default"}`}
-                    onClick={() => {
-                      if (isClickable) {
-                        setCurrentStep(step.num);
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }
-                    }}
-                  >
+        {!showSuccessScreen && (
+          <div className="flex items-center justify-center mb-8">
+            <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4">
+              {[
+                { num: 1, label: "Personal Info" },
+                { num: 2, label: "Course Info" },
+                { num: 3, label: "Payment Proof" },
+                { num: 4, label: "Documents" },
+              ].map((step, idx) => {
+                const isClickable = Boolean(savedAdmissionId) || step.num <= currentStep;
+                return (
+                  <React.Fragment key={step.num}>
                     <div
-                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-sm sm:text-base transition-colors duration-300 ${
-                        currentStep >= step.num
-                          ? 'bg-amber-500 text-white shadow-md'
-                          : 'bg-gray-200 !text-white !important'
-                      }`}
-                      style={{
-                        background: currentStep >= step.num ? T.primary : T.grayLight,
-                        color: currentStep >= step.num ? T.black : T.textMuted,
+                      className={`flex flex-col items-center ${isClickable ? "cursor-pointer" : "cursor-default"}`}
+                      onClick={() => {
+                        if (isClickable) {
+                          setCurrentStep(step.num);
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }
                       }}
                     >
-                      {step.num}
+                      <div
+                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-sm sm:text-base transition-colors duration-300 ${
+                          currentStep >= step.num
+                            ? 'bg-amber-500 text-white shadow-md'
+                            : 'bg-gray-200 !text-white !important'
+                        }`}
+                        style={{
+                          background: currentStep >= step.num ? T.primary : T.grayLight,
+                          color: currentStep >= step.num ? T.black : T.textMuted,
+                        }}
+                      >
+                        {step.num}
+                      </div>
+                      <span
+                        className="text-xs sm:text-sm mt-1.5 font-medium hidden sm:block"
+                        style={{ color: currentStep >= step.num ? T.black : T.textMuted }}
+                      >
+                        {step.label}
+                      </span>
                     </div>
-                    <span
-                      className="text-xs sm:text-sm mt-1.5 font-medium hidden sm:block"
-                      style={{ color: currentStep >= step.num ? T.black : T.textMuted }}
-                    >
-                      {step.label}
+                    {idx < 3 && (
+                      <div
+                        className={`w-6 sm:w-10 md:w-16 h-1 rounded-full transition-colors duration-300 mb-5 sm:mb-6 ${
+                          currentStep > step.num ? 'bg-amber-500' : 'bg-gray-200'
+                        }`}
+                        style={{ background: currentStep > step.num ? T.primary : T.grayLight }}
+                      />
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {showSuccessScreen ? (
+          <div className="space-y-6 sm:space-y-8 animate-in fade-in zoom-in-95 duration-300">
+            {/* Print Styling */}
+            <style>{`
+              @media print {
+                body { background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                .no-print { display: none !important; }
+                .print-only { display: block !important; }
+                .print-shadow-none { box-shadow: none !important; border: 1px solid #ddd !important; }
+              }
+            `}</style>
+
+            {/* ── Main Hero Confirmation Card ── */}
+            <div
+              className="rounded-3xl p-6 sm:p-10 text-center relative overflow-hidden print-shadow-none"
+              style={{
+                background: T.card,
+                border: `1px solid ${T.border}`,
+                boxShadow: "0 10px 40px rgba(0,33,71,0.08)",
+              }}
+            >
+              <div
+                className="absolute -top-24 -left-24 w-48 h-48 rounded-full blur-3xl pointer-events-none opacity-20"
+                style={{ background: T.primary }}
+              />
+              <div
+                className="absolute -bottom-24 -right-24 w-48 h-48 rounded-full blur-3xl pointer-events-none opacity-20"
+                style={{ background: T.success }}
+              />
+
+              {/* Success Badge Icon */}
+              <div
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center mx-auto mb-5 sm:mb-6 shadow-md relative"
+                style={{
+                  background: `linear-gradient(135deg, ${T.success}20 0%, ${T.success}35 100%)`,
+                  border: `3px solid ${T.success}40`,
+                }}
+              >
+                <div
+                  className="w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center shadow-inner"
+                  style={{ background: T.success }}
+                >
+                  <CheckCircle2 className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+                </div>
+              </div>
+
+              <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3 bg-emerald-100 text-emerald-900 border border-emerald-300">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Admission Application Confirmed</span>
+              </div>
+
+              <h2
+                className="text-2xl sm:text-4xl font-extrabold tracking-tight mb-2 sm:mb-3"
+                style={{ color: T.navy, fontFamily: T.headingFont }}
+              >
+                Admission Application Submitted Successfully!
+              </h2>
+
+              <p className="text-sm sm:text-base max-w-xl mx-auto mb-6 text-muted-foreground leading-relaxed">
+                Congratulations, <strong className="text-foreground">{formData.first_name} {formData.surname}</strong>! Your admission application for{" "}
+                <strong className="text-foreground uppercase">
+                  {formData.course === "cseet"
+                    ? "CSEET"
+                    : formData.course === "cs_executive"
+                    ? "CS Executive"
+                    : formData.course === "cs_professional"
+                    ? "CS Professional"
+                    : (formData.course || "").replace(/_/g, " ")}
+                </strong>{" "}
+                has been submitted and recorded with INSIGHT CS Classes.
+              </p>
+
+              {/* Admission ID & Status Highlight Box */}
+              <div className="max-w-2xl mx-auto p-4 sm:p-5 rounded-2xl bg-amber-500/10 border border-amber-300 flex flex-col sm:flex-row items-center justify-between gap-4 text-left">
+                <div>
+                  <span className="text-xs font-bold tracking-wider uppercase text-amber-900 block">
+                    Official Application / Admission ID
+                  </span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-2xl sm:text-3xl font-mono font-black text-amber-950">
+                      #{savedAdmissionId || "SUBMITTED"}
+                    </span>
+                    {savedAdmissionId && (
+                      <button
+                        type="button"
+                        onClick={handleCopyId}
+                        className="p-1.5 rounded-lg border border-amber-300 bg-white hover:bg-amber-100 text-amber-900 text-xs font-semibold transition-all inline-flex items-center gap-1 no-print cursor-pointer shadow-xs"
+                        title="Copy Application ID"
+                      >
+                        {copiedId ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            <span className="text-[11px] text-emerald-700 font-bold">Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5 text-amber-800" />
+                            <span className="text-[11px]">Copy ID</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:items-end gap-1.5 w-full sm:w-auto">
+                  <Badge
+                    className="text-xs font-bold px-3 py-1 bg-emerald-100 text-emerald-900 border-emerald-300 shadow-xs"
+                  >
+                    {admissionStatusDisplay || admissionStatus || "Submitted - Verification in Progress"}
+                  </Badge>
+                  <span className="text-[11px] text-amber-900/80">
+                    Recorded Date: {paymentSubmittedAt ? new Date(paymentSubmittedAt).toLocaleDateString() : new Date().toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Summary Grid Cards ── */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+              {/* Card 1: Student Profile Details */}
+              <div
+                className="rounded-2xl p-5 sm:p-6 space-y-3.5 print-shadow-none"
+                style={{ background: T.card, border: `1px solid ${T.border}` }}
+              >
+                <div className="flex items-center gap-2 pb-3 border-b border-border/60">
+                  <User className="w-5 h-5 text-amber-600 shrink-0" />
+                  <h3 className="font-bold text-base text-foreground" style={{ fontFamily: T.headingFont }}>
+                    Student Profile Details
+                  </h3>
+                </div>
+
+                <div className="space-y-2.5 text-xs sm:text-sm">
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-muted-foreground font-medium">Full Name</span>
+                    <span className="font-bold text-right text-foreground uppercase">
+                      {formData.first_name} {formData.father_name} {formData.surname}
                     </span>
                   </div>
-                  {idx < 3 && (
-                    <div
-                      className={`w-6 sm:w-10 md:w-16 h-1 rounded-full transition-colors duration-300 mb-5 sm:mb-6 ${
-                        currentStep > step.num ? 'bg-amber-500' : 'bg-gray-200'
-                      }`}
-                      style={{ background: currentStep > step.num ? T.primary : T.grayLight }}
-                    />
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </div>
-        </div>
 
-        <form onSubmit={handleNext} className="space-y-5 sm:space-y-6">
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-muted-foreground font-medium">Date of Birth</span>
+                    <span className="font-semibold text-right text-foreground">
+                      {formData.dob || "—"}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-muted-foreground font-medium">Category</span>
+                    <span className="font-semibold text-right text-foreground uppercase">
+                      {formData.category || "General"}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-muted-foreground font-medium">Student Mobile</span>
+                    <span className="font-semibold text-right text-foreground">
+                      {formData.phone_student || "—"}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-muted-foreground font-medium">Father / Mother Phone</span>
+                    <span className="font-semibold text-right text-foreground">
+                      {formData.phone_father || formData.phone_student_2 || "—"}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-muted-foreground font-medium">Email Address</span>
+                    <span className="font-semibold text-right text-foreground lowercase break-all">
+                      {formData.email || "—"}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-start gap-2 pt-2 border-t border-border/40">
+                    <span className="text-muted-foreground font-medium">Residential Address</span>
+                    <span className="font-semibold text-right text-foreground uppercase max-w-[220px]">
+                      {formData.street ? `${formData.street}, ` : ""}{formData.city || "—"}, {formData.state || "—"} {formData.pincode ? `- ${formData.pincode}` : ""}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Course & Academic Selection */}
+              <div
+                className="rounded-2xl p-5 sm:p-6 space-y-3.5 print-shadow-none"
+                style={{ background: T.card, border: `1px solid ${T.border}` }}
+              >
+                <div className="flex items-center gap-2 pb-3 border-b border-border/60">
+                  <GraduationCap className="w-5 h-5 text-amber-600 shrink-0" />
+                  <h3 className="font-bold text-base text-foreground" style={{ fontFamily: T.headingFont }}>
+                    Course & Academic Details
+                  </h3>
+                </div>
+
+                <div className="space-y-2.5 text-xs sm:text-sm">
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-muted-foreground font-medium">Enrolled Course</span>
+                    <span className="font-bold text-right text-foreground uppercase">
+                      {formData.course === "cseet"
+                        ? "CSEET"
+                        : formData.course === "cs_executive"
+                        ? "CS Executive"
+                        : formData.course === "cs_professional"
+                        ? "CS Professional"
+                        : (formData.course || "").replace(/_/g, " ")}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-muted-foreground font-medium">Module / Group</span>
+                    <span className="font-semibold text-right text-foreground uppercase">
+                      {formData.group_module === "both"
+                        ? "Both Modules"
+                        : formData.group_module === "full"
+                        ? "Full Course"
+                        : (formData.group_module || "").replace(/_/g, " ")}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-muted-foreground font-medium">Target Batch Attempt</span>
+                    <span className="font-semibold text-right text-foreground uppercase">
+                      {formData.batch_attempt} {formData.attempt_year}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-muted-foreground font-medium">Current Qualification</span>
+                    <span className="font-semibold text-right text-foreground uppercase">
+                      {(formData.qualification || "").replace(/_/g, " ")}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-muted-foreground font-medium">10th Details</span>
+                    <span className="font-semibold text-right text-foreground uppercase">
+                      {formData.tenth_board?.toUpperCase()} ({formData.tenth_medium?.toUpperCase()}) {formData.tenth_percentage ? `- ${formData.tenth_percentage}%` : ""}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-muted-foreground font-medium">12th Details</span>
+                    <span className="font-semibold text-right text-foreground uppercase">
+                      {formData.twelfth_board?.toUpperCase()} ({formData.twelfth_medium?.toUpperCase()}) {formData.twelfth_percentage ? `- ${formData.twelfth_percentage}%` : ""}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-start gap-2 pt-2 border-t border-border/40">
+                    <span className="text-muted-foreground font-medium">ICSI Registration Fees</span>
+                    <span className="font-semibold text-right text-foreground capitalize">
+                      {formData.icsi_fees_payment === "pay_through_institute"
+                        ? "Pay through Institute"
+                        : "Pay directly to ICSI"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3: Payment & Fee Summary */}
+              <div
+                className="rounded-2xl p-5 sm:p-6 space-y-3.5 print-shadow-none"
+                style={{ background: T.card, border: `1px solid ${T.border}` }}
+              >
+                <div className="flex items-center gap-2 pb-3 border-b border-border/60">
+                  <CreditCard className="w-5 h-5 text-amber-600 shrink-0" />
+                  <h3 className="font-bold text-base text-foreground" style={{ fontFamily: T.headingFont }}>
+                    Payment & Fee Summary
+                  </h3>
+                </div>
+
+                <div className="space-y-2.5 text-xs sm:text-sm">
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-muted-foreground font-medium">Payment Plan</span>
+                    <span className="font-bold text-right text-foreground capitalize">
+                      {formData.payment_type === "token"
+                        ? "Token Payment Plan"
+                        : formData.payment_type === "full_payment"
+                        ? "Full Payment Plan"
+                        : "Finance Assistance"}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-muted-foreground font-medium">Payment Mode</span>
+                    <span className="font-semibold text-right text-foreground uppercase">
+                      {formData.payment_mode === "cash"
+                        ? "Cash"
+                        : formData.payment_mode === "cheque"
+                        ? `Cheque ${formData.cheque_no ? `(#${formData.cheque_no})` : ""}`
+                        : "Online / Bank Transfer"}
+                    </span>
+                  </div>
+
+                  {(totalFeesAmount != null || matchedFee) && (
+                    <div className="flex justify-between items-start gap-2">
+                      <span className="text-muted-foreground font-medium">Total Institute Fee</span>
+                      <span className="font-semibold text-right text-foreground">
+                        {totalFeesAmount != null
+                          ? formatCurrency(Number(totalFeesAmount))
+                          : formatCurrency(getInstituteFee(matchedFee, formData.course, formData.group_module))}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-muted-foreground font-medium">Recorded Payment / Token</span>
+                    <span className="font-bold text-right text-emerald-600 text-sm sm:text-base">
+                      {paymentAmount ? formatCurrency(Number(paymentAmount)) : "—"}
+                    </span>
+                  </div>
+
+                  {remainingFeesAmount != null && (
+                    <div className="flex justify-between items-start gap-2">
+                      <span className="text-muted-foreground font-medium">Remaining Balance</span>
+                      <span className="font-bold text-right text-amber-700 dark:text-amber-400">
+                        {formatCurrency(Number(remainingFeesAmount))}
+                      </span>
+                    </div>
+                  )}
+
+                  {transactionId && (
+                    <div className="flex justify-between items-start gap-2 pt-2 border-t border-border/40">
+                      <span className="text-muted-foreground font-medium">Transaction / Ref ID</span>
+                      <span className="font-mono font-semibold text-right text-foreground">
+                        {transactionId}
+                      </span>
+                    </div>
+                  )}
+
+                  {razorpayPaymentLink && (
+                    <div className="pt-2 no-print">
+                      <a
+                        href={razorpayPaymentLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-black bg-amber-400 hover:bg-amber-500 shadow-sm transition-all cursor-pointer"
+                      >
+                        <span>Pay via Razorpay Link</span>
+                        <ArrowUpRight className="w-4 h-4" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Card 4: Submitted Documents Status */}
+              <div
+                className="rounded-2xl p-5 sm:p-6 space-y-3.5 print-shadow-none"
+                style={{ background: T.card, border: `1px solid ${T.border}` }}
+              >
+                <div className="flex items-center gap-2 pb-3 border-b border-border/60">
+                  <FileCheck className="w-5 h-5 text-amber-600 shrink-0" />
+                  <h3 className="font-bold text-base text-foreground" style={{ fontFamily: T.headingFont }}>
+                    Submitted Documents Status
+                  </h3>
+                </div>
+
+                <div className="space-y-2 text-xs sm:text-sm">
+                  {[
+                    { label: "Signature Upload", file: docSignature, existing: existingDocs.doc_signature },
+                    { label: "Passport Photo", file: docPhoto, existing: existingDocs.doc_photo },
+                    { label: "Aadhar / ID Card", file: docIdCard, existing: existingDocs.doc_id_card },
+                    { label: "10th Marksheet", file: docDobCertificate, existing: existingDocs.doc_dob_certificate },
+                    { label: "12th Marksheet / Passing", file: doc12thMarkSheet, existing: existingDocs.doc_twelfth_marksheet },
+                    { label: "12th Receipt / Hall Ticket", file: doc12thReceipt, existing: existingDocs.doc_twelfth_receipt },
+                    { label: "PAN Card", file: docPanCard, existing: existingDocs.doc_pan_card },
+                    { label: "Payment Proof / Receipt", file: paymentScreenshot, existing: existingPaymentScreenshot },
+                  ].map((doc, idx) => {
+                    const hasDoc = Boolean(doc.file || doc.existing);
+                    return (
+                      <div key={idx} className="flex justify-between items-center py-1 border-b border-border/30 last:border-0">
+                        <span className="text-muted-foreground">{doc.label}</span>
+                        <span className={`font-semibold inline-flex items-center gap-1 text-xs ${hasDoc ? "text-emerald-700" : "text-gray-400"}`}>
+                          {hasDoc ? (
+                            <>
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Uploaded</span>
+                            </>
+                          ) : (
+                            <span>Not Provided</span>
+                          )}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* ── Action Buttons Footer Bar ── */}
+            <div className="flex items-center justify-between gap-3 pt-4 border-t border-border/60 no-print">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleStartNewAdmission}
+                  className="h-11 px-4 font-semibold text-muted-foreground hover:text-foreground gap-1.5"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Submit Another Admission</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleNext} className="space-y-5 sm:space-y-6">
           {/* ════════════════════════════════════════════════════════ */}
           {/*  STEP 1: PERSONAL INFO                                 */}
           {/* ════════════════════════════════════════════════════════ */}
@@ -4018,51 +4465,32 @@ interface ModuleOption {
           {currentStep === 4 && (
             <>
               {isSubmitted && (
-                <div
-                  className="rounded-3xl p-6 sm:p-10 text-center relative overflow-hidden mb-6"
-                  style={{ background: T.card, border: `1px solid ${T.border}`, boxShadow: "0 10px 40px rgba(0,33,71,0.08)" }}
-                >
-                  <div
-                    className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
-                    style={{
-                      background: `linear-gradient(135deg, ${T.success}15 0%, ${T.success}25 100%)`,
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 sm:p-5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 mb-6 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-emerald-100 text-emerald-700 shrink-0">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    </div>
+                    <div className="text-xs sm:text-sm">
+                      <span className="font-bold text-emerald-900 block">
+                        Admission Application #{savedAdmissionId || "Submitted"} is Submitted!
+                      </span>
+                      <p className="text-emerald-800">
+                        Your application and documents are on file. You may review them below or switch back to the confirmation screen.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => {
+                      setShowSuccessScreen(true);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
+                    className="font-bold text-black text-xs h-9 px-4 shrink-0 shadow-sm"
+                    style={{ background: T.primary }}
                   >
-                    <CheckCircle2 className="w-10 h-10" style={{ color: T.success }} />
-                  </div>
-
-                  <h2
-                    className="text-2xl sm:text-3xl font-bold mb-2"
-                    style={{ color: T.black, fontFamily: T.headingFont }}
-                  >
-                    Admission Submitted!
-                  </h2>
-                  <p className="text-sm sm:text-base mb-6" style={{ color: T.text }}>
-                    Your registration form and documents have been received successfully.
-                  </p>
-
-                  <div className="p-4 sm:p-5 rounded-2xl bg-muted/30 border border-border/60 text-xs sm:text-sm text-left max-w-lg mx-auto space-y-2">
-                    <div className="flex justify-between items-center pb-2 border-b border-border/40">
-                      <span className="text-muted-foreground font-medium">Admission ID</span>
-                      <span className="font-mono font-bold text-foreground text-sm">#{savedAdmissionId || "Submitted"}</span>
-                    </div>
-                    <div className="flex justify-between items-center pb-2 border-b border-border/40">
-                      <span className="text-muted-foreground font-medium">Course & Attempt</span>
-                      <span className="font-semibold text-foreground uppercase">
-                        {formData.course?.replace(/_/g, " ")} ({formData.batch_attempt} {formData.attempt_year})
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground font-medium">Payment Plan</span>
-                      <span className="font-semibold capitalize text-foreground">
-                        {formData.payment_type === "token"
-                          ? `Token Payment (${formData.payment_mode === "cash" ? "Cash" : formData.payment_mode === "cheque" ? "Cheque" : "Online"})`
-                          : formData.payment_type === "full_payment"
-                            ? `Full Payment (${formData.payment_mode === "cash" ? "Cash" : formData.payment_mode === "cheque" ? "Cheque" : "Online"})`
-                            : "Finance Assistance"}
-                      </span>
-                    </div>
-                  </div>
+                    View Success Screen
+                  </Button>
                 </div>
               )}
             <>
@@ -4165,13 +4593,15 @@ interface ModuleOption {
             >
               <Checkbox
                 id="consent"
-                checked={formData.consent}
-                onCheckedChange={(checked) => handleChange("consent", checked as boolean)}
-                className="w-5 h-5 mt-0.5 sm:mt-0 flex-shrink-0"
+                checked={Boolean(formData.consent)}
+                onCheckedChange={(checked) =>
+                  setFormData((prev) => ({ ...prev, consent: Boolean(checked) }))
+                }
+                className="w-5 h-5 mt-0.5 sm:mt-0 flex-shrink-0 cursor-pointer"
               />
               <label
                 htmlFor="consent"
-                className="text-xs sm:text-sm font-medium leading-snug cursor-pointer"
+                className="text-xs sm:text-sm font-medium leading-snug cursor-pointer select-none"
                 style={{ color: T.text }}
               >
                 I hereby declare that all the information provided above is true and correct to the
@@ -4432,14 +4862,14 @@ interface ModuleOption {
                           min="0"
                           step="0.01"
                           value={paymentAmount}
-                          onChange={(e) => setPaymentAmount(e.target.value)}
-                          disabled={isFieldLocked("payment_amount")}
-                          className="h-10 sm:h-11 pl-8 text-sm font-semibold"
+                          readOnly
+                          disabled
+                          className="h-10 sm:h-11 pl-8 text-sm font-semibold bg-muted/40 cursor-not-allowed select-none"
                           placeholder="e.g. 20000"
                         />
                       </div>
                       <p className="text-[11px] text-muted-foreground">
-                        Amount paid by the student ({formData.payment_type === "token" ? "Token amount" : "Full course fees"}).
+                        Fixed payable amount ({formData.payment_type === "token" ? "Token amount" : "Full course fees"}).
                       </p>
                     </div>
 
@@ -4545,7 +4975,8 @@ interface ModuleOption {
               </SectionCard>
             </div>
           )}
-        </form>
+          </form>
+        )}
 
         {/* ── Footer ── */}
         <p className="text-center mt-6 sm:mt-8 text-xs" style={{ color: T.textMuted }}>

@@ -561,7 +561,7 @@ export default function StudentAdmissionDetailedPage() {
             <Card title="10th Standard Details">
               <Row
                 label="Board"
-                value={<span className="uppercase">{admission.tenth_board || "—"}</span>}
+                value={<span className="uppercase">{admission.tenth_board_display || "—"}</span>}
               />
               <Row
                 label="Medium"
@@ -586,7 +586,7 @@ export default function StudentAdmissionDetailedPage() {
             <Card title="12th Standard Details">
               <Row
                 label="Board"
-                value={<span className="uppercase">{admission.twelfth_board || "—"}</span>}
+                value={<span className="uppercase">{admission.twelfth_board_display || "—"}</span>}
               />
               <Row
                 label="Medium"

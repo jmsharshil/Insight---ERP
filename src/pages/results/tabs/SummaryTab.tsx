@@ -18,6 +18,10 @@ export default function SummaryTab() {
   const dispatch = useDispatch();
 
   useEffect(() => {
+    if (user?.role === "faculty") {
+      setLoading(false);
+      return;
+    }
     dispatch({
       type: dropdownActions.GET_DROPDOWN,
       method: "GET",
@@ -31,7 +35,11 @@ export default function SummaryTab() {
         console.error("Failed to fetch summary", err);
       }
     } as any);
-  }, [dispatch]);
+  }, [dispatch, user?.role]);
+
+  if (user?.role === "faculty") {
+    return null;
+  }
 
   if (loading) {
     return (

@@ -52,13 +52,13 @@ export interface AdmissionDetail extends AdmissionRecord {
   reference: string;
   consent: boolean;
   tenth_medium: string;
-  tenth_board?: string;
+  tenth_board_display?: string;
   tenth_school: string;
   tenth_coaching: string;
   tenth_percentage: string;
   tenth_percentile: string;
   twelfth_medium: string;
-  twelfth_board?: string;
+  twelfth_board_display?: string;
   twelfth_school: string;
   twelfth_coaching: string;
   twelfth_percentage: string;

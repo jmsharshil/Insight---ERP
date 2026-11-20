@@ -355,85 +355,124 @@ export default function StudentsTab() {
       />
 
       <Dialog open={assignModalOpen} onOpenChange={setAssignModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle>Assign Batch</DialogTitle>
           </DialogHeader>
-          {selectedStudent && (
-            <div className="space-y-4 py-4">
-              <div className="space-y-1">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Student Details
-                </span>
-                <p className="font-semibold text-text-primary text-base">
-                  {selectedStudent.full_name}
-                </p>
-                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                  <span>Course: <strong className="capitalize">{selectedStudent.course?.replace(/_/g, " ")}</strong></span>
-                  <span>•</span>
-                  <span>Module: <strong className="capitalize">{selectedStudent.group_module?.replace(/_/g, " ")}</strong></span>
-                </div>
-              </div>
+          {selectedStudent && (() => {
+            const currentBatchName =
+              selectedStudent.batch_name ||
+              (selectedStudent as any).current_batch_name ||
+              batches.find((b) => b.id === (selectedStudent as any).batch)?.name ||
+              selectedStudent.batch_attempt ||
+              "";
+            const hasAssignedBatch = Boolean(
+              (selectedStudent as any).batch ||
+              (selectedStudent as any).batch_name ||
+              (selectedStudent as any).current_batch_name
+            );
 
-              {/* Current Batch Info */}
-              <div className="rounded-lg bg-muted/20 border border-border/40 p-3 space-y-2">
-                <span className="text-xs font-medium text-muted-foreground block">
-                  Current Enrollment Status
-                </span>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-medium">
-                      {selectedStudent.batch_name || (selectedStudent as any).current_batch_name || selectedStudent.batch_attempt || "No batch assigned"}
-                    </p>
-                  </div>
-                  {/* If they are currently assigned, let them remove */}
-                  {((selectedStudent as any).batch || (selectedStudent as any).batch_name) && (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleRemoveStudentFromBatch(selectedStudent)}
-                      disabled={assignLoading}
-                    >
-                      Remove
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {/* Assign New Batch Selector */}
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
-                  Assign to Batch
-                </label>
-                <Select value={selectedBatchId} onValueChange={setSelectedBatchId}>
-                  <SelectTrigger className="w-full bg-muted/10">
-                    <SelectValue placeholder={batchesLoading ? "Loading batches..." : "Select a batch"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {batches.length === 0 ? (
-                      <SelectItem value="no_batches" disabled>
-                        No active batches found
-                      </SelectItem>
-                    ) : (
-                      batches.map((b) => (
-                        <SelectItem key={b.id} value={b.id}>
-                          {b.name} ({b.course_name || "General"})
-                        </SelectItem>
-                      ))
+            return (
+              <div className="space-y-4 py-2">
+                <div className="p-3 rounded-lg bg-muted/20 border border-border/40 space-y-1.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground block">
+                    Student Details
+                  </span>
+                  <p className="font-semibold text-text-primary text-base">
+                    {selectedStudent.full_name}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span>
+                      Course:{" "}
+                      <strong className="capitalize text-text-primary">
+                        {typeof selectedStudent.course === "string"
+                          ? selectedStudent.course.replace(/_/g, " ")
+                          : (selectedStudent.course as any)?.name?.replace(/_/g, " ") || "—"}
+                      </strong>
+                    </span>
+                    {selectedStudent.group_module && (
+                      <>
+                        <span>•</span>
+                        <span>
+                          Module:{" "}
+                          <strong className="capitalize text-text-primary">
+                            {selectedStudent.group_module.replace(/_/g, " ")}
+                          </strong>
+                        </span>
+                      </>
                     )}
-                  </SelectContent>
-                </Select>
+                  </div>
+                </div>
+
+                {/* Current Batch Info */}
+                <div className="rounded-lg bg-muted/20 border border-border/40 p-3.5 space-y-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
+                    Current Enrollment Status
+                  </span>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      {hasAssignedBatch ? (
+                        <p
+                          className="text-sm font-medium text-text-primary break-all leading-snug"
+                          title={currentBatchName}
+                        >
+                          {currentBatchName}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">
+                          No batch assigned
+                        </p>
+                      )}
+                    </div>
+                    {hasAssignedBatch && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="shrink-0 h-8 px-3 text-xs font-semibold"
+                        onClick={() => handleRemoveStudentFromBatch(selectedStudent)}
+                        disabled={assignLoading}
+                      >
+                        {assignLoading ? "Removing..." : "Remove"}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Assign New Batch Selector */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
+                    Assign to Batch
+                  </label>
+                  <Select value={selectedBatchId} onValueChange={setSelectedBatchId}>
+                    <SelectTrigger className="w-full bg-muted/10">
+                      <SelectValue placeholder={batchesLoading ? "Loading batches..." : "Select a batch"} />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {batches.length === 0 ? (
+                        <SelectItem value="no_batches" disabled>
+                          {batchesLoading ? "Loading batches..." : "No active batches found"}
+                        </SelectItem>
+                      ) : (
+                        batches.map((b) => (
+                          <SelectItem key={b.id} value={b.id}>
+                            {b.name} ({b.course_name || "General"})
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAssignModalOpen(false)}>
+            );
+          })()}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setAssignModalOpen(false)} disabled={assignLoading}>
               Cancel
             </Button>
             <Button
               onClick={handleAssignStudentToBatch}
               disabled={!selectedBatchId || assignLoading}
-              className="bg-primary hover:bg-primary-dark"
+              className="bg-primary hover:bg-primary-dark text-black"
             >
               {assignLoading ? "Assigning..." : "Assign"}
             </Button>

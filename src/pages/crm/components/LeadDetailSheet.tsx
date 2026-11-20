@@ -1,8 +1,9 @@
-import { Phone, Mail, MapPin, Users, FileText, Pencil, ChevronDown } from "lucide-react";
+import { Phone, Mail, MapPin, Users, FileText, Pencil, ChevronDown, Headphones, UserCheck, History } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 
@@ -142,6 +143,163 @@ export default function LeadDetailSheet({ lead, isLoading, onClose, onEditClick,
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Assigned Staff: Telecaller & Counsellor */}
+            <div className="rounded-xl border border-border p-4 bg-muted/20 space-y-3">
+              <Label className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-primary" />
+                <span>Assigned Staff</span>
+              </Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Assigned Telecaller */}
+                <div className="rounded-lg border border-border/80 p-3.5 bg-white shadow-2xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                      <Headphones className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span>Assigned Telecaller</span>
+                    </span>
+                    {lead.assigned_telecaller ? (
+                      <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200 font-semibold">
+                        Assigned
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] bg-gray-100 text-gray-500 border-gray-200">
+                        Unassigned
+                      </Badge>
+                    )}
+                  </div>
+
+                  {lead.assigned_telecaller ? (
+                    <div className="space-y-1">
+                      <p className="font-bold text-sm text-foreground">
+                        {typeof lead.assigned_telecaller === "object" && lead.assigned_telecaller !== null
+                          ? lead.assigned_telecaller.name
+                          : String(lead.assigned_telecaller)}
+                      </p>
+                      {typeof lead.assigned_telecaller === "object" && lead.assigned_telecaller !== null && (
+                        <div className="space-y-1 text-xs text-muted-foreground pt-0.5">
+                          {lead.assigned_telecaller.phone && (
+                            <div className="flex items-center gap-1.5">
+                              <Phone className="w-3 h-3 text-muted-foreground shrink-0" />
+                              <a
+                                href={`tel:${lead.assigned_telecaller.phone}`}
+                                className="hover:text-primary transition-colors font-medium"
+                              >
+                                {lead.assigned_telecaller.phone}
+                              </a>
+                            </div>
+                          )}
+                          {lead.assigned_telecaller.email && (
+                            <div className="flex items-center gap-1.5">
+                              <Mail className="w-3 h-3 text-muted-foreground shrink-0" />
+                              <a
+                                href={`mailto:${lead.assigned_telecaller.email}`}
+                                className="hover:text-primary transition-colors truncate"
+                              >
+                                {lead.assigned_telecaller.email}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">No telecaller assigned</p>
+                  )}
+                </div>
+
+                {/* Assigned Counsellor */}
+                <div className="rounded-lg border border-border/80 p-3.5 bg-white shadow-2xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                      <UserCheck className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                      <span>Assigned Counsellor</span>
+                    </span>
+                    {lead.assigned_counsellor ? (
+                      <Badge variant="outline" className="text-[10px] bg-purple-50 text-purple-700 border-purple-200 font-semibold">
+                        Assigned
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] bg-gray-100 text-gray-500 border-gray-200">
+                        Unassigned
+                      </Badge>
+                    )}
+                  </div>
+
+                  {lead.assigned_counsellor ? (
+                    <div className="space-y-1">
+                      <p className="font-bold text-sm text-foreground">
+                        {typeof lead.assigned_counsellor === "object" && lead.assigned_counsellor !== null
+                          ? lead.assigned_counsellor.name
+                          : String(lead.assigned_counsellor)}
+                      </p>
+                      {typeof lead.assigned_counsellor === "object" && lead.assigned_counsellor !== null && (
+                        <div className="space-y-1 text-xs text-muted-foreground pt-0.5">
+                          {lead.assigned_counsellor.phone && (
+                            <div className="flex items-center gap-1.5">
+                              <Phone className="w-3 h-3 text-muted-foreground shrink-0" />
+                              <a
+                                href={`tel:${lead.assigned_counsellor.phone}`}
+                                className="hover:text-primary transition-colors font-medium"
+                              >
+                                {lead.assigned_counsellor.phone}
+                              </a>
+                            </div>
+                          )}
+                          {lead.assigned_counsellor.email && (
+                            <div className="flex items-center gap-1.5">
+                              <Mail className="w-3 h-3 text-muted-foreground shrink-0" />
+                              <a
+                                href={`mailto:${lead.assigned_counsellor.email}`}
+                                className="hover:text-primary transition-colors truncate"
+                              >
+                                {lead.assigned_counsellor.email}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">No counsellor assigned</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Assignment History if present */}
+              {Array.isArray(lead.assignment_history) && lead.assignment_history.length > 0 && (
+                <div className="pt-2 border-t border-border/60">
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
+                    <History className="w-3 h-3 text-muted-foreground" />
+                    <span>Recent Assignment History</span>
+                  </p>
+                  <div className="rounded-lg border border-border divide-y divide-border/60 bg-white text-xs max-h-36 overflow-y-auto">
+                    {lead.assignment_history.map((hist: any) => (
+                      <div key={hist.id} className="p-2.5 flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-semibold text-foreground">
+                              {hist.assigned_to_name || hist.assigned_to?.name || "Assigned"}
+                            </span>
+                            {hist.status && (
+                              <Badge variant="outline" className="text-[10px] py-0 px-1.5 bg-muted/30 capitalize">
+                                {hist.status}
+                              </Badge>
+                            )}
+                          </div>
+                          {hist.note && (
+                            <p className="text-muted-foreground text-[11px] mt-0.5">{hist.note}</p>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-muted-foreground font-mono shrink-0">
+                          {formatDate(hist.created_at || hist.changed_at)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
