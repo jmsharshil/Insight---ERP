@@ -49,7 +49,7 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
   const [checkers, setCheckers] = useState<any[]>([]);
   const [checkersLoading, setCheckersLoading] = useState(false);
 
-  const isAdmin   = user && ["super_admin", "branch_manager", "admin", "admin_senior_executive"].includes(user.role ?? "");
+  const isAdmin   = user && ["super_admin", "branch_manager", "admin", "admin_senior_executive", "counsellor", "telecaller"].includes(user.role ?? "");
   const isFaculty = user?.role === "faculty";
   const isStudent = user?.role === "student";
   const isParent  = user?.role === "parent" || user?.role === "parents";
@@ -83,7 +83,15 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
       auth: true,
       setLoading: (v: boolean) => setResultsLoading(v),
       getResponse: (res: any) => {
-        const data = res?.data || [];
+        const data = Array.isArray(res)
+          ? res
+          : Array.isArray(res?.data)
+            ? res.data
+            : Array.isArray(res?.data?.data)
+              ? res.data.data
+              : Array.isArray(res?.results)
+                ? res.results
+                : (res?.data || []);
         setResults(data);
         const extractedRecheckRequests = data.flatMap((r: any) => 
           (r.recheck_requests || []).map((req: any) => ({
@@ -315,8 +323,8 @@ export default function ResultsTab({ exam }: ResultsTabProps) {
         </motion.div>
       )} */}
 
-      {/* Admin / Faculty / Paper Checker Results List */}
-      {(isAdmin || isFaculty || isPaperChecker) && (
+      {/* Admin / Faculty / Paper Checker / Staff Results List */}
+      {(isAdmin || isFaculty || isPaperChecker || (!isStudent && !isParent)) && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}

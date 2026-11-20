@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useDispatch } from "react-redux";
 import { API } from "@/service/api";
+import { dropdownActions } from "@/redux/actions";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -286,12 +287,92 @@ export default function SlotForm({
     return true; // Fallback to showing it instead of hiding if we can't determine the level
   });
 
+  const [internalExaminers, setInternalExaminers] = useState<any[]>(examinersList || []);
+  const [internalPaperCheckers, setInternalPaperCheckers] = useState<any[]>(paperCheckersList || []);
+
+  useEffect(() => {
+    if (examinersList && examinersList.length > 0) {
+      setInternalExaminers(examinersList);
+    }
+  }, [examinersList]);
+
+  useEffect(() => {
+    if (paperCheckersList && paperCheckersList.length > 0) {
+      setInternalPaperCheckers(paperCheckersList);
+    }
+  }, [paperCheckersList]);
+
+  useEffect(() => {
+    if (!examinersList || examinersList.length === 0) {
+      dispatch({
+        type: dropdownActions.GET_DROPDOWN,
+        method: "GET",
+        endPoint: "/api/auth/users/?role=exam_supervisor",
+        auth: true,
+        getResponse: (res: any) => {
+          const raw = res?.data?.results || res?.results || res?.data || res;
+          let list = Array.isArray(raw) ? raw : [];
+          if (list.length === 0) {
+            dispatch({
+              type: dropdownActions.GET_DROPDOWN,
+              method: "GET",
+              endPoint: "/api/auth/users/",
+              auth: true,
+              getResponse: (allRes: any) => {
+                const allRaw = allRes?.data?.results || allRes?.results || allRes?.data || allRes;
+                const allList = Array.isArray(allRaw) ? allRaw : [];
+                const matched = allList.filter((u: any) => {
+                  const r = (u.role || "").toLowerCase();
+                  const addRoles = Array.isArray(u.additional_roles) ? u.additional_roles.map((ar: any) => String(ar).toLowerCase()) : [];
+                  return r === "exam_supervisor" || r === "supervisor" || addRoles.includes("exam_supervisor") || addRoles.includes("supervisor");
+                });
+                if (matched.length > 0) {
+                  setInternalExaminers(matched.map((item: any) => ({
+                    id: String(item.id),
+                    name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim() || item.username || item.email || "Supervisor",
+                    employee_id: item.employee_id,
+                    role: item.role,
+                    levels: item.levels || (item.level ? [item.level] : []),
+                    levels_details: item.levels_details,
+                  })));
+                }
+              },
+              getError: () => {},
+            } as any);
+          } else {
+            setInternalExaminers(list.map((item: any) => ({
+              id: String(item.id),
+              name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim() || item.username || item.email || "Supervisor",
+              employee_id: item.employee_id,
+              role: item.role,
+              levels: item.levels || (item.level ? [item.level] : []),
+              levels_details: item.levels_details,
+            })));
+          }
+        },
+        getError: () => {},
+      } as any);
+    }
+  }, [examinersList, dispatch]);
+
   const filterStaffByLevel = (staffList: any[]) => {
     return staffList.filter((staff: any) => {
       if (!selectedBatchId || !hasRecognizedLevel) return true;
       if (staff.levels && Array.isArray(staff.levels) && staff.levels.length > 0) {
         const matches = staff.levels.some((lvl: any) => {
-          const lvlStr = typeof lvl === 'string' ? lvl : (lvl?.name || lvl?.level_name || "");
+          let lvlStr = typeof lvl === 'string' ? lvl : (lvl?.name || lvl?.level_name || "");
+          if (levels && levels.length > 0) {
+            const foundLevel = levels.find((l: any) => String(l.id) === String(lvlStr) || String(l.id) === String(lvl?.id));
+            if (foundLevel?.name) {
+              lvlStr = foundLevel.name;
+            }
+          }
+          if (staff.levels_details && Array.isArray(staff.levels_details)) {
+            const foundDetail = staff.levels_details.find((d: any) => String(d.id) === String(lvlStr) || String(d.id) === String(lvl?.id));
+            if (foundDetail?.name) {
+              lvlStr = foundDetail.name;
+            }
+          }
           return matchesBatchLevel(lvlStr);
         });
         if (!matches) return false;
@@ -302,8 +383,14 @@ export default function SlotForm({
   };
 
   const filteredFacultyList = filterStaffByLevel(facultyList);
-  const filteredExaminersList = filterStaffByLevel(examinersList);
-  const filteredPaperCheckersList = filterStaffByLevel(paperCheckersList);
+
+  const activeExaminers = (internalExaminers && internalExaminers.length > 0) ? internalExaminers : examinersList;
+  const levelFilteredExaminers = filterStaffByLevel(activeExaminers);
+  const filteredExaminersList = levelFilteredExaminers.length > 0 ? levelFilteredExaminers : activeExaminers;
+
+  const activePaperCheckers = (internalPaperCheckers && internalPaperCheckers.length > 0) ? internalPaperCheckers : paperCheckersList;
+  const levelFilteredPaperCheckers = filterStaffByLevel(activePaperCheckers);
+  const filteredPaperCheckersList = levelFilteredPaperCheckers.length > 0 ? levelFilteredPaperCheckers : activePaperCheckers;
 
   const slotCode = watch("slot_code");
   useEffect(() => {
@@ -398,11 +485,14 @@ export default function SlotForm({
             <SelectValue placeholder="Select supervisor..." />
           </SelectTrigger>
           <SelectContent className="max-h-[250px]">
-            {filteredExaminersList.map((fac) => (
-              <SelectItem key={fac.id} value={fac.id}>
-                {fac.name} {fac.employee_id ? `(${fac.employee_id})` : ""}
-              </SelectItem>
-            ))}
+            {filteredExaminersList.map((fac) => {
+              const label = fac.name || fac.full_name || fac.username || fac.email || `Supervisor (${fac.id})`;
+              return (
+                <SelectItem key={String(fac.id)} value={String(fac.id)}>
+                  {label} {fac.employee_id ? `(${fac.employee_id})` : ""}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       )} />
@@ -417,11 +507,14 @@ export default function SlotForm({
             <SelectValue placeholder="Select paper checker..." />
           </SelectTrigger>
           <SelectContent className="max-h-[250px]">
-            {filteredPaperCheckersList.map((fac) => (
-              <SelectItem key={fac.id} value={fac.id}>
-                {fac.name} {fac.employee_id ? `(${fac.employee_id})` : ""}
-              </SelectItem>
-            ))}
+            {filteredPaperCheckersList.map((fac) => {
+              const label = fac.name || fac.full_name || fac.username || fac.email || `Paper Checker (${fac.id})`;
+              return (
+                <SelectItem key={String(fac.id)} value={String(fac.id)}>
+                  {label} {fac.employee_id ? `(${fac.employee_id})` : ""}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       )} />

@@ -37,6 +37,8 @@ export function VerifyPaymentDialog({
   const [status, setStatus] = useState("verified");
   const [note, setNote] = useState("");
 
+  const isReadOnly = payment?.status === "verified" || payment?.status === "rejected";
+
   useEffect(() => {
     if (open) {
       setStatus("verified");
@@ -50,13 +52,33 @@ export function VerifyPaymentDialog({
     <Sheet open={open} onOpenChange={(o) => !o && !loading && onClose()}>
       <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
         <SheetHeader>
-          <SheetTitle className="font-heading">Verify Payment</SheetTitle>
+          <SheetTitle className="font-heading">
+            {isReadOnly ? "Payment Details" : "Verify Payment"}
+          </SheetTitle>
           <SheetDescription>
-            Review and update the verification status for this payment.
+            {isReadOnly
+              ? `Viewing details for this ${payment.status?.replace("_", " ")} payment.`
+              : "Review and update the verification status for this payment."}
           </SheetDescription>
         </SheetHeader>
 
         <div className="space-y-4 py-3 text-sm">
+          {isReadOnly && (
+            <div className="flex justify-between items-center bg-muted/40 p-3 rounded-xl border border-border">
+              <span className="text-xs text-muted-foreground font-medium">Status</span>
+              <span
+                className={cn(
+                  "px-2.5 py-0.5 rounded-full text-xs font-semibold border capitalize",
+                  payment.status === "verified"
+                    ? "bg-green-500/10 text-green-500 border-green-500/20"
+                    : "bg-red-500/10 text-red-500 border-red-500/20",
+                )}
+              >
+                {payment.status_display || payment.status?.replace(/_/g, " ")}
+              </span>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3 bg-muted/30 p-3 rounded-xl border border-border">
             <div>
               <span className="text-xs text-muted-foreground block">Receipt Number</span>
@@ -80,49 +102,71 @@ export function VerifyPaymentDialog({
                 {payment.note || "No note provided."}
               </p>
             </div>
+            {payment.remarks && (
+              <div className="col-span-2 mt-2">
+                <span className="text-xs text-muted-foreground block">Remarks</span>
+                <p className="text-xs bg-background p-2 rounded border mt-0.5 text-foreground">
+                  {payment.remarks}
+                </p>
+              </div>
+            )}
+            {payment.rejection_reason && (
+              <div className="col-span-2 mt-2">
+                <span className="text-xs text-red-500 font-medium block">Rejection Reason</span>
+                <p className="text-xs bg-red-50 text-red-700 p-2 rounded border border-red-200 mt-0.5">
+                  {payment.rejection_reason}
+                </p>
+              </div>
+            )}
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="verify-status">Action *</Label>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger id="verify-status">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="verified">Verify (Approve Payment)</SelectItem>
-                <SelectItem value="rejected">Reject Payment</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {!isReadOnly && (
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="verify-status">Action *</Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger id="verify-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="verified">Verify (Approve Payment)</SelectItem>
+                    <SelectItem value="rejected">Reject Payment</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="verify-note">Note / Comment *</Label>
-            <Textarea
-              id="verify-note"
-              placeholder={status === "verified" ? "Payment received in bank account." : "Reason for rejection..."}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              rows={3}
-            />
-          </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="verify-note">Note / Comment *</Label>
+                <Textarea
+                  id="verify-note"
+                  placeholder={status === "verified" ? "Payment received in bank account." : "Reason for rejection..."}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         <SheetFooter>
           <Button variant="outline" onClick={onClose} disabled={loading}>
-            Cancel
+            {isReadOnly ? "Close" : "Cancel"}
           </Button>
-          <Button
-            onClick={() => onSubmit({ status, note })}
-            disabled={loading || !note.trim()}
-            className={cn(
-              "text-white",
-              status === "verified"
-                ? "bg-green-600 hover:bg-green-700"
-                : "bg-destructive hover:bg-destructive/90"
-            )}
-          >
-            {loading ? "Processing..." : status === "verified" ? "Verify" : "Reject"}
-          </Button>
+          {!isReadOnly && (
+            <Button
+              onClick={() => onSubmit({ status, note })}
+              disabled={loading || !note.trim()}
+              className={cn(
+                "text-white",
+                status === "verified"
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-destructive hover:bg-destructive/90"
+              )}
+            >
+              {loading ? "Processing..." : status === "verified" ? "Verify" : "Reject"}
+            </Button>
+          )}
         </SheetFooter>
       </SheetContent>
     </Sheet>

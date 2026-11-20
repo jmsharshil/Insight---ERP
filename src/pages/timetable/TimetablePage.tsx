@@ -230,16 +230,49 @@ export default function TimetablePage() {
       auth: true,
       getResponse: (res: any) => {
         const data = res?.data?.results || res?.results || res?.data || res;
-        if (Array.isArray(data)) {
-          const parsed = data.map((item: any) => ({
-            id: item.id,
-            name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim(),
+        const list = Array.isArray(data) ? data : [];
+        if (list.length > 0) {
+          const parsed = list.map((item: any) => ({
+            id: String(item.id),
+            name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim() || item.username || item.email || "Supervisor",
             employee_id: item.employee_id,
             role: item.role,
             roles: item.roles,
             levels: item.levels || (item.level ? [item.level] : []),
+            levels_details: item.levels_details,
           }));
           setExaminersList(parsed);
+        } else {
+          // Fallback: fetch all users and filter by role or additional_roles
+          dispatch({
+            type: dropdownActions.GET_DROPDOWN,
+            method: "GET",
+            endPoint: "/api/auth/users/",
+            auth: true,
+            getResponse: (allRes: any) => {
+              const allData = allRes?.data?.results || allRes?.results || allRes?.data || allRes;
+              const allList = Array.isArray(allData) ? allData : [];
+              const matched = allList.filter((item: any) => {
+                const r = (item.role || "").toLowerCase();
+                const addRoles = Array.isArray(item.additional_roles)
+                  ? item.additional_roles.map((ar: any) => String(ar).toLowerCase())
+                  : [];
+                return r === "exam_supervisor" || r === "supervisor" || addRoles.includes("exam_supervisor") || addRoles.includes("supervisor");
+              });
+              if (matched.length > 0) {
+                setExaminersList(matched.map((item: any) => ({
+                  id: String(item.id),
+                  name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim() || item.username || item.email || "Supervisor",
+                  employee_id: item.employee_id,
+                  role: item.role,
+                  roles: item.roles,
+                  levels: item.levels || (item.level ? [item.level] : []),
+                  levels_details: item.levels_details,
+                })));
+              }
+            },
+            getError: () => {},
+          });
         }
       },
       getError: () => {},
@@ -253,16 +286,49 @@ export default function TimetablePage() {
       auth: true,
       getResponse: (res: any) => {
         const data = res?.data?.results || res?.results || res?.data || res;
-        if (Array.isArray(data)) {
-          const parsed = data.map((item: any) => ({
-            id: item.id,
-            name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim(),
+        const list = Array.isArray(data) ? data : [];
+        if (list.length > 0) {
+          const parsed = list.map((item: any) => ({
+            id: String(item.id),
+            name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim() || item.username || item.email || "Paper Checker",
             employee_id: item.employee_id,
             role: item.role,
             roles: item.roles,
             levels: item.levels || (item.level ? [item.level] : []),
+            levels_details: item.levels_details,
           }));
           setPaperCheckersList(parsed);
+        } else {
+          // Fallback: fetch all users and filter by role or additional_roles
+          dispatch({
+            type: dropdownActions.GET_DROPDOWN,
+            method: "GET",
+            endPoint: "/api/auth/users/",
+            auth: true,
+            getResponse: (allRes: any) => {
+              const allData = allRes?.data?.results || allRes?.results || allRes?.data || allRes;
+              const allList = Array.isArray(allData) ? allData : [];
+              const matched = allList.filter((item: any) => {
+                const r = (item.role || "").toLowerCase();
+                const addRoles = Array.isArray(item.additional_roles)
+                  ? item.additional_roles.map((ar: any) => String(ar).toLowerCase())
+                  : [];
+                return r === "paper_checker" || addRoles.includes("paper_checker");
+              });
+              if (matched.length > 0) {
+                setPaperCheckersList(matched.map((item: any) => ({
+                  id: String(item.id),
+                  name: item.full_name || item.name || `${item.first_name || ""} ${item.last_name || ""}`.trim() || item.username || item.email || "Paper Checker",
+                  employee_id: item.employee_id,
+                  role: item.role,
+                  roles: item.roles,
+                  levels: item.levels || (item.level ? [item.level] : []),
+                  levels_details: item.levels_details,
+                })));
+              }
+            },
+            getError: () => {},
+          });
         }
       },
       getError: () => {},
