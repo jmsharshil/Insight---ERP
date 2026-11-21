@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { TrendingUp, Wallet, FileText, CalendarDays, ExternalLink } from "lucide-react";
+import { TrendingUp, Wallet, FileText, CalendarDays, ExternalLink, ArrowRight } from "lucide-react";
 import { payrollActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import { setMyPayroll, setMyPayrollLoading } from "@/redux/slices/payrollSlice";
 import type { RootState, AppDispatch } from "@/store";
 import { useToast } from "@/hooks/useToast";
+import { useAuth } from "@/hooks/useAuth";
 import { TableSkeleton } from "@/components/common/Skeletons";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -411,6 +412,7 @@ export default function MyPayrollTab({
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
+  const { user } = useAuth();
   const { myPayroll, myPayrollLoading } = useSelector((s: RootState) => s.payroll);
 
   const [month,  setMonth]  = useState("all");
@@ -418,8 +420,29 @@ export default function MyPayrollTab({
   const [status, setStatus] = useState("all");
 
   const handleRowClick = (slip: any) => {
-    navigate(`/payroll/payslips/${slip.id}`, {
-      state: { payslip: slip },
+    const emp = myPayroll?.employee;
+    const empName = slip.faculty_name || slip.employee_name || emp?.name || user?.name || "Employee";
+    const empId = slip.employee_id || emp?.employee_id || "—";
+    const roleName = slip.employment_type || emp?.role || user?.role || "";
+    const runId = slip.payroll_run || slip.run_id || slip.payroll_run_id || "";
+
+    const query = runId ? `?run_id=${runId}` : "";
+    navigate(`/payroll/payslips/${slip.id}${query}`, {
+      state: {
+        payslip: {
+          ...slip,
+          faculty_name: empName,
+          employee_id: empId,
+          employment_type: roleName,
+        },
+        run: {
+          id: runId,
+          month: Number(slip.payroll_month || 0),
+          year: Number(slip.payroll_year || 0),
+          branch_name: emp?.branch || emp?.branch_name || (user as any)?.branch_name || "",
+          status: slip.payroll_status?.toLowerCase() || (slip.is_disbursed ? "disbursed" : "pending"),
+        },
+      },
     });
   };
 
@@ -512,9 +535,9 @@ export default function MyPayrollTab({
       </div>
 
       {myPayrollLoading ? (
-        <TableSkeleton columns={10} rows={4} className="mt-0" />
+        <TableSkeleton columns={11} rows={4} className="mt-0" />
       ) : (
-        <Tabs defaultValue="deduction_logs" className="w-full space-y-4">
+        <Tabs defaultValue="payslips" className="w-full space-y-4">
           <TabsList className="bg-card border border-border h-11 p-1">
             <TabsTrigger
               value="deduction_logs"
@@ -610,10 +633,13 @@ export default function MyPayrollTab({
                         "Net Salary",
                         "Sessions / Papers",
                         "Status",
-                      ].map((h) => (
+                        "",
+                      ].map((h, idx) => (
                         <th
-                          key={h}
-                          className="px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap"
+                          key={idx}
+                          className={`px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap ${
+                            h === "" ? "text-right" : "text-left"
+                          }`}
                         >
                           {h}
                         </th>
@@ -623,7 +649,7 @@ export default function MyPayrollTab({
                   <tbody>
                     {!myPayroll?.payslips?.length ? (
                       <tr>
-                        <td colSpan={10} className="text-center py-12 text-muted-foreground text-sm">
+                        <td colSpan={11} className="text-center py-12 text-muted-foreground text-sm">
                           No payslip records found.
                         </td>
                       </tr>
@@ -704,6 +730,19 @@ export default function MyPayrollTab({
                             >
                               {slip.payroll_status || (slip.is_disbursed ? "Disbursed" : "Pending")}
                             </Badge>
+                          </td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs gap-1 px-2.5 text-primary hover:text-primary/80 group-hover:bg-primary/10"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRowClick(slip);
+                              }}
+                            >
+                              View Payslip <ArrowRight className="w-3.5 h-3.5" />
+                            </Button>
                           </td>
                         </motion.tr>
                       ))

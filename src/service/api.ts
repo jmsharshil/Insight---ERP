@@ -277,6 +277,8 @@ BATCHES: {
     RECHECK_REQUESTS: (examId: string) => `/api/v1/exams/${examId}/recheck-requests/`,
     RECHECK_REQUEST_ACTION: (examId: string, requestId: string) =>
       `/api/v1/exams/${examId}/recheck-requests/${requestId}/`,
+    SUPERVISOR_DUTY_PHOTO: (examId: string) =>
+      `/api/v1/exams/${examId}/supervisor-duty/photo/`,
   },
 
   /** Fees endpoints */

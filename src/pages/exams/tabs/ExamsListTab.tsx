@@ -707,11 +707,11 @@ export default function ExamsListTab({ onSelectExam, selectedExamId, resolvedFac
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      {canEdit && (
+                      {/* {canEdit && (
                         <Button variant="ghost" size="icon" className="w-7 h-7" title="Schedule Exam" onClick={e => { e.stopPropagation(); setScheduleTarget(exam); }}>
                           <Calendar className="w-3.5 h-3.5 text-blue-500" />
                         </Button>
-                      )}
+                      )} */}
                       {canAddGraceMarks && (
                         <Button variant="ghost" size="icon" className="w-7 h-7" title="Add Grace Marks" onClick={e => { e.stopPropagation(); openGraceMarks(exam); }}>
                           <Award className="w-3.5 h-3.5 text-orange-500" />
