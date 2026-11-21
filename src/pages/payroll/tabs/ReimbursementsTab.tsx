@@ -779,7 +779,7 @@ export default function ReimbursementsTab() {
               Showing {data.length === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1} to{" "}
               {Math.min((pagination.pageIndex + 1) * pagination.pageSize, data.length)} of {data.length} claims
             </span>
-            <div className="flex items-center gap-1.5 ml-0 sm:ml-4">
+            {/* <div className="flex items-center gap-1.5 ml-0 sm:ml-4">
               <span>Rows per page:</span>
               <Select
                 value={String(pagination.pageSize)}
@@ -798,7 +798,7 @@ export default function ReimbursementsTab() {
                   <SelectItem value="500">All</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </div> */}
           </div>
 
           <div className="flex items-center gap-2">

@@ -11,6 +11,7 @@ import { axiosRequest } from "@/service/axiosRequest";
 import { type FeesStructure } from "@/redux/slices/feesSlice";
 import { formatCurrency } from "@/lib/utils";
 import logo from "@/assets/logo.png";
+import paymentProofsGuide from "@/assets/paymentproofs.png";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -155,6 +156,7 @@ function FileUploadField({
   required = false,
   accept = "image/*,.pdf,application/pdf",
   disabled = false,
+  actionRight,
 }: {
   label: string;
   icon: React.ElementType;
@@ -164,14 +166,18 @@ function FileUploadField({
   required?: boolean;
   accept?: string;
   disabled?: boolean;
+  actionRight?: React.ReactNode;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
-        {label} {required && <span style={{ color: T.error }}>*</span>}
-      </Label>
+      <div className="flex items-center justify-between">
+        <Label className="text-xs sm:text-sm font-medium" style={{ color: T.text }}>
+          {label} {required && <span style={{ color: T.error }}>*</span>}
+        </Label>
+        {actionRight}
+      </div>
       <div
         className={`relative rounded-xl border-2 border-dashed p-4 text-center transition-all duration-200 ${
           disabled
@@ -606,6 +612,8 @@ export default function StudentAdmissionForm() {
   const [paymentNote, setPaymentNote] = useState<string>("");
   const [paymentAmount, setPaymentAmount] = useState<string>("");
   const [paymentSubmittedAt, setPaymentSubmittedAt] = useState<string>("");
+  const [showProofGuide, setShowProofGuide] = useState<boolean>(true);
+  const [isProofGuideModalOpen, setIsProofGuideModalOpen] = useState<boolean>(false);
   const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
   const [paymentProofSubmitting, setPaymentProofSubmitting] = useState<boolean>(false);
   const [paymentProofSuccess, setPaymentProofSuccess] = useState<boolean>(false);
@@ -944,8 +952,7 @@ export default function StudentAdmissionForm() {
     });
 
     // Populate existing payment proof details if available
-    if (data.transaction_id) setTransactionId(String(data.transaction_id).toUpperCase());
-    if (data.payment_note) setPaymentNote(String(data.payment_note).toUpperCase());
+    // Do not autofill transaction_id and payment_note as requested
     if (data.payment_amount != null) setPaymentAmount(String(data.payment_amount));
     if (data.payment_submitted_at) setPaymentSubmittedAt(data.payment_submitted_at.slice(0, 16));
     if (data.payment_screenshot) {
@@ -4736,13 +4743,18 @@ interface ModuleOption {
                             </>
                           )}
                         </p>
-                        <div className="pt-2 border-t border-amber-200 text-xs text-amber-900 font-medium">
-                          ⚠️ <strong>Notice Regarding Remaining Fees:</strong>{" "}
-                          {tokenTermsNote || (
-                            <>
-                              In 15 days you have to pay remaining fees (<strong>{formatCurrency(remFees)}</strong>) otherwise it will be considered as Installment/Finance.
-                            </>
-                          )}
+                        <div className="pt-2 border-t border-amber-200 text-xs text-amber-900 font-medium space-y-1">
+                          <p>
+                            ⚠️ <strong>Notice Regarding Remaining Fees:</strong>{" "}
+                            {tokenTermsNote || (
+                              <>
+                                In 15 days you have to pay remaining fees (<strong>{formatCurrency(remFees)}</strong>) otherwise it will be considered as Installment/Finance.
+                              </>
+                            )}
+                          </p>
+                          <p className="text-[11px] text-amber-800/90 font-normal">
+                            ℹ️ <em>This amount will be updated once your recent payment/transaction is verified and approved.</em>
+                          </p>
                         </div>
                       </div>
                     );
@@ -4797,7 +4809,7 @@ interface ModuleOption {
                 })()}
 
                 {/* Active Razorpay Quick Pay Action */}
-                {razorpayPaymentLink && (
+                {/* {razorpayPaymentLink && (
                   <div className="mt-4 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-400/20 to-amber-500/10 border-2 border-amber-400 max-w-lg mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-left shadow-sm">
                     <div>
                       <span className="text-xs font-bold uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
@@ -4818,7 +4830,7 @@ interface ModuleOption {
                       <ArrowUpRight className="w-4 h-4" />
                     </a>
                   </div>
-                )}
+                )} */}
 
                 <p className="text-xs text-muted-foreground my-3 max-w-lg mx-auto leading-relaxed">
                   Prefer direct UPI or bank transfer? You can upload your payment receipt and enter the transaction reference ID below to complete your admission confirmation.
@@ -4835,6 +4847,89 @@ interface ModuleOption {
               {/* ── Payment Proof Upload & Details Card ── */}
               <SectionCard icon={Receipt} title="Upload Payment Proof & Transaction Details">
                 <div className="space-y-6">
+                  {/* Payment Verification & Proof Requirement Notice */}
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-blue-50/90 dark:from-blue-950/30 dark:via-indigo-950/20 dark:to-blue-950/30 border border-blue-200/90 dark:border-blue-800/60 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 rounded-xl bg-blue-600/10 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5">
+                        <Info className="w-5 h-5" />
+                      </div>
+                      <div className="space-y-1 text-xs sm:text-sm">
+                        <h4 className="font-semibold text-blue-950 dark:text-blue-100 flex items-center flex-wrap gap-2">
+                          <span>Payment Proof & Verification Guidelines</span>
+                          {formData.payment_mode === "online" && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" /> Auto-Approved Online
+                            </span>
+                          )}
+                          {(formData.payment_mode === "cash" || formData.payment_mode === "cheque") && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
+                              <AlertCircle className="w-3 h-3 text-amber-600 dark:text-amber-400" /> Proof Required
+                            </span>
+                          )}
+                        </h4>
+                        <p className="text-blue-900/85 dark:text-blue-200/85 leading-relaxed text-xs sm:text-[13px]">
+                          Uploading payment proof is <strong>only required for Cash and Cheque</strong> payments so our accounts team can verify and approve your payment. For <strong>Online / Razorpay</strong> payments, uploading proof is <strong>not required</strong> — your transaction is <strong>automatically verified and approved</strong> in real-time.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Visual Reference Guide for Transaction ID & Payment Proof */}
+                  <div className="rounded-2xl border border-border/80 overflow-hidden bg-card shadow-sm">
+                    <div className="px-4 py-3 bg-muted/40 border-b border-border/60 flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+                        <span className="text-xs sm:text-sm font-semibold text-foreground">
+                          Where to find your Transaction ID / Reference Number / Cheque Numbe.
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowProofGuide((prev) => !prev)}
+                          className="h-7 px-2.5 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          {showProofGuide ? "Hide Guide" : "Show Guide"}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsProofGuideModalOpen(true)}
+                          className="h-7 px-2.5 text-xs font-medium gap-1"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          <span>Enlarge</span>
+                        </Button>
+                      </div>
+                    </div>
+                    {showProofGuide && (
+                      <div
+                        className="p-3 sm:p-4 bg-muted/15 flex flex-col items-center cursor-pointer group"
+                        onClick={() => setIsProofGuideModalOpen(true)}
+                        title="Click to view full size"
+                      >
+                        <div className="relative w-full max-w-2xl overflow-hidden rounded-xl border border-border/60 bg-white shadow-sm">
+                          <img
+                            src={paymentProofsGuide}
+                            alt="Where can I find my Transaction ID - Insight Institute of Professional Studies"
+                            className="w-full h-auto object-contain transition-transform duration-300 group-hover:scale-[1.01]"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center pointer-events-none">
+                            <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-md flex items-center gap-1.5">
+                              <ExternalLink className="w-3.5 h-3.5" /> Click to enlarge
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-2 text-center">
+                          💡 <em>Check the example above to find your UPI Ref No, Bank UTR, or Cheque number before entering it below.</em>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
                   {paymentProofSuccess && (
                     <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-200 animate-in fade-in duration-200">
                       <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" />
@@ -4886,10 +4981,11 @@ interface ModuleOption {
                         disabled={isFieldLocked("transaction_id")}
                         className="h-10 sm:h-11 text-sm font-mono"
                         placeholder="E.G.ZKHFTRHU3457795"
+                        autoComplete="off"
                       />
-                      <p className="text-[11px] text-muted-foreground">
+                      {/* <p className="text-[11px] text-muted-foreground">
                         UPI / Bank transaction reference number.
-                      </p>
+                      </p> */}
                     </div>
 
                     {/* Payment Submitted Date & Time */}
@@ -4912,12 +5008,21 @@ interface ModuleOption {
                     {/* Payment Screenshot Upload */}
                     <div className="space-y-1.5 sm:col-span-2">
                       <FileUploadField
-                        label="Payment Screenshot / Receipt Upload"
+                        label="Payment Screenshot / Receipt Upload / Proof"
                         icon={Receipt}
                         file={paymentScreenshot}
                         onFileChange={setPaymentScreenshot}
                         existingUrl={existingPaymentScreenshot}
                         disabled={Boolean(existingPaymentScreenshot)}
+                        actionRight={
+                          <button
+                            type="button"
+                            onClick={() => setIsProofGuideModalOpen(true)}
+                            className="text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1 hover:underline cursor-pointer"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" /> View Sample
+                          </button>
+                        }
                       />
                       <p className="text-[11px] text-muted-foreground">
                         Upload screenshot or photo of UPI payment receipt, bank transfer slip, or deposit receipt (JPG, PNG, PDF).
@@ -4935,6 +5040,7 @@ interface ModuleOption {
                         onChange={(e) => setPaymentNote(e.target.value)}
                         placeholder="Optional note from student regarding payment (e.g., Paid via PhonePe from Father's account, Cheque deposited at branch, etc.)."
                         className="text-sm"
+                        autoComplete="off"
                       />
                     </div>
                   </div>
@@ -4977,6 +5083,33 @@ interface ModuleOption {
           )}
           </form>
         )}
+
+        {/* ── Dialog: Full Size Payment Proof Reference Guide ── */}
+        <Dialog open={isProofGuideModalOpen} onOpenChange={setIsProofGuideModalOpen}>
+          <DialogContent className="max-w-4xl p-4 sm:p-6 bg-white dark:bg-card border border-border rounded-2xl sm:rounded-3xl shadow-2xl">
+            <DialogHeader className="pb-2">
+              <DialogTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
+                <Receipt className="w-5 h-5 text-amber-500" />
+                <span>Where to Find Your Transaction ID & Receipt Proof</span>
+              </DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm text-muted-foreground">
+                Please verify that your uploaded payment proof clearly shows the UPI Reference Number, Bank UTR, or Cheque Number.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-2 overflow-auto max-h-[75vh] rounded-xl border border-border/60 bg-muted/10 p-2 flex justify-center">
+              <img
+                src={paymentProofsGuide}
+                alt="Payment Proof Guide - Where to find Transaction ID"
+                className="w-full h-auto object-contain rounded-lg"
+              />
+            </div>
+            <DialogFooter className="pt-2 flex justify-end">
+              <Button type="button" variant="outline" onClick={() => setIsProofGuideModalOpen(false)}>
+                Close Guide
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* ── Footer ── */}
         <p className="text-center mt-6 sm:mt-8 text-xs" style={{ color: T.textMuted }}>
