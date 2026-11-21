@@ -118,7 +118,29 @@ export default function PayslipDetailPage() {
             getResponse: (res: any) => {
               const matched = res?.payslips?.find((p: any) => p.id === id);
               if (matched) {
-                setPayslip(matched);
+                const emp = res?.employee;
+                setPayslip({
+                  ...matched,
+                  faculty_name:
+                    matched.faculty_name ||
+                    matched.employee_name ||
+                    emp?.name ||
+                    user?.name ||
+                    "Employee",
+                  employee_id: matched.employee_id || emp?.employee_id || "—",
+                  employment_type: matched.employment_type || emp?.role || user?.role || "",
+                });
+                if (!run && emp) {
+                  setRun({
+                    id: matched.payroll_run || "",
+                    month: Number(matched.payroll_month || 0),
+                    year: Number(matched.payroll_year || 0),
+                    branch_name: emp.branch || emp.branch_name || "",
+                    status:
+                      matched.payroll_status?.toLowerCase() ||
+                      (matched.is_disbursed ? "disbursed" : "pending"),
+                  } as any);
+                }
               }
             },
             getError: () => {},
@@ -318,10 +340,47 @@ export default function PayslipDetailPage() {
   const monthLabel = run?.month
     ? MONTH_NAMES[run.month]
     : payslip.payroll_month
-      ? payslip.payroll_month
+      ? typeof payslip.payroll_month === "number"
+        ? MONTH_NAMES[payslip.payroll_month]
+        : MONTH_NAMES[Number(payslip.payroll_month)] || payslip.payroll_month
       : "";
   const yearLabel = run?.year || payslip.payroll_year || "";
   const periodLabel = monthLabel && yearLabel ? `${monthLabel} ${yearLabel}` : monthLabel || yearLabel || "Current Period";
+
+  const employeeName =
+    payslip?.faculty_name ||
+    (payslip as any)?.employee_name ||
+    (payslip as any)?.name ||
+    myPayroll?.employee?.name ||
+    user?.name ||
+    "Employee";
+
+  const employeeId =
+    payslip?.employee_id ||
+    (payslip as any)?.employee?.employee_id ||
+    myPayroll?.employee?.employee_id ||
+    "—";
+
+  const employeeRole =
+    payslip?.employment_type ||
+    (payslip as any)?.role ||
+    myPayroll?.employee?.role ||
+    user?.role ||
+    "";
+
+  const branchName =
+    run?.branch_name ||
+    (payslip as any)?.branch_name ||
+    (payslip as any)?.branch ||
+    myPayroll?.employee?.branch ||
+    myPayroll?.employee?.branch_name ||
+    (user as any)?.branch_name ||
+    "";
+
+  const isDisbursed = Boolean(
+    payslip.is_disbursed ||
+    payslip.payroll_status?.toLowerCase() === "disbursed"
+  );
 
   return (
     <>
@@ -341,9 +400,11 @@ export default function PayslipDetailPage() {
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">Payroll</span>
               <span className="text-xs text-muted-foreground">/</span>
-              <span className="text-xs text-muted-foreground">Payslips</span>
+              <span className="text-xs text-muted-foreground">
+                {isAdmin || isAccountant ? "Payslips" : "My Payroll"}
+              </span>
               <span className="text-xs text-muted-foreground">/</span>
-              <span className="text-xs font-semibold text-foreground">{payslip.faculty_name}</span>
+              <span className="text-xs font-semibold text-foreground">{employeeName}</span>
             </div>
             <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2 mt-0.5">
               <FileSpreadsheet className="w-5 h-5 text-primary" />
@@ -353,7 +414,7 @@ export default function PayslipDetailPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          {canAdjust && !payslip.is_disbursed && (
+          {canAdjust && !isDisbursed && (
             <Button
               variant="outline"
               size="sm"
@@ -377,21 +438,21 @@ export default function PayslipDetailPage() {
         <div className="flex flex-wrap items-start justify-between gap-6 relative z-10">
           <div className="flex items-start gap-4">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-primary/20 to-primary/10 border border-primary/25 flex items-center justify-center text-primary font-bold text-xl shrink-0 shadow-inner">
-              {payslip.faculty_name.slice(0, 2).toUpperCase()}
+              {(employeeName || "EP").slice(0, 2).toUpperCase()}
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center gap-2.5 flex-wrap">
                 <h2 className="text-xl font-bold text-foreground tracking-tight">
-                  {payslip.faculty_name}
+                  {employeeName}
                 </h2>
                 <Badge
                   className={`text-[11px] font-semibold capitalize px-2.5 py-0.5 ${
-                    payslip.is_disbursed
+                    isDisbursed
                       ? "bg-blue-100 text-blue-700 hover:bg-blue-100"
                       : "bg-amber-100 text-amber-700 hover:bg-amber-100"
                   }`}
                 >
-                  {payslip.is_disbursed ? (
+                  {isDisbursed ? (
                     <span className="flex items-center gap-1">
                       <CheckCircle2 className="w-3 h-3" /> Disbursed
                     </span>
@@ -410,25 +471,25 @@ export default function PayslipDetailPage() {
 
               <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                 <span className="font-mono bg-muted/60 px-2 py-0.5 rounded text-foreground/80 font-medium">
-                  {payslip.employee_id}
+                  {employeeId}
                 </span>
                 <span>•</span>
                 <span className="capitalize font-medium text-foreground/80">
                   {isFaculty ? "Faculty Member" : "Staff Member"}
                 </span>
-                {payslip.employment_type && (
+                {(payslip.employment_type || employeeRole) && (
                   <>
                     <span>•</span>
                     <Badge variant="secondary" className="text-[10px] font-medium capitalize">
-                      {payslip.employment_type.replace(/_/g, " ")}
+                      {(payslip.employment_type || employeeRole).replace(/_/g, " ")}
                     </Badge>
                   </>
                 )}
-                {run?.branch_name && (
+                {branchName && (
                   <>
                     <span>•</span>
                     <span className="flex items-center gap-1 text-muted-foreground">
-                      <Building2 className="w-3 h-3" /> {run.branch_name}
+                      <Building2 className="w-3 h-3" /> {branchName}
                     </span>
                   </>
                 )}
@@ -1256,8 +1317,8 @@ export default function PayslipDetailPage() {
               <p className="text-xs text-slate-600 mt-1">Salary Payslip for the month of <span className="font-bold text-slate-900">{periodLabel}</span></p>
             </div>
             <div className="text-right">
-              <span className={`inline-block px-3 py-1 rounded text-xs font-bold uppercase tracking-wider ${payslip.is_disbursed ? "bg-slate-200 text-slate-900" : "bg-amber-100 text-amber-900"}`}>
-                {payslip.is_disbursed ? "Disbursed" : "Pending"}
+              <span className={`inline-block px-3 py-1 rounded text-xs font-bold uppercase tracking-wider ${isDisbursed ? "bg-slate-200 text-slate-900" : "bg-amber-100 text-amber-900"}`}>
+                {isDisbursed ? "Disbursed" : "Pending"}
               </span>
               <p className="text-[11px] text-slate-500 mt-1">Date: {new Date().toLocaleDateString()}</p>
             </div>
@@ -1266,15 +1327,15 @@ export default function PayslipDetailPage() {
           {/* Employee Details Table */}
           <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded border border-slate-300">
             <div>
-              <p className="py-0.5"><span className="text-slate-500 font-medium">Employee Name:</span> <strong className="text-slate-900">{payslip.faculty_name}</strong></p>
-              <p className="py-0.5"><span className="text-slate-500 font-medium">Employee ID:</span> <strong className="text-slate-900 font-mono">{payslip.employee_id}</strong></p>
-              <p className="py-0.5"><span className="text-slate-500 font-medium">Designation / Role:</span> <strong className="text-slate-900 capitalize">{isFaculty ? "Faculty" : "Staff"}</strong></p>
-              {payslip.employment_type && (
-                <p className="py-0.5"><span className="text-slate-500 font-medium">Employment Type:</span> <strong className="text-slate-900 capitalize">{payslip.employment_type.replace(/_/g, " ")}</strong></p>
+              <p className="py-0.5"><span className="text-slate-500 font-medium">Employee Name:</span> <strong className="text-slate-900">{employeeName}</strong></p>
+              <p className="py-0.5"><span className="text-slate-500 font-medium">Employee ID:</span> <strong className="text-slate-900 font-mono">{employeeId}</strong></p>
+              <p className="py-0.5"><span className="text-slate-500 font-medium">Designation / Role:</span> <strong className="text-slate-900 capitalize">{(employeeRole || (isFaculty ? "Faculty" : "Staff")).replace(/_/g, " ")}</strong></p>
+              {(payslip.employment_type || employeeRole) && (
+                <p className="py-0.5"><span className="text-slate-500 font-medium">Employment Type:</span> <strong className="text-slate-900 capitalize">{(payslip.employment_type || employeeRole).replace(/_/g, " ")}</strong></p>
               )}
             </div>
             <div>
-              <p className="py-0.5"><span className="text-slate-500 font-medium">Branch:</span> <strong className="text-slate-900">{run?.branch_name || "Main Branch"}</strong></p>
+              <p className="py-0.5"><span className="text-slate-500 font-medium">Branch:</span> <strong className="text-slate-900">{branchName || "Main Branch"}</strong></p>
               <p className="py-0.5"><span className="text-slate-500 font-medium">Days Worked:</span> <strong className="text-slate-900">{payslip.working_days ?? 0} days</strong></p>
               <p className="py-0.5"><span className="text-slate-500 font-medium">Leaves Taken:</span> <strong className="text-slate-900">{payslip.leaves_taken ?? 0} days</strong></p>
               {Number(payslip.total_session_hours || payslip.session_hours || 0) > 0 && (

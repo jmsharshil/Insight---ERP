@@ -19,15 +19,26 @@ import QuestionsTab    from "./tabs/QuestionsTab";
 import MalpracticeTab  from "./tabs/MalpracticeTab";
 import PapersTab       from "./tabs/PapersTab";
 import ResultsTab      from "./tabs/ResultsTab";
+import DutyPhotosTab   from "./tabs/DutyPhotosTab";
 
-const getVisibleTabs = (role: string) => {
+const getVisibleTabs = (user: any) => {
+  const role = user?.role ?? "";
+  const additional = Array.isArray(user?.additional_roles)
+    ? user.additional_roles
+    : typeof user?.additional_roles === "string"
+    ? [user.additional_roles]
+    : [];
+  const allRoles = [role, ...additional].filter(Boolean);
+
+  const hasRole = (roles: string[]) => allRoles.some((r) => roles.includes(r));
+
   const all = [
-    { value: "questions",   label: "Questions",   roles: ["super_admin","branch_manager","admin","admin_senior_executive","faculty"] },
-    { value: "malpractice", label: "Malpractice", roles: ["super_admin","branch_manager","admin","admin_senior_executive","faculty","exam_supervisor"] },
-    { value: "papers",      label: "Papers",      roles: ["super_admin","branch_manager","admin","admin_senior_executive","faculty","paper_checker"] },
-    { value: "results",     label: "Results",     roles: ["super_admin","branch_manager","admin","admin_senior_executive","faculty","student","parent","parents", "paper_checker"] },
+    { value: "questions",   label: "Questions",   show: hasRole(["super_admin","branch_manager","admin","admin_senior_executive","faculty"]) },
+    { value: "duty_photos", label: "Duty Photos", show: hasRole(["super_admin","branch_manager","admin","admin_senior_executive","exam_supervisor"]) },
+    { value: "papers",      label: "Papers",      show: hasRole(["super_admin","branch_manager","admin","admin_senior_executive","faculty","paper_checker"]) },
+    { value: "results",     label: "Results",     show: hasRole(["super_admin","branch_manager","admin","admin_senior_executive","faculty","student","parent","parents", "paper_checker"]) },
   ];
-  return all.filter(t => t.roles.includes(role));
+  return all.filter((t) => t.show);
 };
 
 export default function ExamDetailPage() {
@@ -39,9 +50,28 @@ export default function ExamDetailPage() {
 
   const { selectedExam, error, exams } = useSelector((s: RootState) => s.exams);
   const role = user?.role ?? "student";
-  const visibleTabs = getVisibleTabs(role);
+  const visibleTabs = getVisibleTabs(user);
 
-  const defaultTab = ["student","parent","parents"].includes(role) ? "results" : role === "paper_checker" ? "papers" : role === "exam_supervisor" ? "malpractice" : "questions";
+  const userRoles = [
+    user?.role,
+    ...(Array.isArray(user?.additional_roles)
+      ? user.additional_roles
+      : typeof user?.additional_roles === "string"
+      ? [user.additional_roles]
+      : []),
+  ].filter(Boolean);
+
+  const isSupervisorOnly =
+    userRoles.includes("exam_supervisor") &&
+    !userRoles.some((r) => ["super_admin", "admin", "branch_manager", "faculty"].includes(r));
+
+  const defaultTab = ["student", "parent", "parents"].includes(role)
+    ? "results"
+    : role === "paper_checker"
+    ? "papers"
+    : isSupervisorOnly || role === "exam_supervisor"
+    ? "duty_photos"
+    : "questions";
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [loading, setLoading] = useState(!selectedExam || selectedExam.id !== id);
 
@@ -137,17 +167,23 @@ export default function ExamDetailPage() {
             </TabsContent>
           )}
 
+          {visibleTabs.some(t => t.value === "duty_photos") && (
+            <TabsContent value="duty_photos" className="mt-0 outline-none">
+              <DutyPhotosTab exam={selectedExam} />
+            </TabsContent>
+          )}
+
           {/* {visibleTabs.some(t => t.value === "seating") && (
             <TabsContent value="seating" className="mt-0 outline-none">
               <SeatingTab examId={selectedExam.id} />
             </TabsContent>
           )} */}
 
-          {visibleTabs.some(t => t.value === "malpractice") && (
+          {/* {visibleTabs.some(t => t.value === "malpractice") && (
             <TabsContent value="malpractice" className="mt-0 outline-none">
               <MalpracticeTab examId={selectedExam.id} />
             </TabsContent>
-          )}
+          )} */}
 
           {visibleTabs.some(t => t.value === "papers") && (
             <TabsContent value="papers" className="mt-0 outline-none">

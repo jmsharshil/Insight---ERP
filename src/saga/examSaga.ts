@@ -36,4 +36,6 @@ export function* watchExamSaga() {
   yield takeLatest(examActions.IMPORT_QUESTIONS, genericSaga);
   yield takeLatest(examActions.ADD_GRACE_MARKS, genericSaga);
   yield takeLatest(examActions.UPLOAD_MATERIALS, genericSaga);
+  yield takeLatest(examActions.SUBMIT_DUTY_PHOTO, genericSaga);
+  yield takeLatest(examActions.GET_DUTY_PHOTOS, genericSaga);
 }
