@@ -78,6 +78,8 @@ import {
   Camera,
   AlertTriangle,
   Info,
+  Clock,
+  Clock1,
 } from "lucide-react";
 import EmptyState from "@/components/common/EmptyState";
 
@@ -347,6 +349,10 @@ export default function UsersPage() {
     working_hours: "",
     weekly_schedule: createDefaultWeeklySchedule() as WeeklySchedule,
     per_paper_rate: "",
+    exam_pay_1_5_hours: "",
+    exam_pay_2_hours: "",
+    exam_pay_2_5_hours: "",
+    exam_pay_3_hours: "",
     accessible_modules: [] as string[],
   });
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
@@ -475,6 +481,22 @@ export default function UsersPage() {
           selectedUser.per_paper_rate !== undefined && selectedUser.per_paper_rate !== null
             ? String(selectedUser.per_paper_rate)
             : "",
+        exam_pay_1_5_hours:
+          selectedUser.exam_pay_1_5_hours !== undefined && selectedUser.exam_pay_1_5_hours !== null
+            ? String(selectedUser.exam_pay_1_5_hours)
+            : "",
+        exam_pay_2_hours:
+          selectedUser.exam_pay_2_hours !== undefined && selectedUser.exam_pay_2_hours !== null
+            ? String(selectedUser.exam_pay_2_hours)
+            : "",
+        exam_pay_2_5_hours:
+          selectedUser.exam_pay_2_5_hours !== undefined && selectedUser.exam_pay_2_5_hours !== null
+            ? String(selectedUser.exam_pay_2_5_hours)
+            : "",
+        exam_pay_3_hours:
+          selectedUser.exam_pay_3_hours !== undefined && selectedUser.exam_pay_3_hours !== null
+            ? String(selectedUser.exam_pay_3_hours)
+            : "",
         accessible_modules: parseAccessibleModules(selectedUser),
       });
     }
@@ -575,6 +597,10 @@ export default function UsersPage() {
       working_hours: "",
       weekly_schedule: createDefaultWeeklySchedule(),
       per_paper_rate: "",
+      exam_pay_1_5_hours: "",
+      exam_pay_2_hours: "",
+      exam_pay_2_5_hours: "",
+      exam_pay_3_hours: "",
       accessible_modules: [],
     });
     setProfilePicFile(null);
@@ -584,6 +610,36 @@ export default function UsersPage() {
     dispatch(setSelectedUser(null));
     setIsSheetOpen(true);
   };
+
+  const activeRole = editForm.role;
+  const activeAdditionalRoles = Array.isArray(editForm.additional_roles) ? editForm.additional_roles : [];
+  const allActiveRoles = [activeRole, ...activeAdditionalRoles].filter(Boolean);
+
+  const hasRole = (role: string) => allActiveRoles.includes(role);
+
+  const isEmployee = allActiveRoles.length > 0 && !allActiveRoles.every((r) => r === "student" || r === "parents");
+  const SALES_ROLES = [
+    "cmo",
+    "associate_bdm",
+    "senior_bdm",
+    "deputy_bdm",
+    "sales_executive",
+    "sales_senior_executive",
+    "counsellor",
+  ];
+  const isSalesRole = SALES_ROLES.includes(activeRole);
+  const showWorkingHours = isSalesRole;
+  const isFaculty = hasRole("faculty");
+  const isPartTimeOrVisiting =
+    isFaculty &&
+    (editForm.employment_type === "part_time" || editForm.employment_type === "visiting");
+  const isPaperChecker = hasRole("paper_checker");
+  const isExaminer = hasRole("exam_supervisor");
+  const isPrimaryExamSupervisorOrPaperChecker =
+    activeRole === "exam_supervisor" || activeRole === "paper_checker";
+  const isPrimaryExamSupervisor = activeRole === "exam_supervisor";
+  const showSalary =
+    isEmployee && !(isFaculty && isPartTimeOrVisiting) && !isPaperChecker && !isExaminer;
 
   const addUser = () => {
     setUpdateLoading(true);
@@ -613,15 +669,23 @@ export default function UsersPage() {
       ifsc_code: editForm.ifsc_code,
       pan_number: editForm.pan_number,
       aadhar_number: editForm.aadhar_number,
-      ...(isSalesRole
+      ...(isSalesRole || isPrimaryExamSupervisorOrPaperChecker
         ? {}
         : {
             work_start_time: editForm.work_start_time || editForm.weekly_schedule?.monday?.start_time,
             work_end_time: editForm.work_end_time || editForm.weekly_schedule?.monday?.end_time,
             weekly_schedule: editForm.weekly_schedule,
           }),
-      working_hours: editForm.working_hours,
+      working_hours: isPrimaryExamSupervisorOrPaperChecker ? null : editForm.working_hours,
       per_paper_rate: editForm.per_paper_rate ? Number(editForm.per_paper_rate) : null,
+      ...(isPrimaryExamSupervisor
+        ? {
+            exam_pay_1_5_hours: editForm.exam_pay_1_5_hours || "0.00",
+            exam_pay_2_hours: editForm.exam_pay_2_hours || "0.00",
+            exam_pay_2_5_hours: editForm.exam_pay_2_5_hours || "0.00",
+            exam_pay_3_hours: editForm.exam_pay_3_hours || "0.00",
+          }
+        : {}),
       accessible_modules: editForm.accessible_modules,
     };
 
@@ -706,6 +770,22 @@ export default function UsersPage() {
         selectedUser.per_paper_rate !== undefined && selectedUser.per_paper_rate !== null
           ? String(selectedUser.per_paper_rate)
           : "",
+      exam_pay_1_5_hours:
+        selectedUser.exam_pay_1_5_hours !== undefined && selectedUser.exam_pay_1_5_hours !== null
+          ? String(selectedUser.exam_pay_1_5_hours)
+          : "",
+      exam_pay_2_hours:
+        selectedUser.exam_pay_2_hours !== undefined && selectedUser.exam_pay_2_hours !== null
+          ? String(selectedUser.exam_pay_2_hours)
+          : "",
+      exam_pay_2_5_hours:
+        selectedUser.exam_pay_2_5_hours !== undefined && selectedUser.exam_pay_2_5_hours !== null
+          ? String(selectedUser.exam_pay_2_5_hours)
+          : "",
+      exam_pay_3_hours:
+        selectedUser.exam_pay_3_hours !== undefined && selectedUser.exam_pay_3_hours !== null
+          ? String(selectedUser.exam_pay_3_hours)
+          : "",
       accessible_modules: parseAccessibleModules(selectedUser),
     });
     setProfilePicFile(null);
@@ -783,7 +863,7 @@ export default function UsersPage() {
     if (editForm.ifsc_code !== undefined) formData.append("ifsc_code", editForm.ifsc_code);
     if (editForm.pan_number !== undefined) formData.append("pan_number", editForm.pan_number);
     if (editForm.aadhar_number !== undefined) formData.append("aadhar_number", editForm.aadhar_number);
-    if (!isSalesRole) {
+    if (!isSalesRole && !isPrimaryExamSupervisorOrPaperChecker) {
       if (editForm.work_start_time !== undefined) formData.append("work_start_time", editForm.work_start_time);
       if (editForm.work_end_time !== undefined) formData.append("work_end_time", editForm.work_end_time);
       if (editForm.weekly_schedule) {
@@ -794,8 +874,16 @@ export default function UsersPage() {
         });
       }
     }
-    if (editForm.working_hours !== undefined) formData.append("working_hours", editForm.working_hours);
+    if (!isPrimaryExamSupervisorOrPaperChecker && editForm.working_hours !== undefined) {
+      formData.append("working_hours", editForm.working_hours);
+    }
     if (editForm.per_paper_rate !== undefined && editForm.per_paper_rate !== "") formData.append("per_paper_rate", editForm.per_paper_rate);
+    if (isPrimaryExamSupervisor) {
+      formData.append("exam_pay_1_5_hours", editForm.exam_pay_1_5_hours || "0.00");
+      formData.append("exam_pay_2_hours", editForm.exam_pay_2_hours || "0.00");
+      formData.append("exam_pay_2_5_hours", editForm.exam_pay_2_5_hours || "0.00");
+      formData.append("exam_pay_3_hours", editForm.exam_pay_3_hours || "0.00");
+    }
 
     // --- ACCESSIBLE MODULES ---
     if (allModules && allModules.length > 0) {
@@ -852,33 +940,6 @@ export default function UsersPage() {
       pagination: { pageSize: 50 },
     },
   });
-
-  const activeRole = editForm.role;
-  const activeAdditionalRoles = Array.isArray(editForm.additional_roles) ? editForm.additional_roles : [];
-  const allActiveRoles = [activeRole, ...activeAdditionalRoles].filter(Boolean);
-
-  const hasRole = (role: string) => allActiveRoles.includes(role);
-
-  const isEmployee = allActiveRoles.length > 0 && !allActiveRoles.every((r) => r === "student" || r === "parents");
-  const SALES_ROLES = [
-    "cmo",
-    "associate_bdm",
-    "senior_bdm",
-    "deputy_bdm",
-    "sales_executive",
-    "sales_senior_executive",
-    "counsellor",
-  ];
-  const isSalesRole = SALES_ROLES.includes(activeRole);
-  const showWorkingHours = isSalesRole;
-  const isFaculty = hasRole("faculty");
-  const isPartTimeOrVisiting =
-    isFaculty &&
-    (editForm.employment_type === "part_time" || editForm.employment_type === "visiting");
-  const isPaperChecker = hasRole("paper_checker");
-  const isExaminer = hasRole("exam_supervisor");
-  const showSalary =
-    isEmployee && !(isFaculty && isPartTimeOrVisiting) && !isPaperChecker && !isExaminer;
 
   return (
     <div>
@@ -1691,7 +1752,7 @@ export default function UsersPage() {
                             </div>
                           )}
                         </div>
-                      ) : (
+                      ) : !isPrimaryExamSupervisorOrPaperChecker ? (
                         /* Weekly Schedule & Working Hours for Non-Sales Roles */
                         <div className="sm:col-span-2 pt-2">
                           <WeeklyScheduleEditor
@@ -1708,7 +1769,7 @@ export default function UsersPage() {
                             }}
                           />
                         </div>
-                      )}
+                      ) : null}
                     </>
                   )}
 
@@ -1952,6 +2013,116 @@ export default function UsersPage() {
                           {selectedUser?.per_paper_rate || "N/A"}
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {isPrimaryExamSupervisor && (
+                    <div className="col-span-full space-y-3 pt-2 pb-1 border-t border-border/60">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground uppercase tracking-wider">
+                        <Clock className="w-3.5 h-3.5 text-primary" />
+                        <span>Exam Duty Pay Rates</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                            Exam Pay (1.5 Hours)
+                          </Label>
+                          {isEditing ? (
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={editForm.exam_pay_1_5_hours}
+                              onChange={(e) =>
+                                setEditForm((f) => ({ ...f, exam_pay_1_5_hours: e.target.value }))
+                              }
+                              placeholder="0.00"
+                              className="bg-background"
+                            />
+                          ) : (
+                            <div className="text-sm font-medium font-mono text-text-primary pt-0.5">
+                              {selectedUser?.exam_pay_1_5_hours !== undefined && selectedUser?.exam_pay_1_5_hours !== null && selectedUser?.exam_pay_1_5_hours !== ""
+                                ? `₹${Number(selectedUser.exam_pay_1_5_hours).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
+                                : "₹0.00"}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                            Exam Pay (2.0 Hours)
+                          </Label>
+                          {isEditing ? (
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={editForm.exam_pay_2_hours}
+                              onChange={(e) =>
+                                setEditForm((f) => ({ ...f, exam_pay_2_hours: e.target.value }))
+                              }
+                              placeholder="0.00"
+                              className="bg-background"
+                            />
+                          ) : (
+                            <div className="text-sm font-medium font-mono text-text-primary pt-0.5">
+                              {selectedUser?.exam_pay_2_hours !== undefined && selectedUser?.exam_pay_2_hours !== null && selectedUser?.exam_pay_2_hours !== ""
+                                ? `₹${Number(selectedUser.exam_pay_2_hours).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
+                                : "₹0.00"}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                            Exam Pay (2.5 Hours)
+                          </Label>
+                          {isEditing ? (
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={editForm.exam_pay_2_5_hours}
+                              onChange={(e) =>
+                                setEditForm((f) => ({ ...f, exam_pay_2_5_hours: e.target.value }))
+                              }
+                              placeholder="0.00"
+                              className="bg-background"
+                            />
+                          ) : (
+                            <div className="text-sm font-medium font-mono text-text-primary pt-0.5">
+                              {selectedUser?.exam_pay_2_5_hours !== undefined && selectedUser?.exam_pay_2_5_hours !== null && selectedUser?.exam_pay_2_hours !== ""
+                                ? `₹${Number(selectedUser.exam_pay_2_5_hours).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
+                                : "₹0.00"}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                            Exam Pay (3.0 Hours)
+                          </Label>
+                          {isEditing ? (
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={editForm.exam_pay_3_hours}
+                              onChange={(e) =>
+                                setEditForm((f) => ({ ...f, exam_pay_3_hours: e.target.value }))
+                              }
+                              placeholder="0.00"
+                              className="bg-background"
+                            />
+                          ) : (
+                            <div className="text-sm font-medium font-mono text-text-primary pt-0.5">
+                              {selectedUser?.exam_pay_3_hours !== undefined && selectedUser?.exam_pay_3_hours !== null && selectedUser?.exam_pay_3_hours !== ""
+                                ? `₹${Number(selectedUser.exam_pay_3_hours).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
+                                : "₹0.00"}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
 

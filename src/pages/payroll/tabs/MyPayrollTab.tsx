@@ -1,8 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, Fragment } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { TrendingUp, Wallet, FileText, CalendarDays, ExternalLink, ArrowRight } from "lucide-react";
+import {
+  TrendingUp,
+  Wallet,
+  FileText,
+  CalendarDays,
+  ExternalLink,
+  ArrowRight,
+  ChevronDown,
+  ChevronRight,
+  GraduationCap,
+  Clock,
+} from "lucide-react";
 import { payrollActions } from "@/redux/actions";
 import { API } from "@/service/api";
 import { setMyPayroll, setMyPayrollLoading } from "@/redux/slices/payrollSlice";
@@ -16,6 +27,42 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const formatDateStr = (dStr?: string) => {
+  if (!dStr) return "—";
+  try {
+    const d = new Date(dStr);
+    if (isNaN(d.getTime())) return dStr;
+    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  } catch {
+    return dStr;
+  }
+};
+
+const formatTimeStr = (tStr?: string) => {
+  if (!tStr) return "—";
+  try {
+    if (typeof tStr === "string" && tStr.includes("T")) {
+      const d = new Date(tStr);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+      }
+    }
+    if (typeof tStr === "string") {
+      const parts = tStr.split(":");
+      if (parts.length >= 2) {
+        let hour = parseInt(parts[0], 10);
+        const minute = parts[1];
+        const ampm = hour >= 12 ? "PM" : "AM";
+        hour = hour % 12 || 12;
+        return `${hour}:${minute} ${ampm}`;
+      }
+    }
+    return String(tStr);
+  } catch {
+    return String(tStr);
+  }
+};
 
 const DeductionNoteCell = ({ row }: { row: any }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -418,6 +465,11 @@ export default function MyPayrollTab({
   const [month,  setMonth]  = useState("all");
   const [year,   setYear]   = useState(String(new Date().getFullYear()));
   const [status, setStatus] = useState("all");
+  const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
+
+  const toggleDay = (key: string) => {
+    setExpandedDays((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   const handleRowClick = (slip: any) => {
     const emp = myPayroll?.employee;
@@ -468,14 +520,49 @@ export default function MyPayrollTab({
   useEffect(() => { fetch(); }, []);
 
   const summary = myPayroll?.summary;
-  
-  const allDeductionLogs = (myPayroll?.payslips || []).flatMap((slip: any) => 
-    (slip.per_day_deduction_log || []).map((log: any) => ({
-      ...log,
-      slipMonth: slip.payroll_month,
-      slipYear: slip.payroll_year
-    }))
-  );
+
+  const sessionInfoMap = useMemo(() => {
+    const map = new Map<string, { date: string; batch_name?: string; subject_name?: string; chapter_covered?: string; duration_minutes?: number }>();
+    (myPayroll?.payslips || []).forEach((slip: any) => {
+      const dayLogs = slip.per_day_deduction_log || slip.late_deduction_log || [];
+      dayLogs.forEach((day: any) => {
+        (day.sessions || []).forEach((sess: any) => {
+          if (sess.id) {
+            map.set(sess.id, {
+              date: day.date,
+              batch_name: sess.batch_name,
+              subject_name: sess.subject_name,
+              chapter_covered: sess.chapter_covered,
+              duration_minutes: sess.duration_minutes,
+            });
+          }
+        });
+      });
+    });
+    return map;
+  }, [myPayroll]);
+
+  const allDeductionLogs = useMemo(() => {
+    return (myPayroll?.payslips || []).flatMap((slip: any) => 
+      (slip.per_day_deduction_log || slip.late_deduction_log || []).map((log: any) => ({
+        ...log,
+        slipMonth: slip.payroll_month,
+        slipYear: slip.payroll_year,
+        slipId: slip.id,
+      }))
+    );
+  }, [myPayroll]);
+
+  const allLateLogs = useMemo(() => {
+    return (myPayroll?.payslips || []).flatMap((slip: any) =>
+      (slip.late_logs || []).map((l: any) => ({
+        ...l,
+        slipMonth: slip.payroll_month,
+        slipYear: slip.payroll_year,
+        slipId: slip.id,
+      }))
+    );
+  }, [myPayroll]);
 
   return (
     <div className="space-y-5">
@@ -537,7 +624,7 @@ export default function MyPayrollTab({
       {myPayrollLoading ? (
         <TableSkeleton columns={11} rows={4} className="mt-0" />
       ) : (
-        <Tabs defaultValue="payslips" className="w-full space-y-4">
+        <Tabs defaultValue="deduction_logs" className="w-full space-y-4">
           <TabsList className="bg-card border border-border h-11 p-1">
             <TabsTrigger
               value="deduction_logs"
@@ -720,6 +807,15 @@ export default function MyPayrollTab({
                                 <div className="font-medium text-foreground">{slip.sessions_conducted} papers</div>
                                 <div className="text-muted-foreground text-[10px]">₹{slip.per_paper_rate || 50}/paper</div>
                               </div>
+                            ) : (slip as any)?.exam_supervisor_summary || myPayroll?.employee?.role === "exam_supervisor" ? (
+                              <div>
+                                <div className="font-medium text-foreground">
+                                  {(slip as any)?.exam_supervisor_summary?.total_exams_present ?? slip.sessions_conducted} exams
+                                </div>
+                                <div className="text-muted-foreground text-[10px]">
+                                  {(slip as any)?.exam_supervisor_summary?.total_hours || slip.total_session_hours || slip.total_hours || "0"} hrs
+                                </div>
+                              </div>
                             ) : (
                               `${slip.sessions_conducted} sessions`
                             )}
@@ -753,78 +849,398 @@ export default function MyPayrollTab({
             </div>
           </TabsContent>
 
-          <TabsContent value="deduction_logs" className="outline-none space-y-4">
-            {/* Deduction Logs Table */}
-            <div className="bg-white rounded-xl border border-border overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/40 border-b border-border">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">
-                      Date
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">
-                      Total Hours
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">
-                      Gross Salary
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">
-                      Late Minutes
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">
-                      Penalty Mins / Amt
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">
-                      Deduction
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">
-                      Net Salary
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {!allDeductionLogs.length ? (
+          <TabsContent value="deduction_logs" className="outline-none space-y-6">
+            {/* 1. Daily Attendance & Deduction Breakdown */}
+            <div className="bg-white rounded-xl border border-border p-5 space-y-4 shadow-xs">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-3">
+                <div>
+                  <h3 className="font-semibold text-base text-foreground flex items-center gap-2">
+                    <CalendarDays className="w-4 h-4 text-primary" />
+                    Daily Attendance & Deduction Logs
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Detailed day-wise earnings, conducted class reports, attendance deficit, early exits, and policy penalties
+                  </p>
+                </div>
+                {allDeductionLogs.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const allKeys = allDeductionLogs.reduce((acc: any, d: any) => ({ ...acc, [d.date]: true }), {});
+                      const isAllExpanded = allDeductionLogs.every((d: any) => expandedDays[d.date]);
+                      setExpandedDays(isAllExpanded ? {} : allKeys);
+                    }}
+                    className="text-xs text-primary font-medium hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    {allDeductionLogs.every((d: any) => expandedDays[d.date])
+                      ? "Collapse All Sessions"
+                      : "Expand All Sessions"}
+                  </button>
+                )}
+              </div>
+
+              <div className="overflow-x-auto rounded-lg border border-border">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-muted/50 border-b border-border">
                     <tr>
-                      <td colSpan={7} className="text-center py-12 text-muted-foreground text-sm">
-                        No daily deduction logs found.
-                      </td>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Date & Sessions</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Hours (Duration)</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Gross Salary</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Attendance Deficit</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Penalty (Mins / Amt)</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Daily Deduction</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap text-right">Net Daily Pay</th>
                     </tr>
-                  ) : (
-                    allDeductionLogs.map((log: any, i: number) => (
-                      <motion.tr
-                        key={i}
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.02 }}
-                        className="border-b border-border/50 hover:bg-muted/20 transition-colors"
-                      >
-                        <td className="px-4 py-3 font-mono text-xs flex items-center gap-2">
-                          <CalendarDays className="w-3.5 h-3.5 text-muted-foreground" />
-                          {log.date}
+                  </thead>
+                  <tbody className="divide-y divide-border/50">
+                    {!allDeductionLogs.length ? (
+                      <tr>
+                        <td colSpan={7} className="text-center py-12 text-muted-foreground text-sm">
+                          No daily deduction logs found.
                         </td>
-                        <td className="px-4 py-3 font-mono text-xs">{log.total_hours}</td>
-                        <td className="px-4 py-3 font-mono text-xs">
-                          ₹{Number(log.gross_salary || 0).toLocaleString("en-IN")}
-                        </td>
-                        <td className="px-4 py-3 font-mono text-xs">{log.late_minutes} min</td>
-                        <td className="px-4 py-3 font-mono text-xs">
-                          {log.penalty_minutes} min /{" "}
-                          <span className="text-red-600 font-medium">
-                            ₹{Number(log.penalty_amount || 0).toLocaleString("en-IN")}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 font-mono text-xs text-red-600 font-medium">
-                          ₹{Number(log.deduction || 0).toLocaleString("en-IN")}
-                        </td>
-                        <td className="px-4 py-3 font-mono text-xs text-green-600 font-bold">
-                          ₹{Number(log.net_salary || 0).toLocaleString("en-IN")}
-                        </td>
-                      </motion.tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                      </tr>
+                    ) : (
+                      allDeductionLogs.map((log: any, i: number) => {
+                        const deductAmt = Number(log.deduction ?? log.penalty_amount ?? log.amount ?? 0);
+                        const grossAmt = Number(log.gross_salary || 0);
+                        const netAmt = Number(log.net_salary || 0);
+                        const penaltyAmt = Number(log.penalty_amount || 0);
+                        const lateMins = Number(log.late_minutes ?? 0);
+                        const earlyOutMins = Number(log.early_out_minutes ?? 0);
+                        const penaltyMins = Number(log.penalty_minutes ?? 0);
+                        const sessions = log.sessions || [];
+                        const isExpanded = Boolean(expandedDays[log.date]);
+
+                        return (
+                          <Fragment key={`day-${log.date || i}`}>
+                            <tr
+                              onClick={() => sessions.length > 0 && toggleDay(log.date)}
+                              className={`transition-colors ${sessions.length > 0 ? "cursor-pointer hover:bg-muted/30" : "hover:bg-muted/20"}`}
+                            >
+                              <td className="px-4 py-3 font-medium font-mono text-foreground whitespace-nowrap">
+                                <div className="flex items-center gap-2">
+                                  {sessions.length > 0 ? (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleDay(log.date);
+                                      }}
+                                      className="p-0.5 rounded hover:bg-muted text-muted-foreground cursor-pointer"
+                                    >
+                                      {isExpanded ? (
+                                        <ChevronDown className="w-3.5 h-3.5 text-foreground" />
+                                      ) : (
+                                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+                                      )}
+                                    </button>
+                                  ) : (
+                                    <span className="w-3.5" />
+                                  )}
+                                  <CalendarDays className="w-3.5 h-3.5 text-muted-foreground/70 shrink-0" />
+                                  <span className="font-semibold">{formatDateStr(log.date)}</span>
+                                  {sessions.length > 0 && (
+                                    <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4 bg-muted/60 text-muted-foreground font-sans">
+                                      {sessions.length} {sessions.length === 1 ? "Session" : "Sessions"}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 font-mono whitespace-nowrap">
+                                <span className="font-medium">{log.total_hours ? `${log.total_hours} hrs` : "—"}</span>
+                                {log.duration_minutes ? (
+                                  <span className="text-[10px] text-muted-foreground block">{log.duration_minutes} mins</span>
+                                ) : null}
+                              </td>
+                              <td className="px-4 py-3 font-mono font-medium whitespace-nowrap">
+                                ₹{grossAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                              </td>
+                              <td className="px-4 py-3 font-mono whitespace-nowrap">
+                                {lateMins > 0 || earlyOutMins > 0 ? (
+                                  <div className="space-y-0.5">
+                                    {lateMins > 0 && (
+                                      <span className="text-amber-600 font-semibold block text-[11px]">
+                                        {lateMins} min late
+                                      </span>
+                                    )}
+                                    {earlyOutMins > 0 && (
+                                      <span className="text-orange-600 font-semibold block text-[11px]">
+                                        {earlyOutMins} min early exit
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-emerald-600 font-medium text-[11px]">On Time</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 font-mono whitespace-nowrap">
+                                {penaltyMins > 0 || penaltyAmt > 0 ? (
+                                  <div>
+                                    <span className="text-red-600 font-medium block">
+                                      {penaltyMins} min penalty
+                                    </span>
+                                    <span className="text-red-700 font-semibold text-[11px] block">
+                                      ₹{penaltyAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">—</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 font-mono whitespace-nowrap">
+                                {deductAmt > 0 ? (
+                                  <span className="text-red-600 font-semibold">
+                                    - ₹{deductAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground">₹0.00</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 font-mono font-bold text-emerald-600 text-right whitespace-nowrap">
+                                ₹{netAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                              </td>
+                            </tr>
+
+                            {/* Expanded Nested Sessions */}
+                            {isExpanded && sessions.length > 0 && (
+                              <tr className="bg-slate-50/70">
+                                <td colSpan={7} className="px-4 py-3 pl-8">
+                                  <div className="space-y-2 border-l-2 border-primary/40 pl-3">
+                                    <div className="flex items-center gap-2">
+                                      <GraduationCap className="w-3.5 h-3.5 text-primary" />
+                                      <span className="text-[11px] font-semibold text-slate-700 uppercase tracking-wide">
+                                        Conducted Classes & Sessions for {formatDateStr(log.date)} ({sessions.length})
+                                      </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-2">
+                                      {sessions.map((sess: any, sIdx: number) => {
+                                        const sGross = Number(sess.gross_salary || 0);
+                                        const sPenalty = Number(sess.penalty_amount || 0);
+                                        const sLate = sess.late_minutes ?? 0;
+                                        const sEarly = sess.early_out_minutes ?? 0;
+                                        const sPenMins = sess.penalty_minutes ?? 0;
+
+                                        return (
+                                          <div
+                                            key={`sess-${sess.id || sIdx}`}
+                                            className="bg-white border border-border/80 rounded-lg p-3 text-xs space-y-1.5 shadow-xs"
+                                          >
+                                            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-1.5">
+                                              <div className="flex items-center gap-2 flex-wrap">
+                                                <Badge className="bg-slate-100 text-slate-800 border-slate-200 text-[10px] font-mono hover:bg-slate-100">
+                                                  {sess.batch_name || "Batch"}
+                                                </Badge>
+                                                <span className="font-semibold text-slate-900">
+                                                  {sess.subject_name || "Subject"}
+                                                </span>
+                                                {sess.chapter_covered && (
+                                                  <span className="text-muted-foreground text-[11px] italic">
+                                                    • {sess.chapter_covered}
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <Badge
+                                                variant="outline"
+                                                className="text-[10px] py-0 capitalize bg-emerald-50 text-emerald-700 border-emerald-200"
+                                              >
+                                                {sess.status || "Completed"}
+                                              </Badge>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-1 text-[11px]">
+                                              <div>
+                                                <span className="text-muted-foreground block text-[10px] uppercase">Scheduled Timing</span>
+                                                <span className="font-mono text-slate-800 font-medium">
+                                                  {formatTimeStr(sess.scheduled_start)} – {formatTimeStr(sess.scheduled_end)}
+                                                </span>
+                                              </div>
+                                              <div>
+                                                <span className="text-muted-foreground block text-[10px] uppercase">Actual Session</span>
+                                                <span className="font-mono text-slate-800 font-medium">
+                                                  {formatTimeStr(sess.actual_start)} – {formatTimeStr(sess.actual_end)}
+                                                </span>
+                                                <span className="text-muted-foreground text-[10px] block">
+                                                  {sess.duration_hours} hrs ({sess.duration_minutes}m)
+                                                </span>
+                                              </div>
+                                              <div>
+                                                <span className="text-muted-foreground block text-[10px] uppercase">Deficit & Penalty</span>
+                                                {sLate > 0 || sEarly > 0 ? (
+                                                  <div className="space-y-0.5">
+                                                    {sLate > 0 && (
+                                                      <span className="text-amber-600 font-medium block">
+                                                        {sLate}m late
+                                                      </span>
+                                                    )}
+                                                    {sEarly > 0 && (
+                                                      <span className="text-orange-600 font-medium block">
+                                                        {sEarly}m early exit
+                                                      </span>
+                                                    )}
+                                                    {sPenMins > 0 && (
+                                                      <span className="text-red-600 font-semibold block">
+                                                        Penalty: {sPenMins}m (- ₹{sPenalty.toLocaleString("en-IN", { minimumFractionDigits: 2 })})
+                                                      </span>
+                                                    )}
+                                                  </div>
+                                                ) : (
+                                                  <span className="text-emerald-600 font-medium">No penalties</span>
+                                                )}
+                                              </div>
+                                              <div className="text-right">
+                                                <span className="text-muted-foreground block text-[10px] uppercase">Session Earnings</span>
+                                                <span className="font-mono font-semibold text-slate-900 block">
+                                                  ₹{sGross.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                                </span>
+                                                {sPenalty > 0 && (
+                                                  <span className="font-mono text-red-600 font-medium text-[10px] block">
+                                                    Penalty: - ₹{sPenalty.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                                  </span>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
+
+            {/* 2. Session Check-in Audit Logs (if present) */}
+            {allLateLogs.length > 0 && (
+              <div className="bg-white rounded-xl border border-border p-5 space-y-4 shadow-xs">
+                <div className="border-b border-border/70 pb-3 flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-base text-foreground flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-orange-500" />
+                      Session Check-in Audit Logs
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Detailed punch-in & exit timestamps, attendance deviations, and automated policy penalties
+                    </p>
+                  </div>
+                  <span className="text-xs text-muted-foreground font-medium">
+                    {allLateLogs.length} session check-in(s)
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto rounded-lg border border-border">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-muted/50 border-b border-border">
+                      <tr>
+                        <th className="px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Date & Batch / Subject</th>
+                        <th className="px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Scheduled Timing</th>
+                        <th className="px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Actual Check-in / Out</th>
+                        <th className="px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Attendance Deficit</th>
+                        <th className="px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Penalty Mins</th>
+                        <th className="px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Grace Period</th>
+                        <th className="px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap text-right">Session Penalty</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y border-b border-border/50">
+                      {allLateLogs.map((log: any, i: number) => {
+                        const lateMins = log.late_minutes ?? log.minutes ?? 0;
+                        const earlyOutMins = log.early_out_minutes ?? 0;
+                        const penaltyMins = log.penalty_minutes ?? 0;
+                        const penaltyAmt = Number(log.penalty_amount ?? log.deduction ?? log.penalty ?? 0);
+                        const scheduledStartStr = formatTimeStr(log.scheduled_time);
+                        const scheduledEndStr = formatTimeStr(log.scheduled_end);
+                        const actualStartStr = formatTimeStr(log.actual_start);
+                        const actualEndStr = formatTimeStr(log.actual_end);
+
+                        const sessionInfo = sessionInfoMap.get(log.session_report);
+                        const displayDate = log.date || sessionInfo?.date;
+
+                        return (
+                          <tr key={`late-${i}`} className="hover:bg-muted/20 transition-colors">
+                            <td className="px-4 py-2.5 whitespace-nowrap">
+                              <div className="font-mono font-medium text-foreground flex items-center gap-1.5">
+                                <CalendarDays className="w-3.5 h-3.5 text-muted-foreground/70 shrink-0" />
+                                {displayDate ? formatDateStr(displayDate) : "Session"}
+                              </div>
+                              {sessionInfo?.batch_name && (
+                                <div className="text-[11px] text-muted-foreground mt-0.5">
+                                  <span className="font-semibold text-slate-800">{sessionInfo.batch_name}</span>
+                                  {sessionInfo.subject_name && ` • ${sessionInfo.subject_name}`}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-4 py-2.5 font-mono whitespace-nowrap">
+                              <span className="font-medium text-slate-800">
+                                {scheduledStartStr}
+                                {scheduledEndStr !== "—" ? ` – ${scheduledEndStr}` : ""}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2.5 font-mono whitespace-nowrap">
+                              <span className="text-slate-800 font-medium">
+                                {actualStartStr}
+                                {actualEndStr !== "—" ? ` – ${actualEndStr}` : ""}
+                              </span>
+                              {log.duration_minutes ? (
+                                <span className="text-[10px] text-muted-foreground block">{log.duration_minutes} min duration</span>
+                              ) : null}
+                            </td>
+                            <td className="px-4 py-2.5 font-mono whitespace-nowrap">
+                              <div className="space-y-0.5">
+                                {lateMins > 0 ? (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                                    {lateMins}m late
+                                  </span>
+                                ) : null}
+                                {earlyOutMins > 0 ? (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-50 text-orange-700 border border-orange-200 ml-1">
+                                    {earlyOutMins}m early exit
+                                  </span>
+                                ) : null}
+                                {lateMins === 0 && earlyOutMins === 0 && (
+                                  <span className="text-emerald-600 font-medium text-[11px]">On Time</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-2.5 font-mono whitespace-nowrap">
+                              {penaltyMins > 0 ? (
+                                <span className="text-red-600 font-semibold">{penaltyMins} mins</span>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-2.5 whitespace-nowrap">
+                              {log.grace_applied ? (
+                                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] py-0">
+                                  Grace Applied
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground text-[11px]">No Grace</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-2.5 font-mono text-right font-medium whitespace-nowrap">
+                              {penaltyAmt > 0 ? (
+                                <span className="text-red-600 font-bold">
+                                  - ₹{penaltyAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground text-[11px]">₹0.00</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       )}

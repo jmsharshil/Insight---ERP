@@ -182,15 +182,6 @@ export default function PayrollPage() {
               <FileText className="w-4 h-4" /> Reimbursements
             </TabsTrigger>
 
-            {canPreviewSalary && (
-              <TabsTrigger
-                value="preview"
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-md text-xs font-medium px-4 py-2 flex items-center gap-1.5 transition-all"
-              >
-                <View className="w-4 h-4" /> Salary Preview
-              </TabsTrigger>
-            )}
-
           </TabsList>
         </div>
 

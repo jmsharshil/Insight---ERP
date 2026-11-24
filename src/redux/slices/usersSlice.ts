@@ -39,6 +39,10 @@ export interface UserRecord {
   working_hours?: string;
   weekly_schedule?: WeeklySchedule;
   per_paper_rate?: number | string;
+  exam_pay_1_5_hours?: number | string;
+  exam_pay_2_hours?: number | string;
+  exam_pay_2_5_hours?: number | string;
+  exam_pay_3_hours?: number | string;
   accessible_modules?: string[];
   canDelete?: boolean;
   canExport?: boolean;
