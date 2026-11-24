@@ -70,6 +70,7 @@ export interface PaySlip {
   // Final Salary
   net_salary: number | string;
   is_disbursed: boolean;
+  is_manually_adjusted?: boolean;
 
   // Attendance
   working_days?: number;
@@ -80,6 +81,7 @@ export interface PaySlip {
   payroll_month?: string;
   payroll_year?: string;
   payroll_status?: string;
+  [key: string]: any;
 }
 
 export interface LatePolicy {
@@ -111,6 +113,9 @@ export interface MyPayrollData {
     name: string;
     email: string;
     role: string;
+    branch?: string;
+    branch_name?: string;
+    [key: string]: any;
   };
 
   summary: {

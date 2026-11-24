@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, Fragment } from "react";
 import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
@@ -23,6 +23,11 @@ import {
   ShieldCheck,
   Building2,
   FileSpreadsheet,
+  ChevronDown,
+  ChevronRight,
+  GraduationCap,
+  ClipboardCheck,
+  Timer,
 } from "lucide-react";
 
 import type { RootState, AppDispatch } from "@/store";
@@ -77,6 +82,11 @@ export default function PayslipDetailPage() {
   const [run, setRun] = useState<PayrollRun | null>(stateRun || selectedRun || null);
   const [loading, setLoading] = useState<boolean>(!payslip);
   const [isAdjustOpen, setIsAdjustOpen] = useState(false);
+  const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
+
+  const toggleDay = (key: string) => {
+    setExpandedDays((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   const activeRunId = queryRunId || run?.id || selectedRun?.id || "";
 
@@ -230,6 +240,26 @@ export default function PayslipDetailPage() {
     return parts;
   }, [payslip?.deduction_note]);
 
+  // Map session reports to their parent day date, batch, subject, etc.
+  const sessionInfoMap = useMemo(() => {
+    const map = new Map<string, { date: string; batch_name?: string; subject_name?: string; chapter_covered?: string; duration_minutes?: number }>();
+    const dayLogs = (payslip as any)?.per_day_deduction_log || (payslip as any)?.late_deduction_log || [];
+    dayLogs.forEach((day: any) => {
+      (day.sessions || []).forEach((sess: any) => {
+        if (sess.id) {
+          map.set(sess.id, {
+            date: day.date,
+            batch_name: sess.batch_name,
+            subject_name: sess.subject_name,
+            chapter_covered: sess.chapter_covered,
+            duration_minutes: sess.duration_minutes,
+          });
+        }
+      });
+    });
+    return map;
+  }, [payslip]);
+
   const isUUID = (val: any): boolean => {
     if (!val || typeof val !== "string") return false;
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
@@ -312,6 +342,31 @@ export default function PayslipDetailPage() {
     }
   };
 
+  const formatTimeStr = (tStr?: string) => {
+    if (!tStr) return "—";
+    try {
+      if (typeof tStr === "string" && tStr.includes("T")) {
+        const d = new Date(tStr);
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+        }
+      }
+      if (typeof tStr === "string") {
+        const parts = tStr.split(":");
+        if (parts.length >= 2) {
+          let hour = parseInt(parts[0], 10);
+          const minute = parts[1];
+          const ampm = hour >= 12 ? "PM" : "AM";
+          hour = hour % 12 || 12;
+          return `${hour}:${minute} ${ampm}`;
+        }
+      }
+      return String(tStr);
+    } catch {
+      return String(tStr);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
@@ -372,8 +427,8 @@ export default function PayslipDetailPage() {
     run?.branch_name ||
     (payslip as any)?.branch_name ||
     (payslip as any)?.branch ||
-    myPayroll?.employee?.branch ||
-    myPayroll?.employee?.branch_name ||
+    (myPayroll?.employee as any)?.branch ||
+    (myPayroll?.employee as any)?.branch_name ||
     (user as any)?.branch_name ||
     "";
 
@@ -381,6 +436,41 @@ export default function PayslipDetailPage() {
     payslip.is_disbursed ||
     payslip.payroll_status?.toLowerCase() === "disbursed"
   );
+
+  const examSupervisorSummary = (payslip as any)?.exam_supervisor_summary;
+  const durationBreakdown = examSupervisorSummary?.duration_breakdown as Record<string, any> | undefined;
+  const isExamSupervisor = Boolean(
+    examSupervisorSummary ||
+    durationBreakdown ||
+    payslip.employment_type === "exam_supervisor" ||
+    employeeRole?.toLowerCase() === "exam_supervisor" ||
+    (user?.role === "exam_supervisor" && employeeName === user?.name)
+  );
+
+  const durationTiers = useMemo(() => {
+    if (!durationBreakdown) return [];
+    return Object.entries(durationBreakdown).map(([tierKey, item]: [string, any]) => ({
+      tierKey,
+      label: `${tierKey} Hours Slot`,
+      count: Number(item?.count || 0),
+      rate: Number(item?.rate || 0),
+      grossPay: Number(item?.gross_pay || 0),
+      deductions: Number(item?.deductions || 0),
+      netPay: Number(item?.net_pay || 0),
+    })).sort((a, b) => parseFloat(a.tierKey) - parseFloat(b.tierKey));
+  }, [durationBreakdown]);
+
+  const durationTotals = useMemo(() => {
+    return durationTiers.reduce(
+      (acc, tier) => ({
+        count: acc.count + tier.count,
+        grossPay: acc.grossPay + tier.grossPay,
+        deductions: acc.deductions + tier.deductions,
+        netPay: acc.netPay + tier.netPay,
+      }),
+      { count: 0, grossPay: 0, deductions: 0, netPay: 0 }
+    );
+  }, [durationTiers]);
 
   return (
     <>
@@ -475,7 +565,7 @@ export default function PayslipDetailPage() {
                 </span>
                 <span>•</span>
                 <span className="capitalize font-medium text-foreground/80">
-                  {isFaculty ? "Faculty Member" : "Staff Member"}
+                  {isFaculty ? "Faculty Member" : isExamSupervisor ? "Exam Supervisor" : "Staff Member"}
                 </span>
                 {(payslip.employment_type || employeeRole) && (
                   <>
@@ -612,12 +702,14 @@ export default function PayslipDetailPage() {
             </div>
             <div className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1.5 flex-wrap">
               <span>{payslip.leaves_taken ?? 0} leaves</span>
-              {Boolean(payslip.leave_notes && payslip.leave_notes.length > 0) && (
-                <span className="text-primary font-medium">({payslip.leave_notes.length} approved)</span>
+              {(payslip.leave_notes?.length ?? 0) > 0 && (
+                <span className="text-primary font-medium">({payslip.leave_notes?.length} approved)</span>
               )}
               <span>•</span>
               {Number(payslip.per_paper_rate || 0) > 0 || payslip.employment_type === "paper_checker" ? (
                 <span>{payslip.sessions_conducted ?? 0} papers</span>
+              ) : isExamSupervisor ? (
+                <span>{examSupervisorSummary?.total_exams_present ?? payslip.sessions_conducted ?? 0} exam{(examSupervisorSummary?.total_exams_present ?? payslip.sessions_conducted ?? 0) === 1 ? "" : "s"}</span>
               ) : (
                 <span>{Number(payslip.total_session_hours || payslip.session_hours || 0)} hrs</span>
               )}
@@ -656,10 +748,20 @@ export default function PayslipDetailPage() {
             {(calculations?.hourBased || 0) > 0 || Number(payslip.total_session_hours || payslip.session_hours || 0) > 0 ? (
               <div className="flex items-center justify-between py-2 border-b border-border/40">
                 <div>
-                  <p className="text-sm font-medium text-foreground">Teaching / Session Hours</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {isExamSupervisor ? "Exam Duty / Supervision Pay" : "Teaching / Session Hours"}
+                  </p>
                   <p className="text-xs text-muted-foreground">
-                    {Number(payslip.total_session_hours || payslip.session_hours || 0)} hours
-                    {Number(payslip.hourly_rate || 0) > 0 ? ` @ ₹${payslip.hourly_rate}/hr` : ""}
+                    {isExamSupervisor ? (
+                      <>
+                        {examSupervisorSummary?.total_exams_present ?? 1} exam{(examSupervisorSummary?.total_exams_present ?? 1) === 1 ? "" : "s"} supervised ({payslip.total_session_hours || payslip.total_hours || "1.50"} hrs)
+                      </>
+                    ) : (
+                      <>
+                        {Number(payslip.total_session_hours || payslip.session_hours || 0)} hours
+                        {Number(payslip.hourly_rate || 0) > 0 ? ` @ ₹${payslip.hourly_rate}/hr` : ""}
+                      </>
+                    )}
                   </p>
                 </div>
                 <span className="font-mono text-sm font-semibold text-foreground">
@@ -836,9 +938,9 @@ export default function PayslipDetailPage() {
                   <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
                     Excess Leave Deductions
                   </p>
-                  {Boolean(payslip.leave_notes && payslip.leave_notes.length > 0) && (
+                  {(payslip.leave_notes?.length ?? 0) > 0 && (
                     <Badge variant="outline" className="text-[10px] bg-slate-50 text-slate-700">
-                      {payslip.leave_notes.length} record(s)
+                      {payslip.leave_notes?.length} record(s)
                     </Badge>
                   )}
                   <ExternalLink className="w-3.5 h-3.5 text-muted-foreground opacity-60 group-hover:opacity-100 group-hover:text-primary transition-all shrink-0" />
@@ -984,7 +1086,7 @@ export default function PayslipDetailPage() {
       )}
 
       {/* ── Travel & Odometer Claims Details (if notes present) ── */}
-      {Boolean(payslip.odometer_notes && payslip.odometer_notes.length > 0) && (
+      {(payslip.odometer_notes?.length ?? 0) > 0 && (
         <div className="bg-white rounded-2xl border border-border p-6 shadow-sm space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-3">
             <div>
@@ -1063,7 +1165,7 @@ export default function PayslipDetailPage() {
       )}
 
       {/* ── Approved Reimbursements Details (if notes present) ── */}
-      {Boolean(payslip.reimbursement_notes && payslip.reimbursement_notes.length > 0) && (
+      {(payslip.reimbursement_notes?.length ?? 0) > 0 && (
         <div className="bg-white rounded-2xl border border-border p-6 shadow-sm space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-3">
             <div>
@@ -1129,7 +1231,7 @@ export default function PayslipDetailPage() {
       )}
 
       {/* ── Approved Leave Records & Notes (if notes present) ── */}
-      {Boolean(payslip.leave_notes && payslip.leave_notes.length > 0) && (
+      {(payslip.leave_notes?.length ?? 0) > 0 && (
         <div className="bg-white rounded-2xl border border-border p-6 shadow-sm space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-3">
             <div>
@@ -1237,59 +1339,689 @@ export default function PayslipDetailPage() {
         </div>
       )}
 
-      {/* ── Late Check-in / Daily Deduction Logs (if present) ── */}
-      {Boolean(
-        (payslip.late_logs && payslip.late_logs.length > 0) ||
-        ((payslip as any).per_day_deduction_log && (payslip as any).per_day_deduction_log.length > 0)
-      ) && (
-        <div className="bg-white rounded-2xl border border-border p-6 shadow-sm space-y-4">
-          <div className="border-b border-border/70 pb-3">
-            <h3 className="font-semibold text-base text-foreground flex items-center gap-2">
-              <Clock className="w-4 h-4 text-orange-500" />
-              Daily Attendance & Late Check-in Penalty Logs
-            </h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Detailed tracking of check-in times and automated policy penalties
-            </p>
+      {/* ── Exam Supervisor Duty & Duration Breakdown ── */}
+      {Boolean(examSupervisorSummary || durationBreakdown) && (
+        <div className="bg-white rounded-2xl border border-border p-6 shadow-sm space-y-6">
+          {/* Section Header */}
+          <div className="border-b border-border/70 pb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="font-semibold text-base text-foreground flex items-center gap-2">
+                <ClipboardCheck className="w-4 h-4 text-primary" />
+                Exam Supervisor Duty & Duration Breakdown
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Comprehensive tier-wise breakdown of supervised exam slots, rates, punctuality, and net duty remuneration
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200 text-xs px-2.5 py-1 font-medium font-mono">
+                {examSupervisorSummary?.total_exams_present ?? durationTotals.count} / {examSupervisorSummary?.total_exams_assigned ?? durationTotals.count} Exams Attended
+              </Badge>
+              {Number(examSupervisorSummary?.total_hours || payslip.total_session_hours || payslip.total_hours || 0) > 0 && (
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs px-2.5 py-1 font-medium font-mono">
+                  {Number(examSupervisorSummary?.total_hours || payslip.total_session_hours || payslip.total_hours)} hrs Total
+                </Badge>
+              )}
+              {Number(examSupervisorSummary?.total_late_deduction || 0) > 0 && (
+                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs px-2.5 py-1 font-medium font-mono">
+                  Late Deductions: - ₹{Number(examSupervisorSummary?.total_late_deduction).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                </Badge>
+              )}
+              <Badge className="bg-emerald-600 text-white hover:bg-emerald-600 text-xs px-2.5 py-1 font-bold font-mono">
+                Net Pay: ₹{Number(examSupervisorSummary?.total_net_pay || durationTotals.netPay || calculations?.hourBased || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              </Badge>
+            </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-muted/50 border-b border-border">
-                <tr>
-                  <th className="px-4 py-2.5 font-medium text-muted-foreground">Date</th>
-                  <th className="px-4 py-2.5 font-medium text-muted-foreground">Log Type</th>
-                  <th className="px-4 py-2.5 font-medium text-muted-foreground">Late Minutes</th>
-                  <th className="px-4 py-2.5 font-medium text-muted-foreground">Remarks</th>
-                  <th className="px-4 py-2.5 font-medium text-muted-foreground text-right">Deduction</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/50">
-                {(payslip.late_logs || []).map((log: any, i: number) => (
-                  <tr key={`late-${i}`} className="hover:bg-muted/20">
-                    <td className="px-4 py-2.5 font-medium">{log.date || log.session_date || "—"}</td>
-                    <td className="px-4 py-2.5">Late Arrival</td>
-                    <td className="px-4 py-2.5 font-mono">{log.late_minutes ?? log.minutes ?? 0} mins</td>
-                    <td className="px-4 py-2.5 text-muted-foreground">{log.reason || "Policy penalty"}</td>
-                    <td className="px-4 py-2.5 font-mono text-red-600 font-semibold text-right">
-                      - ₹{Number(log.deduction ?? log.penalty ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                ))}
-                {((payslip as any).per_day_deduction_log || []).map((log: any, i: number) => (
-                  <tr key={`deduct-${i}`} className="hover:bg-muted/20">
-                    <td className="px-4 py-2.5 font-medium">{log.date || "—"}</td>
-                    <td className="px-4 py-2.5">{log.type || "Daily Deduction"}</td>
-                    <td className="px-4 py-2.5 font-mono">—</td>
-                    <td className="px-4 py-2.5 text-muted-foreground">{log.reason || log.note || "—"}</td>
-                    <td className="px-4 py-2.5 font-mono text-red-600 font-semibold text-right">
-                      - ₹{Number(log.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* Quick Metrics Bar */}
+          {examSupervisorSummary && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3">
+                <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Total Assigned</span>
+                <span className="text-lg font-bold font-mono text-slate-800">{examSupervisorSummary.total_exams_assigned ?? 0}</span>
+              </div>
+              <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-3">
+                <span className="text-[10px] text-emerald-800 uppercase font-semibold block">Present / Conducted</span>
+                <span className="text-lg font-bold font-mono text-emerald-700">{examSupervisorSummary.total_exams_present ?? 0}</span>
+              </div>
+              <div className="bg-blue-50/60 border border-blue-200/80 rounded-xl p-3">
+                <span className="text-[10px] text-blue-800 uppercase font-semibold block">On Time</span>
+                <span className="text-lg font-bold font-mono text-blue-700">{examSupervisorSummary.total_exams_on_time ?? 0}</span>
+              </div>
+              <div className="bg-amber-50/60 border border-amber-200/80 rounded-xl p-3">
+                <span className="text-[10px] text-amber-800 uppercase font-semibold block">Late Arrival</span>
+                <span className="text-lg font-bold font-mono text-amber-700">{examSupervisorSummary.total_exams_late ?? 0}</span>
+              </div>
+              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3">
+                <span className="text-[10px] text-muted-foreground uppercase font-semibold block">Total Duty Hours</span>
+                <span className="text-lg font-bold font-mono text-slate-800">{examSupervisorSummary.total_hours ?? "0.00"} hrs</span>
+              </div>
+              <div className="bg-purple-50/60 border border-purple-200/80 rounded-xl p-3">
+                <span className="text-[10px] text-purple-800 uppercase font-semibold block">Gross Earnings</span>
+                <span className="text-lg font-bold font-mono text-purple-700">₹{Number(examSupervisorSummary.total_gross_pay || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+              </div>
+            </div>
+          )}
+
+          {/* 1. Duration Breakdown Cards */}
+          {durationTiers.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <Timer className="w-3.5 h-3.5 text-muted-foreground" />
+                  Duration Tiers & Pay Breakdown
+                </h4>
+                <span className="text-[11px] text-muted-foreground font-medium">
+                  {durationTiers.length} duration categories configured
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* 2. Duration Breakdown Detailed Table */}
+          {durationTiers.length > 0 && (
+            <div className="space-y-2">
+              <div className="overflow-x-auto rounded-xl border border-border">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-muted/50 border-b border-border">
+                    <tr>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground">Exam Duration Tier</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground">Rate per Duty</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground text-center">Duties Conducted</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground">Gross Earnings</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground">Late / Penalty Deductions</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground text-right">Net Payable Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/50 font-mono">
+                    {durationTiers.map((tier) => (
+                      <tr key={`tier-row-${tier.tierKey}`} className={tier.count > 0 ? "bg-white hover:bg-muted/20" : "bg-slate-50/30 hover:bg-muted/10 text-muted-foreground"}>
+                        <td className="px-4 py-3 font-semibold text-foreground font-sans flex items-center gap-2">
+                          <Timer className={`w-3.5 h-3.5 ${tier.count > 0 ? "text-primary" : "text-muted-foreground"}`} />
+                          <span>{tier.label}</span>
+                          {tier.count > 0 && (
+                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 bg-emerald-50 text-emerald-700 border-emerald-200">
+                              Active
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          ₹{tier.rate.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <Badge variant="secondary" className="font-mono text-xs font-semibold">
+                            {tier.count}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 font-medium">
+                          ₹{tier.grossPay.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="px-4 py-3">
+                          {tier.deductions > 0 ? (
+                            <span className="text-red-600 font-semibold">
+                              - ₹{tier.deductions.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">₹0.00</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right font-bold text-emerald-600">
+                          ₹{tier.netPay.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-slate-100/80 border-t border-border font-mono font-bold text-xs">
+                    <tr>
+                      <td className="px-4 py-3 text-foreground font-sans uppercase tracking-wider">
+                        Total Summary
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">—</td>
+                      <td className="px-4 py-3 text-center text-foreground font-sans">
+                        <Badge className="bg-slate-800 text-white hover:bg-slate-800 text-xs font-mono font-bold">
+                          {durationTotals.count} {durationTotals.count === 1 ? "Duty" : "Duties"}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-foreground">
+                        ₹{durationTotals.grossPay.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-4 py-3 text-red-600">
+                        {durationTotals.deductions > 0 ? `- ₹${durationTotals.deductions.toLocaleString("en-IN", { minimumFractionDigits: 2 })}` : "₹0.00"}
+                      </td>
+                      <td className="px-4 py-3 text-right text-emerald-700 text-sm">
+                        ₹{durationTotals.netPay.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* 3. Supervised Exams Conducted Log */}
+          {(examSupervisorSummary?.exams || []).length > 0 && (
+            <div className="space-y-2.5 pt-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                  Supervised Examination Duties Log
+                </h4>
+                <span className="text-[11px] text-muted-foreground font-medium">
+                  {(examSupervisorSummary?.exams || []).length} exam record(s)
+                </span>
+              </div>
+
+              <div className="overflow-x-auto rounded-xl border border-border">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-muted/50 border-b border-border">
+                    <tr>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground">Date & Exam Title</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground">Batch & Subject</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground">Duration Tier</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground">Scheduled & Reporting</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground">Actual Check-in & Status</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground">Duty Rate</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground">Penalty / Deduction</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground text-right">Net Duty Pay</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y border-b border-border/50">
+                    {examSupervisorSummary.exams.map((exam: any, idx: number) => {
+                      const isLate = (exam.late_minutes ?? 0) > 0 || exam.punctuality === "late";
+                      const deductAmt = Number(exam.deduction || 0);
+                      const grossAmt = Number(exam.gross_amount || exam.rate || 0);
+                      const netAmt = Number(exam.net_amount || grossAmt - deductAmt);
+
+                      return (
+                        <tr key={`exam-duty-${exam.duty_log_id || exam.exam_id || idx}`} className="hover:bg-muted/20 transition-colors">
+                          <td className="px-4 py-3">
+                            <div className="font-semibold text-foreground">
+                              {exam.exam_title || "Exam Duty"}
+                            </div>
+                            <div className="text-[11px] text-muted-foreground font-mono mt-0.5 flex items-center gap-1">
+                              <Calendar className="w-3 h-3 text-muted-foreground/70" />
+                              {formatLeaveDate(exam.scheduled_date)}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge variant="outline" className="bg-slate-100 text-slate-800 border-slate-200 text-[10px] font-mono">
+                              {exam.batch_name || "Batch"}
+                            </Badge>
+                            <div className="text-[11px] font-medium text-foreground mt-1">
+                              {exam.subject_name || "Subject"}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 font-mono">
+                            <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] hover:bg-primary/15 font-mono">
+                              {exam.duration_category || exam.duration_hours || "1.5"} hrs
+                            </Badge>
+                            {exam.duration_minutes ? (
+                              <span className="text-[10px] text-muted-foreground block mt-0.5">
+                                {exam.duration_minutes} mins
+                              </span>
+                            ) : null}
+                          </td>
+                          <td className="px-4 py-3 font-mono text-[11px]">
+                            <div className="text-slate-800 font-medium">
+                              {formatTimeStr(exam.start_time)} – {formatTimeStr(exam.end_time)}
+                            </div>
+                            {exam.expected_reporting_time && (
+                              <div className="text-[10px] text-muted-foreground mt-0.5">
+                                Reporting: <span className="font-semibold text-slate-700">{formatTimeStr(exam.expected_reporting_time)}</span>
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="font-mono text-[11px] font-medium text-slate-800">
+                              {formatTimeStr(exam.actual_start_time)}
+                            </div>
+                            <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                              {isLate ? (
+                                <Badge variant="outline" className="text-[10px] py-0 px-1.5 bg-amber-50 text-amber-700 border-amber-200 font-medium">
+                                  {exam.late_minutes ?? 0}m late
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[10px] py-0 px-1.5 bg-emerald-50 text-emerald-700 border-emerald-200 font-medium">
+                                  On Time
+                                </Badge>
+                              )}
+                              {exam.status && (
+                                <span className="text-[10px] uppercase font-semibold text-muted-foreground">
+                                  • {exam.status}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 font-mono font-medium">
+                            ₹{grossAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="px-4 py-3 font-mono">
+                            {deductAmt > 0 ? (
+                              <span className="text-red-600 font-semibold">
+                                - ₹{deductAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">₹0.00</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 font-mono font-bold text-emerald-600 text-right">
+                            ₹{netAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Daily Attendance & Late Check-in Penalty Logs ── */}
+      {Boolean(
+        (payslip.late_logs && payslip.late_logs.length > 0) ||
+        ((payslip as any).per_day_deduction_log && (payslip as any).per_day_deduction_log.length > 0) ||
+        ((payslip as any).late_deduction_log && (payslip as any).late_deduction_log.length > 0)
+      ) && (
+        <div className="bg-white rounded-2xl border border-border p-6 shadow-sm space-y-6">
+          <div className="border-b border-border/70 pb-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="font-semibold text-base text-foreground flex items-center gap-2">
+                <Clock className="w-4 h-4 text-orange-500" />
+                Daily Attendance & Late Check-in Penalty Logs
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Detailed day-wise session reports, check-in audit logs, early departures, and automated policy penalties
+              </p>
+            </div>
+            {payslip.late_penalty != null && Number(payslip.late_penalty) > 0 && (
+              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs px-2.5 py-1 font-medium">
+                Total Late Penalty: - ₹{Number(payslip.late_penalty).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                {payslip.late_penalty_minutes ? ` (${payslip.late_penalty_minutes} mins)` : ""}
+              </Badge>
+            )}
           </div>
+
+          {/* 1. Day-wise Attendance & Earnings Log (per_day_deduction_log) */}
+          {(((payslip as any).per_day_deduction_log || (payslip as any).late_deduction_log || []).length > 0) && (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    <CalendarDays className="w-3.5 h-3.5 text-muted-foreground" />
+                    Daily Attendance & Earnings Log
+                  </h4>
+                  <span className="text-[11px] text-muted-foreground font-medium">
+                    ({((payslip as any).per_day_deduction_log || (payslip as any).late_deduction_log || []).length} days recorded)
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const days = (payslip as any).per_day_deduction_log || (payslip as any).late_deduction_log || [];
+                    const allKeys = days.reduce((acc: any, d: any) => ({ ...acc, [d.date]: true }), {});
+                    const isAllExpanded = days.every((d: any) => expandedDays[d.date]);
+                    setExpandedDays(isAllExpanded ? {} : allKeys);
+                  }}
+                  className="text-xs text-primary font-medium hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  {((payslip as any).per_day_deduction_log || (payslip as any).late_deduction_log || []).every((d: any) => expandedDays[d.date])
+                    ? "Collapse All Sessions"
+                    : "Expand All Sessions"}
+                </button>
+              </div>
+
+              <div className="overflow-x-auto rounded-xl border border-border">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-muted/50 border-b border-border">
+                    <tr>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground">Date & Sessions</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground">Hours (Duration)</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground">Gross Salary</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground">Attendance Deficit</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground">Penalty (Mins / Amt)</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground">Daily Deduction</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground text-right">Net Daily Pay</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/50">
+                    {((payslip as any).per_day_deduction_log || (payslip as any).late_deduction_log || []).map((day: any, i: number) => {
+                      const deductAmt = Number(day.deduction ?? day.penalty_amount ?? day.amount ?? 0);
+                      const grossAmt = Number(day.gross_salary || 0);
+                      const netAmt = Number(day.net_salary || 0);
+                      const penaltyAmt = Number(day.penalty_amount || 0);
+                      const lateMins = Number(day.late_minutes ?? 0);
+                      const earlyOutMins = Number(day.early_out_minutes ?? 0);
+                      const penaltyMins = Number(day.penalty_minutes ?? 0);
+                      const sessions = day.sessions || [];
+                      const isExpanded = Boolean(expandedDays[day.date]);
+
+                      return (
+                        <Fragment key={`day-${day.date || i}`}>
+                          <tr
+                            onClick={() => sessions.length > 0 && toggleDay(day.date)}
+                            className={`transition-colors ${sessions.length > 0 ? "cursor-pointer hover:bg-muted/30" : "hover:bg-muted/20"}`}
+                          >
+                            <td className="px-4 py-3 font-medium font-mono text-foreground">
+                              <div className="flex items-center gap-2">
+                                {sessions.length > 0 ? (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleDay(day.date);
+                                    }}
+                                    className="p-0.5 rounded hover:bg-muted text-muted-foreground cursor-pointer"
+                                  >
+                                    {isExpanded ? (
+                                      <ChevronDown className="w-3.5 h-3.5 text-foreground" />
+                                    ) : (
+                                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+                                    )}
+                                  </button>
+                                ) : (
+                                  <span className="w-3.5" />
+                                )}
+                                <CalendarDays className="w-3.5 h-3.5 text-muted-foreground/70 shrink-0" />
+                                <span className="font-semibold">{formatLeaveDate(day.date)}</span>
+                                {sessions.length > 0 && (
+                                  <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4 bg-muted/60 text-muted-foreground font-sans">
+                                    {sessions.length} {sessions.length === 1 ? "Session" : "Sessions"}
+                                  </Badge>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 font-mono">
+                              <span className="font-medium">{day.total_hours ? `${day.total_hours} hrs` : "—"}</span>
+                              {day.duration_minutes ? (
+                                <span className="text-[10px] text-muted-foreground block">{day.duration_minutes} mins</span>
+                              ) : null}
+                            </td>
+                            <td className="px-4 py-3 font-mono font-medium">
+                              ₹{grossAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                            </td>
+                            <td className="px-4 py-3 font-mono">
+                              {lateMins > 0 || earlyOutMins > 0 ? (
+                                <div className="space-y-0.5">
+                                  {lateMins > 0 && (
+                                    <span className="text-amber-600 font-semibold block text-[11px]">
+                                      {lateMins} min late
+                                    </span>
+                                  )}
+                                  {earlyOutMins > 0 && (
+                                    <span className="text-orange-600 font-semibold block text-[11px]">
+                                      {earlyOutMins} min early exit
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-emerald-600 font-medium text-[11px]">On Time</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 font-mono">
+                              {penaltyMins > 0 || penaltyAmt > 0 ? (
+                                <div>
+                                  <span className="text-red-600 font-medium block">
+                                    {penaltyMins} min penalty
+                                  </span>
+                                  <span className="text-red-700 font-semibold text-[11px] block">
+                                    ₹{penaltyAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 font-mono">
+                              {deductAmt > 0 ? (
+                                <span className="text-red-600 font-semibold">
+                                  - ₹{deductAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground">₹0.00</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 font-mono font-bold text-emerald-600 text-right">
+                              ₹{netAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+
+                          {/* Expanded Nested Sessions */}
+                          {isExpanded && sessions.length > 0 && (
+                            <tr className="bg-slate-50/70">
+                              <td colSpan={7} className="px-4 py-3 pl-8">
+                                <div className="space-y-2 border-l-2 border-primary/40 pl-3">
+                                  <div className="flex items-center gap-2">
+                                    <GraduationCap className="w-3.5 h-3.5 text-primary" />
+                                    <span className="text-[11px] font-semibold text-slate-700 uppercase tracking-wide">
+                                      Conducted Classes & Sessions for {formatLeaveDate(day.date)} ({sessions.length})
+                                    </span>
+                                  </div>
+
+                                  <div className="grid grid-cols-1 gap-2">
+                                    {sessions.map((sess: any, sIdx: number) => {
+                                      const sGross = Number(sess.gross_salary || 0);
+                                      const sPenalty = Number(sess.penalty_amount || 0);
+                                      const sLate = sess.late_minutes ?? 0;
+                                      const sEarly = sess.early_out_minutes ?? 0;
+                                      const sPenMins = sess.penalty_minutes ?? 0;
+
+                                      return (
+                                        <div
+                                          key={`sess-${sess.id || sIdx}`}
+                                          className="bg-white border border-border/80 rounded-lg p-3 text-xs space-y-1.5 shadow-xs"
+                                        >
+                                          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-1.5">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                              <Badge className="bg-slate-100 text-slate-800 border-slate-200 text-[10px] font-mono hover:bg-slate-100">
+                                                {sess.batch_name || "Batch"}
+                                              </Badge>
+                                              <span className="font-semibold text-slate-900">
+                                                {sess.subject_name || "Subject"}
+                                              </span>
+                                              {sess.chapter_covered && (
+                                                <span className="text-muted-foreground text-[11px] italic">
+                                                  • {sess.chapter_covered}
+                                                </span>
+                                              )}
+                                            </div>
+                                            <Badge
+                                              variant="outline"
+                                              className="text-[10px] py-0 capitalize bg-emerald-50 text-emerald-700 border-emerald-200"
+                                            >
+                                              {sess.status || "Completed"}
+                                            </Badge>
+                                          </div>
+
+                                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-1 text-[11px]">
+                                            <div>
+                                              <span className="text-muted-foreground block text-[10px] uppercase">Scheduled Timing</span>
+                                              <span className="font-mono text-slate-800 font-medium">
+                                                {formatTimeStr(sess.scheduled_start)} – {formatTimeStr(sess.scheduled_end)}
+                                              </span>
+                                            </div>
+                                            <div>
+                                              <span className="text-muted-foreground block text-[10px] uppercase">Actual Session</span>
+                                              <span className="font-mono text-slate-800 font-medium">
+                                                {formatTimeStr(sess.actual_start)} – {formatTimeStr(sess.actual_end)}
+                                              </span>
+                                              <span className="text-muted-foreground text-[10px] block">
+                                                {sess.duration_hours} hrs ({sess.duration_minutes}m)
+                                              </span>
+                                            </div>
+                                            <div>
+                                              <span className="text-muted-foreground block text-[10px] uppercase">Deficit & Penalty</span>
+                                              {sLate > 0 || sEarly > 0 ? (
+                                                <div className="space-y-0.5">
+                                                  {sLate > 0 && (
+                                                    <span className="text-amber-600 font-medium block">
+                                                      {sLate}m late
+                                                    </span>
+                                                  )}
+                                                  {sEarly > 0 && (
+                                                    <span className="text-orange-600 font-medium block">
+                                                      {sEarly}m early exit
+                                                    </span>
+                                                  )}
+                                                  {sPenMins > 0 && (
+                                                    <span className="text-red-600 font-semibold block">
+                                                      Penalty: {sPenMins}m (- ₹{sPenalty.toLocaleString("en-IN", { minimumFractionDigits: 2 })})
+                                                    </span>
+                                                  )}
+                                                </div>
+                                              ) : (
+                                                <span className="text-emerald-600 font-medium">No penalties</span>
+                                              )}
+                                            </div>
+                                            <div className="text-right">
+                                              <span className="text-muted-foreground block text-[10px] uppercase">Session Earnings</span>
+                                              <span className="font-mono font-semibold text-slate-900 block">
+                                                ₹{sGross.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                              </span>
+                                              {sPenalty > 0 && (
+                                                <span className="font-mono text-red-600 font-medium text-[10px] block">
+                                                  Penalty: - ₹{sPenalty.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* 2. Session Check-in Audit Logs (late_logs) */}
+          {(payslip.late_logs || []).length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                  Session Check-in Audit Logs
+                </h4>
+                <span className="text-[11px] text-muted-foreground font-medium">
+                  {(payslip.late_logs || []).length} session check-in(s)
+                </span>
+              </div>
+              <div className="overflow-x-auto rounded-xl border border-border">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-muted/50 border-b border-border">
+                    <tr>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground">Date & Batch / Subject</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground">Scheduled Timing</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground">Actual Check-in / Out</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground">Attendance Deficit</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground">Penalty Mins</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground">Grace Period</th>
+                      <th className="px-4 py-2.5 font-medium text-muted-foreground text-right">Session Penalty</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y border-b border-border/50">
+                    {(payslip.late_logs || []).map((log: any, i: number) => {
+                      const lateMins = log.late_minutes ?? log.minutes ?? 0;
+                      const earlyOutMins = log.early_out_minutes ?? 0;
+                      const penaltyMins = log.penalty_minutes ?? 0;
+                      const penaltyAmt = Number(log.penalty_amount ?? log.deduction ?? log.penalty ?? 0);
+                      const scheduledStartStr = formatTimeStr(log.scheduled_time);
+                      const scheduledEndStr = formatTimeStr(log.scheduled_end);
+                      const actualStartStr = formatTimeStr(log.actual_start);
+                      const actualEndStr = formatTimeStr(log.actual_end);
+
+                      // Match info from session report
+                      const sessionInfo = sessionInfoMap.get(log.session_report);
+                      const displayDate = log.date || sessionInfo?.date;
+
+                      return (
+                        <tr key={`late-${i}`} className="hover:bg-muted/20 transition-colors">
+                          <td className="px-4 py-2.5">
+                            <div className="font-mono font-medium text-foreground flex items-center gap-1.5">
+                              <CalendarDays className="w-3.5 h-3.5 text-muted-foreground/70 shrink-0" />
+                              {displayDate ? formatLeaveDate(displayDate) : "Session"}
+                            </div>
+                            {sessionInfo?.batch_name && (
+                              <div className="text-[11px] text-muted-foreground mt-0.5">
+                                <span className="font-semibold text-slate-800">{sessionInfo.batch_name}</span>
+                                {sessionInfo.subject_name && ` • ${sessionInfo.subject_name}`}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-2.5 font-mono">
+                            <span className="font-medium text-slate-800">
+                              {scheduledStartStr}
+                              {scheduledEndStr !== "—" ? ` – ${scheduledEndStr}` : ""}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5 font-mono">
+                            <span className="text-slate-800 font-medium">
+                              {actualStartStr}
+                              {actualEndStr !== "—" ? ` – ${actualEndStr}` : ""}
+                            </span>
+                            {log.duration_minutes ? (
+                              <span className="text-[10px] text-muted-foreground block">{log.duration_minutes} min duration</span>
+                            ) : null}
+                          </td>
+                          <td className="px-4 py-2.5 font-mono">
+                            <div className="space-y-0.5">
+                              {lateMins > 0 ? (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                                  {lateMins}m late
+                                </span>
+                              ) : null}
+                              {earlyOutMins > 0 ? (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-50 text-orange-700 border border-orange-200 ml-1">
+                                  {earlyOutMins}m early exit
+                                </span>
+                              ) : null}
+                              {lateMins === 0 && earlyOutMins === 0 && (
+                                <span className="text-emerald-600 font-medium text-[11px]">On Time</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-2.5 font-mono">
+                            {penaltyMins > 0 ? (
+                              <span className="text-red-600 font-semibold">{penaltyMins} mins</span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2.5">
+                            {log.grace_applied ? (
+                              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] py-0">
+                                Grace Applied
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-[11px]">No Grace</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2.5 font-mono text-right font-medium">
+                            {penaltyAmt > 0 ? (
+                              <span className="text-red-600 font-bold">
+                                - ₹{penaltyAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground text-[11px]">₹0.00</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1329,7 +2061,7 @@ export default function PayslipDetailPage() {
             <div>
               <p className="py-0.5"><span className="text-slate-500 font-medium">Employee Name:</span> <strong className="text-slate-900">{employeeName}</strong></p>
               <p className="py-0.5"><span className="text-slate-500 font-medium">Employee ID:</span> <strong className="text-slate-900 font-mono">{employeeId}</strong></p>
-              <p className="py-0.5"><span className="text-slate-500 font-medium">Designation / Role:</span> <strong className="text-slate-900 capitalize">{(employeeRole || (isFaculty ? "Faculty" : "Staff")).replace(/_/g, " ")}</strong></p>
+              <p className="py-0.5"><span className="text-slate-500 font-medium">Designation / Role:</span> <strong className="text-slate-900 capitalize">{(employeeRole || (isFaculty ? "Faculty" : isExamSupervisor ? "Exam Supervisor" : "Staff")).replace(/_/g, " ")}</strong></p>
               {(payslip.employment_type || employeeRole) && (
                 <p className="py-0.5"><span className="text-slate-500 font-medium">Employment Type:</span> <strong className="text-slate-900 capitalize">{(payslip.employment_type || employeeRole).replace(/_/g, " ")}</strong></p>
               )}
@@ -1339,7 +2071,7 @@ export default function PayslipDetailPage() {
               <p className="py-0.5"><span className="text-slate-500 font-medium">Days Worked:</span> <strong className="text-slate-900">{payslip.working_days ?? 0} days</strong></p>
               <p className="py-0.5"><span className="text-slate-500 font-medium">Leaves Taken:</span> <strong className="text-slate-900">{payslip.leaves_taken ?? 0} days</strong></p>
               {Number(payslip.total_session_hours || payslip.session_hours || 0) > 0 && (
-                <p className="py-0.5"><span className="text-slate-500 font-medium">Session Hours:</span> <strong className="text-slate-900">{Number(payslip.total_session_hours || payslip.session_hours)} hrs</strong></p>
+                <p className="py-0.5"><span className="text-slate-500 font-medium">{isExamSupervisor ? "Exam Duty Hours:" : "Session Hours:"}</span> <strong className="text-slate-900">{Number(payslip.total_session_hours || payslip.session_hours)} hrs</strong></p>
               )}
             </div>
           </div>
@@ -1359,7 +2091,7 @@ export default function PayslipDetailPage() {
                 </div>
                 {(calculations?.hourBased || 0) > 0 && (
                   <div className="px-3 py-1.5 flex justify-between">
-                    <span>Session Hours Pay</span>
+                    <span>{isExamSupervisor ? "Exam Duty / Supervision Pay" : "Session Hours Pay"}</span>
                     <span className="font-mono">{calculations?.hourBased.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
                   </div>
                 )}
@@ -1430,14 +2162,14 @@ export default function PayslipDetailPage() {
           </div>
 
           {/* Leaves Breakdown (if records present) */}
-          {Boolean(payslip.leave_notes && payslip.leave_notes.length > 0) && (
+          {(payslip.leave_notes?.length ?? 0) > 0 && (
             <div className="border border-slate-300 rounded overflow-hidden mt-4">
               <div className="bg-slate-200 px-3 py-1.5 font-bold text-xs text-slate-800 flex justify-between">
-                <span>Approved Leave Records & Policy Breakdown ({payslip.leave_notes.length})</span>
+                <span>Approved Leave Records & Policy Breakdown ({payslip.leave_notes?.length ?? 0})</span>
                 <span>Type / Pay Impact</span>
               </div>
               <div className="divide-y divide-slate-200 text-xs">
-                {payslip.leave_notes.map((note: any, idx: number) => {
+                {(payslip.leave_notes || []).map((note: any, idx: number) => {
                   const isUnpaid = Boolean(note.is_unpaid || note.leave_type === "unpaid");
                   const isHalfDay = Boolean(note.is_half_day);
                   const days = note.days ?? (isHalfDay ? 0.5 : 1);
@@ -1461,6 +2193,88 @@ export default function PayslipDetailPage() {
                       <span className={`font-semibold ${isUnpaid ? "text-red-700" : "text-emerald-700"}`}>
                         {isUnpaid ? "Unpaid (LOP)" : "Paid Leave"}
                       </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Exam Supervisor Duration Breakdown (Print View) */}
+          {Boolean(examSupervisorSummary || durationBreakdown) && (
+            <div className="border border-slate-300 rounded overflow-hidden mt-4">
+              <div className="bg-slate-200 px-3 py-1.5 font-bold text-xs text-slate-800 flex justify-between">
+                <span>Exam Supervisor Duration Breakdown ({examSupervisorSummary?.total_exams_present ?? durationTotals.count} duties · {examSupervisorSummary?.total_hours || payslip.total_hours || "0"} hrs)</span>
+                <span>Duties / Gross / Net Pay</span>
+              </div>
+              <div className="divide-y divide-slate-200 text-xs">
+                {durationTiers.map((tier) => (
+                  <div key={`print-tier-${tier.tierKey}`} className="px-3 py-1.5 flex justify-between items-center">
+                    <div>
+                      <span className="font-semibold">{tier.label}</span>
+                      <span className="text-slate-600 ml-2">
+                        (@ ₹{tier.rate.toLocaleString("en-IN", { minimumFractionDigits: 2 })} / exam · {tier.count} {tier.count === 1 ? "duty" : "duties"})
+                      </span>
+                      {tier.deductions > 0 && (
+                        <span className="text-red-700 ml-2">
+                          (Deductions: - ₹{tier.deductions.toLocaleString("en-IN", { minimumFractionDigits: 2 })})
+                        </span>
+                      )}
+                    </div>
+                    <div className="font-mono text-right">
+                      <span className="text-slate-600 mr-2">
+                        Gross: ₹{tier.grossPay.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                      </span>
+                      <span className="font-bold text-slate-900">
+                        ₹{tier.netPay.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="bg-slate-100 px-3 py-1.5 font-bold text-xs flex justify-between border-t border-slate-300 font-mono">
+                <span className="font-sans">Total Exam Remuneration ({durationTotals.count} duties)</span>
+                <span className="text-slate-900">₹{durationTotals.netPay.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Daily Attendance & Deduction Breakdown (Print View) */}
+          {(((payslip as any).per_day_deduction_log || (payslip as any).late_deduction_log || []).length > 0) && (
+            <div className="border border-slate-300 rounded overflow-hidden mt-4">
+              <div className="bg-slate-200 px-3 py-1.5 font-bold text-xs text-slate-800 flex justify-between">
+                <span>Daily Attendance & Earnings Log ({((payslip as any).per_day_deduction_log || (payslip as any).late_deduction_log || []).length} days)</span>
+                <span>Hours / Penalty / Net Daily</span>
+              </div>
+              <div className="divide-y divide-slate-200 text-xs">
+                {((payslip as any).per_day_deduction_log || (payslip as any).late_deduction_log || []).map((day: any, idx: number) => {
+                  const deductAmt = Number(day.deduction ?? day.penalty_amount ?? day.amount ?? 0);
+                  const grossAmt = Number(day.gross_salary || 0);
+                  const netAmt = Number(day.net_salary || 0);
+                  const sCount = (day.sessions || []).length;
+                  return (
+                    <div key={idx} className="px-3 py-1.5 flex justify-between items-center">
+                      <div>
+                        <span className="font-semibold font-mono">{formatLeaveDate(day.date)}</span>
+                        <span className="text-slate-600 ml-2">
+                          ({day.total_hours || 0} hrs{sCount > 0 ? ` · ${sCount} session${sCount > 1 ? "s" : ""}` : ""} · Gross: ₹{grossAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })})
+                        </span>
+                        {((day.penalty_minutes ?? 0) > 0 || (day.late_minutes ?? 0) > 0 || (day.early_out_minutes ?? 0) > 0) && (
+                          <span className="text-red-700 ml-2">
+                            • Late: {day.late_minutes ?? 0}m{day.early_out_minutes ? `, Early: ${day.early_out_minutes}m` : ""} (Penalty: {day.penalty_minutes ?? 0}m)
+                          </span>
+                        )}
+                      </div>
+                      <div className="font-mono text-right">
+                        {deductAmt > 0 && (
+                          <span className="text-red-700 mr-2 font-semibold">
+                            - ₹{deductAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                          </span>
+                        )}
+                        <span className="font-bold text-slate-900">
+                          ₹{netAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
                     </div>
                   );
                 })}
